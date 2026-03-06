@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "Bash(gh repo:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(cargo fetch:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo metadata:*)",
+      "Bash(cargo tree:*)",
+      "Bash(xargs grep:*)",
+      "Bash(find:*)",
+      "Bash(bun add:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(bunx:*)",
+      "Bash(bun run:*)"
     ]
   }
 }
