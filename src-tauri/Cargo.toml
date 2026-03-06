@@ -22,6 +22,7 @@ tauri-plugin-opener          = "2"
 
 reqwest           = { version = "0.12", features = ["json", "rustls-tls"] }
 tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+rustls             = "0.23"
 tokio             = { version = "1", features = ["full"] }
 futures-util      = "0.3"
 serde             = { version = "1", features = ["derive"] }
