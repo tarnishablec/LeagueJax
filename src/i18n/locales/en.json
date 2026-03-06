@@ -1,0 +1,20 @@
+{
+	"common": {
+		"connected": "Connected",
+		"disconnected": "Disconnected",
+		"enabled": "Enabled",
+		"disabled": "Disabled",
+		"save": "Save",
+		"cancel": "Cancel"
+	},
+	"nav": {
+		"dashboard": "Dashboard",
+		"autoSelect": "Auto Select",
+		"autoGameflow": "Auto Accept",
+		"autoReply": "Auto Reply",
+		"ongoingGame": "Ongoing Game",
+		"savedPlayers": "Saved Players",
+		"statistics": "Statistics",
+		"settings": "Settings"
+	}
+}
