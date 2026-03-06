@@ -1,0 +1,20 @@
+{
+	"common": {
+		"connected": "已连接",
+		"disconnected": "未连接",
+		"enabled": "已启用",
+		"disabled": "已禁用",
+		"save": "保存",
+		"cancel": "取消"
+	},
+	"nav": {
+		"dashboard": "概览",
+		"autoSelect": "自动选英雄",
+		"autoGameflow": "自动接受",
+		"autoReply": "自动回复",
+		"ongoingGame": "当前对局",
+		"savedPlayers": "记录的玩家",
+		"statistics": "战绩统计",
+		"settings": "设置"
+	}
+}
