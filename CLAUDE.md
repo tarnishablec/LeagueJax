@@ -19,6 +19,19 @@ bun run build
 bunx tauri build
 ```
 
+### Lint
+
+```bash
+# Frontend — Biome (lint + format check)
+bunx biome check src/
+
+# Frontend — auto-fix
+bunx biome check --write src/
+
+# Rust — Clippy
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+```
+
 ### Rust (src-tauri)
 ```bash
 # Check Rust code
@@ -59,3 +72,8 @@ This is a **Tauri v2** desktop app with a **React + TypeScript** frontend and a 
 ### Package manager
 
 This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of `npm` / `npx`.
+
+## Linting
+
+- **Frontend:** [Biome](https://biomejs.dev/) — replaces ESLint + Prettier. Config in `biome.json`. Run `bunx biome check --write src/` to auto-fix. CI uses `bunx biome check src/` (no `--write`).
+- **Rust:** Clippy with `-D warnings` (warnings are errors). Run `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings` before committing Rust changes.
