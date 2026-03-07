@@ -9,12 +9,21 @@ mod storage;
 use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, Manager};
+#[cfg(target_os = "windows")]
+use window_vibrancy::{apply_acrylic, apply_mica};
 use tokio::time::{sleep, Duration};
 
 use lcu::{LcuConnector, LcuWatcher, WindowsLcuConnector};
-use shards::Shard;
+use shards::{Shard, ShardInfo, ShardRegistry};
 use state::AppState;
 use storage::SqliteDb;
+
+// ─── Commands ─────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+fn get_shards(registry: tauri::State<ShardRegistry>) -> Vec<ShardInfo> {
+    registry.info()
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -41,8 +50,19 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        .manage(ShardRegistry(shards.clone()))
+        .invoke_handler(tauri::generate_handler![get_shards])
         .setup(move |app| {
             let app_handle = app.handle().clone();
+
+            // Apply native Mica effect (Windows 11 build 22000+), fallback to Acrylic
+            #[cfg(target_os = "windows")]
+            {
+                let win = app.get_webview_window("main").expect("no main window");
+                if apply_mica(&win, None).is_err() {
+                    let _ = apply_acrylic(&win, Some((18, 18, 28, 160)));
+                }
+            }
 
             let data_dir = app.path().app_data_dir().expect("no app data dir");
             std::fs::create_dir_all(&data_dir)?;
@@ -58,7 +78,7 @@ pub fn run() {
                 let app_handle = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
                     if let Err(e) = shard.setup(&app_handle, state).await {
-                        tracing::error!("[{}] setup failed: {e}", shard.name());
+                        tracing::error!("[{}] setup failed: {e}", shard.label());
                     }
                 });
             }
@@ -100,7 +120,7 @@ async fn lcu_watcher_loop(
 
                 for shard in &shards {
                     if let Err(e) = shard.on_lcu_connected(state.clone()).await {
-                        tracing::error!("[{}] on_lcu_connected: {e}", shard.name());
+                        tracing::error!("[{}] on_lcu_connected: {e}", shard.label());
                     }
                 }
 
@@ -116,7 +136,7 @@ async fn lcu_watcher_loop(
                     tauri::async_runtime::spawn(async move {
                         for shard in &shards {
                             if let Err(e) = shard.on_lcu_event(&event, state.clone()).await {
-                                tracing::error!("[{}] on_lcu_event: {e}", shard.name());
+                                tracing::error!("[{}] on_lcu_event: {e}", shard.label());
                             }
                         }
                     });
@@ -127,7 +147,7 @@ async fn lcu_watcher_loop(
                 state.set_lcu_disconnected().await;
                 for shard in &shards {
                     if let Err(e) = shard.on_lcu_disconnected(state.clone()).await {
-                        tracing::error!("[{}] on_lcu_disconnected: {e}", shard.name());
+                        tracing::error!("[{}] on_lcu_disconnected: {e}", shard.label());
                     }
                 }
                 let _ = app.emit("lcu-disconnected", ());

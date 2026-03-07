@@ -8,13 +8,10 @@
 		"cancel": "取消"
 	},
 	"nav": {
-		"dashboard": "概览",
-		"autoSelect": "自动选英雄",
-		"autoGameflow": "自动接受",
-		"autoReply": "自动回复",
-		"ongoingGame": "当前对局",
-		"savedPlayers": "记录的玩家",
-		"statistics": "战绩统计",
+		"history": "战绩",
+		"game": "对局",
+		"automation": "自动操作",
+		"tools": "工具集",
 		"settings": "设置"
 	}
 }

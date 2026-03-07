@@ -13,7 +13,20 @@
       "Bash(bun add:*)",
       "Bash(cargo clippy:*)",
       "Bash(bunx:*)",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(cargo build:*)",
+      "WebSearch",
+      "Bash(gh api:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl:*)",
+      "Bash(bunx biome:*)",
+      "Bash(cargo doc --manifest-path D:/Desktop/Web/LeagueJax/src-tauri/Cargo.toml -p window-vibrancy)",
+      "Bash(for f in auto_gameflow auto_reply ongoing_game saved_player statistics keyboard updater)",
+      "Bash(do echo \"=== $f ===\")",
+      "Read(//d/Desktop/Web/LeagueJax/src-tauri/src/shards/**)",
+      "Bash(done)",
+      "Bash(D:/Desktop/Web/LeagueJax/src/i18n/locales/zh-CN.json:*)",
+      "Bash(node:*)"
     ]
   }
 }

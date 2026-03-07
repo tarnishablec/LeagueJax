@@ -8,13 +8,10 @@
 		"cancel": "Cancel"
 	},
 	"nav": {
-		"dashboard": "Dashboard",
-		"autoSelect": "Auto Select",
-		"autoGameflow": "Auto Accept",
-		"autoReply": "Auto Reply",
-		"ongoingGame": "Ongoing Game",
-		"savedPlayers": "Saved Players",
-		"statistics": "Statistics",
+		"history": "History",
+		"game": "Game",
+		"automation": "Automation",
+		"tools": "Tools",
 		"settings": "Settings"
 	}
 }
