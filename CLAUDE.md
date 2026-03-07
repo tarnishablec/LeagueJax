@@ -73,6 +73,20 @@ This is a **Tauri v2** desktop app with a **React + TypeScript** frontend and a 
 
 This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of `npm` / `npx`.
 
+## Frontend Layout
+
+- 所有布局统一使用 **CSS Grid**（`grid`, `grid-cols-*`, `grid-rows-*`）
+- 禁止使用 Flexbox（`flex`）做页面级布局，Flex 仅用于单行/单列的小型对齐场景（如按钮内图标对齐）
+
+## Accessibility
+
+- All `aria-label` values must be written in **English**.
+
+## Component Styles
+
+- Use **CVA** (`class-variance-authority`) to manage component variant styles. Define a `cva()` call per component and compose with `cn()`.
+- Define all colors with **`oklch()`** syntax — no hex codes, no `rgba()`. Use Tailwind arbitrary values: `bg-[oklch(0.47_0.2_26)]`, `dark:hover:bg-[oklch(1_0_0/0.2)]`, etc.
+
 ## Linting
 
 - **Frontend:** [Biome](https://biomejs.dev/) — replaces ESLint + Prettier. Config in `biome.json`. Run `bunx biome check --write src/` to auto-fix. CI uses `bunx biome check src/` (no `--write`).

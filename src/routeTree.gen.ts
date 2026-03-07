@@ -9,15 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as StatisticsRouteImport } from './routes/statistics'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SavedPlayersRouteImport } from './routes/saved-players'
 import { Route as OngoingGameRouteImport } from './routes/ongoing-game'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as GameRouteImport } from './routes/game'
+import { Route as AutomationRouteImport } from './routes/automation'
 import { Route as AutoSelectRouteImport } from './routes/auto-select'
 import { Route as AutoReplyRouteImport } from './routes/auto-reply'
 import { Route as AutoGameflowRouteImport } from './routes/auto-gameflow'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ToolsRoute = ToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatisticsRoute = StatisticsRouteImport.update({
   id: '/statistics',
   path: '/statistics',
@@ -36,6 +45,21 @@ const SavedPlayersRoute = SavedPlayersRouteImport.update({
 const OngoingGameRoute = OngoingGameRouteImport.update({
   id: '/ongoing-game',
   path: '/ongoing-game',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GameRoute = GameRouteImport.update({
+  id: '/game',
+  path: '/game',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AutomationRoute = AutomationRouteImport.update({
+  id: '/automation',
+  path: '/automation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AutoSelectRoute = AutoSelectRouteImport.update({
@@ -64,20 +88,28 @@ export interface FileRoutesByFullPath {
   '/auto-gameflow': typeof AutoGameflowRoute
   '/auto-reply': typeof AutoReplyRoute
   '/auto-select': typeof AutoSelectRoute
+  '/automation': typeof AutomationRoute
+  '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
   '/ongoing-game': typeof OngoingGameRoute
   '/saved-players': typeof SavedPlayersRoute
   '/settings': typeof SettingsRoute
   '/statistics': typeof StatisticsRoute
+  '/tools': typeof ToolsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auto-gameflow': typeof AutoGameflowRoute
   '/auto-reply': typeof AutoReplyRoute
   '/auto-select': typeof AutoSelectRoute
+  '/automation': typeof AutomationRoute
+  '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
   '/ongoing-game': typeof OngoingGameRoute
   '/saved-players': typeof SavedPlayersRoute
   '/settings': typeof SettingsRoute
   '/statistics': typeof StatisticsRoute
+  '/tools': typeof ToolsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,10 +117,14 @@ export interface FileRoutesById {
   '/auto-gameflow': typeof AutoGameflowRoute
   '/auto-reply': typeof AutoReplyRoute
   '/auto-select': typeof AutoSelectRoute
+  '/automation': typeof AutomationRoute
+  '/game': typeof GameRoute
+  '/history': typeof HistoryRoute
   '/ongoing-game': typeof OngoingGameRoute
   '/saved-players': typeof SavedPlayersRoute
   '/settings': typeof SettingsRoute
   '/statistics': typeof StatisticsRoute
+  '/tools': typeof ToolsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,30 +133,42 @@ export interface FileRouteTypes {
     | '/auto-gameflow'
     | '/auto-reply'
     | '/auto-select'
+    | '/automation'
+    | '/game'
+    | '/history'
     | '/ongoing-game'
     | '/saved-players'
     | '/settings'
     | '/statistics'
+    | '/tools'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auto-gameflow'
     | '/auto-reply'
     | '/auto-select'
+    | '/automation'
+    | '/game'
+    | '/history'
     | '/ongoing-game'
     | '/saved-players'
     | '/settings'
     | '/statistics'
+    | '/tools'
   id:
     | '__root__'
     | '/'
     | '/auto-gameflow'
     | '/auto-reply'
     | '/auto-select'
+    | '/automation'
+    | '/game'
+    | '/history'
     | '/ongoing-game'
     | '/saved-players'
     | '/settings'
     | '/statistics'
+    | '/tools'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -128,14 +176,25 @@ export interface RootRouteChildren {
   AutoGameflowRoute: typeof AutoGameflowRoute
   AutoReplyRoute: typeof AutoReplyRoute
   AutoSelectRoute: typeof AutoSelectRoute
+  AutomationRoute: typeof AutomationRoute
+  GameRoute: typeof GameRoute
+  HistoryRoute: typeof HistoryRoute
   OngoingGameRoute: typeof OngoingGameRoute
   SavedPlayersRoute: typeof SavedPlayersRoute
   SettingsRoute: typeof SettingsRoute
   StatisticsRoute: typeof StatisticsRoute
+  ToolsRoute: typeof ToolsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tools': {
+      id: '/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof ToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/statistics': {
       id: '/statistics'
       path: '/statistics'
@@ -162,6 +221,27 @@ declare module '@tanstack/react-router' {
       path: '/ongoing-game'
       fullPath: '/ongoing-game'
       preLoaderRoute: typeof OngoingGameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/game': {
+      id: '/game'
+      path: '/game'
+      fullPath: '/game'
+      preLoaderRoute: typeof GameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/automation': {
+      id: '/automation'
+      path: '/automation'
+      fullPath: '/automation'
+      preLoaderRoute: typeof AutomationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auto-select': {
@@ -200,10 +280,14 @@ const rootRouteChildren: RootRouteChildren = {
   AutoGameflowRoute: AutoGameflowRoute,
   AutoReplyRoute: AutoReplyRoute,
   AutoSelectRoute: AutoSelectRoute,
+  AutomationRoute: AutomationRoute,
+  GameRoute: GameRoute,
+  HistoryRoute: HistoryRoute,
   OngoingGameRoute: OngoingGameRoute,
   SavedPlayersRoute: SavedPlayersRoute,
   SettingsRoute: SettingsRoute,
   StatisticsRoute: StatisticsRoute,
+  ToolsRoute: ToolsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
