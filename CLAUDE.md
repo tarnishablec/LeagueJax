@@ -84,8 +84,12 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 
 ## Component Styles
 
-- Use **CVA** (`class-variance-authority`) to manage component variant styles. Define a `cva()` call per component and compose with `cn()`.
-- Define all colors with **`oklch()`** syntax — no hex codes, no `rgba()`. Use Tailwind arbitrary values: `bg-[oklch(0.47_0.2_26)]`, `dark:hover:bg-[oklch(1_0_0/0.2)]`, etc.
+- **Styling engine:** [Vanilla Extract](https://vanilla-extract.style/) — all styles live in co-located `.css.ts` files (e.g. `Component.css.ts` next to `Component.tsx`).
+- **Variants:** Use `recipe()` from `@vanilla-extract/recipes` for component variants. Use `styleVariants()` for simple enumerated variants.
+- **Theme tokens:** Defined in `src/styles/theme.css.ts` via `createGlobalThemeContract` / `createGlobalTheme`. Access with `vars.color.*`.
+- **Dynamic values:** Use `assignInlineVars()` from `@vanilla-extract/dynamic` for runtime-dependent CSS values; avoid inline `style` for anything expressible statically.
+- Define all colors with **`oklch()`** syntax — no hex codes, no `rgba()`.
+- **No Tailwind, no utility classes.** All styling must go through Vanilla Extract `.css.ts` files.
 
 ## Linting
 

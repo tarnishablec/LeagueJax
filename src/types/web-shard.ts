@@ -5,16 +5,16 @@ import type { ShardId } from "./shard-id";
 export type NavSection = "main" | "bottom";
 
 export interface NavItem {
-	to: string;
-	labelKey: string;
-	icon: LucideIcon;
-	section?: NavSection;
-	order?: number;
+  to: string;
+  labelKey: string;
+  icon: LucideIcon;
+  section?: NavSection;
+  order?: number;
 }
 
 export interface ToolbarItem {
-	node: React.ReactElement;
-	order?: number;
+  node: React.ReactElement;
+  order?: number;
 }
 
 /**
@@ -22,9 +22,9 @@ export interface ToolbarItem {
  * Each UI-contributing shard implements this and registers itself in the registry.
  */
 export interface WebShard {
-	id(): ShardId;
+  id(): ShardId;
 
-	navItems?(): NavItem[];
+  navItems?(): NavItem[];
 
-	toolbarItems?(): ToolbarItem[];
+  toolbarItems?(): ToolbarItem[];
 }
