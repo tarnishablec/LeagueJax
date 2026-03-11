@@ -1,12 +1,18 @@
-import { createVar, style } from "@vanilla-extract/css";
+import { createVar, type StyleRule, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "../styles/theme.css";
 
 /* ── Layout shell ── */
 
 export const sidebarWidth = createVar();
+export const iconCol = createVar();
+export const navPad = createVar();
 
 export const shell = style({
+  vars: {
+    [iconCol]: "2.5rem",
+    [navPad]: "4px",
+  },
   display: "grid",
   height: "100vh",
   gridTemplateRows: "3rem 1fr",
@@ -66,7 +72,7 @@ export const sidebar = style({
 export const navList = style({
   overflowY: "auto",
   paddingBlock: 12,
-  paddingInline: 4,
+  paddingInline: navPad,
   display: "grid",
   gridAutoFlow: "row",
   alignContent: "start",
@@ -75,7 +81,7 @@ export const navList = style({
 
 /* ── Nav items ── */
 
-const navBase = {
+const navBase: StyleRule = {
   display: "grid",
   placeItems: "center",
   borderRadius: 6,
@@ -91,6 +97,7 @@ const navBase = {
 export const navItem = recipe({
   base: {
     ...navBase,
+    gridTemplateColumns: `${iconCol} minmax(0, 1fr)`,
     selectors: {
       "&:hover": {
         background: vars.color.accent,
@@ -100,17 +107,8 @@ export const navItem = recipe({
   },
   variants: {
     collapsed: {
-      false: {
-        gridTemplateColumns: "2.5rem 1fr",
-        gap: 20,
-        justifyContent: "start",
-      },
-      true: {
-        gridTemplateColumns: "1fr 0",
-        gap: 0,
-        justifyItems: "start",
-        justifyContent: "start",
-      },
+      false: {},
+      true: {},
     },
     active: {
       false: {},

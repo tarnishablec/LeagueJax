@@ -37,7 +37,9 @@ function RootLayout() {
     <div
       className={s.shell}
       style={assignInlineVars({
-        [s.sidebarWidth]: collapsed ? "3rem 1fr" : "12rem 1fr",
+        [s.sidebarWidth]: collapsed
+          ? `calc(${s.iconCol} + ${s.navPad} * 2) 1fr`
+          : "12rem 1fr",
       })}
     >
       {/* ── Sidebar logo / collapse toggle ── */}
@@ -74,6 +76,7 @@ function RootLayout() {
               key={to}
               to={to}
               className={s.navItem({ collapsed })}
+              draggable={false}
               activeProps={{
                 className: s.navItem({ collapsed, active: true }),
               }}
@@ -87,6 +90,7 @@ function RootLayout() {
         {/* ── Sidebar bottom ── */}
         <div className={s.navList}>
           <div
+            draggable={false}
             className={s.navItem({ collapsed })}
             style={{ cursor: "pointer" }}
           >
@@ -119,6 +123,7 @@ function RootLayout() {
               key={to}
               to={to}
               className={s.navItem({ collapsed })}
+              draggable={false}
               activeProps={{
                 className: s.navItem({ collapsed, active: true }),
               }}
