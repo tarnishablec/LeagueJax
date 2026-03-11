@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git Policy
+
+- **Do NOT run any git commands** (commit, push, branch, etc.) unless the user explicitly asks.
+
+## Design Reference
+
+This project takes [League Akari](https://github.com/Hanxven/LeagueAkari) as its design reference. When building UI:
+
+- Follow Akari's visual language: flat, clean, icon-driven sidebar navigation with a compact desktop-app feel.
+- Color palette: dark navy backgrounds, warm amber-gold accents (Jax's signature color).
+- Prefer subtle hover/active states over bold visual noise.
+- Keep the UI dense and information-rich — this is a power-user desktop tool, not a marketing page.
+
 ## Commands
 
 ### Development
