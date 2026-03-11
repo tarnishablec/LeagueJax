@@ -5,5 +5,5 @@ export type ShardId = string & { readonly [__shardId]: never };
 
 /** Wrap a UUID string literal into a typed ShardId */
 export function shardId(uuid: string): ShardId {
-	return uuid as ShardId;
+  return uuid as ShardId;
 }

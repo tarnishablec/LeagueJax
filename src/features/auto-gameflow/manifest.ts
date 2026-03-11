@@ -3,14 +3,14 @@ import type { WebShard } from "@/types/web-shard.ts";
 import { SHARD_IDS } from "../shard-ids";
 
 export const autoGameflowShard: WebShard = {
-	id: () => SHARD_IDS.AUTO_GAMEFLOW,
-	navItems: () => [
-		{
-			to: "/auto-gameflow",
-			labelKey: "nav.autoGameflow",
-			icon: Workflow,
-			section: "main",
-			order: 30,
-		},
-	],
+  id: () => SHARD_IDS.AUTO_GAMEFLOW,
+  navItems: () => [
+    {
+      to: "/auto-gameflow",
+      labelKey: "nav.autoGameflow",
+      icon: Workflow,
+      section: "main",
+      order: 30,
+    },
+  ],
 };

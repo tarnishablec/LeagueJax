@@ -1,17 +1,17 @@
 {
-	"common": {
-		"connected": "Connected",
-		"disconnected": "Disconnected",
-		"enabled": "Enabled",
-		"disabled": "Disabled",
-		"save": "Save",
-		"cancel": "Cancel"
-	},
-	"nav": {
-		"history": "History",
-		"game": "Game",
-		"automation": "Automation",
-		"tools": "Tools",
-		"settings": "Settings"
-	}
+  "common": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "nav": {
+    "history": "History",
+    "game": "Game",
+    "automation": "Automation",
+    "tools": "Tools",
+    "settings": "Settings"
+  }
 }

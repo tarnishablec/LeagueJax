@@ -7,14 +7,12 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": [
-      "**",
-      "!src/routeTree.gen.ts"
-    ]
+    "includes": ["**", "vite.config.ts", "!src/routeTree.gen.ts"]
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "tab"
+    "indentStyle": "space",
+    "lineEnding": "lf"
   },
   "linter": {
     "enabled": true,
@@ -24,7 +22,8 @@
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double"
+      "quoteStyle": "double",
+      "bracketSpacing": true
     }
   },
   "css": {

@@ -1,17 +1,17 @@
 {
-	"common": {
-		"connected": "已连接",
-		"disconnected": "未连接",
-		"enabled": "已启用",
-		"disabled": "已禁用",
-		"save": "保存",
-		"cancel": "取消"
-	},
-	"nav": {
-		"history": "战绩",
-		"game": "对局",
-		"automation": "自动操作",
-		"tools": "工具集",
-		"settings": "设置"
-	}
+  "common": {
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "save": "保存",
+    "cancel": "取消"
+  },
+  "nav": {
+    "history": "战绩",
+    "game": "对局",
+    "automation": "自动操作",
+    "tools": "工具集",
+    "settings": "设置"
+  }
 }

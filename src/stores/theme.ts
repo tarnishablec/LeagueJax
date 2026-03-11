@@ -4,16 +4,16 @@ import { persist } from "zustand/middleware";
 export type Theme = "light" | "dark" | "system";
 
 interface ThemeState {
-	theme: Theme;
-	setTheme: (theme: Theme) => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 export const useThemeStore = create<ThemeState>()(
-	persist(
-		(set) => ({
-			theme: "system",
-			setTheme: (theme) => set({ theme }),
-		}),
-		{ name: "league-jax-theme" },
-	),
+  persist(
+    (set) => ({
+      theme: "system",
+      setTheme: (theme) => set({ theme }),
+    }),
+    { name: "league-jax-theme" },
+  ),
 );

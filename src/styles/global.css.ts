@@ -1,0 +1,45 @@
+import { globalStyle } from "@vanilla-extract/css";
+import { vars } from "./theme.css";
+
+/* ── Root & body — transparent for Mica vibrancy ── */
+
+globalStyle(":root", {
+  fontFamily: "Inter, Avenir, Helvetica, Arial, sans-serif",
+  fontSize: 16,
+  lineHeight: 1.5,
+  fontWeight: 400,
+  fontSynthesis: "none",
+  textRendering: "optimizeLegibility",
+  WebkitFontSmoothing: "antialiased",
+  WebkitTextSizeAdjust: "100%",
+  color: vars.color.foreground,
+  background: vars.color.background,
+});
+
+globalStyle(":root.dark", {
+  background: "transparent",
+});
+
+globalStyle("body, #root", {
+  margin: 0,
+  background: "transparent",
+});
+
+/* ── Reset — minimal, just what the app needs ── */
+
+globalStyle("*, *::before, *::after", {
+  boxSizing: "border-box",
+});
+
+globalStyle("button", {
+  cursor: "pointer",
+  border: "none",
+  background: "none",
+  padding: 0,
+  font: "inherit",
+  color: "inherit",
+});
+
+globalStyle("*", {
+  userSelect: "none",
+});

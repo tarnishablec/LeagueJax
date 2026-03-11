@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { pageTitle } from "../styles/shared.css";
 
 function Dashboard() {
-	return <div className="text-xl font-semibold">Dashboard</div>;
+  return <div className={pageTitle}>Dashboard</div>;
 }
 
 export const Route = createFileRoute("/")({ component: Dashboard });
