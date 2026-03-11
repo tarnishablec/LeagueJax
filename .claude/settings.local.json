@@ -28,7 +28,21 @@
       "Bash(D:/Desktop/Web/LeagueJax/src/i18n/locales/zh-CN.json:*)",
       "Bash(node:*)",
       "Bash(bun remove:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(xargs ls:*)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:lcu.kebs.dev)",
+      "WebFetch(domain:lcu.vivide.re)",
+      "Bash(powershell:*)",
+      "Bash(powershell.exe:*)",
+      "Read(//d/wegameapps/**)",
+      "Bash(xxd:*)",
+      "Read(//d/Riot Games/Riot Client/**)",
+      "Read(//d/Riot Games/**)",
+      "Read(//c/Users/tarni/AppData/**)",
+      "Bash(grep:*)",
+      "Bash(python3:*)"
     ]
   }
 }

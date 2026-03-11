@@ -5,7 +5,7 @@
   "identifier": "com.tarnishablec.league-jax",
   "build": {
     "beforeDevCommand": "bun run dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:31420",
     "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
   },

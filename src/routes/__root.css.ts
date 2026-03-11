@@ -163,6 +163,25 @@ export const navLabel = recipe({
   },
 });
 
+/* ── Status dot ── */
+
+export const statusDot = recipe({
+  base: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    justifySelf: "center",
+    flexShrink: 0,
+  },
+  variants: {
+    connected: {
+      true: { background: "oklch(0.73 0.18 142)" },
+      false: { background: "oklch(0.55 0 0)" },
+    },
+  },
+  defaultVariants: { connected: false },
+});
+
 /* ── Main content ── */
 
 export const main = style({

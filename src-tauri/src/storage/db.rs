@@ -9,7 +9,7 @@ pub struct SqliteDb {
 }
 
 impl SqliteDb {
-    /// Open (or create) database and run migrations.
+    /// Open (or create) a database and run migrations.
     pub fn open(path: &std::path::Path) -> Result<Self> {
         let conn = Connection::open(path)?;
 
@@ -24,7 +24,7 @@ impl SqliteDb {
     }
 
     fn migrate(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().unwrap_or_else(|e| e.into_inner());
 
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
@@ -52,6 +52,19 @@ impl SqliteDb {
             )?;
         }
 
+        if version < 2 {
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS search_history (
+                    puuid TEXT PRIMARY KEY,
+                    game_name TEXT NOT NULL,
+                    tag_line TEXT NOT NULL,
+                    region TEXT NOT NULL DEFAULT '',
+                    last_searched INTEGER NOT NULL
+                );
+                PRAGMA user_version = 2;",
+            )?;
+        }
+
         Ok(())
     }
 
@@ -61,13 +74,9 @@ impl SqliteDb {
         sql: &str,
         params: &[&dyn rusqlite::ToSql],
     ) -> Result<Vec<serde_json::Value>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().unwrap_or_else(|e| e.into_inner());
         let mut stmt = conn.prepare(sql)?;
-        let col_names: Vec<String> = stmt
-            .column_names()
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        let col_names: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
 
         let rows = stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
             let mut map = serde_json::Map::new();
@@ -83,7 +92,7 @@ impl SqliteDb {
     }
 
     pub fn execute(&self, sql: &str, params: &[&dyn rusqlite::ToSql]) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().unwrap_or_else(|e| e.into_inner());
         Ok(conn.execute(sql, rusqlite::params_from_iter(params.iter()))?)
     }
 }
@@ -94,8 +103,8 @@ fn rusqlite_to_json(val: rusqlite::types::Value) -> serde_json::Value {
         rusqlite::types::Value::Integer(i) => serde_json::Value::Number(i.into()),
         rusqlite::types::Value::Real(f) => serde_json::json!(f),
         rusqlite::types::Value::Text(s) => serde_json::Value::String(s),
-        rusqlite::types::Value::Blob(b) => serde_json::Value::String(
-            base64::engine::general_purpose::STANDARD.encode(b),
-        ),
+        rusqlite::types::Value::Blob(b) => {
+            serde_json::Value::String(base64::engine::general_purpose::STANDARD.encode(b))
+        }
     }
 }

@@ -1,13 +1,8 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import {
-  Link as LinkIcon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Unplug,
-} from "lucide-react";
-import React, { useState } from "react";
+import { Link2, PanelLeftClose, PanelLeftOpen, Unplug } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { JaxLogo } from "../components/JaxLogo";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -16,6 +11,7 @@ import { getNavItems } from "../features/registry";
 import { useLcuEvents } from "../hooks/use-lcu-events";
 import { useTheme } from "../hooks/use-theme";
 import { useLcuStore } from "../stores/lcu";
+
 import * as s from "./__root.css";
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
@@ -25,7 +21,8 @@ const bottomNavItems = getNavItems("bottom");
 
 function RootLayout() {
   const { t } = useTranslation();
-  const connected = useLcuStore((s) => s.connected);
+  const connected = useLcuStore((st) => st.connected);
+  const summoner = useLcuStore((st) => st.summoner);
   const [collapsed, setCollapsed] = useState(false);
 
   useLcuEvents();
@@ -89,35 +86,32 @@ function RootLayout() {
 
         {/* ── Sidebar bottom ── */}
         <div className={s.navList}>
-          <div
-            draggable={false}
-            className={s.navItem({ collapsed })}
-            style={{ cursor: "pointer" }}
-          >
-            {connected ? (
-              <React.Fragment>
-                <LinkIcon
-                  size={iconSize}
-                  aria-hidden="true"
-                  className={s.navIcon}
-                />
-                <span className={s.navLabel({ collapsed })}>
-                  {t("common.connected")}
-                </span>
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                <Unplug
-                  size={iconSize}
-                  aria-hidden="true"
-                  className={s.navIcon}
-                />
-                <span className={s.navLabel({ collapsed })}>
-                  {t("common.disconnected")}
-                </span>
-              </React.Fragment>
-            )}
-          </div>
+          {connected && summoner ? (
+            <Link
+              to="/history"
+              className={s.navItem({ collapsed })}
+              draggable={false}
+              activeProps={{
+                className: s.navItem({ collapsed, active: true }),
+              }}
+            >
+              <Link2 size={iconSize} aria-hidden="true" className={s.navIcon} />
+              <span className={s.navLabel({ collapsed })}>
+                {summoner.gameName}#{summoner.tagLine}
+              </span>
+            </Link>
+          ) : (
+            <div className={s.navItem({ collapsed })}>
+              <Unplug
+                size={iconSize}
+                aria-hidden="true"
+                className={s.navIcon}
+              />
+              <span className={s.navLabel({ collapsed })}>
+                {t("common.disconnected")}
+              </span>
+            </div>
+          )}
           {bottomNavItems.map(({ to, labelKey, icon: Icon }) => (
             <Link
               key={to}

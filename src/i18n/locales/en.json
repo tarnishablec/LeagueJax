@@ -5,7 +5,8 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "loading": "Loading..."
   },
   "nav": {
     "history": "History",
@@ -13,5 +14,14 @@
     "automation": "Automation",
     "tools": "Tools",
     "settings": "Settings"
+  },
+  "history": {
+    "searchPlaceholder": "Enter Name#TAG to search",
+    "search": "Search",
+    "victory": "Victory",
+    "defeat": "Defeat",
+    "blueTeam": "Blue Team",
+    "redTeam": "Red Team",
+    "noMatches": "No matches found"
   }
 }

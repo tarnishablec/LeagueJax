@@ -5,7 +5,8 @@
     "enabled": "已启用",
     "disabled": "已禁用",
     "save": "保存",
-    "cancel": "取消"
+    "cancel": "取消",
+    "loading": "加载中..."
   },
   "nav": {
     "history": "战绩",
@@ -13,5 +14,14 @@
     "automation": "自动操作",
     "tools": "工具集",
     "settings": "设置"
+  },
+  "history": {
+    "searchPlaceholder": "输入 名字#TAG 搜索",
+    "search": "搜索",
+    "victory": "胜利",
+    "defeat": "失败",
+    "blueTeam": "蓝色方",
+    "redTeam": "红色方",
+    "noMatches": "暂无对局记录"
   }
 }
