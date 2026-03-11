@@ -42,7 +42,10 @@
       "Read(//d/Riot Games/**)",
       "Read(//c/Users/tarni/AppData/**)",
       "Bash(grep:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }

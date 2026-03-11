@@ -8,20 +8,30 @@ export interface CurrentSummoner {
   summonerLevel: number;
 }
 
+export type LcuConnectionState =
+  | { state: "detecting" }
+  | { state: "connecting"; data: { port: number } }
+  | { state: "connected"; data: { port: number } }
+  | { state: "reconnecting"; data: { port: number } };
+
 interface LcuState {
-  connected: boolean;
-  port: number | null;
+  connection: LcuConnectionState;
   summoner: CurrentSummoner | null;
-  setConnected: (port: number) => void;
-  setDisconnected: () => void;
-  setSummoner: (summoner: CurrentSummoner) => void;
+  setConnection: (connection: LcuConnectionState) => void;
+  setSummoner: (summoner: CurrentSummoner | null) => void;
 }
 
 export const useLcuStore = create<LcuState>((set) => ({
-  connected: false,
-  port: null,
+  connection: { state: "detecting" },
   summoner: null,
-  setConnected: (port) => set({ connected: true, port }),
-  setDisconnected: () => set({ connected: false, port: null, summoner: null }),
+  setConnection: (connection) => set({ connection }),
   setSummoner: (summoner) => set({ summoner }),
 }));
+
+/** Selector: true when state is "connected" */
+export const selectIsConnected = (st: LcuState) =>
+  st.connection.state === "connected";
+
+/** Selector: LCU port if available, otherwise null */
+export const selectPort = (st: LcuState) =>
+  "data" in st.connection ? st.connection.data.port : null;

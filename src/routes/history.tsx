@@ -7,13 +7,13 @@ import { SearchBar } from "../features/history/components/SearchBar";
 import { useMatchHistory } from "../features/history/hooks/use-match-history";
 import { useSearchSummoner } from "../features/history/hooks/use-summoner";
 import type { SummonerInfo } from "../features/history/types";
-import { useLcuStore } from "../stores/lcu";
+import { selectIsConnected, useLcuStore } from "../stores/lcu";
 import * as s from "./history.css";
 
 function History() {
   const { t } = useTranslation();
   const currentSummoner = useLcuStore((st) => st.summoner);
-  const connected = useLcuStore((st) => st.connected);
+  const connected = useLcuStore(selectIsConnected);
 
   const [searchTarget, setSearchTarget] = useState<{
     gameName: string;

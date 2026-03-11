@@ -69,6 +69,7 @@ impl SqliteDb {
     }
 
     /// Generic query returning rows as JSON values
+    #[allow(dead_code)]
     pub fn query_raw(
         &self,
         sql: &str,
@@ -97,6 +98,7 @@ impl SqliteDb {
     }
 }
 
+#[allow(dead_code)]
 fn rusqlite_to_json(val: rusqlite::types::Value) -> serde_json::Value {
     match val {
         rusqlite::types::Value::Null => serde_json::Value::Null,

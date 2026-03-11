@@ -12,7 +12,6 @@ pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000009");
 
 pub struct UpdaterShard;
 
-#[allow(clippy::new_without_default)]
 impl UpdaterShard {
     pub fn new() -> Self {
         Self

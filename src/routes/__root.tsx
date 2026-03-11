@@ -10,7 +10,7 @@ import { TitleBar } from "../components/TitleBar";
 import { getNavItems } from "../features/registry";
 import { useLcuEvents } from "../hooks/use-lcu-events";
 import { useTheme } from "../hooks/use-theme";
-import { useLcuStore } from "../stores/lcu";
+import { selectIsConnected, useLcuStore } from "../stores/lcu";
 
 import * as s from "./__root.css";
 
@@ -21,7 +21,7 @@ const bottomNavItems = getNavItems("bottom");
 
 function RootLayout() {
   const { t } = useTranslation();
-  const connected = useLcuStore((st) => st.connected);
+  const connected = useLcuStore(selectIsConnected);
   const summoner = useLcuStore((st) => st.summoner);
   const [collapsed, setCollapsed] = useState(false);
 

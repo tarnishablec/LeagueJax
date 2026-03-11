@@ -12,7 +12,6 @@ pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000008");
 
 pub struct TrayShard;
 
-#[allow(clippy::new_without_default)]
 impl TrayShard {
     pub fn new() -> Self {
         Self
