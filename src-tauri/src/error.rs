@@ -18,6 +18,9 @@ pub enum AppError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
+    #[error("Mutex poisoned")]
+    MutexPoisoned,
+
     #[error("{0}")]
     Other(String),
 }

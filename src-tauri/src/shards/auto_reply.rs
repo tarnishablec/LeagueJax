@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tauri::AppHandle;
 use uuid::{uuid, Uuid};
 
 use crate::error::Result;
-use crate::state::AppState;
+use crate::jax::Jax;
 
 use super::Shard;
 
@@ -30,7 +29,7 @@ impl Shard for AutoReplyShard {
         "Auto Reply"
     }
 
-    async fn setup(&self, _app: &AppHandle, _state: Arc<AppState>) -> Result<()> {
+    async fn setup(&self, _jax: Arc<Jax>) -> Result<()> {
         tracing::info!("[{}] setup", self.label());
         Ok(())
     }
