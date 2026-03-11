@@ -9,6 +9,7 @@ const host = process.env.TAURI_DEV_HOST;
 
 const dirname = fileURLToPath(new URL(".", import.meta.url));
 
+const port = 31420;
 export default defineConfig(async () => ({
   plugins: [
     tanstackRouter({
@@ -27,10 +28,10 @@ export default defineConfig(async () => ({
   },
   clearScreen: false,
   server: {
-    port: 31420,
+    port,
     strictPort: true,
     host: host || false,
-    hmr: host ? { protocol: "ws", host, port: 31421 } : undefined,
+    hmr: host ? { protocol: "ws", host, port: port + 1 } : undefined,
     watch: { ignored: ["**/src-tauri/**"] },
   },
 }));

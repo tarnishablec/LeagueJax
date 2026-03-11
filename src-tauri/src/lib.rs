@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_imports)]
-
 mod commands;
 mod error;
 mod jax;
@@ -10,12 +8,18 @@ mod storage;
 use std::sync::Arc;
 
 use tauri::Manager;
+
 #[cfg(target_os = "windows")]
 use window_vibrancy::{apply_acrylic, apply_mica};
+
+#[cfg(target_os = "macos")]
+use window_vibrancy::apply_acrylic;
 
 use crate::commands::history::{
     get_current_summoner, get_match_detail, get_match_history, save_search_history, search_summoner,
 };
+use crate::lcu::LcuAuth;
+use crate::shards::lcu::LcuShard;
 use jax::{Jax, ShardInfo};
 use storage::SqliteDb;
 // ─── Commands ─────────────────────────────────────────────────────────────────
@@ -23,6 +27,12 @@ use storage::SqliteDb;
 #[tauri::command]
 fn get_shards(jax: tauri::State<Arc<Jax>>) -> Vec<ShardInfo> {
     jax.shard_info()
+}
+
+#[tauri::command]
+fn lcu_switch_to(port: u16, token: String, jax: tauri::State<Arc<Jax>>) {
+    let auth = LcuAuth::new(port, token);
+    jax.get_shard::<LcuShard>().switch_to(auth);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -39,6 +49,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             get_shards,
+            lcu_switch_to,
             get_current_summoner,
             search_summoner,
             get_match_history,
@@ -48,12 +59,18 @@ pub fn run() {
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
+            let win = app.get_webview_window("main").expect("no main window");
+
             #[cfg(target_os = "windows")]
             {
-                let win = app.get_webview_window("main").expect("no main window");
                 if apply_mica(&win, None).is_err() {
                     let _ = apply_acrylic(&win, Some((18, 18, 28, 160)));
                 }
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                let _ = apply_acrylic(&win, Some((18, 18, 28, 160)));
             }
 
             let data_dir = app.path().app_data_dir().expect("no app data dir");

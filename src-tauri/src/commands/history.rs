@@ -150,7 +150,7 @@ fn parse_participant(p: &Value) -> Participant {
 pub async fn get_current_summoner(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerInfo> {
-    let lcu = jax.get_shard::<LcuShard>().client().await.ok_or(AppError::LcuNotConnected)?;
+    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
     let resp = lcu.get("/lol-summoner/v1/current-summoner").await?;
     parse_summoner(&resp)
 }
@@ -161,7 +161,7 @@ pub async fn search_summoner(
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerInfo> {
-    let lcu = jax.get_shard::<LcuShard>().client().await.ok_or(AppError::LcuNotConnected)?;
+    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
 
     let encoded_name = urlencoding::encode(&game_name);
     let encoded_tag = urlencoding::encode(&tag_line);
@@ -195,7 +195,7 @@ pub async fn get_match_history(
     end_index: u32,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<MatchSummary>> {
-    let lcu = jax.get_shard::<LcuShard>().client().await.ok_or(AppError::LcuNotConnected)?;
+    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
     let path = format!(
         "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex={begin_index}&endIndex={end_index}"
     );
@@ -219,7 +219,7 @@ pub async fn get_match_detail(
     game_id: u64,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<MatchDetail> {
-    let lcu = jax.get_shard::<LcuShard>().client().await.ok_or(AppError::LcuNotConnected)?;
+    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
     let path = format!("/lol-match-history/v1/games/{game_id}");
     let resp = lcu.get(&path).await?;
 

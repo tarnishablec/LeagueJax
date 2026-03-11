@@ -6,7 +6,7 @@ use tauri::AppHandle;
 use uuid::Uuid;
 
 use crate::shards::Shard;
-use crate::storage::{SqliteDb, StoreManager};
+use crate::storage::{SqliteDb};
 
 /// Core application context.
 ///
@@ -15,7 +15,6 @@ use crate::storage::{SqliteDb, StoreManager};
 pub struct Jax {
     app: AppHandle,
     pub db: Arc<SqliteDb>,
-    pub store: Arc<StoreManager>,
     shards: Vec<Arc<dyn Shard>>,
     typed: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
 }
@@ -25,7 +24,6 @@ impl Jax {
         Self {
             app: app.clone(),
             db: Arc::new(db),
-            store: Arc::new(StoreManager::new(app.clone())),
             shards: Vec::new(),
             typed: HashMap::new(),
         }

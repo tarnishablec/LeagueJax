@@ -104,6 +104,10 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 - Define all colors with **`oklch()`** syntax — no hex codes, no `rgba()`.
 - **No Tailwind, no utility classes.** All styling must go through Vanilla Extract `.css.ts` files.
 
+## Rust Code Style
+
+- **Never use `.unwrap()` or `.expect()`** — use `?`, `.unwrap_or()`, `.unwrap_or_default()`, `.unwrap_or_else()`, or proper error handling instead。
+
 ## Linting
 
 - **Frontend:** [Biome](https://biomejs.dev/) — replaces ESLint + Prettier. Config in `biome.json`. Run `bunx biome check --write src/` to auto-fix. CI uses `bunx biome check src/` (no `--write`).

@@ -12,7 +12,6 @@ pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000007");
 
 pub struct KeyboardShard;
 
-#[allow(clippy::new_without_default)]
 impl KeyboardShard {
     pub fn new() -> Self {
         Self

@@ -37,6 +37,7 @@ thiserror = "2.0.18"
 urlencoding = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+statig = "0.4.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }

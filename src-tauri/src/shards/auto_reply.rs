@@ -12,7 +12,6 @@ pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000003");
 
 pub struct AutoReplyShard;
 
-#[allow(clippy::new_without_default)]
 impl AutoReplyShard {
     pub fn new() -> Self {
         Self
