@@ -1,8 +1,8 @@
 use ntapi::ntpsapi::NtQueryInformationProcess;
 use std::ptr;
-use tauri::command;
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, LocalFree, HANDLE, NTSTATUS};
 use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+use windows_sys::Win32::UI::Shell::CommandLineToArgvW;
 
 const PROCESS_COMMAND_LINE_INFORMATION: u32 = 60;
 const STATUS_SUCCESS: NTSTATUS = 0;
@@ -16,7 +16,6 @@ struct UNICODE_STRING {
     buffer: *mut u16,
 }
 
-#[command]
 pub fn get_process_cmdline(pid: u32) -> Result<String, String> {
     unsafe {
         let handle: HANDLE = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
@@ -63,8 +62,6 @@ pub fn get_process_cmdline(pid: u32) -> Result<String, String> {
         Ok(String::from_utf16_lossy(slice))
     }
 }
-
-use windows_sys::Win32::UI::Shell::CommandLineToArgvW;
 
 pub fn parse_cmdline_to_args(full_cmd: &str) -> Vec<String> {
     if full_cmd.is_empty() {
