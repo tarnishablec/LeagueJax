@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Git Policy
 
 - **Do NOT run any git commands** (commit, push, branch, etc.) unless the user explicitly asks.
+- **Subagents are also forbidden from running git commands** — this rule applies to all agents, not just the top-level conversation.
 
 ## Design Reference
 
@@ -107,6 +108,7 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 ## Rust Code Style
 
 - **Never use `.unwrap()` or `.expect()`** — use `?`, `.unwrap_or()`, `.unwrap_or_default()`, `.unwrap_or_else()`, or proper error handling instead。
+- **Never use `#[allow(dead_code)]`** — leave dead_code warnings for the user to handle. Do not add `allow` attributes or delete unused code to fix these warnings.
 
 ## Linting
 
