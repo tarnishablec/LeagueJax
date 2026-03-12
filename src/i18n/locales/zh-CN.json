@@ -6,7 +6,8 @@
     "disabled": "已禁用",
     "save": "保存",
     "cancel": "取消",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "noClients": "无可用客户端"
   },
   "nav": {
     "history": "战绩",

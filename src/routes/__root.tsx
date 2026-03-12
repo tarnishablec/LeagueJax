@@ -1,16 +1,16 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import { Link2, PanelLeftClose, PanelLeftOpen, Unplug } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ClientStatus } from "../components/ClientStatus";
 import { JaxLogo } from "../components/JaxLogo";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { TitleBar } from "../components/TitleBar";
 import { getNavItems } from "../features/registry";
 import { useLcuEvents } from "../hooks/use-lcu-events";
 import { useTheme } from "../hooks/use-theme";
-import { selectIsConnected, useLcuStore } from "../stores/lcu";
 
 import * as s from "./__root.css";
 
@@ -21,8 +21,6 @@ const bottomNavItems = getNavItems("bottom");
 
 function RootLayout() {
   const { t } = useTranslation();
-  const connected = useLcuStore(selectIsConnected);
-  const summoner = useLcuStore((st) => st.summoner);
   const [collapsed, setCollapsed] = useState(false);
 
   useLcuEvents();
@@ -86,32 +84,7 @@ function RootLayout() {
 
         {/* ── Sidebar bottom ── */}
         <div className={s.navList}>
-          {connected && summoner ? (
-            <Link
-              to="/history"
-              className={s.navItem({ collapsed })}
-              draggable={false}
-              activeProps={{
-                className: s.navItem({ collapsed, active: true }),
-              }}
-            >
-              <Link2 size={iconSize} aria-hidden="true" className={s.navIcon} />
-              <span className={s.navLabel({ collapsed })}>
-                {summoner.gameName}#{summoner.tagLine}
-              </span>
-            </Link>
-          ) : (
-            <div className={s.navItem({ collapsed })}>
-              <Unplug
-                size={iconSize}
-                aria-hidden="true"
-                className={s.navIcon}
-              />
-              <span className={s.navLabel({ collapsed })}>
-                {t("common.disconnected")}
-              </span>
-            </div>
-          )}
+          <ClientStatus collapsed={collapsed} iconSize={iconSize} />
           {bottomNavItems.map(({ to, labelKey, icon: Icon }) => (
             <Link
               key={to}
