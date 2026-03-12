@@ -18,6 +18,7 @@ use window_vibrancy::apply_acrylic;
 use crate::commands::history::{
     get_current_summoner, get_match_detail, get_match_history, save_search_history, search_summoner,
 };
+use crate::commands::lcu::get_profile_icon;
 use crate::shards::lcu::LcuShard;
 use jax::{Jax, ShardInfo};
 use storage::SqliteDb;
@@ -53,6 +54,7 @@ pub fn run() {
             get_match_history,
             get_match_detail,
             save_search_history,
+            get_profile_icon,
         ])
         .setup(move |app| {
             let app_handle = app.handle().clone();

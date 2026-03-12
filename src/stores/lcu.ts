@@ -13,6 +13,7 @@ export interface LcuInstanceInfo {
   port: number;
   state: "authenticating" | "ready" | "closing";
   isFocused: boolean;
+  installDir: string | null;
 }
 
 interface LcuState {

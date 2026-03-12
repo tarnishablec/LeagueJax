@@ -6,7 +6,8 @@
     "disabled": "Disabled",
     "save": "Save",
     "cancel": "Cancel",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "noClients": "No clients available"
   },
   "nav": {
     "history": "History",
