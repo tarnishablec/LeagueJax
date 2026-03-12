@@ -1,7 +1,6 @@
 mod commands;
 mod error;
 mod jax;
-mod lcu;
 mod shards;
 mod storage;
 
@@ -18,7 +17,6 @@ use window_vibrancy::apply_acrylic;
 use crate::commands::history::{
     get_current_summoner, get_match_detail, get_match_history, save_search_history, search_summoner,
 };
-use crate::lcu::LcuAuth;
 use crate::shards::lcu::LcuShard;
 use jax::{Jax, ShardInfo};
 use storage::SqliteDb;
@@ -30,9 +28,8 @@ fn get_shards(jax: tauri::State<Arc<Jax>>) -> Vec<ShardInfo> {
 }
 
 #[tauri::command]
-fn lcu_switch_to(port: u16, token: String, jax: tauri::State<Arc<Jax>>) {
-    let auth = LcuAuth::new(0, port, token);
-    jax.get_shard::<LcuShard>().switch_to(auth);
+fn lcu_switch_focus(pid: u32, jax: tauri::State<Arc<Jax>>) {
+    jax.get_shard::<LcuShard>().switch_focus(pid);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -49,7 +46,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             get_shards,
-            lcu_switch_to,
+            lcu_switch_focus,
             get_current_summoner,
             search_summoner,
             get_match_history,
@@ -81,7 +78,7 @@ pub fn run() {
             // ── Jax lifecycle: build → register → start ──
             let mut jax = Jax::new(&app_handle, db);
 
-            jax.register(Arc::new(shards::lcu::LcuShard::new()));
+            jax.register(Arc::new(LcuShard::new()));
             jax.register(Arc::new(shards::auto_select::AutoSelectShard::new()));
             jax.register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()));
             jax.register(Arc::new(shards::auto_reply::AutoReplyShard::new()));
@@ -93,7 +90,7 @@ pub fn run() {
             jax.register(Arc::new(shards::updater::UpdaterShard::new()));
 
             let jax = Arc::new(jax);
-            app.manage(jax.clone());
+            app.manage(Arc::clone(&jax));
             jax.start();
 
             Ok(())
