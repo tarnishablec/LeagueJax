@@ -8,30 +8,33 @@ export interface CurrentSummoner {
   summonerLevel: number;
 }
 
-export type LcuConnectionState =
-  | { state: "detecting" }
-  | { state: "connecting"; data: { port: number } }
-  | { state: "connected"; data: { port: number } }
-  | { state: "reconnecting"; data: { port: number } };
+export interface LcuInstanceInfo {
+  pid: number;
+  port: number;
+  state: "authenticating" | "ready" | "closing";
+  isFocused: boolean;
+}
 
 interface LcuState {
-  connection: LcuConnectionState;
+  instances: LcuInstanceInfo[];
   summoner: CurrentSummoner | null;
-  setConnection: (connection: LcuConnectionState) => void;
+  setInstances: (instances: LcuInstanceInfo[]) => void;
   setSummoner: (summoner: CurrentSummoner | null) => void;
 }
 
 export const useLcuStore = create<LcuState>((set) => ({
-  connection: { state: "detecting" },
+  instances: [],
   summoner: null,
-  setConnection: (connection) => set({ connection }),
+  setInstances: (instances) => set({ instances }),
   setSummoner: (summoner) => set({ summoner }),
 }));
 
-/** Selector: true when state is "connected" */
+/** Selector: true when any instance is focused and ready */
 export const selectIsConnected = (st: LcuState) =>
-  st.connection.state === "connected";
+  st.instances.some((i) => i.isFocused && i.state === "ready");
 
-/** Selector: LCU port if available, otherwise null */
-export const selectPort = (st: LcuState) =>
-  "data" in st.connection ? st.connection.data.port : null;
+/** Selector: focused instance's port, or null */
+export const selectPort = (st: LcuState) => {
+  const focused = st.instances.find((i) => i.isFocused);
+  return focused?.port ?? null;
+};

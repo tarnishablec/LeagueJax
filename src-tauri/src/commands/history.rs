@@ -6,8 +6,8 @@ use serde_json::Value;
 use tauri::State;
 
 use crate::error::{AppError, Result};
-use crate::shards::lcu::LcuShard;
 use crate::jax::Jax;
+use crate::shards::lcu::LcuShard;
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -90,9 +90,7 @@ fn parse_match_summary(game: &Value) -> Result<MatchSummary> {
 
     Ok(MatchSummary {
         game_id: game["gameId"].as_u64().unwrap_or(0),
-        champion_id: game["participants"][0]["championId"]
-            .as_i64()
-            .unwrap_or(0),
+        champion_id: game["participants"][0]["championId"].as_i64().unwrap_or(0),
         win: stats["win"].as_bool().unwrap_or(false),
         kills: stats["kills"].as_i64().unwrap_or(0),
         deaths: stats["deaths"].as_i64().unwrap_or(0),
@@ -128,9 +126,7 @@ fn parse_participant(p: &Value) -> Participant {
         kills: stats["kills"].as_i64().unwrap_or(0),
         deaths: stats["deaths"].as_i64().unwrap_or(0),
         assists: stats["assists"].as_i64().unwrap_or(0),
-        total_damage_dealt_to_champions: stats["totalDamageDealtToChampions"]
-            .as_i64()
-            .unwrap_or(0),
+        total_damage_dealt_to_champions: stats["totalDamageDealtToChampions"].as_i64().unwrap_or(0),
         total_damage_taken: stats["totalDamageTaken"].as_i64().unwrap_or(0),
         gold_earned: stats["goldEarned"].as_i64().unwrap_or(0),
         vision_score: stats["visionScore"].as_i64().unwrap_or(0),
@@ -147,10 +143,11 @@ fn parse_participant(p: &Value) -> Participant {
 // ─── Commands ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn get_current_summoner(
-    jax: State<'_, Arc<Jax>>,
-) -> Result<SummonerInfo> {
-    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
+pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerInfo> {
+    let lcu = jax
+        .get_shard::<LcuShard>()
+        .client()
+        .ok_or(AppError::LcuNotConnected)?;
     let resp = lcu.get("/lol-summoner/v1/current-summoner").await?;
     parse_summoner(&resp)
 }
@@ -161,7 +158,10 @@ pub async fn search_summoner(
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerInfo> {
-    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
+    let lcu = jax
+        .get_shard::<LcuShard>()
+        .client()
+        .ok_or(AppError::LcuNotConnected)?;
 
     let encoded_name = urlencoding::encode(&game_name);
     let encoded_tag = urlencoding::encode(&tag_line);
@@ -195,7 +195,10 @@ pub async fn get_match_history(
     end_index: u32,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<MatchSummary>> {
-    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
+    let lcu = jax
+        .get_shard::<LcuShard>()
+        .client()
+        .ok_or(AppError::LcuNotConnected)?;
     let path = format!(
         "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex={begin_index}&endIndex={end_index}"
     );
@@ -215,18 +218,15 @@ pub async fn get_match_history(
 }
 
 #[tauri::command]
-pub async fn get_match_detail(
-    game_id: u64,
-    jax: State<'_, Arc<Jax>>,
-) -> Result<MatchDetail> {
-    let lcu = jax.get_shard::<LcuShard>().client().ok_or(AppError::LcuNotConnected)?;
+pub async fn get_match_detail(game_id: u64, jax: State<'_, Arc<Jax>>) -> Result<MatchDetail> {
+    let lcu = jax
+        .get_shard::<LcuShard>()
+        .client()
+        .ok_or(AppError::LcuNotConnected)?;
     let path = format!("/lol-match-history/v1/games/{game_id}");
     let resp = lcu.get(&path).await?;
 
-    let participants_raw = resp["participants"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let participants_raw = resp["participants"].as_array().cloned().unwrap_or_default();
 
     let participants: Vec<Participant> = participants_raw.iter().map(parse_participant).collect();
 
@@ -259,12 +259,7 @@ pub async fn save_search_history(
            game_name = excluded.game_name,
            tag_line = excluded.tag_line,
            last_searched = excluded.last_searched",
-        &[
-            &puuid as &dyn rusqlite::ToSql,
-            &game_name,
-            &tag_line,
-            &now,
-        ],
+        &[&puuid as &dyn rusqlite::ToSql, &game_name, &tag_line, &now],
     )?;
 
     Ok(())

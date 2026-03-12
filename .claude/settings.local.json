@@ -45,7 +45,8 @@
       "Bash(python3:*)",
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:crates.io)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(git add:*)"
     ]
   }
 }

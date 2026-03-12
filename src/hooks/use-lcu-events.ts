@@ -3,20 +3,21 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import {
   type CurrentSummoner,
-  type LcuConnectionState,
+  type LcuInstanceInfo,
   useLcuStore,
 } from "../stores/lcu";
 
 export function useLcuEvents() {
-  const { setConnection, setSummoner } = useLcuStore();
+  const { setInstances, setSummoner } = useLcuStore();
 
   useEffect(() => {
-    const unlisten = listen<LcuConnectionState>(
-      "lcu-state-change",
+    const unlisten = listen<LcuInstanceInfo[]>(
+      "lcu-instances-changed",
       async (e) => {
-        setConnection(e.payload);
+        setInstances(e.payload);
 
-        if (e.payload.state === "connected") {
+        const focused = e.payload.find((i) => i.isFocused);
+        if (focused && focused.state === "ready") {
           try {
             const summoner = await invoke<CurrentSummoner>(
               "get_current_summoner",
@@ -25,7 +26,7 @@ export function useLcuEvents() {
           } catch {
             // LCU may not be fully ready yet
           }
-        } else if (e.payload.state === "detecting") {
+        } else if (!focused) {
           setSummoner(null);
         }
       },
@@ -34,5 +35,5 @@ export function useLcuEvents() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [setConnection, setSummoner]);
+  }, [setInstances, setSummoner]);
 }
