@@ -32,7 +32,7 @@ Change `LcuConnector` trait:
 async fn detect_all(&self) -> Vec<DetectedInstance>;
 ```
 
-`WindowsLcuConnector` already iterates process command-line args. Parse `--install-directory=` in the same loop and populate `install_dir`.
+`WindowsLcuConnector` already parses command-line args via `crate::utils::cmd::get_process_cmdline` + `parse_cmdline_to_args`. Parse `--install-directory=` in the same loop using the existing `parse_arg()` helper and populate `install_dir`.
 
 #### 2. `LcuInstance` — add `install_dir` field
 
@@ -114,7 +114,7 @@ Location: `src/components/ClientStatus.tsx` + `ClientStatus.css.ts`
 ```
 new Blob([new Uint8Array(bytes)], { type: "image/jpeg" })
 ```
-Cached with React Query by `profileIconId`. Fallback to `Unplug` icon on error.
+Cached with React Query by `profileIconId`. Fallback to `Unplug` icon on error. Clean up blob URLs with `URL.revokeObjectURL()` when the component unmounts or `profileIconId` changes (via `useEffect` cleanup or React Query's `onSuccess` replacing the previous URL).
 
 #### 3. i18n keys
 
