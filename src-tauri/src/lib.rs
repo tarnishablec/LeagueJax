@@ -3,6 +3,7 @@ mod error;
 mod jax;
 mod shards;
 mod storage;
+mod utils;
 
 use std::sync::Arc;
 
