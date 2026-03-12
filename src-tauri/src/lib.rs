@@ -31,7 +31,7 @@ fn get_shards(jax: tauri::State<Arc<Jax>>) -> Vec<ShardInfo> {
 
 #[tauri::command]
 fn lcu_switch_to(port: u16, token: String, jax: tauri::State<Arc<Jax>>) {
-    let auth = LcuAuth::new(port, token);
+    let auth = LcuAuth::new(0, port, token);
     jax.get_shard::<LcuShard>().switch_to(auth);
 }
 
