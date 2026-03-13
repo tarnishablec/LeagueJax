@@ -21,6 +21,7 @@ export const trigger = recipe({
     whiteSpace: "nowrap",
     overflow: "hidden",
     textDecoration: "none",
+    cursor: "pointer",
     selectors: {
       "&:hover": {
         background: vars.color.accent,
@@ -91,8 +92,8 @@ export const tooltip = style({
 
 export const connectedCard = style({
   display: "grid",
-  gridTemplateColumns: "36px 1fr",
-  gap: 8,
+  gridTemplateColumns: "36px 1fr auto",
+  gap: 16,
   padding: "8px 12px",
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
@@ -132,6 +133,24 @@ export const summonerLevel = style({
   color: vars.color.mutedForeground,
 });
 
+export const unfocusButton = style({
+  display: "grid",
+  placeItems: "center",
+  borderRadius: 4,
+  border: "none",
+  background: "transparent",
+  color: vars.color.mutedForeground,
+  cursor: "pointer",
+  alignSelf: "center",
+  transition: "color 150ms, background 150ms",
+  selectors: {
+    "&:hover": {
+      color: vars.color.foreground,
+      background: vars.color.accent,
+    },
+  },
+});
+
 // ─── Section header ─────────────────────────────────────────────────────────
 
 export const sectionHeader = style({
@@ -160,9 +179,10 @@ export const instanceRow = recipe({
     padding: "6px 8px",
     borderRadius: 6,
     cursor: "default",
+    border: `1px solid ${vars.color.popoverBorder}`,
+    boxShadow: "0 0 2px 2px oklch(0 0 0 / 0.12)",
     width: "100%",
     background: "transparent",
-    border: "none",
     color: "inherit",
     font: "inherit",
     fontSize: "inherit",

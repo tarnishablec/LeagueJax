@@ -14,6 +14,7 @@ function History() {
   const { t } = useTranslation();
   const currentSummoner = useLcuStore((st) => st.summoner);
   const connected = useLcuStore(selectIsConnected);
+  const instances = useLcuStore((st) => st.instances);
 
   const [searchTarget, setSearchTarget] = useState<{
     gameName: string;
@@ -57,7 +58,36 @@ function History() {
   };
 
   if (!connected) {
-    return <div className={s.emptyState}>{t("common.disconnected")}</div>;
+    const readyInstances = instances.filter((i) => i.state === "ready");
+    if (readyInstances.length === 0) {
+      return <div className={s.emptyState}>{t("common.disconnected")}</div>;
+    }
+    return (
+      <div className={s.focusPicker}>
+        <div className={s.focusPickerTitle}>{t("history.selectClient")}</div>
+        {readyInstances.map((inst) => (
+          <button
+            key={inst.pid}
+            type="button"
+            className={s.focusPickerCard}
+            onClick={() => invoke("lcu_switch_focus", { pid: inst.pid })}
+          >
+            <span className={s.focusPickerName}>
+              {inst.gameName
+                ? `${inst.gameName}#${inst.tagLine}`
+                : `PID: ${inst.pid}`}
+            </span>
+            <span className={s.focusPickerDetail}>
+              {inst.region ?? ""}
+              {inst.region ? " · " : ""}PID: {inst.pid}
+            </span>
+            {inst.installDir && (
+              <span className={s.focusPickerPath}>{inst.installDir}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    );
   }
 
   return (

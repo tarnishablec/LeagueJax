@@ -20,7 +20,8 @@
     "otherClients": "其他客户端",
     "noClients": "未检测到客户端",
     "authenticating": "连接中...",
-    "closing": "关闭中..."
+    "closing": "关闭中...",
+    "unfocus": "断开"
   },
   "history": {
     "searchPlaceholder": "输入 名字#TAG 搜索",
@@ -29,6 +30,7 @@
     "defeat": "失败",
     "blueTeam": "蓝色方",
     "redTeam": "红色方",
-    "noMatches": "暂无对局记录"
+    "noMatches": "暂无对局记录",
+    "selectClient": "选择客户端以查看战绩"
   }
 }

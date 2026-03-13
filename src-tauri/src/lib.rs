@@ -34,6 +34,11 @@ fn lcu_switch_focus(pid: u32, jax: tauri::State<Arc<Jax>>) {
     jax.get_shard::<LcuShard>().switch_focus(pid);
 }
 
+#[tauri::command]
+fn lcu_unfocus(jax: tauri::State<Arc<Jax>>) {
+    jax.get_shard::<LcuShard>().unfocus();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
@@ -49,6 +54,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_shards,
             lcu_switch_focus,
+            lcu_unfocus,
             get_current_summoner,
             search_summoner,
             get_match_history,
