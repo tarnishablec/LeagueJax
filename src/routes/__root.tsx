@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ClientStatus } from "../components/ClientStatus";
 import { JaxLogo } from "../components/JaxLogo";
-import { ThemeToggle } from "../components/ThemeToggle";
 import { TitleBar } from "../components/TitleBar";
 import { getNavItems } from "../features/registry";
 import { useLcuEvents } from "../hooks/use-lcu-events";
@@ -61,7 +60,7 @@ function RootLayout() {
       </button>
 
       {/* ── Title bar ── */}
-      <TitleBar tools={[<ThemeToggle key="theme-toggle" />]} />
+      <TitleBar />
 
       {/* ── Sidebar nav ── */}
       <aside className={s.sidebar}>

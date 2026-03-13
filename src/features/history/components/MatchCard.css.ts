@@ -30,6 +30,27 @@ export const championIcon = style({
   width: 48,
   height: 48,
   borderRadius: 8,
+  objectFit: "cover",
+});
+
+export const championIconFallback = style({
+  width: 48,
+  height: 48,
+  borderRadius: 8,
+  background: vars.color.accent,
+});
+
+export const participantIcon = style({
+  width: 24,
+  height: 24,
+  borderRadius: 4,
+  objectFit: "cover",
+});
+
+export const participantIconFallback = style({
+  width: 24,
+  height: 24,
+  borderRadius: 4,
   background: vars.color.accent,
 });
 

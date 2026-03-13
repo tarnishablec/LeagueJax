@@ -31,6 +31,8 @@
     "blueTeam": "蓝色方",
     "redTeam": "红色方",
     "noMatches": "暂无对局记录",
-    "selectClient": "选择客户端以查看战绩"
+    "selectClient": "选择客户端以查看战绩",
+    "emptyState": "搜索召唤师以查看战绩",
+    "closeTab": "关闭标签页"
   }
 }

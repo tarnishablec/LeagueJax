@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MatchSummary } from "@/bindings/matches.ts";
+import { useGameVersion } from "@/hooks/use-game-version";
+import { championIconUrl } from "@/utils/cdragon";
 import { useMatchDetail } from "../hooks/use-match-detail";
 import * as s from "./MatchCard.css";
 
@@ -18,6 +20,7 @@ export function MatchCard({ match }: { match: MatchSummary }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { data: detail } = useMatchDetail(expanded ? match.gameId : null);
+  const { data: version } = useGameVersion();
 
   return (
     <div>
@@ -26,7 +29,15 @@ export function MatchCard({ match }: { match: MatchSummary }) {
         className={s.card({ win: match.win })}
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className={s.championIcon} />
+        {version ? (
+          <img
+            src={championIconUrl(version, match.championId)}
+            alt=""
+            className={s.championIcon}
+          />
+        ) : (
+          <div className={s.championIconFallback} />
+        )}
         <div className={s.info}>
           <span className={s.kda}>
             {match.kills}/{match.deaths}/{match.assists}
@@ -55,10 +66,15 @@ export function MatchCard({ match }: { match: MatchSummary }) {
                 </div>
                 {team.map((p) => (
                   <div key={p.puuid} className={s.participantRow}>
-                    <div
-                      className={s.championIcon}
-                      style={{ width: 24, height: 24 }}
-                    />
+                    {version ? (
+                      <img
+                        src={championIconUrl(version, p.championId)}
+                        alt=""
+                        className={s.participantIcon}
+                      />
+                    ) : (
+                      <div className={s.participantIconFallback} />
+                    )}
                     <span>{p.summonerName}</span>
                     <span>
                       {p.kills}/{p.deaths}/{p.assists}

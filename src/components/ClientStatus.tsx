@@ -7,36 +7,17 @@ import {
   useHover,
   useInteractions,
 } from "@floating-ui/react";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { Unlink, Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { SummonerID } from "@/components/SummonerID.tsx";
+import { useProfileIcon } from "@/hooks/use-profile-icon.ts";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
+import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
-
-function useProfileIcon(iconId: number | null | undefined) {
-  const query = useQuery({
-    queryKey: ["profile-icon", iconId],
-    queryFn: async () => {
-      const bytes = await invoke<number[]>("get_profile_icon", {
-        iconId,
-      });
-      const uint8 = new Uint8Array(bytes);
-      let binary = "";
-      for (let i = 0; i < uint8.length; i++) {
-        binary += String.fromCharCode(uint8[i]);
-      }
-      return `data:image/jpeg;base64,${btoa(binary)}`;
-    },
-    enabled: iconId != null,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-
-  return query.data ?? null;
-}
 
 // ─── Tooltip sub-components ─────────────────────────────────────────────────
 
@@ -155,12 +136,21 @@ interface ClientStatusProps {
 
 export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const openTab = useTabStore((st) => st.openTab);
   const focusedInstance = useLcuStore(selectIsFocused);
   const summoner = focusedInstance?.summoner;
   const instances = useLcuStore((st) => st.instances);
   const avatarUrl = useProfileIcon(
     focusedInstance && summoner ? summoner.profileIconId : undefined,
   );
+
+  const handleClick = () => {
+    if (summoner) {
+      openTab(summoner);
+      void navigate({ to: "/history" });
+    }
+  };
 
   const [open, setOpen] = useState(false);
   const { refs, floatingStyles, context } = useFloating({
@@ -179,7 +169,11 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
         className={s.container}
         {...getReferenceProps()}
       >
-        <div className={s.trigger({ collapsed })}>
+        <button
+          type="button"
+          className={s.trigger({ collapsed })}
+          onClick={handleClick}
+        >
           {focusedInstance && summoner && avatarUrl ? (
             <img
               src={avatarUrl}
@@ -202,7 +196,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
               t("common.disconnected")
             )}
           </span>
-        </div>
+        </button>
       </div>
 
       {open && (
