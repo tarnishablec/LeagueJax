@@ -49,10 +49,13 @@ export const avatar = style({
 
 export const label = recipe({
   base: {
+    display: "inline-block",
     overflow: "hidden",
     textOverflow: "ellipsis",
     justifySelf: "start",
     transition: "opacity 150ms",
+    paddingRight: "1rem",
+    width: "100%",
   },
   variants: {
     collapsed: {
@@ -66,11 +69,14 @@ export const label = recipe({
 });
 
 export const tooltip = style({
-  minWidth: 240,
-  padding: 8,
+  minWidth: 200,
+  // padding: 8,
   borderRadius: 8,
-  background: "oklch(0.2 0.015 270 / 0.95)",
-  border: "1px solid oklch(0.4 0.015 270 / 0.3)",
+  background: "transparent",
+  display: "grid",
+  gridAutoRows: "auto",
+  gap: 4,
+  // border: "1px solid oklch(0.4 0.015 270 / 0.3)",
   color: "oklch(0.985 0 0)",
   fontSize: "0.8125rem",
   zIndex: 1000,
@@ -85,12 +91,14 @@ export const emptyText = style({
 export const instanceRow = recipe({
   base: {
     display: "grid",
-    gridTemplateColumns: "1fr auto auto",
+    gridTemplateColumns: "minmax(auto,100px) auto auto",
     alignItems: "center",
     gap: 8,
     padding: "6px 8px",
     borderRadius: 4,
     cursor: "default",
+    width: "100%",
+    background: "rgba(0,0,0, 0.1)",
   },
   variants: {
     focused: {
@@ -130,12 +138,15 @@ export const instancePath = style({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
   maxWidth: 160,
+  lineHeight: 1,
 });
 
 export const instancePid = style({
   color: "oklch(0.6 0 0)",
   fontSize: "0.75rem",
   whiteSpace: "nowrap",
+  justifySelf: "start",
+  lineHeight: 1,
 });
 
 export const focusDot = style({
@@ -143,4 +154,5 @@ export const focusDot = style({
   height: 6,
   borderRadius: "50%",
   background: vars.color.primary,
+  lineHeight: 1,
 });
