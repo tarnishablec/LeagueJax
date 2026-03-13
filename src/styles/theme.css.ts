@@ -13,6 +13,8 @@ export const vars = createGlobalThemeContract({
     accentForeground: "accent-foreground",
     mutedForeground: "muted-foreground",
     border: "border",
+    popover: "popover",
+    popoverBorder: "popover-border",
   },
 });
 
@@ -26,6 +28,8 @@ createGlobalTheme(":root", vars, {
     accentForeground: "oklch(0.2 0 0)",
     mutedForeground: "oklch(0.55 0 0)",
     border: "oklch(0.88 0 0)",
+    popover: "oklch(0.98 0 0)",
+    popoverBorder: "oklch(0.88 0 0)",
   },
 });
 
@@ -39,5 +43,7 @@ createGlobalTheme(":root.dark", vars, {
     accentForeground: "oklch(0.985 0 0)",
     mutedForeground: "oklch(0.708 0 0)",
     border: "oklch(0.4 0.015 270 / 0.3)",
+    popover: "oklch(0.2 0.015 270 / 0.98)",
+    popoverBorder: "oklch(1 0 0 / 0.12)",
   },
 });

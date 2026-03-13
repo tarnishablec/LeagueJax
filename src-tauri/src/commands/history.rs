@@ -11,7 +11,7 @@ use crate::shards::lcu::LcuShard;
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SummonerInfo {
     pub puuid: String,
@@ -73,7 +73,7 @@ pub struct MatchDetail {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-fn parse_summoner(v: &Value) -> Result<SummonerInfo> {
+pub fn parse_summoner(v: &Value) -> Result<SummonerInfo> {
     Ok(SummonerInfo {
         puuid: v["puuid"].as_str().unwrap_or_default().to_string(),
         game_name: v["gameName"].as_str().unwrap_or_default().to_string(),

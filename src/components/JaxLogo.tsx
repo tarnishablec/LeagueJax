@@ -3,15 +3,15 @@
  *
  * Design language (matches Akari):
  *  - Dark navy radial-gradient background, rounded-rect canvas
- *  - Single solid fill shape (warm amber-gold, Jax's signature colour)
- *  - Dark incised cut lines (same oklch family as background) for detail
- *  - No gradients, no outlines — purely flat fills + strokes
+ *  - Single solid fill shape (warm amber-gold, Jax's signature color)
+ *  - Dark incised cut lines (same oklch family as a background) for detail
+ *  - No gradients, no outlines — purely flat fills and strokes
  *
  * Jax anatomy encoded:
  *  - Two swept-back fins (his iconic ear-guards)
  *  - Dome helmet body
  *  - Dark visor ellipse (no visible face — the classic Jax joke)
- *  - Two dome cut-arcs + neck-guard divider (Akari-style slashes)
+ *  - Two dome cut-arcs and neck-guard divider (Akari-style slashes)
  */
 
 const GOLD = "var(--primary)";
