@@ -6,121 +6,110 @@ import { MatchCard } from "../features/history/components/MatchCard";
 import { SearchBar } from "../features/history/components/SearchBar";
 import { useMatchHistory } from "../features/history/hooks/use-match-history";
 import { useSearchSummoner } from "../features/history/hooks/use-summoner";
-import type { SummonerInfo } from "../features/history/types";
-import { selectIsConnected, useLcuStore } from "../stores/lcu";
+import {
+  type LcuInstanceInfo,
+  selectIsConnected,
+  useLcuStore,
+} from "../stores/lcu";
 import * as s from "./history.css";
 
-function History() {
+const ConnectionGuard = ({ instances }: { instances: LcuInstanceInfo[] }) => {
   const { t } = useTranslation();
-  const currentSummoner = useLcuStore((st) => st.summoner);
-  const connected = useLcuStore(selectIsConnected);
-  const instances = useLcuStore((st) => st.instances);
+  const readyInstances = instances.filter((i) => i.state === "ready");
 
-  const [searchTarget, setSearchTarget] = useState<{
+  if (readyInstances.length === 0) {
+    return <div className={s.emptyState}>{t("common.disconnected")}</div>;
+  }
+
+  return (
+    <div className={s.focusPicker}>
+      <div className={s.focusPickerTitle}>{t("history.selectClient")}</div>
+      {readyInstances.map((inst) => (
+        <button
+          type={"button"}
+          key={inst.pid}
+          className={s.focusPickerCard}
+          onClick={() => invoke("lcu_switch_focus", { pid: inst.pid })}
+        >
+          <span className={s.focusPickerName}>
+            {inst.gameName
+              ? `${inst.gameName}#${inst.tagLine}`
+              : `PID: ${inst.pid}`}
+          </span>
+          <span className={s.focusPickerDetail}>
+            <span>{inst.region}</span>
+            <span>PID: {inst.pid}</span>
+          </span>
+          <span>{inst.installDir}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+export function History() {
+  const { t } = useTranslation();
+  const connected = useLcuStore(selectIsConnected);
+  const { summoner: self, instances } = useLcuStore();
+
+  const [searchParams, setSearchParams] = useState<{
     gameName: string;
     tagLine: string;
   } | null>(null);
-  const [viewingSummoner, setViewingSummoner] = useState<SummonerInfo | null>(
-    null,
-  );
 
   const { data: searchResult, isFetching: isSearching } = useSearchSummoner(
-    searchTarget?.gameName ?? "",
-    searchTarget?.tagLine ?? "",
-    searchTarget !== null,
+    searchParams?.gameName ?? "",
+    searchParams?.tagLine ?? "",
+    !!searchParams,
   );
 
-  // When a search result arrives, update the viewing summoner and save history
+  const activeSummoner = searchResult ?? self;
+  const { data: matches, isLoading: isLoadingMatches } = useMatchHistory(
+    activeSummoner?.puuid,
+  );
+
   useEffect(() => {
-    if (searchResult && searchResult !== viewingSummoner) {
-      setViewingSummoner(searchResult);
+    if (searchResult?.puuid) {
       invoke("save_search_history", {
         puuid: searchResult.puuid,
         gameName: searchResult.gameName,
         tagLine: searchResult.tagLine,
       }).catch(() => {});
     }
-  }, [searchResult, viewingSummoner]);
+  }, [searchResult?.puuid, searchResult?.gameName, searchResult?.tagLine]);
 
-  const activeSummoner = viewingSummoner ?? (searchResult || null);
-  const puuid = activeSummoner?.puuid ?? currentSummoner?.puuid;
-  const displayName = activeSummoner
-    ? `${activeSummoner.gameName}#${activeSummoner.tagLine}`
-    : currentSummoner
-      ? `${currentSummoner.gameName}#${currentSummoner.tagLine}`
-      : null;
-
-  const { data: matches, isLoading: isLoadingMatches } = useMatchHistory(puuid);
-
-  const handleSearch = (gameName: string, tagLine: string) => {
-    setSearchTarget({ gameName, tagLine });
-    setViewingSummoner(null);
-  };
-
-  if (!connected) {
-    const readyInstances = instances.filter((i) => i.state === "ready");
-    if (readyInstances.length === 0) {
-      return <div className={s.emptyState}>{t("common.disconnected")}</div>;
-    }
-    return (
-      <div className={s.focusPicker}>
-        <div className={s.focusPickerTitle}>{t("history.selectClient")}</div>
-        {readyInstances.map((inst) => (
-          <button
-            key={inst.pid}
-            type="button"
-            className={s.focusPickerCard}
-            onClick={() => invoke("lcu_switch_focus", { pid: inst.pid })}
-          >
-            <span className={s.focusPickerName}>
-              {inst.gameName
-                ? `${inst.gameName}#${inst.tagLine}`
-                : `PID: ${inst.pid}`}
-            </span>
-            <span className={s.focusPickerDetail}>
-              {inst.region ?? ""}
-              {inst.region ? " · " : ""}PID: {inst.pid}
-            </span>
-            {inst.installDir && (
-              <span className={s.focusPickerPath}>{inst.installDir}</span>
-            )}
-          </button>
-        ))}
-      </div>
-    );
-  }
+  if (!connected) return <ConnectionGuard instances={instances} />;
 
   return (
     <div className={s.page}>
-      <SearchBar onSearch={handleSearch} isLoading={isSearching} />
+      <SearchBar
+        onSearch={(gameName, tagLine) => setSearchParams({ gameName, tagLine })}
+        isLoading={isSearching}
+      />
 
-      {displayName && (
+      {activeSummoner && (
         <div className={s.summaryBar}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 8,
-              background: "var(--accent)",
-            }}
-          />
+          <div />
           <div>
-            <div className={s.summonerName}>{displayName}</div>
+            <div className={s.summonerName}>
+              {activeSummoner.gameName}#{activeSummoner.tagLine}
+            </div>
             <div className={s.summonerLevel}>
-              Lv.{" "}
-              {activeSummoner?.summonerLevel ?? currentSummoner?.summonerLevel}
+              Lv. {activeSummoner.summonerLevel}
             </div>
           </div>
         </div>
       )}
 
       <div className={s.matchList}>
-        {isLoadingMatches && (
+        {isLoadingMatches ? (
           <div className={s.emptyState}>{t("common.loading")}</div>
+        ) : (
+          matches?.map((match) => (
+            <MatchCard key={match.gameId} match={match} />
+          ))
         )}
-        {matches?.map((match) => (
-          <MatchCard key={match.gameId} match={match} />
-        ))}
+
         {matches?.length === 0 && !isLoadingMatches && (
           <div className={s.emptyState}>{t("history.noMatches")}</div>
         )}

@@ -85,6 +85,9 @@ export const focusPickerName = style({
 });
 
 export const focusPickerDetail = style({
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  justifyContent: "space-between",
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
 });

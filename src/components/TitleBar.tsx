@@ -45,8 +45,8 @@ function CloseIcon() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Slot for global app action buttons (e.g., announcements, background tasks). */
-export function TitleBarToolbar({ children }: { children?: React.ReactNode }) {
+/** Slot for global app action buttons (e.g., theme-switch, language-switch). */
+export function Toolbar({ children }: { children?: React.ReactNode }) {
   return (
     <div role="toolbar" aria-label="Application actions" className={s.toolbar}>
       {children}
@@ -59,18 +59,13 @@ export function TitleBarToolbar({ children }: { children?: React.ReactNode }) {
 export function TitleBar({ tools }: { tools?: React.ReactElement[] }) {
   return (
     <header className={s.header}>
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: OS-level drag region (≡ Electron's -webkit-app-region:drag). Keyboard users use the Maximize button. */}
-      <div
-        data-tauri-drag-region
-        className={s.dragRegion}
-        onDoubleClick={() => void appWindow.toggleMaximize()}
-      />
+      <div data-tauri-drag-region className={s.dragRegion}></div>
 
-      <TitleBarToolbar>
+      <Toolbar>
         {tools?.map((tool) => (
           <React.Fragment key={tool.key}>{tool}</React.Fragment>
         ))}
-      </TitleBarToolbar>
+      </Toolbar>
 
       <div aria-hidden="true" className={s.divider} />
 

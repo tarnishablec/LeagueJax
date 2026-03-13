@@ -12,9 +12,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { Unlink, Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { LcuInstanceInfo, Summoner } from "../stores/lcu";
+import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
+import type { SummonerInfo } from "@/bindings/summoner.ts";
+import { SummonerID } from "@/components/SummonerID.tsx";
 import { selectIsConnected, useLcuStore } from "../stores/lcu";
-
 import * as s from "./ClientStatus.css";
 
 function useProfileIcon(iconId: number | null | undefined) {
@@ -47,7 +48,7 @@ function ConnectedClientCard({
   pid,
 }: {
   installDir: string;
-  summoner: Summoner;
+  summoner: SummonerInfo;
   avatarUrl: string | null;
   pid: number;
 }) {
@@ -59,10 +60,7 @@ function ConnectedClientCard({
         <div className={s.profileIcon} />
       )}
       <div className={s.summonerInfo}>
-        <div className={s.summonerName}>
-          {summoner.gameName}
-          <span className={s.summonerTag}>#{summoner.tagLine}</span>
-        </div>
+        <SummonerID summoner={summoner}></SummonerID>
         <div className={s.summonerLevel}>
           Lv. {summoner.summonerLevel} · PID: {pid}
         </div>
@@ -80,8 +78,8 @@ function ConnectedClientCard({
 function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
   const { t } = useTranslation();
   const isReady = inst.state === "ready";
-  const hasSummoner = inst.gameName && inst.tagLine;
-  const avatarUrl = useProfileIcon(inst.profileIconId);
+  const hasSummoner = !!inst.summoner;
+  const avatarUrl = useProfileIcon(inst.summoner?.profileIconId);
 
   const stateLabel =
     inst.state === "authenticating"
@@ -101,9 +99,11 @@ function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
       )}
       <div className={s.instanceInfo}>
         <span className={s.instancePath}>
-          {hasSummoner
-            ? `${inst.gameName}#${inst.tagLine}`
-            : (inst.installDir ?? `Port ${inst.port}`)}
+          {inst.summoner ? (
+            <SummonerID summoner={inst.summoner}></SummonerID>
+          ) : (
+            (inst.installDir ?? `Port ${inst.port}`)
+          )}
         </span>
         <span className={s.instancePid}>
           PID: {inst.pid}
@@ -146,7 +146,7 @@ function TooltipContent({
   avatarUrl,
 }: {
   instances: LcuInstanceInfo[];
-  summoner: Summoner | null;
+  summoner: SummonerInfo | null;
   avatarUrl: string | null;
 }) {
   // const { t } = useTranslation();

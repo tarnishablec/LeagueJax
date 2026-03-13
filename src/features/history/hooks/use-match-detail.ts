@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { MatchDetail } from "../types";
+import type { MatchDetail } from "@/bindings/matches.ts";
 
 export function useMatchDetail(gameId: number | null) {
   return useQuery<MatchDetail>({
