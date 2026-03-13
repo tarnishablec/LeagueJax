@@ -13,9 +13,8 @@ import { Unlink, Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
-import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { SummonerID } from "@/components/SummonerID.tsx";
-import { selectIsConnected, useLcuStore } from "../stores/lcu";
+import { selectIsFocused, useLcuStore } from "../stores/lcu";
 import * as s from "./ClientStatus.css";
 
 function useProfileIcon(iconId: number | null | undefined) {
@@ -41,19 +40,17 @@ function useProfileIcon(iconId: number | null | undefined) {
 
 // ─── Tooltip sub-components ─────────────────────────────────────────────────
 
-function ConnectedClientCard({
-  installDir,
-  summoner,
-  avatarUrl,
-  pid,
-}: {
-  installDir: string;
-  summoner: SummonerInfo;
-  avatarUrl: string | null;
-  pid: number;
-}) {
+function LcuClientCard({ lucInstance }: { lucInstance: LcuInstanceInfo }) {
+  const { summoner } = lucInstance;
+
+  if (!summoner) {
+    return null;
+  }
+
+  const avatarUrl = useProfileIcon(summoner.profileIconId);
+
   return (
-    <div className={s.connectedCard} title={installDir}>
+    <div className={s.connectedCard} title={lucInstance.installDir ?? ""}>
       {avatarUrl ? (
         <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
       ) : (
@@ -62,7 +59,7 @@ function ConnectedClientCard({
       <div className={s.summonerInfo}>
         <SummonerID summoner={summoner}></SummonerID>
         <div className={s.summonerLevel}>
-          Lv. {summoner.summonerLevel} · PID: {pid}
+          Lv. {summoner.summonerLevel} · PID: {lucInstance.pid}
         </div>
       </div>
       <Unlink
@@ -140,15 +137,7 @@ function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
   );
 }
 
-function TooltipContent({
-  instances,
-  summoner,
-  avatarUrl,
-}: {
-  instances: LcuInstanceInfo[];
-  summoner: SummonerInfo | null;
-  avatarUrl: string | null;
-}) {
+function TooltipContent({ instances }: { instances: LcuInstanceInfo[] }) {
   // const { t } = useTranslation();
 
   const focused = instances.find((i) => i.isFocused);
@@ -161,30 +150,16 @@ function TooltipContent({
 
   return (
     <>
-      {focused && summoner && (
-        <ConnectedClientCard
-          installDir={focused.installDir ?? ""}
-          summoner={summoner}
-          avatarUrl={avatarUrl}
-          pid={focused.pid}
-        />
-      )}
+      {focused && <LcuClientCard lucInstance={focused} />}
 
-      {focused && summoner && others.length > 0 && (
-        <div className={s.separator} />
-      )}
+      {focused && others.length > 0 && <div className={s.separator} />}
 
       {others.length > 0 && (
-        <>
-          {/*<div className={s.sectionHeader}>*/}
-          {/*  {t("clientStatus.otherClients")}*/}
-          {/*</div>*/}
-          <div className={s.instanceList}>
-            {others.map((inst) => (
-              <InstanceCard key={inst.pid} instance={inst} />
-            ))}
-          </div>
-        </>
+        <div className={s.instanceList}>
+          {others.map((inst) => (
+            <InstanceCard key={inst.pid} instance={inst} />
+          ))}
+        </div>
       )}
     </>
   );
@@ -199,11 +174,11 @@ interface ClientStatusProps {
 
 export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
   const { t } = useTranslation();
-  const connected = useLcuStore(selectIsConnected);
-  const summoner = useLcuStore((st) => st.summoner);
+  const focusedInstance = useLcuStore(selectIsFocused);
+  const summoner = focusedInstance?.summoner;
   const instances = useLcuStore((st) => st.instances);
   const avatarUrl = useProfileIcon(
-    connected && summoner ? summoner.profileIconId : undefined,
+    focusedInstance && summoner ? summoner.profileIconId : undefined,
   );
 
   const [open, setOpen] = useState(false);
@@ -224,7 +199,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
         {...getReferenceProps()}
       >
         <div className={s.trigger({ collapsed })}>
-          {connected && summoner && avatarUrl ? (
+          {focusedInstance && summoner && avatarUrl ? (
             <img
               src={avatarUrl}
               alt="Profile icon"
@@ -240,9 +215,11 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
             />
           )}
           <span className={s.label({ collapsed })}>
-            {connected && summoner
-              ? `${summoner.gameName}#${summoner.tagLine}`
-              : t("common.disconnected")}
+            {focusedInstance && summoner ? (
+              <SummonerID summoner={summoner}></SummonerID>
+            ) : (
+              t("common.disconnected")
+            )}
           </span>
         </div>
       </div>
@@ -255,11 +232,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
             style={floatingStyles}
             {...getFloatingProps()}
           >
-            <TooltipContent
-              instances={instances}
-              summoner={summoner}
-              avatarUrl={avatarUrl}
-            />
+            <TooltipContent instances={instances} />
           </div>
         </FloatingPortal>
       )}

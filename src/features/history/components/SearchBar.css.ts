@@ -28,7 +28,7 @@ export const input = style({
   },
 });
 
-export const button = style({
+export const searchButton = style({
   height: 36,
   paddingInline: 16,
   borderRadius: 6,
@@ -38,7 +38,10 @@ export const button = style({
   fontWeight: 500,
   transition: "opacity 150ms",
   selectors: {
-    "&:hover": { opacity: 0.9 },
+    "&:hover": { opacity: 0.75 },
     "&:disabled": { opacity: 0.5, cursor: "not-allowed" },
+    "&:active": {
+      opacity: 0.6,
+    },
   },
 });

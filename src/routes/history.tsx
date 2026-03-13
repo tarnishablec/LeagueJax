@@ -2,15 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { MatchCard } from "../features/history/components/MatchCard";
 import { SearchBar } from "../features/history/components/SearchBar";
 import { useMatchHistory } from "../features/history/hooks/use-match-history";
 import { useSearchSummoner } from "../features/history/hooks/use-summoner";
-import {
-  type LcuInstanceInfo,
-  selectIsConnected,
-  useLcuStore,
-} from "../stores/lcu";
+import { selectIsFocused, useLcuStore } from "../stores/lcu";
 import * as s from "./history.css";
 
 const ConnectionGuard = ({ instances }: { instances: LcuInstanceInfo[] }) => {
@@ -32,8 +29,8 @@ const ConnectionGuard = ({ instances }: { instances: LcuInstanceInfo[] }) => {
           onClick={() => invoke("lcu_switch_focus", { pid: inst.pid })}
         >
           <span className={s.focusPickerName}>
-            {inst.gameName
-              ? `${inst.gameName}#${inst.tagLine}`
+            {inst.summoner?.gameName
+              ? `${inst.summoner.gameName}#${inst.summoner.tagLine}`
               : `PID: ${inst.pid}`}
           </span>
           <span className={s.focusPickerDetail}>
@@ -49,8 +46,8 @@ const ConnectionGuard = ({ instances }: { instances: LcuInstanceInfo[] }) => {
 
 export function History() {
   const { t } = useTranslation();
-  const connected = useLcuStore(selectIsConnected);
-  const { summoner: self, instances } = useLcuStore();
+  const connected = useLcuStore(selectIsFocused);
+  const { instances } = useLcuStore();
 
   const [searchParams, setSearchParams] = useState<{
     gameName: string;
@@ -63,7 +60,7 @@ export function History() {
     !!searchParams,
   );
 
-  const activeSummoner = searchResult ?? self;
+  const activeSummoner = searchResult;
   const { data: matches, isLoading: isLoadingMatches } = useMatchHistory(
     activeSummoner?.puuid,
   );
