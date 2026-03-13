@@ -105,6 +105,14 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 - Define all colors with **`oklch()`** syntax — no hex codes, no `rgba()`.
 - **No Tailwind, no utility classes.** All styling must go through Vanilla Extract `.css.ts` files.
 
+## Type Sharing (Rust → TypeScript)
+
+- **所有领域模型和通用类型必须在 Rust 侧定义**，使用 [ts-rs](https://github.com/Aleph-Alpha/ts-rs) 导出到 TypeScript。禁止在 TS 侧手写重复的类型定义。
+- **通用/共享类型**（跨 shard 使用的）定义在 `src-tauri/src/concepts/`，导出到 `src/bindings/`。
+- **Shard 专属类型**定义在各自 shard 内，导出到 `src/bindings/<shard_name>.ts`（如 `src/bindings/client_shard.ts`）。
+- 运行 `bun run sync_rs_types` 重新生成所有绑定（执行 Rust 测试导出 + Biome 格式化 + 类型检查）。
+- TS 侧应始终从 `src/bindings/` 导入这些类型，不要自行定义镜像类型。
+
 ## Rust Code Style
 
 - **Never use `.unwrap()` or `.expect()`** — use `?`, `.unwrap_or()`, `.unwrap_or_default()`, `.unwrap_or_else()`, or proper error handling instead。

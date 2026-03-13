@@ -40,40 +40,9 @@ function useProfileIcon(iconId: number | null | undefined) {
 
 // ─── Tooltip sub-components ─────────────────────────────────────────────────
 
-function LcuClientCard({ lucInstance }: { lucInstance: LcuInstanceInfo }) {
-  const { summoner } = lucInstance;
-
-  if (!summoner) {
-    return null;
-  }
-
-  const avatarUrl = useProfileIcon(summoner.profileIconId);
-
-  return (
-    <div className={s.connectedCard} title={lucInstance.installDir ?? ""}>
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
-      ) : (
-        <div className={s.profileIcon} />
-      )}
-      <div className={s.summonerInfo}>
-        <SummonerID summoner={summoner}></SummonerID>
-        <div className={s.summonerLevel}>
-          Lv. {summoner.summonerLevel} · PID: {lucInstance.pid}
-        </div>
-      </div>
-      <Unlink
-        size={16}
-        className={s.unfocusButton}
-        onClick={() => invoke("lcu_unfocus")}
-        aria-label="Disconnect focus"
-      ></Unlink>
-    </div>
-  );
-}
-
-function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
+function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
   const { t } = useTranslation();
+  const isFocused = inst.isFocused;
   const isReady = inst.state === "ready";
   const hasSummoner = !!inst.summoner;
   const avatarUrl = useProfileIcon(inst.summoner?.profileIconId);
@@ -97,7 +66,7 @@ function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
       <div className={s.instanceInfo}>
         <span className={s.instancePath}>
           {inst.summoner ? (
-            <SummonerID summoner={inst.summoner}></SummonerID>
+            <SummonerID summoner={inst.summoner} />
           ) : (
             (inst.installDir ?? `Port ${inst.port}`)
           )}
@@ -107,12 +76,38 @@ function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
           {stateLabel ? ` · ${stateLabel}` : ""}
         </span>
       </div>
-      <span
-        className={s.stateIndicator({ state: inst.state })}
-        aria-hidden="true"
-      />
+      {isFocused ? (
+        <button
+          type="button"
+          title={t("clientStatus.unfocus")}
+          className={s.unfocusButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            void invoke("lcu_unfocus");
+          }}
+          aria-label="Disconnect focus"
+        >
+          <Unlink size={14} />
+        </button>
+      ) : (
+        <span
+          className={s.stateIndicator({ state: inst.state })}
+          aria-hidden="true"
+        />
+      )}
     </>
   );
+
+  if (isFocused) {
+    return (
+      <div
+        className={s.instanceRow({ focused: true })}
+        title={inst.installDir ?? undefined}
+      >
+        {info}
+      </div>
+    );
+  }
 
   if (isReady) {
     return (
@@ -129,7 +124,7 @@ function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
 
   return (
     <div
-      className={s.instanceRow({ disabled: !isReady })}
+      className={s.instanceRow({ disabled: true })}
       title={inst.installDir ?? undefined}
     >
       {info}
@@ -138,30 +133,16 @@ function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
 }
 
 function TooltipContent({ instances }: { instances: LcuInstanceInfo[] }) {
-  // const { t } = useTranslation();
-
-  const focused = instances.find((i) => i.isFocused);
-  const others = instances.filter((i) => !i.isFocused);
-
   if (instances.length === 0) {
-    // return <div className={s.emptyText}>{t("clientStatus.noClients")}</div>;
     return null;
   }
 
   return (
-    <>
-      {focused && <LcuClientCard lucInstance={focused} />}
-
-      {focused && others.length > 0 && <div className={s.separator} />}
-
-      {others.length > 0 && (
-        <div className={s.instanceList}>
-          {others.map((inst) => (
-            <InstanceCard key={inst.pid} instance={inst} />
-          ))}
-        </div>
-      )}
-    </>
+    <div className={s.instanceList}>
+      {instances.map((inst) => (
+        <LcuClientCard key={inst.pid} instance={inst} />
+      ))}
+    </div>
   );
 }
 
@@ -185,7 +166,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
   const { refs, floatingStyles, context } = useFloating({
     open,
     onOpenChange: setOpen,
-    placement: "right-end",
+    placement: "right",
     middleware: [offset(8), flip(), shift({ padding: 8 })],
   });
   const hover = useHover(context, { delay: { open: 0, close: 80 } });

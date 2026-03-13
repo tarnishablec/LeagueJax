@@ -88,37 +88,7 @@ export const tooltip = style({
   zIndex: 1000,
 });
 
-// ─── Connected client card ──────────────────────────────────────────────────
-
-export const connectedCard = style({
-  display: "grid",
-  gridTemplateColumns: "36px 1fr auto",
-  gap: 16,
-  padding: "8px 12px",
-  borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
-});
-
-export const profileIcon = style({
-  width: 36,
-  height: 36,
-  borderRadius: "50%",
-  objectFit: "cover",
-  alignSelf: "center",
-});
-
-export const summonerInfo = style({
-  display: "grid",
-  alignContent: "center",
-  gap: 2,
-  minWidth: 0,
-});
-
-export const summonerLevel = style({
-  fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
-});
+// ─── Unfocus button ─────────────────────────────────────────────────────────
 
 export const unfocusButton = style({
   display: "grid",
@@ -133,7 +103,7 @@ export const unfocusButton = style({
   selectors: {
     "&:hover": {
       color: vars.color.foreground,
-      background: vars.color.accent,
+      // background: vars.color.accent,
     },
   },
 });
@@ -154,13 +124,14 @@ export const instanceList = style({
   display: "grid",
   gap: 4,
   maxHeight: 240,
+  width: 250,
   overflowY: "auto",
 });
 
 export const instanceRow = recipe({
   base: {
     display: "grid",
-    gridTemplateColumns: "24px 1fr auto",
+    gridTemplateColumns: "auto 1fr minmax(30px, auto)",
     alignItems: "center",
     gap: 14,
     padding: "6px 8px",
@@ -176,6 +147,12 @@ export const instanceRow = recipe({
     textAlign: "start",
   },
   variants: {
+    focused: {
+      true: {
+        borderLeft: `2px solid ${vars.color.primary}`,
+        background: `color-mix(in srgb, ${vars.color.primary} 8%, transparent)`,
+      },
+    },
     clickable: {
       true: {
         cursor: "pointer",
@@ -194,6 +171,7 @@ export const instanceRow = recipe({
     },
   },
   defaultVariants: {
+    focused: false,
     clickable: false,
     disabled: false,
   },
@@ -241,10 +219,11 @@ const pulse = keyframes({
 
 export const stateIndicator = recipe({
   base: {
-    width: 6,
-    height: 6,
+    width: 10,
+    height: 10,
     borderRadius: "50%",
     flexShrink: 0,
+    justifySelf: "center",
   },
   variants: {
     state: {
@@ -263,13 +242,6 @@ export const stateIndicator = recipe({
   defaultVariants: {
     state: "ready",
   },
-});
-
-// ─── Separator ──────────────────────────────────────────────────────────────
-
-export const separator = style({
-  height: 1,
-  background: vars.color.border,
 });
 
 // ─── Empty state ────────────────────────────────────────────────────────────
