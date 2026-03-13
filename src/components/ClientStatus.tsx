@@ -9,7 +9,7 @@ import {
 } from "@floating-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { Unplug } from "lucide-react";
+import { Unlink, Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo, Summoner } from "../stores/lcu";
@@ -41,16 +41,18 @@ function useProfileIcon(iconId: number | null | undefined) {
 // ─── Tooltip sub-components ─────────────────────────────────────────────────
 
 function ConnectedClientCard({
+  installDir,
   summoner,
   avatarUrl,
   pid,
 }: {
+  installDir: string;
   summoner: Summoner;
   avatarUrl: string | null;
   pid: number;
 }) {
   return (
-    <div className={s.connectedCard}>
+    <div className={s.connectedCard} title={installDir}>
       {avatarUrl ? (
         <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
       ) : (
@@ -65,6 +67,12 @@ function ConnectedClientCard({
           Lv. {summoner.summonerLevel} · PID: {pid}
         </div>
       </div>
+      <Unlink
+        size={16}
+        className={s.unfocusButton}
+        onClick={() => invoke("lcu_unfocus")}
+        aria-label="Disconnect focus"
+      ></Unlink>
     </div>
   );
 }
@@ -141,19 +149,21 @@ function TooltipContent({
   summoner: Summoner | null;
   avatarUrl: string | null;
 }) {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   const focused = instances.find((i) => i.isFocused);
   const others = instances.filter((i) => !i.isFocused);
 
   if (instances.length === 0) {
-    return <div className={s.emptyText}>{t("clientStatus.noClients")}</div>;
+    // return <div className={s.emptyText}>{t("clientStatus.noClients")}</div>;
+    return null;
   }
 
   return (
     <>
       {focused && summoner && (
         <ConnectedClientCard
+          installDir={focused.installDir ?? ""}
           summoner={summoner}
           avatarUrl={avatarUrl}
           pid={focused.pid}

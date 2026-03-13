@@ -18,6 +18,7 @@ export interface LcuInstanceInfo {
   tagLine: string | null;
   profileIconId: number | null;
   summonerLevel: number | null;
+  region: string | null;
 }
 
 interface LcuState {

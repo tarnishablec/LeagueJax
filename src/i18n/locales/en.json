@@ -20,7 +20,8 @@
     "otherClients": "Other Clients",
     "noClients": "No clients detected",
     "authenticating": "Connecting...",
-    "closing": "Closing..."
+    "closing": "Closing...",
+    "unfocus": "Disconnect"
   },
   "history": {
     "searchPlaceholder": "Enter Name#TAG to search",
@@ -29,6 +30,7 @@
     "defeat": "Defeat",
     "blueTeam": "Blue Team",
     "redTeam": "Red Team",
-    "noMatches": "No matches found"
+    "noMatches": "No matches found",
+    "selectClient": "Select a client to view match history"
   }
 }
