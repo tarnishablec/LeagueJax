@@ -29,7 +29,7 @@ function History() {
     searchTarget !== null,
   );
 
-  // When a search result arrives, update viewing summoner and save history
+  // When a search result arrives, update the viewing summoner and save history
   useEffect(() => {
     if (searchResult && searchResult !== viewingSummoner) {
       setViewingSummoner(searchResult);

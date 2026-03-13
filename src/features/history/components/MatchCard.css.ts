@@ -4,6 +4,7 @@ import { vars } from "@/styles/theme.css.ts";
 
 export const card = recipe({
   base: {
+    width: "100%",
     display: "grid",
     gridTemplateColumns: "48px 1fr auto",
     alignItems: "center",
