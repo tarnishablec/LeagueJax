@@ -12,7 +12,8 @@
     "tauri:build": "tauri build",
     "lint:check": "bunx biome check .",
     "lint:fix": "bunx biome check --write .",
-    "sync_rs_types": "cd src-tauri && cargo test export_bindings && bunx biome check --write ../src/bindings"
+    "typecheck": "tsc --noEmit",
+    "sync_rs_types": "cd src-tauri && cargo test export_bindings && cd .. && bunx biome check --write ./src/bindings && bun run typecheck"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.19",

@@ -13,10 +13,8 @@ export function SearchBar({ onSearch, isLoading }: SearchBarProps) {
 
   const handleSubmit = () => {
     const trimmed = value.trim();
-    const hashIndex = trimmed.lastIndexOf("#");
-    if (hashIndex === -1 || hashIndex === 0 || hashIndex === trimmed.length - 1)
-      return;
-    onSearch(trimmed.slice(0, hashIndex), trimmed.slice(hashIndex + 1));
+    const [name, tag] = trimmed.split("#");
+    onSearch(name, tag);
   };
 
   return (
@@ -31,7 +29,7 @@ export function SearchBar({ onSearch, isLoading }: SearchBarProps) {
       />
       <button
         type="button"
-        className={s.button}
+        className={s.searchButton}
         disabled={isLoading || !value.includes("#")}
         onClick={handleSubmit}
       >

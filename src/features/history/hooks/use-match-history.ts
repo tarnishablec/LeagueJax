@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type { MatchSummary } from "../types";
+import type { MatchSummary } from "@/bindings/matches.ts";
 
 export function useMatchHistory(
   puuid: string | undefined,
