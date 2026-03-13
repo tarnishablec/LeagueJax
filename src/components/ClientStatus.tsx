@@ -10,7 +10,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { Unplug } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "../stores/lcu";
 import { selectIsConnected, useLcuStore } from "../stores/lcu";
@@ -23,34 +23,22 @@ function truncatePath(path: string, max = 25): string {
 }
 
 function useProfileIcon(iconId: number | undefined) {
-  const prevUrl = useRef<string | null>(null);
-
   const query = useQuery({
     queryKey: ["profile-icon", iconId],
     queryFn: async () => {
       const bytes = await invoke<number[]>("get_profile_icon", {
         iconId,
       });
-      const blob = new Blob([new Uint8Array(bytes)], { type: "image/jpeg" });
-      return URL.createObjectURL(blob);
+      const uint8 = new Uint8Array(bytes);
+      let binary = "";
+      for (let i = 0; i < uint8.length; i++) {
+        binary += String.fromCharCode(uint8[i]);
+      }
+      return `data:image/jpeg;base64,${btoa(binary)}`;
     },
     enabled: iconId !== undefined,
     staleTime: Number.POSITIVE_INFINITY,
   });
-
-  useEffect(() => {
-    if (prevUrl.current && prevUrl.current !== query.data) {
-      URL.revokeObjectURL(prevUrl.current);
-    }
-    prevUrl.current = query.data ?? null;
-
-    return () => {
-      if (prevUrl.current) {
-        URL.revokeObjectURL(prevUrl.current);
-        prevUrl.current = null;
-      }
-    };
-  }, [query.data]);
 
   return query.data ?? null;
 }
@@ -147,8 +135,8 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
             <img
               src={avatarUrl}
               alt="Profile icon"
-              width={iconSize}
-              height={iconSize}
+              width={iconSize * 1.3}
+              height={iconSize * 1.3}
               className={s.avatar}
             />
           ) : (
