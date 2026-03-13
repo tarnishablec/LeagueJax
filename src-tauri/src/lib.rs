@@ -4,6 +4,7 @@ mod jax;
 mod shards;
 mod storage;
 mod utils;
+mod concepts;
 
 use std::sync::Arc;
 

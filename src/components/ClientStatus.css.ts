@@ -115,19 +115,6 @@ export const summonerInfo = style({
   minWidth: 0,
 });
 
-export const summonerName = style({
-  fontWeight: 600,
-  color: vars.color.foreground,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
-
-export const summonerTag = style({
-  fontWeight: 400,
-  color: vars.color.mutedForeground,
-});
-
 export const summonerLevel = style({
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
@@ -153,13 +140,13 @@ export const unfocusButton = style({
 
 // ─── Section header ─────────────────────────────────────────────────────────
 
-export const sectionHeader = style({
-  fontSize: "0.6875rem",
-  fontWeight: 600,
-  textTransform: "uppercase",
-  color: vars.color.mutedForeground,
-  letterSpacing: "0.04em",
-});
+// export const sectionHeader = style({
+//   fontSize: "0.6875rem",
+//   fontWeight: 600,
+//   textTransform: "uppercase",
+//   color: vars.color.mutedForeground,
+//   letterSpacing: "0.04em",
+// });
 
 // ─── Instance list ──────────────────────────────────────────────────────────
 
@@ -175,7 +162,7 @@ export const instanceRow = recipe({
     display: "grid",
     gridTemplateColumns: "24px 1fr auto",
     alignItems: "center",
-    gap: 8,
+    gap: 14,
     padding: "6px 8px",
     borderRadius: 6,
     cursor: "default",
@@ -287,8 +274,8 @@ export const separator = style({
 
 // ─── Empty state ────────────────────────────────────────────────────────────
 
-export const emptyText = style({
-  padding: "8px 4px",
-  color: vars.color.mutedForeground,
-  textAlign: "center",
-});
+// export const emptyText = style({
+//   padding: "8px 4px",
+//   color: vars.color.mutedForeground,
+//   textAlign: "center",
+// });

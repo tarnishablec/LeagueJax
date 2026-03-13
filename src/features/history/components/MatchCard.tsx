@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { MatchSummary } from "@/bindings/matches.ts";
 import { useMatchDetail } from "../hooks/use-match-detail";
-import type { MatchSummary } from "../types";
 import * as s from "./MatchCard.css";
 
 function formatDuration(seconds: number): string {
