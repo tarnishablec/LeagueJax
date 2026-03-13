@@ -12,12 +12,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { CurrentSummoner, LcuInstanceInfo } from "../stores/lcu";
+import type { LcuInstanceInfo, Summoner } from "../stores/lcu";
 import { selectIsConnected, useLcuStore } from "../stores/lcu";
 
 import * as s from "./ClientStatus.css";
 
-function useProfileIcon(iconId: number | undefined) {
+function useProfileIcon(iconId: number | null | undefined) {
   const query = useQuery({
     queryKey: ["profile-icon", iconId],
     queryFn: async () => {
@@ -31,7 +31,7 @@ function useProfileIcon(iconId: number | undefined) {
       }
       return `data:image/jpeg;base64,${btoa(binary)}`;
     },
-    enabled: iconId !== undefined,
+    enabled: iconId != null,
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -43,9 +43,11 @@ function useProfileIcon(iconId: number | undefined) {
 function ConnectedClientCard({
   summoner,
   avatarUrl,
+  pid,
 }: {
-  summoner: CurrentSummoner;
+  summoner: Summoner;
   avatarUrl: string | null;
+  pid: number;
 }) {
   return (
     <div className={s.connectedCard}>
@@ -59,7 +61,9 @@ function ConnectedClientCard({
           {summoner.gameName}
           <span className={s.summonerTag}>#{summoner.tagLine}</span>
         </div>
-        <div className={s.summonerLevel}>Lv. {summoner.summonerLevel}</div>
+        <div className={s.summonerLevel}>
+          Lv. {summoner.summonerLevel} · PID: {pid}
+        </div>
       </div>
     </div>
   );
@@ -68,6 +72,8 @@ function ConnectedClientCard({
 function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
   const { t } = useTranslation();
   const isReady = inst.state === "ready";
+  const hasSummoner = inst.gameName && inst.tagLine;
+  const avatarUrl = useProfileIcon(inst.profileIconId);
 
   const stateLabel =
     inst.state === "authenticating"
@@ -78,9 +84,18 @@ function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
 
   const info = (
     <>
+      {hasSummoner && avatarUrl ? (
+        <img src={avatarUrl} alt="Profile icon" className={s.instanceIcon} />
+      ) : (
+        <div className={s.instanceIconFallback}>
+          <Unplug size={14} aria-hidden="true" />
+        </div>
+      )}
       <div className={s.instanceInfo}>
         <span className={s.instancePath}>
-          {inst.installDir ?? `Port ${inst.port}`}
+          {hasSummoner
+            ? `${inst.gameName}#${inst.tagLine}`
+            : (inst.installDir ?? `Port ${inst.port}`)}
         </span>
         <span className={s.instancePid}>
           PID: {inst.pid}
@@ -123,7 +138,7 @@ function TooltipContent({
   avatarUrl,
 }: {
   instances: LcuInstanceInfo[];
-  summoner: CurrentSummoner | null;
+  summoner: Summoner | null;
   avatarUrl: string | null;
 }) {
   const { t } = useTranslation();
@@ -138,7 +153,11 @@ function TooltipContent({
   return (
     <>
       {focused && summoner && (
-        <ConnectedClientCard summoner={summoner} avatarUrl={avatarUrl} />
+        <ConnectedClientCard
+          summoner={summoner}
+          avatarUrl={avatarUrl}
+          pid={focused.pid}
+        />
       )}
 
       {focused && summoner && others.length > 0 && (
@@ -147,9 +166,9 @@ function TooltipContent({
 
       {others.length > 0 && (
         <>
-          <div className={s.sectionHeader}>
-            {t("clientStatus.otherClients")}
-          </div>
+          {/*<div className={s.sectionHeader}>*/}
+          {/*  {t("clientStatus.otherClients")}*/}
+          {/*</div>*/}
           <div className={s.instanceList}>
             {others.map((inst) => (
               <InstanceCard key={inst.pid} instance={inst} />

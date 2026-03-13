@@ -74,15 +74,15 @@ export const label = recipe({
 
 export const tooltip = style({
   minWidth: 220,
-  padding: 8,
+  // padding: 8,
   borderRadius: 8,
-  background: "oklch(0.18 0.015 270 / 0.95)",
-  border: "1px solid oklch(1 0 0 / 0.12)",
-  boxShadow: "0 0 2px 2px oklch(0 0 0 / 0.12)",
+  background: "transparent",
+  // border: `1px solid ${vars.color.popoverBorder}`,
+  // boxShadow: "0 0 2px 2px oklch(0 0 0 / 0.12)",
   display: "grid",
   gridAutoRows: "auto",
   gap: 8,
-  color: "oklch(0.985 0 0)",
+  color: vars.color.foreground,
   fontSize: "0.8125rem",
   zIndex: 1000,
 });
@@ -95,8 +95,8 @@ export const connectedCard = style({
   gap: 8,
   padding: "8px 12px",
   borderRadius: 8,
-  border: "1px solid oklch(1 0 0 / 0.08)",
-  background: "oklch(0.22 0.02 270 / 0.8)",
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.accent,
 });
 
 export const profileIcon = style({
@@ -116,7 +116,7 @@ export const summonerInfo = style({
 
 export const summonerName = style({
   fontWeight: 600,
-  color: "oklch(0.985 0 0)",
+  color: vars.color.foreground,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -124,12 +124,12 @@ export const summonerName = style({
 
 export const summonerTag = style({
   fontWeight: 400,
-  color: "oklch(1 0 0 / 0.5)",
+  color: vars.color.mutedForeground,
 });
 
 export const summonerLevel = style({
   fontSize: "0.75rem",
-  color: "oklch(1 0 0 / 0.5)",
+  color: vars.color.mutedForeground,
 });
 
 // ─── Section header ─────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ export const sectionHeader = style({
   fontSize: "0.6875rem",
   fontWeight: 600,
   textTransform: "uppercase",
-  color: "oklch(1 0 0 / 0.73)",
+  color: vars.color.mutedForeground,
   letterSpacing: "0.04em",
 });
 
@@ -154,7 +154,7 @@ export const instanceList = style({
 export const instanceRow = recipe({
   base: {
     display: "grid",
-    gridTemplateColumns: "1fr auto",
+    gridTemplateColumns: "24px 1fr auto",
     alignItems: "center",
     gap: 8,
     padding: "6px 8px",
@@ -174,7 +174,7 @@ export const instanceRow = recipe({
         cursor: "pointer",
         selectors: {
           "&:hover": {
-            background: "oklch(1 0 0 / 0.06)",
+            background: `color-mix(in srgb, ${vars.color.accent} 40%, transparent)`,
           },
         },
       },
@@ -192,6 +192,21 @@ export const instanceRow = recipe({
   },
 });
 
+export const instanceIcon = style({
+  width: 24,
+  height: 24,
+  borderRadius: "50%",
+  objectFit: "cover",
+});
+
+export const instanceIconFallback = style({
+  width: 24,
+  height: 24,
+  display: "grid",
+  placeItems: "center",
+  color: vars.color.mutedForeground,
+});
+
 export const instanceInfo = style({
   display: "grid",
   gap: 1,
@@ -206,7 +221,7 @@ export const instancePath = style({
 });
 
 export const instancePid = style({
-  color: "oklch(1 0 0 / 0.45)",
+  color: vars.color.mutedForeground,
   fontSize: "0.7rem",
 });
 
@@ -234,7 +249,7 @@ export const stateIndicator = recipe({
         animation: `${pulse} 1.5s ease-in-out infinite`,
       },
       closing: {
-        background: "oklch(1 0 0 / 0.3)",
+        background: vars.color.mutedForeground,
       },
     },
   },
@@ -247,13 +262,13 @@ export const stateIndicator = recipe({
 
 export const separator = style({
   height: 1,
-  background: "oklch(1 0 0 / 0.08)",
+  background: vars.color.border,
 });
 
 // ─── Empty state ────────────────────────────────────────────────────────────
 
 export const emptyText = style({
   padding: "8px 4px",
-  color: "oklch(1 0 0 / 0.5)",
+  color: vars.color.mutedForeground,
   textAlign: "center",
 });

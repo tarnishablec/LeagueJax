@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export interface CurrentSummoner {
+export interface Summoner {
   puuid: string;
   gameName: string;
   tagLine: string;
@@ -14,13 +14,17 @@ export interface LcuInstanceInfo {
   state: "authenticating" | "ready" | "closing";
   isFocused: boolean;
   installDir: string | null;
+  gameName: string | null;
+  tagLine: string | null;
+  profileIconId: number | null;
+  summonerLevel: number | null;
 }
 
 interface LcuState {
   instances: LcuInstanceInfo[];
-  summoner: CurrentSummoner | null;
+  summoner: Summoner | null;
   setInstances: (instances: LcuInstanceInfo[]) => void;
-  setSummoner: (summoner: CurrentSummoner | null) => void;
+  setSummoner: (summoner: Summoner | null) => void;
 }
 
 export const useLcuStore = create<LcuState>((set) => ({
