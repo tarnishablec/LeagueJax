@@ -34,6 +34,7 @@ export const matchList = style({
   gap: 8,
   alignContent: "start",
   overflowY: "auto",
+  paddingRight: `4px`,
 });
 
 export const emptyState = style({

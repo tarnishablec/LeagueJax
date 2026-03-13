@@ -16,6 +16,12 @@
     "tools": "工具集",
     "settings": "设置"
   },
+  "clientStatus": {
+    "otherClients": "其他客户端",
+    "noClients": "未检测到客户端",
+    "authenticating": "连接中...",
+    "closing": "关闭中..."
+  },
   "history": {
     "searchPlaceholder": "输入 名字#TAG 搜索",
     "search": "搜索",

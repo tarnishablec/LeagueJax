@@ -12,15 +12,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { LcuInstanceInfo } from "../stores/lcu";
+import type { CurrentSummoner, LcuInstanceInfo } from "../stores/lcu";
 import { selectIsConnected, useLcuStore } from "../stores/lcu";
 
 import * as s from "./ClientStatus.css";
-
-function truncatePath(path: string, max = 25): string {
-  if (path.length <= max) return path;
-  return `${path.slice(0, max - 3)}...`;
-}
 
 function useProfileIcon(iconId: number | undefined) {
   const query = useQuery({
@@ -43,57 +38,126 @@ function useProfileIcon(iconId: number | undefined) {
   return query.data ?? null;
 }
 
-// ─── Tooltip content ────────────────────────────────────────────────────────
+// ─── Tooltip sub-components ─────────────────────────────────────────────────
 
-function InstanceList({ instances }: { instances: LcuInstanceInfo[] }) {
-  const { t } = useTranslation();
-
-  if (instances.length === 0) {
-    return <div className={s.emptyText}>{t("common.noClients")}</div>;
-  }
-
-  return instances.map((inst) => (
-    <InstanceRow key={inst.pid} instance={inst} />
-  ));
+function ConnectedClientCard({
+  summoner,
+  avatarUrl,
+}: {
+  summoner: CurrentSummoner;
+  avatarUrl: string | null;
+}) {
+  return (
+    <div className={s.connectedCard}>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
+      ) : (
+        <div className={s.profileIcon} />
+      )}
+      <div className={s.summonerInfo}>
+        <div className={s.summonerName}>
+          {summoner.gameName}
+          <span className={s.summonerTag}>#{summoner.tagLine}</span>
+        </div>
+        <div className={s.summonerLevel}>Lv. {summoner.summonerLevel}</div>
+      </div>
+    </div>
+  );
 }
 
-function InstanceRow({ instance: inst }: { instance: LcuInstanceInfo }) {
+function InstanceCard({ instance: inst }: { instance: LcuInstanceInfo }) {
+  const { t } = useTranslation();
   const isReady = inst.state === "ready";
-  const canSwitch = isReady && !inst.isFocused;
 
-  const content = (
+  const stateLabel =
+    inst.state === "authenticating"
+      ? t("clientStatus.authenticating")
+      : inst.state === "closing"
+        ? t("clientStatus.closing")
+        : null;
+
+  const info = (
     <>
-      <span className={s.instancePath}>
-        {inst.installDir ? truncatePath(inst.installDir) : `Port ${inst.port}`}
-      </span>
-      <span className={s.instancePid}>PID: {inst.pid}</span>
-      {inst.isFocused && <span className={s.focusDot} />}
+      <div className={s.instanceInfo}>
+        <span className={s.instancePath}>
+          {inst.installDir ?? `Port ${inst.port}`}
+        </span>
+        <span className={s.instancePid}>
+          PID: {inst.pid}
+          {stateLabel ? ` · ${stateLabel}` : ""}
+        </span>
+      </div>
+      <span
+        className={s.stateIndicator({ state: inst.state })}
+        aria-hidden="true"
+      />
     </>
   );
 
-  if (canSwitch) {
+  if (isReady) {
     return (
       <button
         type="button"
-        className={s.instanceRow({ focused: false })}
+        className={s.instanceRow({ clickable: true })}
         onClick={() => invoke("lcu_switch_focus", { pid: inst.pid })}
         title={inst.installDir ?? undefined}
       >
-        {content}
+        {info}
       </button>
     );
   }
 
   return (
     <div
-      className={s.instanceRow({
-        focused: inst.isFocused,
-        disabled: !isReady,
-      })}
+      className={s.instanceRow({ disabled: !isReady })}
       title={inst.installDir ?? undefined}
     >
-      {content}
+      {info}
     </div>
+  );
+}
+
+function TooltipContent({
+  instances,
+  summoner,
+  avatarUrl,
+}: {
+  instances: LcuInstanceInfo[];
+  summoner: CurrentSummoner | null;
+  avatarUrl: string | null;
+}) {
+  const { t } = useTranslation();
+
+  const focused = instances.find((i) => i.isFocused);
+  const others = instances.filter((i) => !i.isFocused);
+
+  if (instances.length === 0) {
+    return <div className={s.emptyText}>{t("clientStatus.noClients")}</div>;
+  }
+
+  return (
+    <>
+      {focused && summoner && (
+        <ConnectedClientCard summoner={summoner} avatarUrl={avatarUrl} />
+      )}
+
+      {focused && summoner && others.length > 0 && (
+        <div className={s.separator} />
+      )}
+
+      {others.length > 0 && (
+        <>
+          <div className={s.sectionHeader}>
+            {t("clientStatus.otherClients")}
+          </div>
+          <div className={s.instanceList}>
+            {others.map((inst) => (
+              <InstanceCard key={inst.pid} instance={inst} />
+            ))}
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
@@ -162,7 +226,11 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
             style={floatingStyles}
             {...getFloatingProps()}
           >
-            <InstanceList instances={instances} />
+            <TooltipContent
+              instances={instances}
+              summoner={summoner}
+              avatarUrl={avatarUrl}
+            />
           </div>
         </FloatingPortal>
       )}

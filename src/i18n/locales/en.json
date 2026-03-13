@@ -16,6 +16,12 @@
     "tools": "Tools",
     "settings": "Settings"
   },
+  "clientStatus": {
+    "otherClients": "Other Clients",
+    "noClients": "No clients detected",
+    "authenticating": "Connecting...",
+    "closing": "Closing..."
+  },
   "history": {
     "searchPlaceholder": "Enter Name#TAG to search",
     "search": "Search",

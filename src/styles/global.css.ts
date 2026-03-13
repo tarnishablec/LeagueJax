@@ -43,3 +43,7 @@ globalStyle("button", {
 globalStyle("*", {
   userSelect: "none",
 });
+
+globalStyle("html", {
+  scrollbarColor: `#888 transparent`,
+});
