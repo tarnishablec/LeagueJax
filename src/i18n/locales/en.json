@@ -31,6 +31,8 @@
     "blueTeam": "Blue Team",
     "redTeam": "Red Team",
     "noMatches": "No matches found",
-    "selectClient": "Select a client to view match history"
+    "selectClient": "Select a client to view match history",
+    "emptyState": "Search for a summoner to view match history",
+    "closeTab": "Close tab"
   }
 }

@@ -15,6 +15,8 @@ export interface NavItem {
 export interface ToolbarItem {
   node: React.ReactElement;
   order?: number;
+  /** Paths where this item appears. `undefined` = all routes. */
+  routes?: string[];
 }
 
 /**

@@ -11,6 +11,7 @@ export const container = style({
 
 export const trigger = recipe({
   base: {
+    width: "100%",
     display: "grid",
     placeItems: "center",
     borderRadius: 6,
@@ -59,6 +60,7 @@ export const label = recipe({
     transition: "opacity 150ms",
     paddingRight: "1rem",
     width: "100%",
+    textAlign: "start",
   },
   variants: {
     collapsed: {
@@ -150,15 +152,16 @@ export const instanceRow = recipe({
     focused: {
       true: {
         borderLeft: `2px solid ${vars.color.primary}`,
-        background: `color-mix(in srgb, ${vars.color.primary} 8%, transparent)`,
+        background: `color-mix(in srgb, ${vars.color.primary} 15%, ${vars.color.backgroundRaw})`,
       },
     },
     clickable: {
       true: {
         cursor: "pointer",
+        background: `color-mix(in srgb, ${vars.color.accent} 5%, ${vars.color.backgroundRaw})`,
         selectors: {
           "&:hover": {
-            background: `color-mix(in srgb, ${vars.color.accent} 40%, transparent)`,
+            background: `color-mix(in srgb, ${vars.color.accent} 30%, ${vars.color.backgroundRaw})`,
           },
         },
       },

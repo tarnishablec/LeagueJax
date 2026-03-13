@@ -1,10 +1,10 @@
 mod commands;
+mod concepts;
 mod error;
 mod jax;
 mod shards;
 mod storage;
 mod utils;
-mod concepts;
 
 use std::sync::Arc;
 
@@ -16,11 +16,9 @@ use window_vibrancy::{apply_acrylic, apply_mica};
 #[cfg(target_os = "macos")]
 use window_vibrancy::apply_acrylic;
 
-use crate::commands::history::{
-    get_current_summoner, get_match_detail, get_match_history, save_search_history, search_summoner,
-};
-use crate::commands::lcu::get_profile_icon;
-use crate::shards::lcu::LcuShard;
+use crate::commands::history::*;
+use crate::commands::lcu::*;
+
 use jax::{Jax, ShardInfo};
 use storage::SqliteDb;
 // ─── Commands ─────────────────────────────────────────────────────────────────
@@ -28,16 +26,6 @@ use storage::SqliteDb;
 #[tauri::command]
 fn get_shards(jax: tauri::State<Arc<Jax>>) -> Vec<ShardInfo> {
     jax.shard_info()
-}
-
-#[tauri::command]
-fn lcu_switch_focus(pid: u32, jax: tauri::State<Arc<Jax>>) {
-    jax.get_shard::<LcuShard>().switch_focus(pid);
-}
-
-#[tauri::command]
-fn lcu_unfocus(jax: tauri::State<Arc<Jax>>) {
-    jax.get_shard::<LcuShard>().unfocus();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -62,6 +50,7 @@ pub fn run() {
             get_match_detail,
             save_search_history,
             get_profile_icon,
+            get_game_version,
         ])
         .setup(move |app| {
             let app_handle = app.handle().clone();
@@ -88,7 +77,7 @@ pub fn run() {
             // ── Jax lifecycle: build → register → start ──
             let mut jax = Jax::new(&app_handle, db);
 
-            jax.register(Arc::new(LcuShard::new()));
+            jax.register(Arc::new(shards::lcu::LcuShard::new()));
             jax.register(Arc::new(shards::auto_select::AutoSelectShard::new()));
             jax.register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()));
             jax.register(Arc::new(shards::auto_reply::AutoReplyShard::new()));

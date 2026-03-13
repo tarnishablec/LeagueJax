@@ -1,13 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
-import { MatchCard } from "../features/history/components/MatchCard";
-import { SearchBar } from "../features/history/components/SearchBar";
-import { useMatchHistory } from "../features/history/hooks/use-match-history";
-import { useSearchSummoner } from "../features/history/hooks/use-summoner";
+import { MatchList } from "../features/history/components/MatchList";
+import { SummaryBar } from "../features/history/components/SummaryBar";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
+import { useTabStore } from "../stores/tabs";
 import * as s from "./history.css";
 
 const ConnectionGuard = ({ instances }: { instances: LcuInstanceInfo[] }) => {
@@ -44,73 +42,24 @@ const ConnectionGuard = ({ instances }: { instances: LcuInstanceInfo[] }) => {
   );
 };
 
-export function History() {
+function EmptyState() {
   const { t } = useTranslation();
+  return <div className={s.emptyState}>{t("history.emptyState")}</div>;
+}
+
+export function History() {
   const connected = useLcuStore(selectIsFocused);
   const { instances } = useLcuStore();
-
-  const [searchParams, setSearchParams] = useState<{
-    gameName: string;
-    tagLine: string;
-  } | null>(null);
-
-  const { data: searchResult, isFetching: isSearching } = useSearchSummoner(
-    searchParams?.gameName ?? "",
-    searchParams?.tagLine ?? "",
-    !!searchParams,
-  );
-
-  const activeSummoner = searchResult;
-  const { data: matches, isLoading: isLoadingMatches } = useMatchHistory(
-    activeSummoner?.puuid,
-  );
-
-  useEffect(() => {
-    if (searchResult?.puuid) {
-      invoke("save_search_history", {
-        puuid: searchResult.puuid,
-        gameName: searchResult.gameName,
-        tagLine: searchResult.tagLine,
-      }).catch(() => {});
-    }
-  }, [searchResult?.puuid, searchResult?.gameName, searchResult?.tagLine]);
+  const { tabs, activeTabId } = useTabStore();
+  const activeTab = tabs.find((t) => t.id === activeTabId);
 
   if (!connected) return <ConnectionGuard instances={instances} />;
+  if (!activeTab) return <EmptyState />;
 
   return (
     <div className={s.page}>
-      <SearchBar
-        onSearch={(gameName, tagLine) => setSearchParams({ gameName, tagLine })}
-        isLoading={isSearching}
-      />
-
-      {activeSummoner && (
-        <div className={s.summaryBar}>
-          <div />
-          <div>
-            <div className={s.summonerName}>
-              {activeSummoner.gameName}#{activeSummoner.tagLine}
-            </div>
-            <div className={s.summonerLevel}>
-              Lv. {activeSummoner.summonerLevel}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className={s.matchList}>
-        {isLoadingMatches ? (
-          <div className={s.emptyState}>{t("common.loading")}</div>
-        ) : (
-          matches?.map((match) => (
-            <MatchCard key={match.gameId} match={match} />
-          ))
-        )}
-
-        {matches?.length === 0 && !isLoadingMatches && (
-          <div className={s.emptyState}>{t("history.noMatches")}</div>
-        )}
-      </div>
+      <SummaryBar summoner={activeTab.summoner} />
+      <MatchList puuid={activeTab.puuid} />
     </div>
   );
 }

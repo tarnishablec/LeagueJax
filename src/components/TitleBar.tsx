@@ -1,5 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import React from "react";
+import type React from "react";
+import { ThemeToggle } from "@/components/ThemeToggle.tsx";
 import * as s from "./TitleBar.css";
 
 const appWindow = getCurrentWindow();
@@ -56,15 +57,13 @@ export function Toolbar({ children }: { children?: React.ReactNode }) {
 
 // ─── TitleBar ─────────────────────────────────────────────────────────────────
 
-export function TitleBar({ tools }: { tools?: React.ReactElement[] }) {
+export function TitleBar() {
   return (
     <header className={s.header}>
       <div data-tauri-drag-region className={s.dragRegion}></div>
 
       <Toolbar>
-        {tools?.map((tool) => (
-          <React.Fragment key={tool.key}>{tool}</React.Fragment>
-        ))}
+        <ThemeToggle key="theme-toggle" />
       </Toolbar>
 
       <div aria-hidden="true" className={s.divider} />

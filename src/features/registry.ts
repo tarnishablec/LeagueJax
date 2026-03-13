@@ -1,6 +1,7 @@
 import { BarChart3, Bot, Swords, Wrench } from "lucide-react";
+import React from "react";
 import { shardId } from "../types/shard-id";
-import type { NavItem, WebShard } from "../types/web-shard";
+import type { NavItem, ToolbarItem, WebShard } from "../types/web-shard";
 import { settingsShard } from "./settings/manifest";
 
 // ─── Core nav sections ────────────────────────────────────────────────────────
@@ -15,6 +16,20 @@ const historyShard: WebShard = {
       icon: BarChart3,
       section: "main",
       order: 10,
+    },
+  ],
+  toolbarItems: () => [
+    {
+      node: React.createElement(
+        React.lazy(() =>
+          import("./history/components/HistoryToolbar").then((m) => ({
+            default: m.HistoryToolbar,
+          })),
+        ),
+        { key: "history-search" },
+      ),
+      order: 10,
+      routes: ["/history"],
     },
   ],
 };
@@ -71,5 +86,14 @@ export const SHARD_REGISTRY: WebShard[] = [
 export function getNavItems(section: NavItem["section"] = "main"): NavItem[] {
   return SHARD_REGISTRY.flatMap((s) => s.navItems?.() ?? [])
     .filter((item) => (item.section ?? "main") === section)
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+}
+
+export function getToolbarItems(currentRoute: string): ToolbarItem[] {
+  return SHARD_REGISTRY.flatMap((s) => s.toolbarItems?.() ?? [])
+    .filter(
+      (item) =>
+        !item.routes || item.routes.some((r) => currentRoute.startsWith(r)),
+    )
     .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 }
