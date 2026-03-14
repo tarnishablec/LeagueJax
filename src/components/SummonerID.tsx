@@ -7,6 +7,7 @@ export const SummonerID = ({ summoner }: { summoner: SummonerInfo }) => {
       style={{
         display: "inline-grid",
         gridTemplateColumns: "1fr auto",
+        gap: 2,
       }}
     >
       <span

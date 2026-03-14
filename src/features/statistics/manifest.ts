@@ -1,5 +1,5 @@
 import { BarChart3 } from "lucide-react";
-import type { WebShard } from "@/types/web-shard.ts";
+import type { WebShard } from "@/core/shard/web-shard.ts";
 import { SHARD_IDS } from "../shard-ids";
 
 export const statisticsShard: WebShard = {

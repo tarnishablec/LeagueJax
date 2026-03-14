@@ -1,6 +1,6 @@
 import { Settings } from "lucide-react";
-import { shardId } from "@/types/shard-id.ts";
-import type { WebShard } from "@/types/web-shard.ts";
+import { shardId } from "@/core/shard/shard-id.ts";
+import type { WebShard } from "@/core/shard/web-shard.ts";
 
 // Settings is a core UI feature with no Rust shard counterpart
 export const settingsShard: WebShard = {
