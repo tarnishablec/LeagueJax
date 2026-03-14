@@ -1,3 +1,3 @@
 [workspace]
-members = ["src-tauri"]
+members = ["jax","src-tauri"]
 resolver = "3"

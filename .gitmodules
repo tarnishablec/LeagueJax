@@ -1,0 +1,3 @@
+[submodule "jax"]
+	path = jax
+	url = https://github.com/tarnishablec/jax.git

@@ -2,7 +2,7 @@ use base64::Engine as _;
 use rusqlite::Connection;
 use std::sync::Mutex;
 
-use crate::error::{AppError, Result};
+use crate::error::AppError;
 
 pub struct SqliteDb {
     conn: Mutex<Connection>,
@@ -10,7 +10,7 @@ pub struct SqliteDb {
 
 impl SqliteDb {
     /// Open (or create) a database and run migrations.
-    pub fn open(path: &std::path::Path) -> Result<Self> {
+    pub fn open(path: &std::path::Path) -> Result<Self, AppError> {
         let conn = Connection::open(path)?;
 
         // Enable WAL mode for better concurrent performance
@@ -23,7 +23,7 @@ impl SqliteDb {
         Ok(db)
     }
 
-    fn migrate(&self) -> Result<()> {
+    fn migrate(&self) -> Result<(), AppError> {
         let conn = self.conn.lock().unwrap_or_else(|e| e.into_inner());
 
         let version: i64 = conn
@@ -74,7 +74,7 @@ impl SqliteDb {
         &self,
         sql: &str,
         params: &[&dyn rusqlite::ToSql],
-    ) -> Result<Vec<serde_json::Value>> {
+    ) -> Result<Vec<serde_json::Value>, AppError> {
         let conn = self.conn.lock().unwrap_or_else(|e| e.into_inner());
         let mut stmt = conn.prepare(sql)?;
         let col_names: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
@@ -88,11 +88,11 @@ impl SqliteDb {
             Ok(serde_json::Value::Object(map))
         })?;
 
-        rows.collect::<std::result::Result<Vec<_>, _>>()
+        rows.collect::<Result<Vec<_>, _>>()
             .map_err(AppError::Database)
     }
 
-    pub fn execute(&self, sql: &str, params: &[&dyn rusqlite::ToSql]) -> Result<usize> {
+    pub fn execute(&self, sql: &str, params: &[&dyn rusqlite::ToSql]) -> Result<usize, AppError> {
         let conn = self.conn.lock().unwrap_or_else(|e| e.into_inner());
         Ok(conn.execute(sql, rusqlite::params_from_iter(params.iter()))?)
     }

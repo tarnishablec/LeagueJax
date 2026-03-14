@@ -2,17 +2,16 @@ use std::sync::Arc;
 
 use crate::concepts::matches::{MatchDetail, MatchSummary, Participant};
 use crate::concepts::summoner::SummonerInfo;
-use crate::error::{AppError, Result};
-use crate::jax::Jax;
+use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
+use jax::Jax;
 use serde_json::Value;
 use tauri::State;
-
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-pub fn parse_summoner(v: &Value) -> Result<SummonerInfo> {
+pub fn parse_summoner(v: &Value) -> Result<SummonerInfo, AppError> {
     Ok(SummonerInfo {
         puuid: v["puuid"].as_str().unwrap_or_default().to_string(),
         game_name: v["gameName"].as_str().unwrap_or_default().to_string(),
@@ -22,7 +21,7 @@ pub fn parse_summoner(v: &Value) -> Result<SummonerInfo> {
     })
 }
 
-fn parse_match_summary(game: &Value) -> Result<MatchSummary> {
+fn parse_match_summary(game: &Value) -> Result<MatchSummary, AppError> {
     let stats = &game["participants"][0]["stats"];
     let total_minions = stats["totalMinionsKilled"].as_i64().unwrap_or(0);
     let neutral_minions = stats["neutralMinionsKilled"].as_i64().unwrap_or(0);
@@ -82,7 +81,7 @@ fn parse_participant(p: &Value) -> Participant {
 // ─── Commands ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerInfo> {
+pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerInfo, AppError> {
     let lcu = jax
         .get_shard::<LcuShard>()
         .client()
@@ -96,7 +95,7 @@ pub async fn search_summoner(
     game_name: String,
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
-) -> Result<SummonerInfo> {
+) -> Result<SummonerInfo, AppError> {
     let lcu = jax
         .get_shard::<LcuShard>()
         .client()
@@ -133,7 +132,7 @@ pub async fn get_match_history(
     begin_index: u32,
     end_index: u32,
     jax: State<'_, Arc<Jax>>,
-) -> Result<Vec<MatchSummary>> {
+) -> Result<Vec<MatchSummary>, AppError> {
     let lcu = jax
         .get_shard::<LcuShard>()
         .client()
@@ -157,7 +156,10 @@ pub async fn get_match_history(
 }
 
 #[tauri::command]
-pub async fn get_match_detail(game_id: u64, jax: State<'_, Arc<Jax>>) -> Result<MatchDetail> {
+pub async fn get_match_detail(
+    game_id: u64,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<MatchDetail, AppError> {
     let lcu = jax
         .get_shard::<LcuShard>()
         .client()

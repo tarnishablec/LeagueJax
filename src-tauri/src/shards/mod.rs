@@ -8,4 +8,6 @@ pub mod saved_player;
 pub mod statistics;
 pub mod tray;
 pub mod updater;
+pub mod tauri_host;
+pub mod persistence_sled;
 
