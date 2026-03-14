@@ -6,7 +6,7 @@ use uuid::{uuid, Uuid};
 use crate::error::Result;
 use crate::jax::Jax;
 
-use super::Shard;
+use crate::jax::shard::Shard;
 
 pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000001");
 

@@ -1,6 +1,5 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -11,16 +10,7 @@ const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const port = 31420;
 export default defineConfig(async () => ({
-  plugins: [
-    tanstackRouter({
-      routesDirectory: path.resolve(dirname, "./src/routes"),
-      target: "react",
-      autoCodeSplitting: true,
-      routeFileIgnorePattern: "\\.css\\.ts$",
-    }),
-    react(),
-    vanillaExtractPlugin(),
-  ],
+  plugins: [react(), vanillaExtractPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(dirname, "./src"),

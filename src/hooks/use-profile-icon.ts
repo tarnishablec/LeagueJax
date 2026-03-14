@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import useSWR from "swr";
 
 export function useProfileIcon(iconId: number | null | undefined) {
-  const query = useQuery({
-    queryKey: ["profile-icon", iconId],
-    queryFn: async () => {
-      const bytes = await invoke<number[]>("get_profile_icon", {
+  const query = useSWR(
+    iconId ? ["get_profile_icon", iconId] : null,
+    async ([cmd]) => {
+      const bytes = await invoke<number[]>(cmd, {
         iconId,
       });
       const uint8 = new Uint8Array(bytes);
@@ -15,9 +15,10 @@ export function useProfileIcon(iconId: number | null | undefined) {
       }
       return `data:image/jpeg;base64,${btoa(binary)}`;
     },
-    enabled: iconId != null,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+    {
+      dedupingInterval: Number.POSITIVE_INFINITY,
+    },
+  );
 
   return query.data ?? null;
 }

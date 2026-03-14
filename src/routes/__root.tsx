@@ -1,9 +1,8 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { NavLink, Outlet } from "react-router";
 import { ClientStatus } from "../components/ClientStatus";
 import { JaxLogo } from "../components/JaxLogo";
 import { TitleBar } from "../components/TitleBar";
@@ -18,7 +17,7 @@ import * as s from "./__root.css";
 const mainNavItems = getNavItems("main");
 const bottomNavItems = getNavItems("bottom");
 
-function RootLayout() {
+export function RootLayout() {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -66,18 +65,17 @@ function RootLayout() {
       <aside className={s.sidebar}>
         <nav className={s.navList}>
           {mainNavItems.map(({ to, labelKey, icon: Icon }) => (
-            <Link
+            <NavLink
               key={to}
               to={to}
-              className={s.navItem({ collapsed })}
+              className={({ isActive }) =>
+                s.navItem({ collapsed, active: isActive })
+              }
               draggable={false}
-              activeProps={{
-                className: s.navItem({ collapsed, active: true }),
-              }}
             >
               <Icon size={iconSize} aria-hidden="true" className={s.navIcon} />
               <span className={s.navLabel({ collapsed })}>{t(labelKey)}</span>
-            </Link>
+            </NavLink>
           ))}
         </nav>
 
@@ -85,18 +83,17 @@ function RootLayout() {
         <div className={s.navList}>
           <ClientStatus collapsed={collapsed} iconSize={iconSize} />
           {bottomNavItems.map(({ to, labelKey, icon: Icon }) => (
-            <Link
+            <NavLink
               key={to}
               to={to}
-              className={s.navItem({ collapsed })}
+              className={({ isActive }) =>
+                s.navItem({ collapsed, active: isActive })
+              }
               draggable={false}
-              activeProps={{
-                className: s.navItem({ collapsed, active: true }),
-              }}
             >
               <Icon size={iconSize} aria-hidden="true" className={s.navIcon} />
               <span className={s.navLabel({ collapsed })}>{t(labelKey)}</span>
-            </Link>
+            </NavLink>
           ))}
         </div>
       </aside>
@@ -105,12 +102,6 @@ function RootLayout() {
       <main className={s.main}>
         <Outlet />
       </main>
-
-      {import.meta.env.DEV && (
-        <TanStackRouterDevtools position="bottom-right" />
-      )}
     </div>
   );
 }
-
-export const Route = createRootRoute({ component: RootLayout });
