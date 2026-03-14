@@ -1,7 +1,7 @@
 import { BarChart3, Bot, Swords, Wrench } from "lucide-react";
 import React from "react";
-import { shardId } from "../types/shard-id";
-import type { NavItem, ToolbarItem, WebShard } from "../types/web-shard";
+import { shardId } from "@/core/shard/shard-id.ts";
+import type { NavItem, ToolbarItem, WebShard } from "@/core/shard/web-shard.ts";
 import { settingsShard } from "./settings/manifest";
 
 // ─── Core nav sections ────────────────────────────────────────────────────────

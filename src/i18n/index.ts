@@ -12,5 +12,3 @@ await i18n.use(initReactI18next).init({
   fallbackLng: "en",
   interpolation: { escapeValue: false },
 });
-
-export default i18n;
