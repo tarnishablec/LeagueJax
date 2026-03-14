@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
+use crate::error::AppError;
+use crate::shards::lcu::LcuShard;
+use jax::Jax;
 use tauri::State;
 
-use crate::error::{AppError, Result};
-use crate::jax::Jax;
-use crate::shards::lcu::LcuShard;
-
 #[tauri::command]
-pub fn lcu_switch_focus(pid: u32, jax: tauri::State<Arc<Jax>>) {
+pub fn lcu_switch_focus(pid: u32, jax: State<Arc<Jax>>) {
     jax.get_shard::<LcuShard>().switch_focus(pid);
 }
 
@@ -17,7 +16,7 @@ pub fn lcu_unfocus(jax: tauri::State<Arc<Jax>>) {
 }
 
 #[tauri::command]
-pub async fn get_profile_icon(icon_id: i64, jax: State<'_, Arc<Jax>>) -> Result<Vec<u8>> {
+pub async fn get_profile_icon(icon_id: i64, jax: State<'_, Arc<Jax>>) -> Result<Vec<u8>, AppError> {
     let client = jax
         .get_shard::<LcuShard>()
         .client()
@@ -27,7 +26,7 @@ pub async fn get_profile_icon(icon_id: i64, jax: State<'_, Arc<Jax>>) -> Result<
 }
 
 #[tauri::command]
-pub async fn get_game_version(jax: State<'_, Arc<Jax>>) -> Result<String> {
+pub async fn get_game_version(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
     let client = jax
         .get_shard::<LcuShard>()
         .client()

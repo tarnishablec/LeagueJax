@@ -1,7 +1,6 @@
 mod commands;
 mod concepts;
 mod error;
-mod jax;
 mod shards;
 mod storage;
 mod utils;
@@ -19,14 +18,11 @@ use window_vibrancy::apply_acrylic;
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 
-use jax::{Jax, ShardInfo};
-use storage::SqliteDb;
-// ─── Commands ─────────────────────────────────────────────────────────────────
+use jax::Jax;
 
-#[tauri::command]
-fn get_shards(jax: tauri::State<Arc<Jax>>) -> Vec<ShardInfo> {
-    jax.shard_info()
-}
+use storage::SqliteDb;
+
+// ─── Runtime ─────────────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -41,7 +37,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
-            get_shards,
             lcu_switch_focus,
             lcu_unfocus,
             get_current_summoner,
@@ -74,8 +69,9 @@ pub fn run() {
                 SqliteDb::open(&data_dir.join("league-jax.db")).expect("failed to open database");
 
             // ── Jax lifecycle: build → register → start ──
-            let mut jax = Jax::new(&app_handle);
+            let mut jax = Jax::default();
 
+            jax.register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)));
             jax.register(Arc::new(shards::lcu::LcuShard::new()));
             jax.register(Arc::new(shards::auto_select::AutoSelectShard::new()));
             jax.register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()));
@@ -89,7 +85,7 @@ pub fn run() {
 
             let jax = Arc::new(jax);
             app.manage(Arc::clone(&jax));
-            jax.start();
+            jax.start().expect("Jax failed to start");
 
             Ok(())
         })
