@@ -1,12 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import useSWR from "swr";
 import type { MatchDetail } from "@/bindings/matches.ts";
 
 export function useMatchDetail(gameId: number | null) {
-  return useQuery<MatchDetail>({
-    queryKey: ["match-detail", gameId],
-    queryFn: () => invoke<MatchDetail>("get_match_detail", { gameId }),
-    enabled: gameId !== null,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  return useSWR(
+    gameId ? ["get_match_detail", gameId] : null,
+    () => invoke<MatchDetail>("get_match_detail", { gameId }),
+    {
+      dedupingInterval: Number.POSITIVE_INFINITY,
+    },
+  );
 }

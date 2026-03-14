@@ -48,7 +48,6 @@ pub fn run() {
             search_summoner,
             get_match_history,
             get_match_detail,
-            save_search_history,
             get_profile_icon,
             get_game_version,
         ])
@@ -75,7 +74,7 @@ pub fn run() {
                 SqliteDb::open(&data_dir.join("league-jax.db")).expect("failed to open database");
 
             // ── Jax lifecycle: build → register → start ──
-            let mut jax = Jax::new(&app_handle, db);
+            let mut jax = Jax::new(&app_handle);
 
             jax.register(Arc::new(shards::lcu::LcuShard::new()));
             jax.register(Arc::new(shards::auto_select::AutoSelectShard::new()));

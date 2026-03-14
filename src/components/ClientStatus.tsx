@@ -7,7 +7,6 @@ import {
   useHover,
   useInteractions,
 } from "@floating-ui/react";
-import { useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { Unlink, Unplug } from "lucide-react";
 import { useState } from "react";
@@ -18,6 +17,7 @@ import { useProfileIcon } from "@/hooks/use-profile-icon.ts";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
 import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
+import { useNavigate } from "react-router";
 
 // ─── Tooltip sub-components ─────────────────────────────────────────────────
 
@@ -148,7 +148,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
   const handleClick = () => {
     if (summoner) {
       openTab(summoner);
-      void navigate({ to: "/history" });
+      void navigate("/history");
     }
   };
 

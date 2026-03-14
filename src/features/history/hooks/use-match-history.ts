@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
+import useSWR from "swr";
 import type { MatchSummary } from "@/bindings/matches.ts";
 
 export function useMatchHistory(
@@ -7,14 +7,16 @@ export function useMatchHistory(
   page = 0,
   pageSize = 20,
 ) {
-  return useQuery<MatchSummary[]>({
-    queryKey: ["match-history", puuid, page],
-    queryFn: () =>
-      invoke<MatchSummary[]>("get_match_history", {
+  return useSWR(
+    puuid && page > 0 ? ["get_match_history", puuid, page] : null,
+    ([cmd]) =>
+      invoke<MatchSummary[]>(cmd, {
         puuid,
         beginIndex: page * pageSize,
         endIndex: (page + 1) * pageSize,
       }),
-    enabled: !!puuid,
-  });
+    {
+      dedupingInterval: Number.POSITIVE_INFINITY,
+    },
+  );
 }

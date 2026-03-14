@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::concepts::matches::{MatchDetail, MatchSummary, Participant};
 use crate::concepts::summoner::SummonerInfo;
@@ -178,29 +177,4 @@ pub async fn get_match_detail(game_id: u64, jax: State<'_, Arc<Jax>>) -> Result<
         queue_id: resp["queueId"].as_i64().unwrap_or(0),
         participants,
     })
-}
-
-#[tauri::command]
-pub async fn save_search_history(
-    puuid: String,
-    game_name: String,
-    tag_line: String,
-    jax: State<'_, Arc<Jax>>,
-) -> Result<()> {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64;
-
-    jax.db.execute(
-        "INSERT INTO search_history (puuid, game_name, tag_line, last_searched)
-         VALUES (?1, ?2, ?3, ?4)
-         ON CONFLICT(puuid) DO UPDATE SET
-           game_name = excluded.game_name,
-           tag_line = excluded.tag_line,
-           last_searched = excluded.last_searched",
-        &[&puuid as &dyn rusqlite::ToSql, &game_name, &tag_line, &now],
-    )?;
-
-    Ok(())
 }

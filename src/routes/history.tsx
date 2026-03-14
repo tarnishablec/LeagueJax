@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
@@ -63,5 +62,3 @@ export function History() {
     </div>
   );
 }
-
-export const Route = createFileRoute("/history")({ component: History });

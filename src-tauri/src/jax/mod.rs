@@ -1,3 +1,5 @@
+pub mod shard;
+
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -5,8 +7,7 @@ use std::sync::Arc;
 use tauri::AppHandle;
 use uuid::Uuid;
 
-use crate::shards::Shard;
-use crate::storage::{SqliteDb};
+use crate::jax::shard::Shard;
 
 /// Core application context.
 ///
@@ -14,16 +15,15 @@ use crate::storage::{SqliteDb};
 /// Tauri drives it: `Builder::setup()` builds and starts Jax.
 pub struct Jax {
     app: AppHandle,
-    pub db: Arc<SqliteDb>,
+    // Sorted shards list for iteration, and a typed map for retrieval by concrete type.
     shards: Vec<Arc<dyn Shard>>,
     typed: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
 }
 
 impl Jax {
-    pub fn new(app: &AppHandle, db: SqliteDb) -> Self {
+    pub fn new(app: &AppHandle) -> Self {
         Self {
             app: app.clone(),
-            db: Arc::new(db),
             shards: Vec::new(),
             typed: HashMap::new(),
         }
@@ -31,9 +31,12 @@ impl Jax {
 
     /// Register a shard. Must be called before `start()`.
     pub fn register<T: Shard + 'static>(&mut self, shard: Arc<T>) {
-        self.typed
-            .insert(TypeId::of::<T>(), Box::new(shard.clone()));
-        self.shards.push(shard);
+        let tid = TypeId::of::<T>();
+
+        self.shards.push(shard.clone() as Arc<dyn Shard>);
+        self.typed.insert(tid, Box::new(shard));
+
+        tracing::debug!("Registered shard: {}", std::any::type_name::<T>());
     }
 
     /// Set up all registered shards. Call once after wrapping in `Arc`.

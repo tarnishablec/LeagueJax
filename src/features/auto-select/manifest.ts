@@ -1,5 +1,5 @@
 import { Target } from "lucide-react";
-import type { WebShard } from "@/core/shard/web-shard.ts";
+import type { WebShard } from "@/jax/shard/web-shard.ts";
 import { SHARD_IDS } from "../shard-ids";
 
 export const autoSelectShard: WebShard = {
