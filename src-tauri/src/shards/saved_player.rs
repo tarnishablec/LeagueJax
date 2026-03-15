@@ -3,10 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use jax::shard::Shard;
-use jax::Jax;
-use uuid::{uuid, Uuid};
-
-pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000005");
+use jax::{shard_id, Jax};
 
 pub struct SavedPlayerShard;
 
@@ -18,11 +15,9 @@ impl SavedPlayerShard {
 
 #[async_trait]
 impl Shard for SavedPlayerShard {
-    fn id(&self) -> Uuid {
-        ID
-    }
+    shard_id!("0885405c-362d-45b6-b212-f943046c401f");
 
-    async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         todo!()
     }
 }

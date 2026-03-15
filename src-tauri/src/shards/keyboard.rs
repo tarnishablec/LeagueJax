@@ -3,10 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use jax::shard::Shard;
-use jax::Jax;
-use uuid::{uuid, Uuid};
-
-pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000007");
+use jax::{shard_id, Jax};
 
 pub struct KeyboardShard;
 
@@ -18,11 +15,9 @@ impl KeyboardShard {
 
 #[async_trait]
 impl Shard for KeyboardShard {
-    fn id(&self) -> Uuid {
-        ID
-    }
+    shard_id!(r"886fead7-3482-4c3f-a28b-20f5e972d221");
 
-    async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         todo!()
     }
 }
