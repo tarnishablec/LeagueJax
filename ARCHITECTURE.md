@@ -1,261 +1,122 @@
 # LeagueJax Architecture
 
-Tauri v2 桌面应用，前端 React 19 + TypeScript，后端 Rust + Tokio 异步运行时。
+Tauri v2 桌面应用，前端 React + TypeScript，后端 Rust + Tokio。前后端通过 Tauri IPC（invoke / emit）通信。
 
-## 整体分层
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                     Frontend (WebView)                   │
-│                                                          │
-│  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌───────────┐   │
-│  │ Routes  │  │  Stores  │  │  Hooks  │  │ Features  │   │
-│  │TanStack │  │ Zustand  │  │         │  │ (WebShard)│   │
-│  │ Router  │  │          │  │         │  │           │   │
-│  └────┬────┘  └────┬─────┘  └────┬────┘  └──────┬────┘   │
-│       │            │             │              │        │
-│       └────────────┴──────┬──────┴──────────────┘        │
-│                           │                              │
-│                    invoke() / listen()                   │
-│                     Tauri IPC Bridge                     │
-├───────────────────────────┼──────────────────────────────┤
-│                           │                              │
-│                   Commands / Events                      │
-│                                                          │
-│  ┌──────┐                                                │
-│  │ Jax  │─── Owning Shards (get_shard<T>())              │
-│  └──┬───┘                                                │
-│     │  register + setup                                  │
-│     ▼                                                    │
-│  ┌──────────┬──────────┬──────────┬─────────┬─────────┐  │
-│  │ LcuShard │ AutoSel  │ AutoGF   │  Tray   │  ...    │  │
-│  └──────────┴──────────┴──────────┴─────────┴─────────┘  │
-│                                                          │
-│  ┌──────────┐                                            │
-│  │ SqliteDb │  WAL                                       │
-│  └──────────┘                                            │
-│                     Backend (Rust)                       │
-└──────────────────────────────────────────────────────────┘
-```
-
-## Shard 插件体系
-
-所有功能以 Shard 为单元组织。每个 Shard 实现 `Shard` trait，提供 `id()`、`label()`、`setup()`。
+## 总体结构
 
 ```
-                        ┌────────────┐
-                        │    Jax     │
-                        │  (Context) │
-                        └─────┬──────┘
-                              │ register → Arc::new → start
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-        ┌───────────┐  ┌───────────┐   ┌───────────┐
-        │ LcuShard  │  │ TrayShard │   │ KeyBoard  │
-        │           │  │           │   │  Shard    │
-        └─────┬─────┘  └───────────┘   └───────────┘
-              │
-              │ get_shard<LcuShard>()
-              ▼
-        ┌───────────┐
-        │ AutoSel   │  Shard 间通过 Jax 互相访问
-        │  Shard    │  或通过 broadcast channel 订阅事件
-        └───────────┘
+Frontend (WebView)
+  ├─ Routes / Features / Stores
+  └─ invoke("command") / listen("event")
+           │
+           ▼
+Tauri IPC Bridge
+           │
+           ▼
+Backend (Rust)
+  ├─ Jax Shards（模块化功能单元）
+  └─ LCU Shard（多实例管理 + 事件转发）
 ```
 
-### 已注册的 Shard
+## Shard 架构
 
-| Shard             | 状态   |           用途           |
-|-------------------|------|:----------------------:|
-| **LcuShard**      | 已实现  | LCU 多实例管理、WebSocket 事件 |
-| AutoSelectShard   | stub |          自动选人          |
-| AutoGameflowShard | stub |         自动游戏流程         |
-| AutoReplyShard    | stub |          自动回复          |
-| OngoingGameShard  | stub |         当前对局信息         |
-| SavedPlayerShard  | stub |          标记玩家          |
-| StatisticsShard   | stub |          统计数据          |
-| KeyboardShard     | stub |         全局快捷键          |
-| TrayShard         | stub |          系统托盘          |
-| UpdaterShard      | stub |          自动更新          |
+所有功能以 Shard 组织。每个 Shard 实现 `Shard` trait，注册到 Jax，上层可通过 `get_shard<T>()` 访问。
 
-## 前后端通信
+当前 LCU Shard 的对外暴露是 **LcuManager**，Shard 本身不再透传 tx/rx：
 
 ```
-  Frontend                              Backend
-  ────────                              ───────
-
-  invoke("cmd", args)  ─── RPC ──────►  #[tauri::command]
-                                        fn cmd(jax: State<Jax>)
-
-  listen("event", cb)  ◄── Event ────  app.emit("event", payload)
+Jax
+ └─ LcuShard
+     └─ LcuManager (Arc)
 ```
 
-- **Commands (前端→后端)**：同步 RPC 调用，支持参数和返回值
-- **Events (后端→前端)**：广播推送，一对多，无应答
+## LCU Shard（核心）
 
-## LCU Shard 架构（已实现）
+LCU Shard 支持同时管理多个 League Client 进程，通过聚焦机制选择当前实例。
 
-LCU Shard 支持同时管理多个 League Client 进程，通过焦点切换选择活跃实例。
+### 主要组件
 
-### 三层结构
+- **LcuConnector**：平台适配层，负责发现本机 LCU 进程并解析认证信息。
+- **LcuManager**：全局管理器，轮询进程，维护实例列表与聚焦状态，向前端广播快照与事件。
+- **LcuInstance**：单个 LCU 实例容器，持有 auth、install_dir、API client 和状态机。
+- **LcuInstanceBridge**：实例内部 actor，持有状态机与 watcher/auth 任务，驱动生命周期。
+- **LcuWatcher**：纯数据源，只负责 WebSocket -> `LcuEvent` 的 stream。
+- **LcuApi**：LCU REST API 请求端（原 LcuClient，已迁移到 `api.rs`）。
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    LcuShard                         │
-│  对外接口：subscribe() / client() / switch_focus()    │
-│                                                     │
-│  broadcast::Sender ◄──── 其他 Shard 订阅              │
-│  Arc<RwLock<Option<LcuClient>>> ◄── 共享聚焦客户端     │
-│  mpsc::Sender ────────────────────────┐             │
-└───────────────────────────────────────┼─────────────┘
-                                        │
-                  setup() spawns        ▼
-┌─────────────────────────────────────────────────────┐
-│                   LcuManager                        │
-│                                                     │
-│  每 2s 轮询        instances: HashMap<PID, Instance>│
-│       │                                             │
-│       ▼            focus_pid: Option<u32>            │
-│  ┌──────────┐                                       │
-│  │Connector │      ┌─────────┐  ┌─────────┐        │
-│  │detect_all│      │ Inst #1 │  │ Inst #2 │  ...   │
-│  │          │      │ PID=123 │  │ PID=456 │        │
-│  └──────────┘      └────┬────┘  └────┬────┘        │
-│                         │            │              │
-│                    状态机反馈 (mpsc channel)          │
-└─────────────────────────────────────────────────────┘
-```
-
-### 实例状态机
-
-每个 `LcuInstance` 内嵌一个 statig 状态机：
+### 数据流
 
 ```
-                    ┌────────────────┐
-                    │ Authenticating │ ◄─── 初始状态
-                    │                │
-                    │ 每秒尝试 HTTPS │
-                    │ 验证 auth 有效  │
-                    └───────┬────────┘
-                            │ AuthOk
-                            ▼
-                    ┌────────────────┐
-                    │     Ready      │
-                    │                │
-                    │ 持有 LcuClient │
-                    │ WebSocket 监听 │
-                    └───────┬────────┘
-                            │ ProcessLost / WsDisconnected
-                            ▼
-                    ┌────────────────┐
-                    │    Closing     │
-                    │                │
-                    │ 中止所有任务    │
-                    │ 等待被 Manager  │
-                    │ 清理移除        │
-                    └────────────────┘
+Connector.detect_all()
+  └─ LcuManager 创建/维护 LcuInstance
+        └─ LcuInstanceBridge 运行状态机
+              ├─ auth loop -> AuthOk/AuthFailed
+              ├─ watcher stream -> LcuEvent
+              └─ 生命周期信号 -> LcuManager
+
+LcuManager:
+  ├─ 维护 instances + focus_pid
+  ├─ 生成 LcuInstanceInfo 快照
+  └─ emit:
+      - "lcu-instances-changed"
+      - "lcu-event" (仅聚焦实例)
+      - "lcu-focus-changed"
 ```
 
-### 焦点管理策略
+### 聚焦语义（update_focus）
+
+`update_focus(pid: Option<u32>)` 的语义如下：
+
+- `None`：强制清空 focus，不自动聚焦。
+- `Some(0)`：自动选择  
+  - 若 ready 实例恰好 1 个 → 选中  
+  - 否则 → 不选
+- `Some(pid>0)`：只有该实例 ready 时才聚焦，否则清空。
+
+**自动聚焦只在 focus 丢失/失效时显式触发**，不在周期性 tick 中隐式进行。
+
+### 状态机
+
+每个实例内部状态机（statig）是**单一真相**，运行于 `LcuInstanceBridge`：
 
 ```
-新实例 Ready?  ──── 当前有焦点? ──── 是 → 不切换（不打扰）
-                        │
-                        否 → 自动聚焦该实例
-
-焦点实例消失?  ──── 还有其他 Ready 实例? ──── 是 → 自动选第一个
-                        │
-                        否 → focus_pid = None，广播 Disconnected
+Authenticating
+  └─ AuthOk -> Ready
+Ready
+  └─ WsDisconnected / ProcessLost -> Closing
+Closing
+  └─ 等待 manager 清理移除
 ```
 
-### Connector（平台适配）
+`LcuInstance` 通过持有状态机引用提供 `status()`，用于生成 `LcuInstanceInfo`。
+
+## IPC：Command / Event
+
+### Commands（前端 -> 后端）
 
 ```
-              LcuConnector trait
-              ┌──────────────────┐
-              │ detect_all()     │
-              │ → Vec<LcuAuth>   │
-              └────────┬─────────┘
-                       │
-          ┌────────────┴────────────┐
-          ▼                         ▼
- #[cfg(windows)]            #[cfg(macos)]
- WindowsLcuConnector        (未实现)
-
- 读取 LeagueClientUx        未来：读取进程
- 进程命令行参数               或 lockfile
- --app-port
- --remoting-auth-token
+invoke("lcu_update_focus", { pid })
 ```
 
-### LCU 数据流
+### Events（后端 -> 前端）
 
-```
-  Connector                Manager              Frontend
-  ─────────                ───────              ────────
-
-  detect_all()
-  → Vec<LcuAuth>  ──────►  新 PID?
-                            创建 Instance
-                            Instance 启动认证
-
-                            Instance 反馈
-                            AuthOk ──────────►  emit("lcu-instances-changed")
-                                                → 更新 Zustand store
-
-                            WsMessage ───────►  emit("lcu-event")
-                                                → React Query 刷新
-
-  invoke("lcu_switch_focus", pid)  ◄──────────  用户点击切换
-                            更新 focus_pid
-                            更新 shared_client
-                            广播 Connected ──►  emit("lcu-instances-changed")
-```
+- `lcu-instances-changed`：实例快照列表
+- `lcu-event`：聚焦实例的 WebSocket 事件
+- `lcu-focus-changed`：focus 变化（previous/requested/current）
 
 ## 前端结构
 
 ```
-  src/
-  ├── routes/           TanStack Router 页面（自动发现）
-  ├── features/         功能模块，每个模块可注册 WebShard
-  │   ├── history/      战绩查询（已实现）
-  │   ├── registry.ts   WebShard 注册表 → 动态导航菜单
-  │   └── shard-ids.ts  与 Rust 端 UUID 对应
-  ├── stores/           Zustand 状态（lcu / app / theme）
-  ├── hooks/            自定义 Hook（事件监听、主题）
-  ├── styles/           Vanilla Extract 主题 + 全局样式
-  └── components/       通用 UI 组件
+src/
+  routes/       路由页面（TanStack Router）
+  features/     功能模块
+  stores/       Zustand 状态管理
+  hooks/        事件与数据访问
+  styles/       Vanilla Extract 主题
+  components/   通用 UI 组件
 ```
 
-### 样式体系
+前端类型全部来自 Rust `ts-rs` 导出（`src/bindings/`），禁止手写重复类型。
 
-- 引擎：Vanilla Extract（零运行时 CSS-in-TS）
-- 色彩：全部使用 `oklch()` 语法
-- 布局：页面级 CSS Grid，组件内微调可用 Flex
-- 变体：`recipe()` + `styleVariants()`
-- 主题：`createGlobalThemeContract` 定义 token，暗色/亮色两套
+## 数据存储
 
-### 数据获取
-
-```
-  用户操作
-     │
-     ▼
-  TanStack Query (useQuery)
-     │
-     ▼
-  invoke("command")  ───►  Rust Command
-     │                         │
-     ▼                         ▼
-  缓存 + 自动刷新           LcuClient.get/post(LCU API)
-```
-
-## 数据库
-
-SQLite WAL 模式，存储路径 `{APP_DATA}/league-jax.db`。
-
-| 表                 | 用途                      |
-|-------------------|-------------------------|
-| saved_players     | 标记的玩家（puuid, note, tag） |
-| encountered_games | 遇到的对局记录                 |
-| search_history    | 搜索历史（puuid, 名字, 标签）     |
+当前数据存储统一使用 `PersistentSled`（sled），实现位于 `persistence_sled` shard（`src-tauri/src/shards/persistence_sled.rs`），不再使用 SQLite。
