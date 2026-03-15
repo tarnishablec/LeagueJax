@@ -20,8 +20,6 @@ use crate::commands::lcu::*;
 
 use jax::Jax;
 
-use storage::SqliteDb;
-
 // ─── Runtime ─────────────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -64,14 +62,15 @@ pub fn run() {
             }
 
             let data_dir = app.path().app_data_dir().expect("no app data dir");
-            std::fs::create_dir_all(&data_dir)?;
-            let db =
-                SqliteDb::open(&data_dir.join("league-jax.db")).expect("failed to open database");
+            let db_path = data_dir.join("league-jax.db");
 
             // ── Jax lifecycle: build → register → start ──
             let mut jax = Jax::default();
 
             jax.register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)));
+            jax.register(Arc::new(shards::persistence_sled::PersistenceSled::new(
+                db_path,
+            )));
             jax.register(Arc::new(shards::lcu::LcuShard::new()));
             jax.register(Arc::new(shards::auto_select::AutoSelectShard::new()));
             jax.register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()));
@@ -83,9 +82,14 @@ pub fn run() {
             jax.register(Arc::new(shards::tray::TrayShard::new()));
             jax.register(Arc::new(shards::updater::UpdaterShard::new()));
 
+            jax.build();
+
             let jax = Arc::new(jax);
             app.manage(Arc::clone(&jax));
-            jax.start().expect("Jax failed to start");
+
+            tauri::async_runtime::spawn(async move {
+                jax.start().await.expect("Jax failed to start");
+            });
 
             Ok(())
         })

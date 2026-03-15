@@ -3,10 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use jax::shard::Shard;
-use jax::Jax;
-use uuid::{uuid, Uuid};
-
-pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000001");
+use jax::{shard_id, Jax};
 
 pub struct AutoSelectShard;
 
@@ -18,11 +15,9 @@ impl AutoSelectShard {
 
 #[async_trait]
 impl Shard for AutoSelectShard {
-    fn id(&self) -> Uuid {
-        ID
-    }
+    shard_id!("2c98048a-4233-4aa4-b9d7-5d11282e1ad6");
 
-    async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         todo!()
     }
 }

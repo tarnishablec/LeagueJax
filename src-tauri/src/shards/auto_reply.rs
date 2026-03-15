@@ -3,10 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use jax::shard::Shard;
-use jax::Jax;
-use uuid::{uuid, Uuid};
-
-pub const ID: Uuid = uuid!("00000000-0000-4000-8000-000000000003");
+use jax::{shard_id, Jax};
 
 pub struct AutoReplyShard;
 
@@ -18,11 +15,9 @@ impl AutoReplyShard {
 
 #[async_trait]
 impl Shard for AutoReplyShard {
-    fn id(&self) -> Uuid {
-        ID
-    }
+    shard_id!("4201e831-e67b-4264-b2c0-46f2397a2da3");
 
-    async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         todo!()
     }
 }
