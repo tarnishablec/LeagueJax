@@ -62,7 +62,7 @@ pub fn run() {
             }
 
             let data_dir = app.path().app_data_dir().expect("no app data dir");
-            let db_path = data_dir.join("league-jax.db");
+            let db_path = data_dir.join("data");
 
             // ── Jax lifecycle: build → register → start ──
             let mut jax = Jax::default();
@@ -82,13 +82,38 @@ pub fn run() {
             jax.register(Arc::new(shards::tray::TrayShard::new()));
             jax.register(Arc::new(shards::updater::UpdaterShard::new()));
 
-            jax.build();
+            jax.build()
+                .expect("Jax failed to build: check logs for details");
 
             let jax = Arc::new(jax);
             app.manage(Arc::clone(&jax));
 
             tauri::async_runtime::spawn(async move {
-                jax.start().await.expect("Jax failed to start");
+                match jax.start().await {
+                    Ok(report) => {
+                        if report.is_success() {
+                            tracing::info!("🚀 Jax started successfully with all shards.");
+                        } else {
+                            for f in report.failed {
+                                tracing::error!(
+                                    shard_id = %f.id,
+                                    error = %f.error,
+                                    "❌ Shard failed to setup"
+                                );
+                            }
+                            for s in report.skipped {
+                                tracing::warn!(
+                                    shard_id = %s,
+                                    "skip" = true,
+                                    "⚠️ Shard skipped due to dependency failure"
+                                );
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, "🚨 Jax encountered a critical startup error");
+                    }
+                }
             });
 
             Ok(())
