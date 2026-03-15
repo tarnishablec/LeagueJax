@@ -1,9 +1,9 @@
 use crate::shards::tauri_host::TauriHost;
 use core::error::Error;
-use std::path::PathBuf;
 use jax::shard::Shard;
 use jax::{depends, shard_id, Jax};
 use sled::Db;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::OnceCell;
 use uuid::Uuid;
@@ -34,7 +34,11 @@ impl Shard for PersistenceSled {
     shard_id!("11c8b250-cd30-4f0a-a500-aa4b355311f0");
 
     async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        todo!()
+        let sled_db = sled::open(&self.path)?;
+        self.db
+            .set(sled_db)
+            .expect("Sled database already initialized");
+        Ok(())
     }
 
     fn dependencies(&self) -> Vec<Uuid> {
