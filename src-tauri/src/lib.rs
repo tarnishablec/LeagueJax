@@ -12,11 +12,10 @@ use tauri::Manager;
 #[cfg(target_os = "windows")]
 use window_vibrancy::{apply_acrylic, apply_mica};
 
-#[cfg(target_os = "macos")]
-use window_vibrancy::apply_acrylic;
-
 use crate::commands::history::*;
 use crate::commands::lcu::*;
+#[cfg(target_os = "macos")]
+use window_vibrancy::apply_acrylic;
 
 use jax::Jax;
 
@@ -65,24 +64,22 @@ pub fn run() {
             let db_path = data_dir.join("data");
 
             // ── Jax lifecycle: build → register → start ──
-            let mut jax = Jax::default();
-
-            jax.register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)));
-            jax.register(Arc::new(shards::persistence_sled::PersistenceSled::new(
-                db_path,
-            )));
-            jax.register(Arc::new(shards::lcu::LcuShard::new()));
-            jax.register(Arc::new(shards::auto_select::AutoSelectShard::new()));
-            jax.register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()));
-            jax.register(Arc::new(shards::auto_reply::AutoReplyShard::new()));
-            jax.register(Arc::new(shards::ongoing_game::OngoingGameShard::new()));
-            jax.register(Arc::new(shards::saved_player::SavedPlayerShard::new()));
-            jax.register(Arc::new(shards::statistics::StatisticsShard::new()));
-            jax.register(Arc::new(shards::keyboard::KeyboardShard::new()));
-            jax.register(Arc::new(shards::tray::TrayShard::new()));
-            jax.register(Arc::new(shards::updater::UpdaterShard::new()));
-
-            jax.build()
+            let jax = Jax::default()
+                .register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)))
+                .register(Arc::new(shards::persistence_sled::PersistenceSled::new(
+                    db_path,
+                )))
+                .register(Arc::new(shards::lcu::LcuShard::new()))
+                .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
+                .register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()))
+                .register(Arc::new(shards::auto_reply::AutoReplyShard::new()))
+                .register(Arc::new(shards::ongoing_game::OngoingGameShard::new()))
+                .register(Arc::new(shards::saved_player::SavedPlayerShard::new()))
+                .register(Arc::new(shards::statistics::StatisticsShard::new()))
+                .register(Arc::new(shards::keyboard::KeyboardShard::new()))
+                .register(Arc::new(shards::tray::TrayShard::new()))
+                .register(Arc::new(shards::updater::UpdaterShard::new()))
+                .build()
                 .expect("Jax failed to build: check logs for details");
 
             let jax = Arc::new(jax);
