@@ -2080,7 +2080,6 @@ dependencies = [
  "downcast-rs",
  "futures",
  "petgraph",
- "serde",
  "uuid",
 ]
 
