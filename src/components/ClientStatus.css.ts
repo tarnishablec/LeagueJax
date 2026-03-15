@@ -1,4 +1,4 @@
-import { keyframes, style } from "@vanilla-extract/css";
+import { createVar, keyframes, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { iconCol } from "@/routes/__root.css";
 import { vars } from "@/styles/theme.css";
@@ -49,6 +49,23 @@ export const avatar = style({
   borderRadius: "50%",
   objectFit: "cover",
   justifySelf: "center",
+});
+
+export const avatarSizeVar = createVar();
+
+const spin = keyframes({
+  "0%": { transform: "rotate(0deg)" },
+  "100%": { transform: "rotate(360deg)" },
+});
+
+export const avatarLoading = style({
+  width: avatarSizeVar,
+  height: avatarSizeVar,
+  borderRadius: "50%",
+  border: `2px solid ${vars.color.mutedForeground}`,
+  borderTopColor: vars.color.primary,
+  justifySelf: "center",
+  animation: `${spin} 1s linear infinite`,
 });
 
 export const label = recipe({

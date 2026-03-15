@@ -8,16 +8,17 @@ import {
   useInteractions,
 } from "@floating-ui/react";
 import { invoke } from "@tauri-apps/api/core";
+import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { Unlink, Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { SummonerID } from "@/components/SummonerID.tsx";
 import { useProfileIcon } from "@/hooks/use-profile-icon.ts";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
 import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
-import { useNavigate } from "react-router";
 
 // ─── Tooltip sub-components ─────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
           className={s.unfocusButton}
           onClick={(e) => {
             e.stopPropagation();
-            void invoke("lcu_unfocus");
+            void invoke("lcu_update_focus", { pid: null });
           }}
           aria-label="Disconnect focus"
         >
@@ -95,7 +96,7 @@ function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
       <button
         type="button"
         className={s.instanceRow({ clickable: true })}
-        onClick={() => invoke("lcu_switch_focus", { pid: inst.pid })}
+        onClick={() => invoke("lcu_update_focus", { pid: inst.pid })}
         title={inst.installDir ?? undefined}
       >
         {info}
@@ -138,11 +139,15 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const openTab = useTabStore((st) => st.openTab);
-  const focusedInstance = useLcuStore(selectIsFocused);
-  const summoner = focusedInstance?.summoner;
+  const focusedReady = useLcuStore(selectIsFocused);
+  const focusedInstance = useLcuStore((st) =>
+    st.instances.find((i) => i.isFocused),
+  );
+  const summoner = focusedReady?.summoner;
   const instances = useLcuStore((st) => st.instances);
+  const isLoading = focusedInstance && focusedInstance.state !== "ready";
   const avatarUrl = useProfileIcon(
-    focusedInstance && summoner ? summoner.profileIconId : undefined,
+    focusedReady && summoner ? summoner.profileIconId : undefined,
   );
 
   const handleClick = () => {
@@ -174,13 +179,22 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
           className={s.trigger({ collapsed })}
           onClick={handleClick}
         >
-          {focusedInstance && summoner && avatarUrl ? (
+          {focusedReady && summoner && avatarUrl ? (
             <img
               src={avatarUrl}
               alt="Profile icon"
               width={iconSize * 1.3}
               height={iconSize * 1.3}
               className={s.avatar}
+            />
+          ) : isLoading ? (
+            <div
+              className={s.avatarLoading}
+              style={assignInlineVars({
+                [s.avatarSizeVar]: `${iconSize * 1.3}px`,
+              })}
+              aria-label="Connecting"
+              role="img"
             />
           ) : (
             <Unplug
@@ -190,8 +204,12 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
             />
           )}
           <span className={s.label({ collapsed })}>
-            {focusedInstance && summoner ? (
+            {focusedReady && summoner ? (
               <SummonerID summoner={summoner}></SummonerID>
+            ) : focusedInstance ? (
+              focusedInstance.state === "closing"
+                ? t("clientStatus.closing")
+                : t("clientStatus.authenticating")
             ) : (
               t("common.disconnected")
             )}

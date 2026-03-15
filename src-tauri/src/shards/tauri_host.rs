@@ -1,7 +1,5 @@
 use async_trait::async_trait;
-use jax::{shard_id, Jax, Shard};
-use std::error::Error;
-use std::sync::Arc;
+use jax::{shard_id, Shard};
 
 pub struct TauriHost {
     pub app: tauri::AppHandle,
@@ -16,8 +14,4 @@ impl TauriHost {
 #[async_trait]
 impl Shard for TauriHost {
     shard_id!("d25bdd2c-277b-496b-92ee-c056b9af4e98");
-
-    async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        todo!()
-    }
 }
