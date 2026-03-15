@@ -2,8 +2,7 @@ use std::error::Error;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use jax::shard::Shard;
-use jax::{shard_id, Jax};
+use jax::{shard_id, Jax, Shard};
 
 
 pub struct TrayShard;
