@@ -82,9 +82,13 @@ fn parse_participant(p: &Value) -> Participant {
 
 #[tauri::command]
 pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerInfo, AppError> {
-    let lcu = jax
+    let manager = jax
         .get_shard::<LcuShard>()
-        .client()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager
+        .focused_client()
+        .await
         .ok_or(AppError::LcuNotConnected)?;
     let resp = lcu.get("/lol-summoner/v1/current-summoner").await?;
     parse_summoner(&resp)
@@ -96,9 +100,13 @@ pub async fn search_summoner(
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerInfo, AppError> {
-    let lcu = jax
+    let manager = jax
         .get_shard::<LcuShard>()
-        .client()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager
+        .focused_client()
+        .await
         .ok_or(AppError::LcuNotConnected)?;
 
     let encoded_name = urlencoding::encode(&game_name);
@@ -133,9 +141,13 @@ pub async fn get_match_history(
     end_index: u32,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<MatchSummary>, AppError> {
-    let lcu = jax
+    let manager = jax
         .get_shard::<LcuShard>()
-        .client()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager
+        .focused_client()
+        .await
         .ok_or(AppError::LcuNotConnected)?;
     let path = format!(
         "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex={begin_index}&endIndex={end_index}"
@@ -160,9 +172,13 @@ pub async fn get_match_detail(
     game_id: u64,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<MatchDetail, AppError> {
-    let lcu = jax
+    let manager = jax
         .get_shard::<LcuShard>()
-        .client()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager
+        .focused_client()
+        .await
         .ok_or(AppError::LcuNotConnected)?;
     let path = format!("/lol-match-history/v1/games/{game_id}");
     let resp = lcu.get(&path).await?;

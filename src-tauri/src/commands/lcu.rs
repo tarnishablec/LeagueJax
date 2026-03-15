@@ -6,20 +6,26 @@ use jax::Jax;
 use tauri::State;
 
 #[tauri::command]
-pub fn lcu_switch_focus(pid: u32, jax: State<Arc<Jax>>) {
-    jax.get_shard::<LcuShard>().switch_focus(pid);
-}
-
-#[tauri::command]
-pub fn lcu_unfocus(jax: tauri::State<Arc<Jax>>) {
-    jax.get_shard::<LcuShard>().unfocus();
+pub async fn lcu_update_focus(
+    pid: Option<u32>,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<(), AppError> {
+    let Some(manager) = jax.get_shard::<LcuShard>().manager() else {
+        return Err(AppError::LcuNotConnected);
+    };
+    manager.update_focus(pid).await;
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn get_profile_icon(icon_id: i64, jax: State<'_, Arc<Jax>>) -> Result<Vec<u8>, AppError> {
-    let client = jax
+    let manager = jax
         .get_shard::<LcuShard>()
-        .client()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let client = manager
+        .focused_client()
+        .await
         .ok_or(AppError::LcuNotConnected)?;
     let path = format!("/lol-game-data/assets/v1/profile-icons/{icon_id}.jpg");
     client.get_bytes(&path).await
@@ -27,9 +33,13 @@ pub async fn get_profile_icon(icon_id: i64, jax: State<'_, Arc<Jax>>) -> Result<
 
 #[tauri::command]
 pub async fn get_game_version(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
-    let client = jax
+    let manager = jax
         .get_shard::<LcuShard>()
-        .client()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let client = manager
+        .focused_client()
+        .await
         .ok_or(AppError::LcuNotConnected)?;
     let resp = client.get("/lol-patch/v1/game-version").await?;
     let full = resp.as_str().unwrap_or_default();

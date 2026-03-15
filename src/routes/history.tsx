@@ -23,7 +23,7 @@ const ConnectionGuard = ({ instances }: { instances: LcuInstanceInfo[] }) => {
           type={"button"}
           key={inst.pid}
           className={s.focusPickerCard}
-          onClick={() => invoke("lcu_switch_focus", { pid: inst.pid })}
+          onClick={() => invoke("lcu_update_focus", { pid: inst.pid })}
         >
           <span className={s.focusPickerName}>
             {inst.summoner?.gameName

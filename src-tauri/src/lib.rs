@@ -34,8 +34,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
-            lcu_switch_focus,
-            lcu_unfocus,
+            lcu_update_focus,
             get_current_summoner,
             search_summoner,
             get_match_history,
