@@ -1,7 +1,6 @@
 use crate::shards::tauri_host::TauriHost;
 use core::error::Error;
-use jax::shard::Shard;
-use jax::{depends, shard_id, Jax};
+use jax::{depends, shard_id, Jax, Shard};
 use sled::Db;
 use std::path::PathBuf;
 use std::sync::Arc;
