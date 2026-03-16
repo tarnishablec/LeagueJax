@@ -6,7 +6,6 @@ mod storage;
 mod utils;
 
 use std::sync::Arc;
-
 use tauri::Manager;
 
 #[cfg(target_os = "windows")]
@@ -82,7 +81,7 @@ pub fn run() {
                 .expect("Jax failed to build: check logs for details");
 
             let jax = Arc::new(jax);
-            app.manage(Arc::clone(&jax));
+            app.manage(jax.clone());
 
             tauri::async_runtime::spawn(async move {
                 match jax.start().await {
