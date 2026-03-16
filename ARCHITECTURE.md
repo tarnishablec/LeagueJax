@@ -58,7 +58,7 @@ LcuManager:
   ├─ 生成 LcuInstanceInfo 快照
   └─ emit:
       - "lcu-instances-changed"
-      - "lcu-event" (仅聚焦实例)
+      - "lcu-ws-event"
       - "lcu-focus-changed"
 ```
 
@@ -100,7 +100,7 @@ invoke("lcu_update_focus", { pid })
 ### Events（后端 -> 前端）
 
 - `lcu-instances-changed`：实例快照列表
-- `lcu-event`：聚焦实例的 WebSocket 事件
+- `lcu-ws-event`：聚焦实例的 WebSocket 事件
 - `lcu-focus-changed`：focus 变化（previous/requested/current）
 
 ## 前端结构
