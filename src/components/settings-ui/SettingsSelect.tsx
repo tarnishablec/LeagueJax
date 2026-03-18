@@ -1,5 +1,7 @@
-import { ChevronDown } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Portal } from "@ark-ui/react/portal";
+import { createListCollection, Select } from "@ark-ui/react/select";
+import { Check, ChevronDown } from "lucide-react";
+import { useMemo } from "react";
 import * as s from "./SettingsSelect.css";
 
 interface SettingsSelectOption {
@@ -20,80 +22,64 @@ export function SettingsSelect({
   options,
   onValueChange,
 }: SettingsSelectProps) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const collection = useMemo(
+    () =>
+      createListCollection({
+        items: options,
+        itemToValue: (item) => item.value,
+        itemToString: (item) => item.label,
+      }),
+    [options],
+  );
 
-  const selectedLabel = useMemo(() => {
-    const selected = options.find((option) => option.value === value);
-    return selected?.label ?? options[0]?.label ?? "";
+  const selectedValue = useMemo(() => {
+    if (options.some((option) => option.value === value)) {
+      return value;
+    }
+    return options[0]?.value ?? "";
   }, [options, value]);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [open]);
-
   return (
-    <div ref={rootRef} className={s.root}>
-      <button
-        type="button"
-        aria-label={ariaLabel}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        className={s.trigger({ open })}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span className={s.value}>{selectedLabel}</span>
-        <ChevronDown
-          size={14}
-          aria-hidden="true"
-          className={s.chevron({ open })}
-        />
-      </button>
-
-      {open ? (
-        <div role="listbox" aria-label={ariaLabel} className={s.menu}>
-          {options.map((option) => {
-            const selected = option.value === value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                className={s.option({ selected })}
-                onClick={() => {
-                  onValueChange(option.value);
-                  setOpen(false);
-                }}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+    <Select.Root
+      aria-label={ariaLabel}
+      className={s.root}
+      collection={collection}
+      value={selectedValue ? [selectedValue] : []}
+      positioning={{ sameWidth: true, placement: "bottom-start", gutter: 4 }}
+      onValueChange={(details) => {
+        const next = details.value[0];
+        if (next) {
+          onValueChange(next);
+        }
+      }}
+    >
+      <Select.HiddenSelect />
+      <Select.Control className={s.control}>
+        <Select.Trigger className={s.trigger}>
+          <Select.ValueText className={s.value} />
+          <Select.Indicator className={s.indicator}>
+            <ChevronDown size={14} aria-hidden="true" />
+          </Select.Indicator>
+        </Select.Trigger>
+      </Select.Control>
+      <Portal>
+        <Select.Positioner className={s.positioner}>
+          <Select.Content className={s.content}>
+            <Select.List className={s.list}>
+              {collection.items.map((item) => (
+                <Select.Item key={item.value} item={item} className={s.item}>
+                  <Select.ItemText className={s.itemText}>
+                    {item.label}
+                  </Select.ItemText>
+                  <Select.ItemIndicator className={s.itemIndicator}>
+                    <Check size={13} aria-hidden="true" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+              ))}
+            </Select.List>
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
   );
 }

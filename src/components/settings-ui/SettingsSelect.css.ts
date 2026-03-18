@@ -1,47 +1,39 @@
 import { style } from "@vanilla-extract/css";
-import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css";
 
 export const root = style({
-  position: "relative",
   minWidth: 180,
 });
 
-export const trigger = recipe({
-  base: {
-    width: "100%",
-    height: 32,
-    borderRadius: 8,
-    border: `1px solid ${vars.color.border}`,
-    background: vars.color.background,
-    color: vars.color.foreground,
-    padding: "0 10px",
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) auto",
-    alignItems: "center",
-    gap: 8,
-    textAlign: "left",
-    cursor: "pointer",
-    selectors: {
-      "&:focus-visible": {
-        outline: `2px solid ${vars.color.primary}`,
-        outlineOffset: 1,
-      },
-      "&:hover": {
-        borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
-      },
+export const control = style({
+  width: "100%",
+});
+
+export const trigger = style({
+  width: "100%",
+  height: 32,
+  borderRadius: 8,
+  border: `1px solid ${vars.settings.controlBorder}`,
+  background: vars.settings.controlBg,
+  color: vars.settings.controlText,
+  padding: "0 10px",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 8,
+  textAlign: "left",
+  cursor: "pointer",
+  selectors: {
+    "&:hover": {
+      borderColor: vars.settings.controlHoverBorder,
     },
-  },
-  variants: {
-    open: {
-      true: {
-        borderColor: vars.color.primary,
-      },
-      false: {},
+    "&:focus-visible": {
+      outline: `2px solid ${vars.color.primary}`,
+      outlineOffset: 1,
     },
-  },
-  defaultVariants: {
-    open: false,
+    "&[data-state='open']": {
+      borderColor: vars.color.primary,
+    },
   },
 });
 
@@ -52,73 +44,80 @@ export const value = style({
   fontSize: "0.875rem",
 });
 
-export const chevron = recipe({
-  base: {
-    color: vars.color.mutedForeground,
-    transition: "transform 120ms ease-out, color 120ms ease-out",
-  },
-  variants: {
-    open: {
-      true: {
-        transform: "rotate(180deg)",
-        color: vars.color.foreground,
-      },
-      false: {},
+export const indicator = style({
+  color: vars.settings.selectChevron,
+  transition: "transform 120ms ease-out, color 120ms ease-out",
+  selectors: {
+    "[data-state='open'] &": {
+      transform: "rotate(180deg)",
+      color: vars.settings.controlText,
     },
-  },
-  defaultVariants: {
-    open: false,
   },
 });
 
-export const menu = style({
-  position: "absolute",
-  top: 36,
-  left: 0,
-  right: 0,
-  zIndex: 20,
+export const positioner = style({
+  zIndex: 30,
+});
+
+export const content = style({
+  marginTop: 4,
   borderRadius: 10,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
-  boxShadow: `0 10px 24px oklch(from ${vars.color.backgroundRaw} l c h / 0.35)`,
+  border: `1px solid ${vars.settings.selectMenuBorder}`,
+  background: vars.settings.selectMenuBg,
+  boxShadow: `0 10px 24px ${vars.settings.selectMenuShadow}`,
   overflow: "hidden",
   padding: 4,
+  minWidth: "var(--reference-width)",
+});
+
+export const list = style({
   display: "grid",
   gap: 2,
 });
 
-export const option = recipe({
-  base: {
-    width: "100%",
-    minHeight: 30,
-    border: "none",
-    borderRadius: 7,
-    background: "transparent",
-    color: vars.color.foreground,
-    textAlign: "left",
-    padding: "0 10px",
-    cursor: "pointer",
-    fontSize: "0.875rem",
-    selectors: {
-      "&:hover": {
-        background: `oklch(from ${vars.color.accent} calc(l + 0.06) c h / 0.4)`,
-      },
-      "&:focus-visible": {
-        outline: `2px solid ${vars.color.primary}`,
-        outlineOffset: -1,
-      },
+export const item = style({
+  width: "100%",
+  minHeight: 30,
+  borderRadius: 7,
+  background: "transparent",
+  color: vars.settings.controlText,
+  textAlign: "left",
+  padding: "0 10px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 8,
+  selectors: {
+    "&[data-highlighted]": {
+      background: vars.settings.selectOptionHoverBg,
+    },
+    "&[data-state='checked']": {
+      background: vars.settings.selectOptionSelectedBg,
+      color: vars.settings.selectOptionSelectedText,
+    },
+    "&:focus-visible": {
+      outline: `2px solid ${vars.color.primary}`,
+      outlineOffset: -1,
     },
   },
-  variants: {
-    selected: {
-      true: {
-        background: vars.color.accent,
-        color: vars.color.accentForeground,
-      },
-      false: {},
+});
+
+export const itemText = style({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+export const itemIndicator = style({
+  display: "grid",
+  placeItems: "center",
+  opacity: 0,
+  transition: "opacity 100ms ease-out",
+  selectors: {
+    "[data-state='checked'] &": {
+      opacity: 1,
     },
-  },
-  defaultVariants: {
-    selected: false,
   },
 });
