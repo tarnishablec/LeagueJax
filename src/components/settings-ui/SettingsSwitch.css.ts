@@ -12,7 +12,7 @@ export const button = recipe({
     background: "transparent",
     padding: 0,
     cursor: "pointer",
-    color: vars.color.foreground,
+    color: vars.settings.controlText,
   },
   variants: {
     checked: {
@@ -35,11 +35,11 @@ export const track = recipe({
   variants: {
     checked: {
       true: {
-        background: `oklch(from ${vars.color.primary} l c h / 0.3)`,
+        background: vars.settings.switchTrackOn,
         justifyItems: "end",
       },
       false: {
-        background: vars.color.accent,
+        background: vars.settings.switchTrackOff,
         justifyItems: "start",
       },
     },
@@ -53,10 +53,10 @@ export const thumb = style({
   width: 16,
   height: 16,
   borderRadius: "50%",
-  background: vars.color.foreground,
+  background: vars.settings.switchThumb,
 });
 
 export const text = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: vars.settings.switchText,
 });
