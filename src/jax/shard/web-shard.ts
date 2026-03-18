@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
+import type { RouteObject } from "react-router";
 import type { ShardId } from "./shard-id.ts";
 
 export type NavSection = "main" | "bottom";
@@ -12,21 +13,69 @@ export interface NavItem {
   order?: number;
 }
 
-export interface ToolbarItem {
+export interface RouteContribution
+  extends Pick<RouteObject, "path" | "index" | "element"> {
+  order?: number;
+}
+
+export interface ToolbarSlot {
+  id: string;
   node: React.ReactElement;
   order?: number;
-  /** Paths where this item appears. `undefined` = all routes. */
   routes?: string[];
 }
 
+export interface TitlebarSlot {
+  id: string;
+  node: React.ReactElement;
+  order?: number;
+  routes?: string[];
+}
+
+export interface SidebarSlotContext {
+  currentPath: string;
+  collapsed: boolean;
+  iconSize: number;
+}
+
+export interface SidebarSlot {
+  id: string;
+  order?: number;
+  routes?: string[];
+  render: (context: SidebarSlotContext) => React.ReactElement;
+}
+
+export interface SettingsSection {
+  id: string;
+  titleKey: string;
+  node: React.ReactElement;
+  order?: number;
+}
+
+export type I18nLocaleBundle = Record<string, Record<string, unknown>>;
+
 /**
  * Web-side shard interface.
- * Each UI-contributing shard implements this and registers itself in the registry.
+ * Static registry only: no runtime lifecycle orchestration.
  */
 export interface WebShard {
   id(): ShardId;
 
+  dependsOn?(): ShardId[];
+
+  setupStores?(): void;
+
+  routes?(): RouteContribution[];
+
   navItems?(): NavItem[];
 
-  toolbarItems?(): ToolbarItem[];
+  toolbarSlots?(): ToolbarSlot[];
+
+  sidebarSlots?(): SidebarSlot[];
+
+  titlebarSlots?(): TitlebarSlot[];
+
+  settingsSections?(): SettingsSection[];
+
+  i18nResources?(): I18nLocaleBundle;
 }

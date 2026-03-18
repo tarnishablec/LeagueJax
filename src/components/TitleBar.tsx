@@ -1,11 +1,8 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type React from "react";
-import { ThemeToggle } from "@/components/ThemeToggle.tsx";
 import * as s from "./TitleBar.css";
 
 const appWindow = getCurrentWindow();
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
 
 function MinimizeIcon() {
   return (
@@ -44,9 +41,6 @@ function CloseIcon() {
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-/** Slot for global app action buttons (e.g., theme-switch, language-switch). */
 export function Toolbar({ children }: { children?: React.ReactNode }) {
   return (
     <div role="toolbar" aria-label="Application actions" className={s.toolbar}>
@@ -55,16 +49,22 @@ export function Toolbar({ children }: { children?: React.ReactNode }) {
   );
 }
 
-// ─── TitleBar ─────────────────────────────────────────────────────────────────
+interface TitleBarProps {
+  toolbarSlots?: React.ReactElement[];
+  titlebarSlots?: React.ReactElement[];
+}
 
-export function TitleBar() {
+export function TitleBar({
+  toolbarSlots = [],
+  titlebarSlots = [],
+}: TitleBarProps) {
   return (
     <header className={s.header}>
-      <div data-tauri-drag-region className={s.dragRegion}></div>
+      <div data-tauri-drag-region className={s.dragRegion} />
 
-      <Toolbar>
-        <ThemeToggle key="theme-toggle" />
-      </Toolbar>
+      <div className={s.centerSlots}>{titlebarSlots}</div>
+
+      <Toolbar>{toolbarSlots}</Toolbar>
 
       <div aria-hidden="true" className={s.divider} />
 

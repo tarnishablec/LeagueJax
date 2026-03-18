@@ -1,14 +1,37 @@
-import i18n from "i18next";
+import i18n, { type Resource, type ResourceLanguage } from "i18next";
 import { initReactI18next } from "react-i18next";
-import en from "./locales/en.json";
-import zhCN from "./locales/zh-CN.json";
+import type { I18nLocaleBundle } from "@/jax/shard/web-shard";
 
-await i18n.use(initReactI18next).init({
-  resources: {
-    "zh-CN": { translation: zhCN },
-    en: { translation: en },
-  },
-  lng: "zh-CN",
-  fallbackLng: "en",
-  interpolation: { escapeValue: false },
-});
+let initialized = false;
+
+function toI18nResources(resources: I18nLocaleBundle): Resource {
+  return Object.fromEntries(
+    Object.entries(resources).map(([locale, translation]) => [
+      locale,
+      { translation: translation as ResourceLanguage },
+    ]),
+  );
+}
+
+export async function initializeI18n(
+  resources: I18nLocaleBundle,
+  language = "zh-CN",
+): Promise<void> {
+  if (initialized) {
+    if (i18n.language !== language) {
+      await i18n.changeLanguage(language);
+    }
+    return;
+  }
+
+  await i18n.use(initReactI18next).init({
+    resources: toI18nResources(resources),
+    lng: language,
+    fallbackLng: "en",
+    interpolation: { escapeValue: false },
+  });
+
+  initialized = true;
+}
+
+export default i18n;

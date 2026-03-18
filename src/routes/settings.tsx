@@ -1,5 +1,5 @@
-import { pageTitle } from "../styles/shared.css";
+import { SettingsHub } from "@/features/settings/components/SettingsHub";
 
 export function Settings() {
-  return <div className={pageTitle}>Settings</div>;
+  return <SettingsHub />;
 }

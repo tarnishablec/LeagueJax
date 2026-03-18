@@ -1,7 +1,13 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
+import { getRouteContributions } from "@/features/registry";
 import { RootLayout } from "@/routes/__root";
-import { Settings } from "@/routes/settings.tsx";
+
+const shardRoutes = getRouteContributions().map((route) => ({
+  path: route.path,
+  index: route.index,
+  element: route.element,
+}));
 
 const router = createBrowserRouter([
   {
@@ -9,9 +15,10 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       {
-        path: "settings",
-        element: <Settings />,
+        index: true,
+        element: <Navigate to="/history" replace />,
       },
+      ...shardRoutes,
     ],
   },
 ]);

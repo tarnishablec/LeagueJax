@@ -1,1 +1,7 @@
-export const Tools = <div>Tools</div>;
+import { useTranslation } from "react-i18next";
+import { pageTitle } from "../styles/shared.css";
+
+export function Tools() {
+  const { t } = useTranslation();
+  return <div className={pageTitle}>{t("nav.tools")}</div>;
+}
