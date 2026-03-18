@@ -68,6 +68,7 @@ pub fn run() {
                     db_path,
                 )))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
+                .register(Arc::new(shards::sgp::SgpShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
                 .register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()))
                 .register(Arc::new(shards::auto_reply::AutoReplyShard::new()))

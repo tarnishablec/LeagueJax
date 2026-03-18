@@ -4,6 +4,7 @@ use crate::concepts::matches::{MatchDetail, MatchSummary, Participant};
 use crate::concepts::summoner::SummonerInfo;
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
+use crate::shards::sgp::SgpShard;
 use jax::Jax;
 use serde_json::Value;
 use tauri::State;
@@ -21,61 +22,131 @@ pub fn parse_summoner(v: &Value) -> Result<SummonerInfo, AppError> {
     })
 }
 
-fn parse_match_summary(game: &Value) -> Result<MatchSummary, AppError> {
-    let stats = &game["participants"][0]["stats"];
-    let total_minions = stats["totalMinionsKilled"].as_i64().unwrap_or(0);
-    let neutral_minions = stats["neutralMinionsKilled"].as_i64().unwrap_or(0);
+fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSummary, AppError> {
+    let payload = sgp_summary_payload(game);
+    let participants = payload
+        .get("participants")
+        .and_then(Value::as_array)
+        .ok_or_else(|| AppError::Other("SGP summary is missing participants".to_string()))?;
+
+    let participant = participants
+        .iter()
+        .find(|participant| {
+            participant
+                .get("puuid")
+                .and_then(Value::as_str)
+                .is_some_and(|puuid| puuid == target_puuid)
+        })
+        .or_else(|| participants.first())
+        .ok_or_else(|| AppError::Other("SGP summary participants are empty".to_string()))?;
+
+    let null = Value::Null;
+    let stats = participant.get("stats").unwrap_or(&null);
+
+    let total_minions = first_i64(stats, &["totalMinionsKilled"]).unwrap_or(0);
+    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"]).unwrap_or(0);
 
     Ok(MatchSummary {
-        game_id: game["gameId"].as_u64().unwrap_or(0),
-        champion_id: game["participants"][0]["championId"].as_i64().unwrap_or(0),
-        win: stats["win"].as_bool().unwrap_or(false),
-        kills: stats["kills"].as_i64().unwrap_or(0),
-        deaths: stats["deaths"].as_i64().unwrap_or(0),
-        assists: stats["assists"].as_i64().unwrap_or(0),
+        game_id: parse_sgp_game_id(payload, game),
+        champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
+        win: stats.get("win").and_then(Value::as_bool).unwrap_or(false),
+        kills: first_i64(stats, &["kills"]).unwrap_or(0),
+        deaths: first_i64(stats, &["deaths"]).unwrap_or(0),
+        assists: first_i64(stats, &["assists"]).unwrap_or(0),
         cs: total_minions + neutral_minions,
-        game_duration: game["gameDuration"].as_i64().unwrap_or(0),
-        game_mode: game["gameMode"].as_str().unwrap_or_default().to_string(),
-        game_creation: game["gameCreation"].as_i64().unwrap_or(0),
-        queue_id: game["queueId"].as_i64().unwrap_or(0),
+        game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
+        game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
+        game_creation: first_i64(payload, &["gameCreation", "game_datetime"]).unwrap_or(0),
+        queue_id: first_i64(payload, &["queueId", "queue_id"]).unwrap_or(0),
     })
 }
 
-fn parse_participant(p: &Value) -> Participant {
-    let stats = &p["stats"];
+fn parse_sgp_participant(participant: &Value) -> Participant {
+    let null = Value::Null;
+    let stats = participant.get("stats").unwrap_or(&null);
 
     let mut items = [0i64; 7];
-    for i in 0..7 {
-        items[i] = stats[format!("item{i}")].as_i64().unwrap_or(0);
+    for (index, item) in items.iter_mut().enumerate() {
+        let key = format!("item{index}");
+        *item = stats.get(&key).and_then(Value::as_i64).unwrap_or(0);
     }
 
-    let total_minions = stats["totalMinionsKilled"].as_i64().unwrap_or(0);
-    let neutral_minions = stats["neutralMinionsKilled"].as_i64().unwrap_or(0);
+    let total_minions = first_i64(stats, &["totalMinionsKilled"]).unwrap_or(0);
+    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"]).unwrap_or(0);
 
     Participant {
-        puuid: p["puuid"].as_str().unwrap_or_default().to_string(),
-        champion_id: p["championId"].as_i64().unwrap_or(0),
-        summoner_name: p["summonerName"]
-            .as_str()
-            .or_else(|| p["gameName"].as_str())
-            .unwrap_or_default()
-            .to_string(),
-        team_id: p["teamId"].as_i64().unwrap_or(0),
-        kills: stats["kills"].as_i64().unwrap_or(0),
-        deaths: stats["deaths"].as_i64().unwrap_or(0),
-        assists: stats["assists"].as_i64().unwrap_or(0),
-        total_damage_dealt_to_champions: stats["totalDamageDealtToChampions"].as_i64().unwrap_or(0),
-        total_damage_taken: stats["totalDamageTaken"].as_i64().unwrap_or(0),
-        gold_earned: stats["goldEarned"].as_i64().unwrap_or(0),
-        vision_score: stats["visionScore"].as_i64().unwrap_or(0),
+        puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
+        champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
+        summoner_name: first_string(
+            participant,
+            &["summonerName", "riotIdGameName", "gameName", "name"],
+        )
+        .unwrap_or_default(),
+        team_id: first_i64(participant, &["teamId"]).unwrap_or(0),
+        kills: first_i64(stats, &["kills"]).unwrap_or(0),
+        deaths: first_i64(stats, &["deaths"]).unwrap_or(0),
+        assists: first_i64(stats, &["assists"]).unwrap_or(0),
+        total_damage_dealt_to_champions: first_i64(stats, &["totalDamageDealtToChampions"])
+            .unwrap_or(0),
+        total_damage_taken: first_i64(stats, &["totalDamageTaken"]).unwrap_or(0),
+        gold_earned: first_i64(stats, &["goldEarned"]).unwrap_or(0),
+        vision_score: first_i64(stats, &["visionScore"]).unwrap_or(0),
         cs: total_minions + neutral_minions,
         items,
-        spell1_id: p["spell1Id"].as_i64().unwrap_or(0),
-        spell2_id: p["spell2Id"].as_i64().unwrap_or(0),
-        perk_primary_style: stats["perkPrimaryStyle"].as_i64().unwrap_or(0),
-        perk_sub_style: stats["perkSubStyle"].as_i64().unwrap_or(0),
-        win: stats["win"].as_bool().unwrap_or(false),
+        spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
+        spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
+        perk_primary_style: first_i64(stats, &["perkPrimaryStyle"]).unwrap_or(0),
+        perk_sub_style: first_i64(stats, &["perkSubStyle"]).unwrap_or(0),
+        win: stats.get("win").and_then(Value::as_bool).unwrap_or(false),
     }
+}
+
+fn sgp_summary_payload(game: &Value) -> &Value {
+    if let Some(payload) = game.get("json") {
+        payload
+    } else {
+        game
+    }
+}
+
+fn parse_sgp_game_id(payload: &Value, game: &Value) -> u64 {
+    if let Some(game_id) = payload
+        .get("gameId")
+        .and_then(Value::as_u64)
+        .or_else(|| payload.get("game_id").and_then(Value::as_u64))
+    {
+        return game_id;
+    }
+
+    let match_id = game
+        .get("metadata")
+        .and_then(|metadata| metadata.get("match_id"))
+        .and_then(Value::as_str)
+        .or_else(|| {
+            game.get("metadata")
+                .and_then(|metadata| metadata.get("matchId"))
+                .and_then(Value::as_str)
+        });
+
+    match_id
+        .and_then(|identifier| identifier.rsplit('_').next())
+        .and_then(|suffix| suffix.parse::<u64>().ok())
+        .unwrap_or(0)
+}
+
+fn first_string(value: &Value, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(Value::as_str))
+        .map(ToString::to_string)
+}
+
+fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
+    keys.iter().find_map(|key| {
+        value
+            .get(*key)
+            .and_then(Value::as_i64)
+            .or_else(|| value.get(*key).and_then(Value::as_u64).and_then(|v| i64::try_from(v).ok()))
+    })
 }
 
 // ─── Commands ────────────────────────────────────────────────────────────────
@@ -145,23 +216,30 @@ pub async fn get_match_history(
         .get_shard::<LcuShard>()
         .manager()
         .ok_or(AppError::LcuNotConnected)?;
-    let lcu = manager
-        .focused_client()
-        .await
-        .ok_or(AppError::LcuNotConnected)?;
-    let path = format!(
-        "/lol-match-history/v1/products/lol/{puuid}/matches?begIndex={begin_index}&endIndex={end_index}"
-    );
-    let resp = lcu.get(&path).await?;
+    let token_context = manager.exchange_sgp_token_context().await?;
+    let sgp_api = jax
+        .get_shard::<SgpShard>()
+        .api()
+        .ok_or_else(|| AppError::Other("SGP shard is not initialized".to_string()))?;
 
-    let games = resp["games"]["games"]
-        .as_array()
+    let count = end_index.saturating_sub(begin_index);
+    if count == 0 {
+        return Ok(Vec::new());
+    }
+
+    let response = sgp_api
+        .get_match_history(&token_context, &puuid, begin_index, count)
+        .await?;
+
+    let games = response
+        .get("games")
+        .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
 
     let mut summaries = Vec::with_capacity(games.len());
     for game in &games {
-        summaries.push(parse_match_summary(game)?);
+        summaries.push(parse_sgp_match_summary(game, &puuid)?);
     }
 
     Ok(summaries)
@@ -176,23 +254,36 @@ pub async fn get_match_detail(
         .get_shard::<LcuShard>()
         .manager()
         .ok_or(AppError::LcuNotConnected)?;
-    let lcu = manager
-        .focused_client()
-        .await
-        .ok_or(AppError::LcuNotConnected)?;
-    let path = format!("/lol-match-history/v1/games/{game_id}");
-    let resp = lcu.get(&path).await?;
+    let token_context = manager.exchange_sgp_token_context().await?;
+    let sgp_api = jax
+        .get_shard::<SgpShard>()
+        .api()
+        .ok_or_else(|| AppError::Other("SGP shard is not initialized".to_string()))?;
 
-    let participants_raw = resp["participants"].as_array().cloned().unwrap_or_default();
+    let response = sgp_api.get_game_summary(&token_context, game_id).await?;
+    let payload = sgp_summary_payload(&response);
 
-    let participants: Vec<Participant> = participants_raw.iter().map(parse_participant).collect();
+    let participants_raw = payload
+        .get("participants")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+
+    let participants: Vec<Participant> = participants_raw.iter().map(parse_sgp_participant).collect();
 
     Ok(MatchDetail {
-        game_id: resp["gameId"].as_u64().unwrap_or(game_id),
-        game_duration: resp["gameDuration"].as_i64().unwrap_or(0),
-        game_mode: resp["gameMode"].as_str().unwrap_or_default().to_string(),
-        game_creation: resp["gameCreation"].as_i64().unwrap_or(0),
-        queue_id: resp["queueId"].as_i64().unwrap_or(0),
+        game_id: {
+            let parsed = parse_sgp_game_id(payload, &response);
+            if parsed == 0 {
+                game_id
+            } else {
+                parsed
+            }
+        },
+        game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
+        game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
+        game_creation: first_i64(payload, &["gameCreation", "game_datetime"]).unwrap_or(0),
+        queue_id: first_i64(payload, &["queueId", "queue_id"]).unwrap_or(0),
         participants,
     })
 }
