@@ -19,10 +19,10 @@
     "@floating-ui/react": "^0.27.19",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-opener": "^2.5.3",
-    "@vanilla-extract/css": "^1.18.0",
+    "@vanilla-extract/css": "^1.19.1",
     "@vanilla-extract/dynamic": "^2.1.5",
     "@vanilla-extract/recipes": "^0.5.7",
-    "@vanilla-extract/vite-plugin": "^5.1.4",
+    "@vanilla-extract/vite-plugin": "^5.2.0",
     "graphology": "^0.26.0",
     "i18next": "^25.8.18",
     "lucide-react": "^0.577.0",
@@ -32,7 +32,7 @@
     "react-router": "^7.13.1",
     "swr": "^2.4.1",
     "uuid": "^13.0.0",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",

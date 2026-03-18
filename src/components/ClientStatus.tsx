@@ -20,23 +20,109 @@ import { selectIsFocused, useLcuStore } from "../stores/lcu";
 import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
 
-// ─── Tooltip sub-components ─────────────────────────────────────────────────
+type ClientDisplayState = Exclude<LcuInstanceInfo["state"], "idle">;
 
-function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
+function normalizeState(state: LcuInstanceInfo["state"]): ClientDisplayState {
+  return state === "idle" ? "authenticating" : state;
+}
+
+function renderInstanceStateLabel(
+  state: ClientDisplayState,
+  t: (key: string) => string,
+): string | null {
+  if (state === "authenticating") {
+    return t("clientStatus.authenticating");
+  }
+  if (state === "closing") {
+    return t("clientStatus.closing");
+  }
+  return null;
+}
+
+function TriggerIcon({
+  avatarUrl,
+  hasSummoner,
+  isLoading,
+  iconSize,
+}: {
+  avatarUrl: string | null;
+  hasSummoner: boolean;
+  isLoading: boolean;
+  iconSize: number;
+}) {
+  if (hasSummoner && avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt="Profile icon"
+        width={iconSize * 1.3}
+        height={iconSize * 1.3}
+        className={s.avatar}
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div
+        className={s.avatarLoading}
+        style={assignInlineVars({
+          [s.avatarSizeVar]: `${iconSize * 1.3}px`,
+        })}
+        aria-label="Connecting"
+        role="img"
+      />
+    );
+  }
+
+  return (
+    <Unplug
+      size={iconSize}
+      aria-hidden="true"
+      style={{ justifySelf: "center" }}
+    />
+  );
+}
+
+function TriggerLabel({
+  hasFocusedSummoner,
+  summoner,
+  focusedState,
+}: {
+  hasFocusedSummoner: boolean;
+  summoner: LcuInstanceInfo["summoner"] | undefined;
+  focusedState: ClientDisplayState | null;
+}) {
   const { t } = useTranslation();
-  const isFocused = inst.isFocused;
-  const isReady = inst.state === "ready";
-  const hasSummoner = !!inst.summoner;
+
+  if (hasFocusedSummoner && summoner) {
+    return <SummonerID summoner={summoner} />;
+  }
+
+  if (focusedState) {
+    return focusedState === "closing"
+      ? t("clientStatus.closing")
+      : t("clientStatus.authenticating");
+  }
+
+  return t("common.disconnected");
+}
+
+function ClientCardContent({
+  inst,
+  displayState,
+  isFocused,
+}: {
+  inst: LcuInstanceInfo;
+  displayState: ClientDisplayState;
+  isFocused: boolean;
+}) {
+  const { t } = useTranslation();
   const avatarUrl = useProfileIcon(inst.summoner?.profileIconId);
+  const hasSummoner = !!inst.summoner;
+  const stateLabel = renderInstanceStateLabel(displayState, t);
 
-  const stateLabel =
-    inst.state === "authenticating"
-      ? t("clientStatus.authenticating")
-      : inst.state === "closing"
-        ? t("clientStatus.closing")
-        : null;
-
-  const info = (
+  return (
     <>
       {hasSummoner && avatarUrl ? (
         <img src={avatarUrl} alt="Profile icon" className={s.instanceIcon} />
@@ -50,7 +136,7 @@ function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
           {inst.summoner ? (
             <SummonerID summoner={inst.summoner} />
           ) : (
-            (inst.installDir ?? `Port ${inst.port}`)
+            inst.installDir ?? `Port ${inst.port}`
           )}
         </span>
         <span className={s.instancePid}>
@@ -73,11 +159,24 @@ function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
         </button>
       ) : (
         <span
-          className={s.stateIndicator({ state: inst.state })}
+          className={s.stateIndicator({ state: displayState })}
           aria-hidden="true"
         />
       )}
     </>
+  );
+}
+
+function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
+  const displayState = normalizeState(inst.state);
+  const isFocused = inst.isFocused;
+  const isReady = inst.state === "ready";
+  const content = (
+    <ClientCardContent
+      inst={inst}
+      displayState={displayState}
+      isFocused={isFocused}
+    />
   );
 
   if (isFocused) {
@@ -86,7 +185,7 @@ function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
         className={s.instanceRow({ focused: true })}
         title={inst.installDir ?? undefined}
       >
-        {info}
+        {content}
       </div>
     );
   }
@@ -99,7 +198,7 @@ function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
         onClick={() => invoke("lcu_update_focus", { pid: inst.pid })}
         title={inst.installDir ?? undefined}
       >
-        {info}
+        {content}
       </button>
     );
   }
@@ -109,7 +208,7 @@ function LcuClientCard({ instance: inst }: { instance: LcuInstanceInfo }) {
       className={s.instanceRow({ disabled: true })}
       title={inst.installDir ?? undefined}
     >
-      {info}
+      {content}
     </div>
   );
 }
@@ -128,33 +227,36 @@ function TooltipContent({ instances }: { instances: LcuInstanceInfo[] }) {
   );
 }
 
-// ─── Main component ─────────────────────────────────────────────────────────
-
 interface ClientStatusProps {
   collapsed: boolean;
   iconSize: number;
 }
 
 export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const openTab = useTabStore((st) => st.openTab);
   const focusedReady = useLcuStore(selectIsFocused);
   const focusedInstance = useLcuStore((st) =>
     st.instances.find((i) => i.isFocused),
   );
-  const summoner = focusedReady?.summoner;
+  const focusedDisplayState = focusedInstance
+    ? normalizeState(focusedInstance.state)
+    : null;
   const instances = useLcuStore((st) => st.instances);
-  const isLoading = focusedInstance && focusedInstance.state !== "ready";
+
+  const summoner = focusedReady?.summoner;
+  const hasFocusedSummoner = !!(focusedReady && summoner);
   const avatarUrl = useProfileIcon(
-    focusedReady && summoner ? summoner.profileIconId : undefined,
+    hasFocusedSummoner ? summoner?.profileIconId : undefined,
   );
+  const isLoading = !!focusedInstance && focusedInstance.state !== "ready";
 
   const handleClick = () => {
-    if (summoner) {
-      openTab(summoner);
-      void navigate("/history");
+    if (!summoner) {
+      return;
     }
+    openTab(summoner);
+    void navigate("/history");
   };
 
   const [open, setOpen] = useState(false);
@@ -179,40 +281,18 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
           className={s.trigger({ collapsed })}
           onClick={handleClick}
         >
-          {focusedReady && summoner && avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt="Profile icon"
-              width={iconSize * 1.3}
-              height={iconSize * 1.3}
-              className={s.avatar}
-            />
-          ) : isLoading ? (
-            <div
-              className={s.avatarLoading}
-              style={assignInlineVars({
-                [s.avatarSizeVar]: `${iconSize * 1.3}px`,
-              })}
-              aria-label="Connecting"
-              role="img"
-            />
-          ) : (
-            <Unplug
-              size={iconSize}
-              aria-hidden="true"
-              style={{ justifySelf: "center" }}
-            />
-          )}
+          <TriggerIcon
+            avatarUrl={avatarUrl}
+            hasSummoner={hasFocusedSummoner}
+            isLoading={isLoading}
+            iconSize={iconSize}
+          />
           <span className={s.label({ collapsed })}>
-            {focusedReady && summoner ? (
-              <SummonerID summoner={summoner}></SummonerID>
-            ) : focusedInstance ? (
-              focusedInstance.state === "closing"
-                ? t("clientStatus.closing")
-                : t("clientStatus.authenticating")
-            ) : (
-              t("common.disconnected")
-            )}
+            <TriggerLabel
+              hasFocusedSummoner={hasFocusedSummoner}
+              summoner={summoner}
+              focusedState={focusedDisplayState}
+            />
           </span>
         </button>
       </div>

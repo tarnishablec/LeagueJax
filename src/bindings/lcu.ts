@@ -17,4 +17,4 @@ export type LcuInstanceInfo = {
   summoner: SummonerInfo | null;
 };
 
-export type LcuInstanceState = "authenticating" | "ready" | "closing";
+export type LcuInstanceState = "idle" | "authenticating" | "ready" | "closing";
