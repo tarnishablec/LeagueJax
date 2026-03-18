@@ -17,6 +17,6 @@ impl Shard for AutoReplyShard {
     shard_id!("4201e831-e67b-4264-b2c0-46f2397a2da3");
 
     async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        todo!()
+        Ok(())
     }
 }

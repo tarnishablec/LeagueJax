@@ -86,6 +86,7 @@ This is a **Tauri v2** desktop app with a **React + TypeScript** frontend and a 
 ### Package manager
 
 This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of `npm` / `npx`.
+- Always use `bun add <package> --no-cache` for dependency installation.
 
 ## Frontend Layout
 

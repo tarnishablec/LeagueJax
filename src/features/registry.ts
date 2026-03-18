@@ -1,18 +1,19 @@
 import type React from "react";
+import { entries, mergeDeep, sortBy } from "remeda";
 import type {
   I18nLocaleBundle,
   NavItem,
   RouteContribution,
-  SettingsSection,
   SidebarSlotContext,
-  WebShard,
-} from "@/jax/shard/web-shard";
-import { automationShard } from "./automation/manifest";
-import { historyShard } from "./history/manifest";
-import { gameShard } from "./ongoing-game/manifest";
-import { settingsShard } from "./settings/manifest";
-import { shellShard } from "./shell/manifest";
-import { toolsShard } from "./tools/manifest";
+  WebContribution,
+} from "@/features/runtime/web-contract";
+import { Jax, type JaxShard, type JaxShardClass } from "@/jax";
+import { AutomationShard } from "./automation/manifest";
+import { HistoryShard } from "./history/manifest";
+import { OngoingGameShard } from "./ongoing-game/manifest";
+import { SettingsShard } from "./settings/manifest";
+import { ShellShard } from "./shell/manifest";
+import { ToolsShard } from "./tools/manifest";
 
 export interface RenderedSlot {
   id: string;
@@ -20,22 +21,23 @@ export interface RenderedSlot {
   order: number;
 }
 
-export const SHARD_REGISTRY: WebShard[] = [
-  shellShard,
-  historyShard,
-  gameShard,
-  automationShard,
-  toolsShard,
-  settingsShard,
+export const SHARD_CLASSES: readonly JaxShardClass<WebContribution>[] = [
+  SettingsShard,
+  ShellShard,
+  HistoryShard,
+  OngoingGameShard,
+  AutomationShard,
+  ToolsShard,
 ];
 
-let storesInitialized = false;
+let jaxRuntime: Jax | null = null;
+let jaxInitialization: Promise<void> | null = null;
 
-function sortByOrder<T extends { order?: number }>(entries: T[]): T[] {
-  return [...entries].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
-}
+const sortByOrder = <T extends { order?: number }>(entries: T[]): T[] => {
+  return sortBy(entries, (entry) => entry.order ?? 99);
+};
 
-function routeMatches(currentPath: string, routes?: string[]): boolean {
+const routeMatches = (currentPath: string, routes?: string[]): boolean => {
   if (!routes || routes.length === 0) {
     return true;
   }
@@ -49,79 +51,107 @@ function routeMatches(currentPath: string, routes?: string[]): boolean {
     }
     return currentPath === route || currentPath.startsWith(`${route}/`);
   });
-}
+};
 
-function slotToRendered<
+const slotToRendered = <
   T extends { id: string; node: React.ReactElement; order?: number },
 >(
   slots: T[],
-): RenderedSlot[] {
+): RenderedSlot[] => {
   return slots.map((slot) => ({
     id: slot.id,
     node: slot.node,
     order: slot.order ?? 99,
   }));
-}
+};
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function deepMerge(
-  target: Record<string, unknown>,
-  source: Record<string, unknown>,
-): Record<string, unknown> {
-  for (const [key, value] of Object.entries(source)) {
-    const current = target[key];
-    if (isRecord(current) && isRecord(value)) {
-      target[key] = deepMerge(current, value);
-      continue;
-    }
-    target[key] = value;
+const getJaxRuntime = (): Jax => {
+  if (!jaxRuntime) {
+    throw new Error("[registry] Jax runtime is not initialized.");
   }
-  return target;
-}
+  return jaxRuntime;
+};
 
-export function initializeWebShards(): void {
-  if (storesInitialized) {
+const listWebShards = (): WebContribution[] => {
+  return getJaxRuntime().listShards() as WebContribution[];
+};
+
+export const initializeWebShards = async (): Promise<void> => {
+  if (jaxRuntime) {
     return;
   }
 
-  for (const shard of SHARD_REGISTRY) {
-    shard.setupStores?.();
+  if (jaxInitialization) {
+    await jaxInitialization;
+    return;
   }
 
-  storesInitialized = true;
-}
+  jaxInitialization = (async () => {
+    const runtime = new Jax().registerMany(SHARD_CLASSES).build();
+    const report = await runtime.start();
+    if (report.failed.length > 0) {
+      const failedIds = report.failed.map((item) => String(item.id)).join(", ");
+      throw new Error(`[registry] Shard startup failed: ${failedIds}`);
+    }
+    jaxRuntime = runtime;
+  })();
 
-export function getRouteContributions(): RouteContribution[] {
-  const routes = SHARD_REGISTRY.flatMap((shard) => shard.routes?.() ?? []);
+  try {
+    await jaxInitialization;
+  } finally {
+    jaxInitialization = null;
+  }
+};
+
+export const shutdownWebShards = async (): Promise<void> => {
+  if (!jaxRuntime) {
+    return;
+  }
+
+  await jaxRuntime.shutdown();
+  jaxRuntime = null;
+};
+
+export const getRouteContributions = (): RouteContribution[] => {
+  const routes = listWebShards().flatMap((shard) => shard.routes?.() ?? []);
   return sortByOrder(routes);
-}
+};
 
-export function getNavItems(section: NavItem["section"] = "main"): NavItem[] {
-  const items = SHARD_REGISTRY.flatMap((shard) => shard.navItems?.() ?? []);
-  return sortByOrder(items).filter((item) => (item.section ?? "main") === section);
-}
+export const getNavItems = (
+  section: NavItem["section"] = "main",
+): NavItem[] => {
+  const items = listWebShards().flatMap((shard) => shard.navItems?.() ?? []);
+  return sortByOrder(items).filter(
+    (item) => (item.section ?? "main") === section,
+  );
+};
 
-export function getToolbarSlots(currentPath: string): RenderedSlot[] {
-  const slots = SHARD_REGISTRY.flatMap((shard) => shard.toolbarSlots?.() ?? []);
+export const getToolbarSlots = (currentPath: string): RenderedSlot[] => {
+  const slots = listWebShards().flatMap(
+    (shard) => shard.toolbarSlots?.() ?? [],
+  );
   const visible = sortByOrder(slots).filter((slot) =>
     routeMatches(currentPath, slot.routes),
   );
   return slotToRendered(visible);
-}
+};
 
-export function getTitlebarSlots(currentPath: string): RenderedSlot[] {
-  const slots = SHARD_REGISTRY.flatMap((shard) => shard.titlebarSlots?.() ?? []);
+export const getTitlebarSlots = (currentPath: string): RenderedSlot[] => {
+  const slots = listWebShards().flatMap(
+    (shard) => shard.titlebarSlots?.() ?? [],
+  );
   const visible = sortByOrder(slots).filter((slot) =>
     routeMatches(currentPath, slot.routes),
   );
   return slotToRendered(visible);
-}
+};
 
-export function getSidebarSlots(context: SidebarSlotContext): RenderedSlot[] {
-  const slots = SHARD_REGISTRY.flatMap((shard) => shard.sidebarSlots?.() ?? []);
+export const getSidebarSlots = (
+  context: SidebarSlotContext,
+): RenderedSlot[] => {
+  const slots = listWebShards().flatMap(
+    (shard) => shard.sidebarSlots?.() ?? [],
+  );
   const visible = sortByOrder(slots).filter((slot) =>
     routeMatches(context.currentPath, slot.routes),
   );
@@ -131,29 +161,28 @@ export function getSidebarSlots(context: SidebarSlotContext): RenderedSlot[] {
     order: slot.order ?? 99,
     node: slot.render(context),
   }));
-}
+};
 
-export function getSettingsSections(): SettingsSection[] {
-  const sections = SHARD_REGISTRY.flatMap(
-    (shard) => shard.settingsSections?.() ?? [],
-  );
-  return sortByOrder(sections);
-}
-
-export function getMergedI18nResources(): I18nLocaleBundle {
+export const getMergedI18nResources = (): I18nLocaleBundle => {
   const merged: I18nLocaleBundle = {};
 
-  for (const shard of SHARD_REGISTRY) {
+  for (const shard of listWebShards()) {
     const resources = shard.i18nResources?.();
     if (!resources) {
       continue;
     }
 
-    for (const [locale, bundle] of Object.entries(resources)) {
-      const localeTarget = (merged[locale] ??= {});
-      deepMerge(localeTarget, bundle);
+    for (const [locale, bundle] of entries(resources)) {
+      const localeTarget = merged[locale] ?? {};
+      merged[locale] = mergeDeep(localeTarget, bundle);
     }
   }
 
   return merged;
-}
+};
+
+export const getShardInstance = <T extends JaxShard>(
+  shardClass: JaxShardClass<T>,
+): T => {
+  return getJaxRuntime().getShard(shardClass);
+};

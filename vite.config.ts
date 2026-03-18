@@ -1,8 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import swc from "@rollup/plugin-swc";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, withFilter } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -10,7 +11,32 @@ const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const port = 31420;
 export default defineConfig(async () => ({
-  plugins: [react(), vanillaExtractPlugin()],
+  plugins: [
+    withFilter(
+      swc({
+        swc: {
+          jsc: {
+            parser: {
+              syntax: "typescript",
+              tsx: true,
+              decorators: true,
+            },
+            transform: {
+              decoratorVersion: "2022-03",
+            },
+          },
+        },
+      }),
+      {
+        transform: {
+          id: /\.[cm]?[jt]sx?$/,
+          code: "@",
+        },
+      },
+    ),
+    react(),
+    vanillaExtractPlugin(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(dirname, "./src"),

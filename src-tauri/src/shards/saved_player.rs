@@ -17,6 +17,6 @@ impl Shard for SavedPlayerShard {
     shard_id!("0885405c-362d-45b6-b212-f943046c401f");
 
     async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        todo!()
+        Ok(())
     }
 }

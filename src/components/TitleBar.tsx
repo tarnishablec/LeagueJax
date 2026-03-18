@@ -60,9 +60,9 @@ export function TitleBar({
 }: TitleBarProps) {
   return (
     <header className={s.header}>
-      <div data-tauri-drag-region className={s.dragRegion} />
-
       <div className={s.centerSlots}>{titlebarSlots}</div>
+
+      <div data-tauri-drag-region className={s.dragRegion} />
 
       <Toolbar>{toolbarSlots}</Toolbar>
 

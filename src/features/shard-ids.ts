@@ -1,4 +1,4 @@
-import { type ShardId, shardId } from "@/jax/shard/shard-id.ts";
+import { type ShardId, shardId } from "@/jax";
 
 /**
  * Canonical shard UUID constants.

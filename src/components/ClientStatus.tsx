@@ -136,7 +136,7 @@ function ClientCardContent({
           {inst.summoner ? (
             <SummonerID summoner={inst.summoner} />
           ) : (
-            inst.installDir ?? `Port ${inst.port}`
+            (inst.installDir ?? `Port ${inst.port}`)
           )}
         </span>
         <span className={s.instancePid}>
