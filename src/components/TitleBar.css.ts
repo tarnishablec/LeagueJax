@@ -4,7 +4,7 @@ import { vars } from "../styles/theme.css";
 
 export const header = style({
   display: "grid",
-  gridTemplateColumns: "minmax(3rem, 1fr) minmax(0, auto) auto auto auto",
+  gridTemplateColumns: "minmax(0, auto) minmax(3rem, 1fr) auto auto auto",
   height: 40,
   userSelect: "none",
   borderBottom: `1px solid ${vars.color.border}`,

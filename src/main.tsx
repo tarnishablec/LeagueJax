@@ -1,5 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { settingsApi } from "@/features/settings/store";
+import {
+  GENERAL_LANGUAGE_SETTING_ID,
+  type Language,
+} from "@/features/settings/store/general";
 import "./styles/theme.css";
 import "./styles/global.css";
 import { initializeI18n } from "@/i18n";
@@ -8,18 +13,31 @@ import {
   getMergedI18nResources,
   initializeWebShards,
 } from "./features/registry";
-import { useAppStore } from "./stores/app";
 
 async function bootstrap(): Promise<void> {
-  initializeWebShards();
-  const { language } = useAppStore.getState();
-  await initializeI18n(getMergedI18nResources(), language);
+  const rootElement = document.getElementById("root") as HTMLElement;
+  const root = ReactDOM.createRoot(rootElement);
 
-  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
-  );
+  try {
+    await initializeWebShards();
+    const language =
+      settingsApi.get<Language>(GENERAL_LANGUAGE_SETTING_ID) ?? "zh-CN";
+    await initializeI18n(getMergedI18nResources(), language);
+
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>,
+    );
+  } catch (error) {
+    console.error("[bootstrap] failed to initialize app", error);
+    const message = error instanceof Error ? error.message : String(error);
+    root.render(
+      <pre style={{ padding: 16, whiteSpace: "pre-wrap" }}>
+        {`App bootstrap failed:\n${message}`}
+      </pre>,
+    );
+  }
 }
 
 void bootstrap();

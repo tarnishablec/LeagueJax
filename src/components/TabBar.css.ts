@@ -6,7 +6,7 @@ export const container = style({
   display: "grid",
   gridAutoFlow: "column",
   gridAutoColumns: "max-content",
-  alignItems: "end",
+  alignItems: "start",
   overflowX: "auto",
   maxWidth: 560,
   scrollbarWidth: "none",
@@ -36,6 +36,7 @@ export const tab = recipe({
     whiteSpace: "nowrap",
     borderBottom: "2px solid transparent",
     transition: "color 100ms, background 100ms",
+    borderRadius: "4px 4px 0 0",
     selectors: {
       "&:hover": {
         color: vars.color.foreground,

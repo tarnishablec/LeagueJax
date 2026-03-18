@@ -1,5 +1,5 @@
-import {pageTitle} from "../styles/shared.css";
+import { pageTitle } from "../styles/shared.css";
 
 export function Dashboard() {
-    return <div className={pageTitle}>Dashboard</div>;
+  return <div className={pageTitle}>Dashboard</div>;
 }

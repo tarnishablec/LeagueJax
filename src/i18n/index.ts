@@ -1,6 +1,6 @@
 import i18n, { type Resource, type ResourceLanguage } from "i18next";
 import { initReactI18next } from "react-i18next";
-import type { I18nLocaleBundle } from "@/jax/shard/web-shard";
+import type { I18nLocaleBundle } from "@/features/runtime/web-contract";
 
 let initialized = false;
 

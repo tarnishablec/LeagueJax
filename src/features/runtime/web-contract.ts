@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
 import type { RouteObject } from "react-router";
-import type { ShardId } from "./shard-id.ts";
+import type { JaxShard } from "@/jax";
 
 export type NavSection = "main" | "bottom";
 
@@ -45,37 +45,13 @@ export interface SidebarSlot {
   render: (context: SidebarSlotContext) => React.ReactElement;
 }
 
-export interface SettingsSection {
-  id: string;
-  titleKey: string;
-  node: React.ReactElement;
-  order?: number;
-}
-
 export type I18nLocaleBundle = Record<string, Record<string, unknown>>;
 
-/**
- * Web-side shard interface.
- * Static registry only: no runtime lifecycle orchestration.
- */
-export interface WebShard {
-  id(): ShardId;
-
-  dependsOn?(): ShardId[];
-
-  setupStores?(): void;
-
+export interface WebContribution extends JaxShard {
   routes?(): RouteContribution[];
-
   navItems?(): NavItem[];
-
   toolbarSlots?(): ToolbarSlot[];
-
   sidebarSlots?(): SidebarSlot[];
-
   titlebarSlots?(): TitlebarSlot[];
-
-  settingsSections?(): SettingsSection[];
-
   i18nResources?(): I18nLocaleBundle;
 }

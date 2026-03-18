@@ -1,37 +1,45 @@
 import { Bot } from "lucide-react";
-import type { WebShard } from "@/jax/shard/web-shard";
+import type { WebContribution } from "@/features/runtime/web-contract";
 import { Automation } from "@/routes/automation";
 import { SHARD_IDS } from "../shard-ids";
 
-export const automationShard: WebShard = {
-  id: () => SHARD_IDS.AUTOMATION,
-  setupStores: () => {},
-  routes: () => [
-    {
-      path: "automation",
-      element: <Automation />,
-      order: 85,
-    },
-  ],
-  navItems: () => [
-    {
-      to: "/automation",
-      labelKey: "nav.automation",
-      icon: Bot,
-      section: "main",
-      order: 80,
-    },
-  ],
-  i18nResources: () => ({
-    en: {
-      nav: {
-        automation: "Automation",
+export class AutomationShard implements WebContribution {
+  public static readonly id = SHARD_IDS.AUTOMATION;
+
+  public routes() {
+    return [
+      {
+        path: "automation",
+        element: <Automation />,
+        order: 85,
       },
-    },
-    "zh-CN": {
-      nav: {
-        automation: "自动化",
+    ];
+  }
+
+  public navItems() {
+    return [
+      {
+        to: "/automation",
+        labelKey: "nav.automation",
+        icon: Bot,
+        section: "main" as const,
+        order: 80,
       },
-    },
-  }),
-};
+    ];
+  }
+
+  public i18nResources() {
+    return {
+      en: {
+        nav: {
+          automation: "Automation",
+        },
+      },
+      "zh-CN": {
+        nav: {
+          automation: "\u81ea\u52a8\u5316",
+        },
+      },
+    };
+  }
+}

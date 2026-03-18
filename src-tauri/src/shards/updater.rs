@@ -17,6 +17,6 @@ impl Shard for UpdaterShard {
     shard_id!("0adeb8a1-2f80-41af-a381-a852a08e1ab5");
 
     async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        todo!()
+        Ok(())
     }
 }

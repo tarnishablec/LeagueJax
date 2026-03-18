@@ -1,9 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import { Moon, Sparkle, Sun } from "lucide-react";
-import { type Theme, useThemeStore } from "../stores/theme";
+import { useSyncExternalStore } from "react";
+import { settingsApi } from "@/features/settings/store";
+import {
+  GENERAL_THEME_SETTING_ID,
+  type Theme,
+} from "@/features/settings/store/general";
 import * as s from "./ThemeToggle.css";
-
-// ─── Config ───────────────────────────────────────────────────────────────────
 
 const THEME_OPTIONS: { value: Theme; label: string; Icon: LucideIcon }[] = [
   { value: "light", label: "Light", Icon: Sun },
@@ -11,17 +14,25 @@ const THEME_OPTIONS: { value: Theme; label: string; Icon: LucideIcon }[] = [
   { value: "dark", label: "Dark", Icon: Moon },
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function useThemeValue(): Theme {
+  const value = useSyncExternalStore(
+    (onStoreChange) =>
+      settingsApi.subscribe(GENERAL_THEME_SETTING_ID, onStoreChange),
+    () => settingsApi.get<Theme>(GENERAL_THEME_SETTING_ID),
+    () => settingsApi.get<Theme>(GENERAL_THEME_SETTING_ID),
+  );
+
+  return value ?? "system";
+}
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useThemeStore();
+  const theme = useThemeValue();
   const current =
-    THEME_OPTIONS.find((o) => o.value === theme) ?? THEME_OPTIONS[1];
+    THEME_OPTIONS.find((option) => option.value === theme) ?? THEME_OPTIONS[1];
   const CurrentIcon = current.Icon;
 
   return (
     <div className={s.wrapper}>
-      {/* Trigger */}
       <button
         type="button"
         aria-label={`Theme: ${current.label}`}
@@ -30,7 +41,6 @@ export function ThemeToggle() {
         <CurrentIcon size={14} aria-hidden="true" />
       </button>
 
-      {/* Dropdown — flush with the trigger so the hover area is continuous */}
       <div className={s.dropdownOuter}>
         <div className={s.dropdownInner}>
           {THEME_OPTIONS.map(({ value, label, Icon }) => (
@@ -40,7 +50,9 @@ export function ThemeToggle() {
               aria-label={label}
               aria-pressed={theme === value}
               className={s.dropdownItem({ active: theme === value })}
-              onClick={() => setTheme(value)}
+              onClick={() => {
+                settingsApi.set(GENERAL_THEME_SETTING_ID, value);
+              }}
             >
               <Icon size={14} aria-hidden="true" />
               <span>{label}</span>

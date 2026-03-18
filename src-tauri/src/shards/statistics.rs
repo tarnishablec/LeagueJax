@@ -17,6 +17,6 @@ impl Shard for StatisticsShard {
     shard_id!(r"e5eab397-efba-4ee0-8507-def244597f1b");
 
     async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        todo!()
+        Ok(())
     }
 }

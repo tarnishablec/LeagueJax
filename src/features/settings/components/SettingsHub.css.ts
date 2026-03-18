@@ -18,17 +18,37 @@ export const sections = style({
   gap: 12,
 });
 
-export const section = style({
+export const pageTabs = style({
   display: "grid",
-  gap: 10,
-  padding: 14,
-  borderRadius: 10,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  gridAutoFlow: "column",
+  gridAutoColumns: "max-content",
+  gap: 8,
+  alignItems: "center",
+  justifyContent: "start",
 });
 
-export const sectionTitle = style({
-  fontSize: "0.9rem",
-  fontWeight: 600,
-  color: vars.color.foreground,
+const pageTabBase = style({
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: 8,
+  padding: "6px 12px",
+  color: vars.color.mutedForeground,
+  textDecoration: "none",
+  fontSize: "0.875rem",
+  selectors: {
+    "&:hover": {
+      color: vars.color.foreground,
+      borderColor: vars.color.primary,
+    },
+  },
 });
+
+export const pageTab = pageTabBase;
+
+export const pageTabActive = style([
+  pageTabBase,
+  {
+    color: vars.color.foreground,
+    borderColor: vars.color.primary,
+    background: vars.color.accent,
+  },
+]);

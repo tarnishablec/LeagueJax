@@ -17,6 +17,6 @@ impl Shard for KeyboardShard {
     shard_id!(r"886fead7-3482-4c3f-a28b-20f5e972d221");
 
     async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        todo!()
+        Ok(())
     }
 }
