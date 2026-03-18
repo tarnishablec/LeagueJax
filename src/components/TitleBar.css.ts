@@ -4,7 +4,7 @@ import { vars } from "../styles/theme.css";
 
 export const header = style({
   display: "grid",
-  gridTemplateColumns: "1fr auto auto auto",
+  gridTemplateColumns: "minmax(3rem, 1fr) minmax(0, auto) auto auto auto",
   height: 40,
   userSelect: "none",
   borderBottom: `1px solid ${vars.color.border}`,
@@ -16,11 +16,22 @@ export const dragRegion = style({
   height: "100%",
 });
 
+export const centerSlots = style({
+  display: "grid",
+  gridAutoColumns: "max-content",
+  gridAutoFlow: "column",
+  alignItems: "end",
+  maxWidth: "min(52vw, 720px)",
+  overflow: "hidden",
+  paddingInline: 8,
+});
+
 export const toolbar = style({
   display: "grid",
   gridAutoColumns: "auto",
   gridAutoFlow: "column",
   alignItems: "center",
+  paddingInlineStart: 4,
 });
 
 export const divider = style({

@@ -1,30 +1,57 @@
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet } from "react-router";
-import { ClientStatus } from "../components/ClientStatus";
-import { JaxLogo } from "../components/JaxLogo";
-import { TitleBar } from "../components/TitleBar";
-import { getNavItems } from "../features/registry";
-import { useLcuEvents } from "../hooks/use-lcu-events";
-import { useTheme } from "../hooks/use-theme";
-
+import { NavLink, Outlet, useLocation } from "react-router";
+import { JaxLogo } from "@/components/JaxLogo";
+import { TitleBar } from "@/components/TitleBar";
+import {
+  getNavItems,
+  getSidebarSlots,
+  getTitlebarSlots,
+  getToolbarSlots,
+} from "@/features/registry";
+import { useLcuEvents } from "@/hooks/use-lcu-events";
+import { useTheme } from "@/hooks/use-theme";
 import * as s from "./__root.css";
-
-// ─── Layout ───────────────────────────────────────────────────────────────────
-
-const mainNavItems = getNavItems("main");
-const bottomNavItems = getNavItems("bottom");
 
 export function RootLayout() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
   useLcuEvents();
   useTheme();
 
   const iconSize = collapsed ? 20 : 16;
+  const mainNavItems = useMemo(() => getNavItems("main"), []);
+  const bottomNavItems = useMemo(() => getNavItems("bottom"), []);
+
+  const toolbarSlots = useMemo(
+    () =>
+      getToolbarSlots(pathname).map((slot) => (
+        <div key={slot.id}>{slot.node}</div>
+      )),
+    [pathname],
+  );
+
+  const titlebarSlots = useMemo(
+    () =>
+      getTitlebarSlots(pathname).map((slot) => (
+        <div key={slot.id}>{slot.node}</div>
+      )),
+    [pathname],
+  );
+
+  const sidebarSlots = useMemo(
+    () =>
+      getSidebarSlots({
+        currentPath: pathname,
+        collapsed,
+        iconSize,
+      }),
+    [collapsed, iconSize, pathname],
+  );
 
   return (
     <div
@@ -35,12 +62,11 @@ export function RootLayout() {
           : "12rem 1fr",
       })}
     >
-      {/* ── Sidebar logo / collapse toggle ── */}
       <button
         type="button"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         className={s.logoButton}
-        onClick={() => setCollapsed((c) => !c)}
+        onClick={() => setCollapsed((value) => !value)}
       >
         <JaxLogo size={20} className={s.logoIcon} />
         {collapsed ? (
@@ -58,10 +84,8 @@ export function RootLayout() {
         )}
       </button>
 
-      {/* ── Title bar ── */}
-      <TitleBar />
+      <TitleBar toolbarSlots={toolbarSlots} titlebarSlots={titlebarSlots} />
 
-      {/* ── Sidebar nav ── */}
       <aside className={s.sidebar}>
         <nav className={s.navList}>
           {mainNavItems.map(({ to, labelKey, icon: Icon }) => (
@@ -79,9 +103,10 @@ export function RootLayout() {
           ))}
         </nav>
 
-        {/* ── Sidebar bottom ── */}
         <div className={s.navList}>
-          <ClientStatus collapsed={collapsed} iconSize={iconSize} />
+          {sidebarSlots.map((slot) => (
+            <div key={slot.id}>{slot.node}</div>
+          ))}
           {bottomNavItems.map(({ to, labelKey, icon: Icon }) => (
             <NavLink
               key={to}
@@ -98,7 +123,6 @@ export function RootLayout() {
         </div>
       </aside>
 
-      {/* ── Main content ── */}
       <main className={s.main}>
         <Outlet />
       </main>
