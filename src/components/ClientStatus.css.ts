@@ -1,6 +1,6 @@
 import { createVar, keyframes, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { iconCol } from "@/routes/__root.css";
+import { iconCol } from "@/layout/__root.css";
 import { vars } from "@/styles/theme.css";
 
 // ─── Trigger area (unchanged) ───────────────────────────────────────────────

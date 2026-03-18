@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { pageTitle } from "../styles/shared.css";
+import { pageTitle } from "@/styles/shared.css";
 
-export function OngoingGame() {
+export function OngoingGameRoute() {
   const { t } = useTranslation();
   return <div className={pageTitle}>{t("nav.game")}</div>;
 }

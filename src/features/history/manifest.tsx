@@ -2,11 +2,11 @@ import { BarChart3 } from "lucide-react";
 import { TabBar } from "@/components/TabBar";
 import type { WebContribution } from "@/features/runtime/web-contract";
 import type { Jax } from "@/jax";
-import { History } from "@/routes/history";
 import { useLcuStore } from "@/stores/lcu";
 import { useTabStore } from "@/stores/tabs";
 import { SHARD_IDS } from "../shard-ids";
 import { HistoryToolbar } from "./components/HistoryToolbar";
+import { HistoryRoute } from "./routes/HistoryRoute";
 
 export class HistoryShard implements WebContribution {
   public static readonly id = SHARD_IDS.HISTORY;
@@ -21,7 +21,7 @@ export class HistoryShard implements WebContribution {
     return [
       {
         path: "history",
-        element: <History />,
+        element: <HistoryRoute />,
         order: 10,
       },
     ];

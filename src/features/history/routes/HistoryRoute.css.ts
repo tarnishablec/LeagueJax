@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "../styles/theme.css";
+import { vars } from "@/styles/theme.css";
 
 export const page = style({
   display: "grid",
@@ -15,8 +15,6 @@ export const emptyState = style({
   color: vars.color.mutedForeground,
   fontSize: "0.875rem",
 });
-
-// ─── Focus picker ────────────────────────────────────────────────────────────
 
 export const focusPicker = style({
   display: "grid",
@@ -61,12 +59,4 @@ export const focusPickerDetail = style({
   justifyContent: "space-between",
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
-});
-
-export const focusPickerPath = style({
-  fontSize: "0.6875rem",
-  color: vars.color.mutedForeground,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
 });

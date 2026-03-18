@@ -2,8 +2,8 @@ import { Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { WebContribution } from "@/features/runtime/web-contract";
 import type { Jax } from "@/jax";
-import { Settings as SettingsRoute } from "@/routes/settings";
 import { SHARD_IDS } from "../shard-ids";
+import { SettingsRoute } from "./routes/SettingsRoute";
 import { settingsApi } from "./store";
 import { registerGeneralSettings } from "./store/general";
 import type {

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { createBrowserRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { getRouteContributions } from "@/features/registry";
-import { RootLayout } from "@/routes/__root";
+import { RootLayout } from "@/layout/__root";
 
 export default function App() {
   const router = useMemo(() => {

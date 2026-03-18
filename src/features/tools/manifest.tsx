@@ -1,7 +1,7 @@
 import { Wrench } from "lucide-react";
 import type { WebContribution } from "@/features/runtime/web-contract";
-import { Tools } from "@/routes/tools";
 import { SHARD_IDS } from "../shard-ids";
+import { ToolsRoute } from "./routes/ToolsRoute";
 
 export class ToolsShard implements WebContribution {
   public static readonly id = SHARD_IDS.TOOLS;
@@ -11,7 +11,7 @@ export class ToolsShard implements WebContribution {
     return [
       {
         path: "tools",
-        element: <Tools />,
+        element: <ToolsRoute />,
         order: 86,
       },
     ];
