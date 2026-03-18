@@ -19,6 +19,7 @@ impl PersistenceSled {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_db(&self) -> Db {
         self.db
             .get()
