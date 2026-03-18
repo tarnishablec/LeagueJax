@@ -8,14 +8,14 @@ import type {
   SettingId,
   SettingsShardApi,
 } from "@/features/settings/types";
+import { AppError, type AppThatError } from "@/infra/errors";
+import { createLogger } from "@/infra/logger";
 
 interface SettingsState {
   values: Record<string, unknown>;
 }
 
-type DecoratedFieldDefinition = SettingDefinition & {
-  fieldName: string;
-};
+type DecoratedFieldDefinition = SettingDefinition;
 
 const settingsStateStore = createStore<SettingsState>()(
   persist(
@@ -38,6 +38,7 @@ const registeredDefinitions = new Map<SettingId, RegisteredSetting>();
 const fieldSubscribers = new Map<SettingId, Set<() => void>>();
 
 let declarationSequence = 0;
+const logger = createLogger("settings-store");
 
 const settingIdRegex = /^[^.]+\.[^.]+\.[^.]+$/;
 const settingOptionSchema = z
@@ -58,11 +59,12 @@ const zodSchemaValueSchema = z.custom<ZodType>(
   { message: "zod must be a valid Zod schema instance." },
 );
 
-const onSetValueSchema = z.custom<
-  ((next: unknown, prev: unknown) => void) | undefined
->((value) => value === undefined || typeof value === "function", {
-  message: "onSet must be a function.",
-});
+const onSetValueSchema = z.custom<(next: unknown, prev: unknown) => void>(
+  (value) => typeof value === "function",
+  {
+    message: "onSet must be a function.",
+  },
+);
 
 const sharedDefinitionShape = {
   id: z.string().regex(settingIdRegex, 'id must match "page.section.field".'),
@@ -71,7 +73,7 @@ const sharedDefinitionShape = {
   defaultValue: z.unknown(),
   order: z.number().int().optional(),
   visible: z.boolean().optional(),
-  onSet: onSetValueSchema.optional(),
+  onSet: onSetValueSchema,
 };
 
 const selectSettingDefinitionSchema = z
@@ -123,11 +125,11 @@ const settingDefinitionSchema = z.union([
   numberSettingDefinitionSchema,
 ]);
 
-function reportRegistrationError(message: string): void {
+function reportRegistrationError(error: AppThatError): void {
   if (import.meta.env.DEV) {
-    throw new Error(message);
+    throw error;
   }
-  console.error(message);
+  logger.error({ error }, error.message);
 }
 
 function settingClassName(ctor: SettingClassCtor): string {
@@ -177,7 +179,9 @@ function registerDefinition(definition: SettingDefinition): void {
   if (!parsedDefinition.success) {
     const issue = parsedDefinition.error.issues[0];
     reportRegistrationError(
-      `[settings] Invalid setting definition: ${issue?.message ?? "unknown error"}.`,
+      AppError.SettingsRegistration(
+        `Invalid setting definition: ${issue?.message ?? "unknown error"}.`,
+      ),
     );
     return;
   }
@@ -189,14 +193,18 @@ function registerDefinition(definition: SettingDefinition): void {
   );
   if (!defaultValueParsed.success) {
     reportRegistrationError(
-      `[settings] Default value for "${validatedDefinition.id}" does not match its zod schema.`,
+      AppError.SettingsRegistration(
+        `Default value for "${validatedDefinition.id}" does not match its zod schema.`,
+      ),
     );
     return;
   }
 
   if (registeredDefinitions.has(validatedDefinition.id)) {
     reportRegistrationError(
-      `[settings] Duplicate setting id "${validatedDefinition.id}" was registered.`,
+      AppError.SettingsRegistration(
+        `Duplicate setting id "${validatedDefinition.id}" was registered.`,
+      ),
     );
     return;
   }
@@ -209,32 +217,6 @@ function registerDefinition(definition: SettingDefinition): void {
   if (existingValue === undefined) {
     updateValue(validatedDefinition.id, normalized.defaultValue);
   }
-}
-
-function capitalizeFirstLetter(value: string): string {
-  if (value.length === 0) {
-    return value;
-  }
-  return value[0].toUpperCase() + value.slice(1);
-}
-
-function buildAutoOnSet(
-  classInstance: object,
-  fieldName: string,
-): ((next: unknown, prev: unknown) => void) | undefined {
-  const methodName = `on${capitalizeFirstLetter(fieldName)}Set`;
-  const method = (classInstance as Record<string, unknown>)[methodName];
-  if (typeof method !== "function") {
-    return undefined;
-  }
-
-  return (next: unknown, prev: unknown) => {
-    (method as (next: unknown, prev: unknown) => void).call(
-      classInstance,
-      next,
-      prev,
-    );
-  };
 }
 
 export function settings(
@@ -260,7 +242,6 @@ export function setting(definition: SettingDefinition) {
         return;
       }
 
-      const fieldName = String(context.name);
       const current = classFieldDefinitions.get(ctor) ?? [];
 
       const exists = current.some((item) => item.id === definition.id);
@@ -268,10 +249,7 @@ export function setting(definition: SettingDefinition) {
         return;
       }
 
-      current.push({
-        ...definition,
-        fieldName,
-      });
+      current.push(definition);
       classFieldDefinitions.set(ctor, current);
     });
   };
@@ -280,7 +258,9 @@ export function setting(definition: SettingDefinition) {
 function registerClass(ctor: SettingClassCtor): void {
   if (!settingsClasses.has(ctor)) {
     reportRegistrationError(
-      `[settings] Class "${settingClassName(ctor)}" must use @settings before registerClass.`,
+      AppError.SettingsRegistration(
+        `Class "${settingClassName(ctor)}" must use @settings before registerClass.`,
+      ),
     );
     return;
   }
@@ -289,16 +269,11 @@ function registerClass(ctor: SettingClassCtor): void {
     return;
   }
 
-  const classInstance = new ctor();
+  void new ctor();
   const definitions = classFieldDefinitions.get(ctor) ?? [];
 
   for (const definition of definitions) {
-    const { fieldName, ...baseDefinition } = definition;
-    const autoOnSet = buildAutoOnSet(classInstance, fieldName);
-    registerDefinition({
-      ...baseDefinition,
-      onSet: baseDefinition.onSet ?? autoOnSet,
-    });
+    registerDefinition(definition);
   }
 
   registeredClasses.add(ctor);
@@ -340,7 +315,7 @@ function set<T = unknown>(id: SettingId, value: T): boolean {
 
   const previous = get(id);
   updateValue(id, parsed.data);
-  definition.onSet?.(parsed.data, previous);
+  definition.onSet(parsed.data, previous);
   notifySubscribers(id);
   return true;
 }

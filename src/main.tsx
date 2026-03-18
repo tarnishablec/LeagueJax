@@ -13,15 +13,21 @@ import {
   getMergedI18nResources,
   initializeWebShards,
 } from "./features/registry";
+import { toErrorMessage } from "./infra/errors";
+import { createLogger } from "./infra/logger";
+
+const logger = createLogger("bootstrap");
 
 async function bootstrap(): Promise<void> {
   const rootElement = document.getElementById("root") as HTMLElement;
   const root = ReactDOM.createRoot(rootElement);
 
   try {
+    logger.info("Starting app bootstrap");
     await initializeWebShards();
     const language =
       settingsApi.get<Language>(GENERAL_LANGUAGE_SETTING_ID) ?? "zh-CN";
+    logger.info({ language }, "Initializing i18n resources");
     await initializeI18n(getMergedI18nResources(), language);
 
     root.render(
@@ -29,9 +35,10 @@ async function bootstrap(): Promise<void> {
         <App />
       </React.StrictMode>,
     );
+    logger.info("App bootstrap completed");
   } catch (error) {
-    console.error("[bootstrap] failed to initialize app", error);
-    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ error }, "App bootstrap failed");
+    const message = toErrorMessage(error);
     root.render(
       <pre style={{ padding: 16, whiteSpace: "pre-wrap" }}>
         {`App bootstrap failed:\n${message}`}

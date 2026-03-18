@@ -43,7 +43,7 @@ interface SettingDefinitionBase<TControl extends SettingControl> {
   defaultValue: unknown;
   order?: number;
   visible?: boolean;
-  onSet?: (next: unknown, prev: unknown) => void;
+  onSet: (next: unknown, prev: unknown) => void;
 }
 
 export interface SelectSettingDefinition

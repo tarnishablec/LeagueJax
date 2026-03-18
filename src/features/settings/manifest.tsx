@@ -117,32 +117,32 @@ export class SettingsShard implements WebContribution, SettingsShardApi {
       },
       "zh-CN": {
         nav: {
-          settings: "\u8bbe\u7f6e",
+          settings: "设置",
         },
         settings: {
-          title: "\u8bbe\u7f6e",
+          title: "设置",
           pages: {
             general: {
-              title: "\u901a\u7528",
+              title: "通用",
             },
           },
           sections: {
             general: {
               preferences: {
-                title: "\u504f\u597d",
+                title: "偏好",
               },
             },
           },
           language: {
-            label: "\u8bed\u8a00",
-            zhCN: "\u7b80\u4f53\u4e2d\u6587",
+            label: "语言",
+            zhCN: "简体中文",
             en: "English",
           },
           theme: {
-            label: "\u4e3b\u9898",
-            system: "\u8ddf\u968f\u7cfb\u7edf",
-            light: "\u6d45\u8272",
-            dark: "\u6df1\u8272",
+            label: "主题",
+            system: "跟随系统",
+            light: "浅色",
+            dark: "深色",
           },
         },
       },
