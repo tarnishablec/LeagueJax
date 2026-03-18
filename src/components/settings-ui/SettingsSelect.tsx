@@ -65,7 +65,11 @@ export function SettingsSelect({
         onClick={() => setOpen((current) => !current)}
       >
         <span className={s.value}>{selectedLabel}</span>
-        <ChevronDown size={14} aria-hidden="true" className={s.chevron({ open })} />
+        <ChevronDown
+          size={14}
+          aria-hidden="true"
+          className={s.chevron({ open })}
+        />
       </button>
 
       {open ? (
