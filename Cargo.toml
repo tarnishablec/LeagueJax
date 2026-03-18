@@ -1,3 +1,7 @@
 [workspace]
 members = ["jax","src-tauri"]
 resolver = "3"
+
+[patch.crates-io]
+#maokai-runner = { path = "../../Rust/maokai/maokai-runner" }
+#maokai-tree = { path = "../../Rust/maokai/maokai-tree" }

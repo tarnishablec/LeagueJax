@@ -19,18 +19,17 @@ tauri = { version = "2", features = ["tray-icon"] }
 window-vibrancy = "0.7.1"
 uuid = { version = "1", features = ["serde"] }
 tauri-plugin-store = "2"
-tauri-plugin-global-shortcut = "2"
-tauri-plugin-updater = "2"
+#tauri-plugin-updater = "2"
 tauri-plugin-opener = "2"
 
 reqwest = { version = "0.13.2", features = ["json", "rustls"] }
-tokio-tungstenite = { version = "0.28.0", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.29.0", features = ["rustls-tls-webpki-roots"] }
 rustls = { version = "0.23", features = ["ring"] }
 tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rusqlite = { version = "0.38.0", features = ["bundled"] }
+rusqlite = { version = "0.39.0", features = ["bundled"] }
 async-trait = "0.1"
 sysinfo = "0.38.4"
 base64 = "0.22"
@@ -38,7 +37,8 @@ thiserror = "2.0.18"
 urlencoding = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-statig = "0.4.1"
+maokai-runner = { git = "https://github.com/tarnishablec/maokai", branch = "main" }
+maokai-tree = { git = "https://github.com/tarnishablec/maokai", branch = "main" }
 windows-sys = { version = "0.61.2", features = ["Win32_System_Threading", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_WindowsProgramming", "Win32_System_LibraryLoader", "Wdk_System_Threading", "Win32_System_Memory"] }
 ntapi = "0.4.3"
 ts-rs = "12.0.1"
