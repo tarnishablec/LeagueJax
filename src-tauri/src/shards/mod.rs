@@ -3,6 +3,7 @@ pub mod auto_reply;
 pub mod auto_select;
 pub mod keyboard;
 pub mod lcu;
+pub mod sgp;
 pub mod ongoing_game;
 pub mod saved_player;
 pub mod statistics;
