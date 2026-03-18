@@ -7,7 +7,9 @@ import type {
   SidebarSlotContext,
   WebContribution,
 } from "@/features/runtime/web-contract";
-import { Jax, type JaxShard, type JaxShardClass } from "@/jax";
+import { AppError } from "@/infra/errors";
+import { createLogger } from "@/infra/logger";
+import { Jax, type JaxShardClass } from "@/jax";
 import { AutomationShard } from "./automation/manifest";
 import { HistoryShard } from "./history/manifest";
 import { OngoingGameShard } from "./ongoing-game/manifest";
@@ -32,6 +34,7 @@ export const SHARD_CLASSES: readonly JaxShardClass<WebContribution>[] = [
 
 let jaxRuntime: Jax | null = null;
 let jaxInitialization: Promise<void> | null = null;
+const logger = createLogger("registry");
 
 const sortByOrder = <T extends { order?: number }>(entries: T[]): T[] => {
   return sortBy(entries, (entry) => entry.order ?? 99);
@@ -67,7 +70,7 @@ const slotToRendered = <
 
 const getJaxRuntime = (): Jax => {
   if (!jaxRuntime) {
-    throw new Error("[registry] Jax runtime is not initialized.");
+    throw AppError.RegistryRuntimeNotInitialized();
   }
   return jaxRuntime;
 };
@@ -78,21 +81,42 @@ const listWebShards = (): WebContribution[] => {
 
 export const initializeWebShards = async (): Promise<void> => {
   if (jaxRuntime) {
+    logger.debug("Web shards already initialized; skipping");
     return;
   }
 
   if (jaxInitialization) {
+    logger.debug("Web shard initialization already in progress; awaiting");
     await jaxInitialization;
     return;
   }
 
   jaxInitialization = (async () => {
+    logger.info(
+      { shardCount: SHARD_CLASSES.length },
+      "Initializing web shards",
+    );
     const runtime = new Jax().registerMany(SHARD_CLASSES).build();
     const report = await runtime.start();
     if (report.failed.length > 0) {
       const failedIds = report.failed.map((item) => String(item.id)).join(", ");
-      throw new Error(`[registry] Shard startup failed: ${failedIds}`);
+      logger.error(
+        {
+          failed: report.failed.map((item) => ({
+            id: String(item.id),
+            error: item.error,
+          })),
+          skipped: report.skipped.map((id) => String(id)),
+        },
+        "Web shard startup failed",
+      );
+      throw AppError.RegistryShardStartupFailed(failedIds);
     }
+
+    logger.info(
+      { skipped: report.skipped.map((id) => String(id)) },
+      "Web shard startup completed",
+    );
     jaxRuntime = runtime;
   })();
 
@@ -105,11 +129,16 @@ export const initializeWebShards = async (): Promise<void> => {
 
 export const shutdownWebShards = async (): Promise<void> => {
   if (!jaxRuntime) {
+    logger.debug(
+      "Web shard shutdown skipped because runtime is not initialized",
+    );
     return;
   }
 
+  logger.info("Shutting down web shards");
   await jaxRuntime.shutdown();
   jaxRuntime = null;
+  logger.info("Web shard shutdown completed");
 };
 
 export const getRouteContributions = (): RouteContribution[] => {
@@ -179,10 +208,4 @@ export const getMergedI18nResources = (): I18nLocaleBundle => {
   }
 
   return merged;
-};
-
-export const getShardInstance = <T extends JaxShard>(
-  shardClass: JaxShardClass<T>,
-): T => {
-  return getJaxRuntime().getShard(shardClass);
 };
