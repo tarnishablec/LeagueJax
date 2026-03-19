@@ -24,7 +24,7 @@ export const toolbar = style({
 export const pageControls = style({
   display: "grid",
   gap: 8,
-  gridTemplateColumns: "1fr minmax(60px, auto) 1fr",
+  gridTemplateColumns: "1fr minmax(60px, auto) 1fr auto",
 });
 
 export const selectWrap = style({
@@ -76,6 +76,30 @@ export const pageIndicator = style({
   placeItems: "center",
   padding: "0 6px",
   lineHeight: 1,
+});
+
+export const refreshButton = style({
+  width: 30,
+  height: 30,
+  borderRadius: 7,
+  border: `1px solid ${vars.settings.controlBorder}`,
+  background: vars.settings.controlBg,
+  color: vars.settings.controlText,
+  cursor: "pointer",
+  display: "grid",
+  placeItems: "center",
+  padding: 0,
+  transition: "border-color 120ms, color 120ms",
+  selectors: {
+    "&:hover": {
+      borderColor: vars.settings.controlHoverBorder,
+      color: vars.color.primary,
+    },
+    "&:disabled": {
+      opacity: 0.45,
+      cursor: "not-allowed",
+    },
+  },
 });
 
 export const list = style({

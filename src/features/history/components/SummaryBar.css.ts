@@ -102,7 +102,7 @@ export const ranks = style({
   "@media": {
     "(max-width: 1000px)": {
       gridColumn: "1 / -1",
-      gridTemplateColumns: "1fr",
+      // gridTemplateColumns: "1fr",
     },
   },
 });

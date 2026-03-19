@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+﻿import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Settings } from "lucide-react";
 import type {
@@ -212,6 +212,11 @@ export class SettingsShard implements WebShard, SettingsShardApi {
             light: "Light",
             dark: "Dark",
           },
+          assetSource: {
+            label: "Asset Source",
+            cdragon: "CommunityDragon",
+            ddragon: "Data Dragon",
+          },
           logging: {
             level: {
               label: "Log Level",
@@ -265,6 +270,11 @@ export class SettingsShard implements WebShard, SettingsShardApi {
             light: "浅色",
             dark: "深色",
           },
+          assetSource: {
+            label: "资源来源",
+            cdragon: "CommunityDragon",
+            ddragon: "Data Dragon",
+          },
           logging: {
             level: {
               label: "日志等级",
@@ -317,6 +327,11 @@ export class SettingsShard implements WebShard, SettingsShardApi {
             system: "\u30b7\u30b9\u30c6\u30e0",
             light: "\u30e9\u30a4\u30c8",
             dark: "\u30c0\u30fc\u30af",
+          },
+          assetSource: {
+            label: "\u30a2\u30bb\u30c3\u30c8\u30bd\u30fc\u30b9",
+            cdragon: "CommunityDragon",
+            ddragon: "Data Dragon",
           },
           logging: {
             level: {

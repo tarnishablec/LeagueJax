@@ -1,24 +1,34 @@
-import { invoke } from "@tauri-apps/api/core";
-import useSWR from "swr";
+import { selectIsFocused, useLcuStore } from "@/stores/lcu";
+import { useGameVersion } from "./use-game-version";
+
+function toDdragonVersion(version: string | undefined): string | null {
+  if (!version || version.trim().length === 0) {
+    return null;
+  }
+
+  const segments = version
+    .trim()
+    .split(".")
+    .filter((segment) => segment.length > 0);
+
+  if (segments.length < 2) {
+    return null;
+  }
+
+  const major = segments[0];
+  const minor = segments[1];
+  const patch = segments[2] ?? "1";
+  return `${major}.${minor}.${patch}`;
+}
 
 export function useProfileIcon(iconId: number | null | undefined) {
-  const query = useSWR(
-    iconId ? ["get_profile_icon", iconId] : null,
-    async ([cmd]) => {
-      const bytes = await invoke<number[]>(cmd, {
-        iconId,
-      });
-      const uint8 = new Uint8Array(bytes);
-      let binary = "";
-      for (let i = 0; i < uint8.length; i++) {
-        binary += String.fromCharCode(uint8[i]);
-      }
-      return `data:image/jpeg;base64,${btoa(binary)}`;
-    },
-    {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-    },
-  );
+  const connected = useLcuStore(selectIsFocused);
+  const { data: gameVersion } = useGameVersion();
+  const ddragonVersion = toDdragonVersion(gameVersion);
 
-  return query.data ?? null;
+  if (!connected || !iconId || !ddragonVersion) {
+    return null;
+  }
+
+  return `https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/profileicon/${iconId}.png`;
 }
