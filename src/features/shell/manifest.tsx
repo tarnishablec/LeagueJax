@@ -1,12 +1,17 @@
 import { ClientStatus } from "@/components/ClientStatus";
-import type { SidebarSlot, WebShard } from "@/features/runtime/web-contract";
 import en from "@/i18n/locales/en.json";
 import zhCN from "@/i18n/locales/zh-CN.json";
+import type { SidebarSlot, WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 
 export class ShellShard implements WebShard {
-  public static readonly id = SHARD_IDS.SHELL;
-  public static readonly dependsOn = [SHARD_IDS.SETTINGS];
+  public id() {
+    return SHARD_IDS.SHELL;
+  }
+
+  public dependsOn() {
+    return [SHARD_IDS.SETTINGS];
+  }
 
   public sidebarSlots(): SidebarSlot[] {
     return [

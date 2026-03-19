@@ -13,15 +13,11 @@ export const shardId = (uuid: string): ShardId => {
 type LifecycleResult = void | Promise<void>;
 
 export interface Shard {
+  id(): ShardId;
+  dependsOn?(): readonly ShardId[];
   setup?(jax: Jax): LifecycleResult;
   teardown?(jax: Jax): LifecycleResult;
 }
-
-export type JaxShardClass<T extends Shard = Shard> = {
-  new (): T;
-  id: ShardId;
-  dependsOn?: readonly ShardId[];
-};
 
 export interface StartupShardError {
   id: ShardId;
@@ -34,60 +30,53 @@ export interface StartupReport {
 }
 
 interface ShardRegistry {
-  graph: DirectedGraph<{ shardClass: JaxShardClass }>;
-  byId: Map<ShardId, JaxShardClass>;
+  graph: DirectedGraph<{ shard: Shard }>;
+  byId: Map<ShardId, Shard>;
   startupOrder: ShardId[];
 }
 
 const logger = createLogger("jax");
 
 export class Jax {
-  private readonly pending = new Map<ShardId, JaxShardClass>();
+  private readonly pending = new Map<ShardId, Shard>();
   private registry: ShardRegistry | null = null;
-  private readonly shardInstancesByClass = new Map<JaxShardClass, Shard>();
   private readonly shardInstancesById = new Map<ShardId, Shard>();
   private started = false;
 
-  public constructor(shardClasses: readonly JaxShardClass[] = []) {
-    this.registerMany(shardClasses);
-    logger.debug(
-      { shardClassCount: shardClasses.length },
-      "Jax runtime created",
-    );
+  public constructor() {
+    logger.debug("Jax runtime created");
   }
 
-  public register<T extends Shard>(shardClass: JaxShardClass<T>): this {
+  public register(shard: Shard): this {
+    const id = shard.id();
+
     if (this.started) {
-      throw AppError.JaxRegisterAfterStart(String(shardClass.id));
+      throw AppError.JaxRegisterAfterStart(String(id));
     }
 
-    const existing = this.pending.get(shardClass.id);
-    if (existing && existing !== shardClass) {
+    const existing = this.pending.get(id);
+    if (existing && existing !== shard) {
       throw AppError.JaxDuplicateShardId(
-        String(shardClass.id),
-        shardClass.name,
-        existing.name,
+        String(id),
+        shard.constructor.name,
+        existing.constructor.name,
       );
     }
 
-    this.pending.set(shardClass.id, shardClass);
+    if (existing === shard) {
+      logger.debug(
+        { shardId: String(id) },
+        "Skipping duplicate shard instance",
+      );
+      return this;
+    }
+
+    this.pending.set(id, shard);
     this.registry = null;
-    this.shardInstancesByClass.clear();
     this.shardInstancesById.clear();
     logger.debug(
-      { shardId: String(shardClass.id), pendingCount: this.pending.size },
-      "Registered shard class",
-    );
-    return this;
-  }
-
-  public registerMany(shardClasses: readonly JaxShardClass[]): this {
-    for (const shardClass of shardClasses) {
-      this.register(shardClass);
-    }
-    logger.debug(
-      { shardClassCount: shardClasses.length, pendingCount: this.pending.size },
-      "Registered shard class batch",
+      { shardId: String(id), pendingCount: this.pending.size },
+      "Registered shard",
     );
     return this;
   }
@@ -99,42 +88,31 @@ export class Jax {
 
     logger.info({ pendingCount: this.pending.size }, "Building shard registry");
 
-    const graph = new DirectedGraph<{ shardClass: JaxShardClass }>();
-    const byId = new Map<ShardId, JaxShardClass>();
+    const graph = new DirectedGraph<{ shard: Shard }>();
+    const byId = new Map<ShardId, Shard>();
+    const dependenciesById = new Map<ShardId, readonly ShardId[]>();
 
-    for (const shardClass of this.pending.values()) {
-      byId.set(shardClass.id, shardClass);
-      graph.addNode(shardClass.id, { shardClass });
+    this.shardInstancesById.clear();
+
+    for (const [id, shard] of this.pending) {
+      byId.set(id, shard);
+      dependenciesById.set(id, shard.dependsOn?.() ?? []);
+      this.shardInstancesById.set(id, shard);
+      graph.addNode(id, { shard });
     }
 
-    for (const shardClass of this.pending.values()) {
-      for (const dependencyId of shardClass.dependsOn ?? []) {
+    for (const [id, dependencies] of dependenciesById) {
+      for (const dependencyId of dependencies) {
         if (!byId.has(dependencyId)) {
-          throw AppError.JaxMissingDependency(
-            String(dependencyId),
-            String(shardClass.id),
-          );
+          throw AppError.JaxMissingDependency(String(dependencyId), String(id));
         }
-        graph.addDirectedEdge(dependencyId, shardClass.id);
+        graph.addDirectedEdge(dependencyId, id);
       }
     }
 
     const startupOrder = this.topologicalSort(byId, graph);
 
     this.registry = { graph, byId, startupOrder };
-    this.shardInstancesByClass.clear();
-    this.shardInstancesById.clear();
-
-    for (const id of startupOrder) {
-      const shardClass = byId.get(id);
-      if (!shardClass) {
-        throw AppError.JaxInternalMissingShard(String(id));
-      }
-
-      const instance = new shardClass();
-      this.shardInstancesByClass.set(shardClass, instance);
-      this.shardInstancesById.set(id, instance);
-    }
 
     logger.info(
       {
@@ -170,16 +148,14 @@ export class Jax {
         continue;
       }
 
-      const shardClass = registry.byId.get(id);
-      const shardInstance =
-        (shardClass && this.shardInstancesByClass.get(shardClass)) ?? null;
-      if (!shardClass || !shardInstance) {
+      const shard = registry.byId.get(id);
+      if (!shard) {
         throw AppError.JaxInternalUnavailableDuringStart(String(id));
       }
 
       try {
         logger.debug({ shardId: String(id) }, "Running shard setup");
-        await shardInstance.setup?.(this);
+        await shard.setup?.(this);
         logger.info({ shardId: String(id) }, "Shard setup completed");
       } catch (error) {
         report.failed.push({ id, error });
@@ -213,15 +189,13 @@ export class Jax {
     const errors: Array<{ shardId: ShardId; error: unknown }> = [];
 
     for (const id of teardownOrder) {
-      const shardClass = registry.byId.get(id);
-      const shardInstance =
-        (shardClass && this.shardInstancesByClass.get(shardClass)) ?? null;
-      if (!shardInstance) {
+      const shard = registry.byId.get(id);
+      if (!shard) {
         continue;
       }
 
       try {
-        await shardInstance.teardown?.(this);
+        await shard.teardown?.(this);
         logger.info({ shardId: String(id) }, "Shard teardown completed");
       } catch (error) {
         errors.push({ shardId: id, error });
@@ -242,16 +216,6 @@ export class Jax {
 
   public async stop(): Promise<void> {
     await this.shutdown();
-  }
-
-  public getShard<T extends Shard>(shardClass: JaxShardClass<T>): T {
-    this.requireRegistry();
-
-    const shard = this.shardInstancesByClass.get(shardClass);
-    if (!shard) {
-      throw AppError.JaxShardUnavailable(String(shardClass.id));
-    }
-    return shard as T;
   }
 
   public getShardById(id: ShardId): Shard {
@@ -277,8 +241,8 @@ export class Jax {
   }
 
   private topologicalSort(
-    byId: Map<ShardId, JaxShardClass>,
-    graph: DirectedGraph<{ shardClass: JaxShardClass }>,
+    byId: Map<ShardId, Shard>,
+    graph: DirectedGraph<{ shard: Shard }>,
   ): ShardId[] {
     const inDegree = new Map<ShardId, number>();
     const queue: ShardId[] = [];
@@ -321,7 +285,7 @@ export class Jax {
   }
 
   private markDescendantsBlocked(
-    graph: DirectedGraph<{ shardClass: JaxShardClass }>,
+    graph: DirectedGraph<{ shard: Shard }>,
     root: ShardId,
     blocked: Set<ShardId>,
   ): void {

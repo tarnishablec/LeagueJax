@@ -1,7 +1,7 @@
 import { Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type { WebShard } from "@/features/runtime/web-contract";
 import type { Jax } from "@/jax";
+import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { SettingsRoute } from "./routes/SettingsRoute";
 import { settingsApi } from "./store";
@@ -15,7 +15,9 @@ import type {
 } from "./types";
 
 export class SettingsShard implements WebShard, SettingsShardApi {
-  public static readonly id = SHARD_IDS.SETTINGS;
+  public id() {
+    return SHARD_IDS.SETTINGS;
+  }
 
   public setup(_jax: Jax): void {
     registerGeneralSettings(this);

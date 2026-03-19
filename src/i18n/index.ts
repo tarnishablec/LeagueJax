@@ -1,10 +1,9 @@
 import i18n, { type Resource, type ResourceLanguage } from "i18next";
 import { initReactI18next } from "react-i18next";
-import type { I18nLocaleBundle } from "@/features/runtime/web-contract";
 
 let initialized = false;
 
-function toI18nResources(resources: I18nLocaleBundle): Resource {
+function toI18nResources(resources: Resource): Resource {
   return Object.fromEntries(
     Object.entries(resources).map(([locale, translation]) => [
       locale,
@@ -14,7 +13,7 @@ function toI18nResources(resources: I18nLocaleBundle): Resource {
 }
 
 export async function initializeI18n(
-  resources: I18nLocaleBundle,
+  resources: Resource,
   language = "zh-CN",
 ): Promise<void> {
   if (initialized) {
@@ -33,5 +32,3 @@ export async function initializeI18n(
 
   initialized = true;
 }
-
-export default i18n;

@@ -1,11 +1,16 @@
 import { Wrench } from "lucide-react";
-import type { WebShard } from "@/features/runtime/web-contract";
+import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { ToolsRoute } from "./routes/ToolsRoute";
 
 export class ToolsShard implements WebShard {
-  public static readonly id = SHARD_IDS.TOOLS;
-  public static readonly dependsOn = [SHARD_IDS.SETTINGS];
+  public id() {
+    return SHARD_IDS.TOOLS;
+  }
+
+  public dependsOn() {
+    return [SHARD_IDS.SETTINGS];
+  }
 
   public routes() {
     return [

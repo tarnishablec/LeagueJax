@@ -1,11 +1,16 @@
 import { Gamepad2 } from "lucide-react";
-import type { WebShard } from "@/features/runtime/web-contract";
+import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { OngoingGameRoute } from "./routes/OngoingGameRoute";
 
 export class OngoingGameShard implements WebShard {
-  public static readonly id = SHARD_IDS.ONGOING_GAME;
-  public static readonly dependsOn = [SHARD_IDS.SETTINGS];
+  public id() {
+    return SHARD_IDS.ONGOING_GAME;
+  }
+
+  public dependsOn() {
+    return [SHARD_IDS.SETTINGS];
+  }
 
   public routes() {
     return [

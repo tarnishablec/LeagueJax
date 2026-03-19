@@ -1,3 +1,4 @@
+import type { Resource } from "i18next";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
 import type { RouteObject } from "react-router";
@@ -45,7 +46,7 @@ export interface SidebarSlot {
   render: (context: SidebarSlotContext) => React.ReactElement;
 }
 
-export type I18nLocaleBundle = Record<string, Record<string, unknown>>;
+// export type I18nLocaleBundle = Record<string, Record<string, unknown>>;
 
 export interface WebShard extends Shard {
   routes?(): RouteContribution[];
@@ -53,5 +54,5 @@ export interface WebShard extends Shard {
   toolbarSlots?(): ToolbarSlot[];
   sidebarSlots?(): SidebarSlot[];
   titlebarSlots?(): TitlebarSlot[];
-  i18nResources?(): I18nLocaleBundle;
+  i18nResources?(): Resource;
 }
