@@ -3,6 +3,7 @@ import useSWR from "swr";
 import { settingsApi } from "@/features/settings/store";
 import type { AssetSource } from "@/features/settings/store/general";
 import { SYSTEM_ASSET_SOURCE_SETTING_ID } from "@/features/settings/store/general";
+import { toDdragonVersion } from "@/hooks/to-ddragon-version";
 import { useGameVersion } from "@/hooks/use-game-version";
 import {
   CDRAGON_GAME_DATA_BASE,
@@ -20,6 +21,11 @@ type CdragonItem = {
 type CdragonSummonerSpell = {
   id?: number | string;
   name?: string;
+  iconPath?: string;
+};
+
+type CdragonPerk = {
+  id?: number | string;
   iconPath?: string;
 };
 
@@ -54,13 +60,13 @@ interface CdragonStaticCatalog {
   itemIcons: Record<number, string>;
   spellIcons: Record<number, string>;
   spellNames: Record<number, string>;
+  perkIcons: Record<number, string>;
 }
 
 interface DdragonStaticCatalog {
   spellIcons: Record<number, string>;
   spellNames: Record<number, string>;
   perkIcons: Record<number, string>;
-  cdragonPerkIcons: Record<number, string>;
   perkStyleIcons: Record<number, string>;
 }
 
@@ -99,13 +105,13 @@ const EMPTY_CDRAGON_CATALOG: CdragonStaticCatalog = {
   itemIcons: {},
   spellIcons: {},
   spellNames: {},
+  perkIcons: {},
 };
 
 const EMPTY_DDRAGON_CATALOG: DdragonStaticCatalog = {
   spellIcons: {},
   spellNames: {},
   perkIcons: {},
-  cdragonPerkIcons: {},
   perkStyleIcons: DDRAGON_PERK_STYLE_ICON_BY_ID,
 };
 
@@ -145,26 +151,6 @@ function asNumber(value: unknown): number | null {
   return null;
 }
 
-function toDdragonVersion(version: string | undefined): string | null {
-  if (!version || version.trim().length === 0) {
-    return null;
-  }
-
-  const segments = version
-    .trim()
-    .split(".")
-    .filter((segment) => segment.length > 0);
-
-  if (segments.length < 2) {
-    return null;
-  }
-
-  const major = segments[0];
-  const minor = segments[1];
-  const patch = segments[2] ?? "1";
-  return `${major}.${minor}.${patch}`;
-}
-
 function ddragonDataUrl(version: string, fileName: string): string {
   return `${DDRAGON_BASE}/cdn/${version}/data/en_US/${fileName}`;
 }
@@ -179,7 +165,7 @@ function iconFileName(path: string): string | null {
 }
 
 function normalizeDdragonIconPath(iconPath: string): string {
-  if (iconPath.startsWith("https://") || iconPath.startsWith("http://")) {
+  if (iconPath.startsWith("https://")) {
     return iconPath;
   }
 
@@ -187,20 +173,22 @@ function normalizeDdragonIconPath(iconPath: string): string {
   return `${DDRAGON_BASE}/cdn/img/${encodeURI(normalized)}`;
 }
 
-function toCdragonPerkImagePath(iconPath: string): string | null {
+function normalizeCdragonIconPath(iconPath: string): string {
   const normalized = iconPath.replace(/\\/g, "/");
-  const marker = "perk-images/";
-  const markerIndex = normalized.toLowerCase().indexOf(marker);
-  if (markerIndex === -1) {
-    return null;
+  const encoded = encodeURI(
+    normalized
+      .replace(/\.dds$/i, ".png")
+      .replace(/\.tex$/i, ".png")
+      .replace(/\.jpg$/i, ".png")
+      .replace(/\.jpeg$/i, ".png"),
+  );
+  if (encoded.startsWith("/lol-game-data/assets")) {
+    return `${CDRAGON_GAME_DATA_BASE}${encoded.replace("/lol-game-data/assets", "")}`;
   }
-
-  const suffix = normalized.slice(markerIndex);
-  if (suffix.trim().length === 0) {
-    return null;
+  if (encoded.startsWith("/")) {
+    return `${CDRAGON_GAME_DATA_BASE}${encoded}`;
   }
-
-  return `${CDRAGON_GAME_DATA_BASE}/v1/${encodeURI(suffix.toLowerCase())}`;
+  return `${CDRAGON_GAME_DATA_BASE}/${encoded}`;
 }
 
 function cdragonItemIcons(
@@ -271,14 +259,44 @@ function cdragonSpellMaps(
   };
 }
 
+function cdragonPerkIcons(
+  collection: CdragonPerk[] | Record<string, CdragonPerk> | null,
+): Record<number, string> {
+  const mapped: Record<number, string> = {};
+
+  const consume = (entry: CdragonPerk, idFromKey: number | null) => {
+    const id = asNumber(entry.id) ?? idFromKey;
+    if (id === null || !entry.iconPath || entry.iconPath.trim().length === 0) {
+      return;
+    }
+
+    mapped[id] = normalizeCdragonIconPath(entry.iconPath);
+  };
+
+  if (Array.isArray(collection)) {
+    for (const entry of collection) {
+      consume(entry, null);
+    }
+  } else if (collection) {
+    for (const [key, entry] of Object.entries(collection)) {
+      consume(entry, asNumber(key));
+    }
+  }
+
+  return mapped;
+}
+
 async function fetchCdragonStaticCatalog(): Promise<CdragonStaticCatalog> {
-  const [items, spells] = await Promise.all([
+  const [items, spells, perks] = await Promise.all([
     fetchJsonByUrl<CdragonItem[] | Record<string, CdragonItem>>(
       `${CDRAGON_GAME_DATA_BASE}/v1/items.json`,
     ),
     fetchJsonByUrl<
       CdragonSummonerSpell[] | Record<string, CdragonSummonerSpell>
     >(`${CDRAGON_GAME_DATA_BASE}/v1/summoner-spells.json`),
+    fetchJsonByUrl<CdragonPerk[] | Record<string, CdragonPerk>>(
+      `${CDRAGON_GAME_DATA_BASE}/v1/perks.json`,
+    ),
   ]);
 
   const { spellIcons, spellNames } = cdragonSpellMaps(spells);
@@ -287,6 +305,7 @@ async function fetchCdragonStaticCatalog(): Promise<CdragonStaticCatalog> {
     itemIcons: cdragonItemIcons(items),
     spellIcons,
     spellNames,
+    perkIcons: cdragonPerkIcons(perks),
   };
 }
 
@@ -319,42 +338,46 @@ function ddragonSpellMaps(
 
 function ddragonRuneMaps(
   styles: DdragonRuneStyle[] | null,
-): Pick<
-  DdragonStaticCatalog,
-  "perkIcons" | "cdragonPerkIcons" | "perkStyleIcons"
-> {
+): Pick<DdragonStaticCatalog, "perkIcons" | "perkStyleIcons"> {
   const perkIcons: Record<number, string> = {};
-  const cdragonPerkIcons: Record<number, string> = {};
   const perkStyleIcons: Record<number, string> = {
     ...DDRAGON_PERK_STYLE_ICON_BY_ID,
   };
 
-  for (const style of styles ?? []) {
+  const mapStyleIcon = (style: DdragonRuneStyle) => {
     const styleId = asNumber(style.id);
-    if (styleId !== null && style.icon) {
-      perkStyleIcons[styleId] = normalizeDdragonIconPath(style.icon);
+    if (styleId === null || !style.icon) {
+      return;
     }
 
+    perkStyleIcons[styleId] = normalizeDdragonIconPath(style.icon);
+  };
+
+  const mapRuneIcon = (rune: DdragonRune) => {
+    const runeId = asNumber(rune.id);
+    if (runeId === null || !rune.icon) {
+      return;
+    }
+
+    perkIcons[runeId] = normalizeDdragonIconPath(rune.icon);
+  };
+
+  const mapSlotRunes = (slot: DdragonRuneSlot) => {
+    for (const rune of slot.runes ?? []) {
+      mapRuneIcon(rune);
+    }
+  };
+
+  for (const style of styles ?? []) {
+    mapStyleIcon(style);
+
     for (const slot of style.slots ?? []) {
-      for (const rune of slot.runes ?? []) {
-        const runeId = asNumber(rune.id);
-        if (runeId === null || !rune.icon) {
-          continue;
-        }
-
-        perkIcons[runeId] = normalizeDdragonIconPath(rune.icon);
-
-        const cdragonPath = toCdragonPerkImagePath(rune.icon);
-        if (cdragonPath) {
-          cdragonPerkIcons[runeId] = cdragonPath;
-        }
-      }
+      mapSlotRunes(slot);
     }
   }
 
   return {
     perkIcons,
-    cdragonPerkIcons,
     perkStyleIcons,
   };
 }
@@ -372,14 +395,12 @@ async function fetchDdragonStaticCatalog(
   ]);
 
   const { spellIcons, spellNames } = ddragonSpellMaps(spells, ddragonVersion);
-  const { perkIcons, cdragonPerkIcons, perkStyleIcons } =
-    ddragonRuneMaps(runes);
+  const { perkIcons, perkStyleIcons } = ddragonRuneMaps(runes);
 
   return {
     spellIcons,
     spellNames,
     perkIcons,
-    cdragonPerkIcons,
     perkStyleIcons,
   };
 }
@@ -393,7 +414,6 @@ interface ResolveContext {
 function resolveFromCdragon(
   param: DragonAssetParam,
   cdragonCatalog: CdragonStaticCatalog,
-  ddragonCatalog: DdragonStaticCatalog,
 ): DragonAssetData {
   switch (param.type) {
     case "spell": {
@@ -419,7 +439,7 @@ function resolveFromCdragon(
         return { src: null, label: null };
       }
       return {
-        src: ddragonCatalog.cdragonPerkIcons[param.runeId] ?? null,
+        src: cdragonCatalog.perkIcons[param.runeId] ?? null,
         label: null,
       };
     }
@@ -490,11 +510,7 @@ function resolveDragonAsset(
   assetSource: AssetSource,
 ): DragonAssetData {
   if (assetSource === "cdragon") {
-    return resolveFromCdragon(
-      param,
-      context.cdragonCatalog,
-      context.ddragonCatalog,
-    );
+    return resolveFromCdragon(param, context.cdragonCatalog);
   }
 
   return resolveFromDdragon(
@@ -512,6 +528,8 @@ export function useDragonStaticData(
   param: DragonAssetParam | readonly DragonAssetParam[],
 ): DragonAssetData | DragonAssetData[] {
   const assetSource = useSelectedAssetSource();
+  const isCdragon = assetSource === "cdragon";
+  const isDdragon = assetSource === "ddragon";
   const { data: gameVersion } = useGameVersion();
   const ddragonVersion = useMemo(
     () => toDdragonVersion(gameVersion),
@@ -519,8 +537,8 @@ export function useDragonStaticData(
   );
 
   const { data: cdragonCatalog = EMPTY_CDRAGON_CATALOG } = useSWR(
-    "history:cdragon-static-catalog",
-    fetchCdragonStaticCatalog,
+    isCdragon ? "history:cdragon-static-catalog" : null,
+    () => fetchCdragonStaticCatalog(),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
       revalidateOnFocus: false,
@@ -529,7 +547,9 @@ export function useDragonStaticData(
   );
 
   const { data: ddragonCatalog = EMPTY_DDRAGON_CATALOG } = useSWR(
-    ddragonVersion ? ["history:ddragon-static-catalog", ddragonVersion] : null,
+    isDdragon && ddragonVersion
+      ? ["history:ddragon-static-catalog", ddragonVersion]
+      : null,
     ([, version]) => fetchDdragonStaticCatalog(version),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,

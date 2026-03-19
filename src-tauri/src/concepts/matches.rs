@@ -3,12 +3,24 @@ use ts_rs::TS;
 
 #[derive(TS)]
 #[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MatchOutcome {
+    Victory,
+    Defeat,
+    Remake,
+    Terminated,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchSummary {
     pub game_id: u64,
     pub champion_id: i64,
     pub win: bool,
+    pub outcome: MatchOutcome,
     pub team_id: i64,
     pub kills: i64,
     pub deaths: i64,
@@ -26,6 +38,19 @@ pub struct MatchSummary {
     pub game_mode: String,
     pub game_creation: i64,
     pub queue_id: i64,
+    pub participants: Vec<MatchSummaryParticipant>,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchSummaryParticipant {
+    pub puuid: String,
+    pub champion_id: i64,
+    pub game_name: String,
+    pub tag_line: String,
+    pub team_id: i64,
 }
 
 #[derive(TS)]
@@ -36,6 +61,8 @@ pub struct Participant {
     pub puuid: String,
     pub champion_id: i64,
     pub summoner_name: String,
+    pub game_name: String,
+    pub tag_line: String,
     pub team_id: i64,
     pub kills: i64,
     pub deaths: i64,

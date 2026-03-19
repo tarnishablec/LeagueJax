@@ -37,6 +37,7 @@ pub fn run() {
             lcu_update_focus,
             get_current_summoner,
             search_summoner,
+            get_summoner_by_puuid,
             get_ranked_summary,
             get_match_summaries,
             get_match_detail,
