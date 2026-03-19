@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
 import type { RouteObject } from "react-router";
-import type { JaxShard } from "@/jax";
+import type { Shard } from "@/jax";
 
 export type NavSection = "main" | "bottom";
 
@@ -47,7 +47,7 @@ export interface SidebarSlot {
 
 export type I18nLocaleBundle = Record<string, Record<string, unknown>>;
 
-export interface WebContribution extends JaxShard {
+export interface WebShard extends Shard {
   routes?(): RouteContribution[];
   navItems?(): NavItem[];
   toolbarSlots?(): ToolbarSlot[];
