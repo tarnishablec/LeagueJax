@@ -2,7 +2,7 @@ import { style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 export const root = style({
-  minWidth: 180,
+  // minWidth: 180,
 });
 
 export const control = style({
