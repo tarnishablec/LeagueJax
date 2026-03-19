@@ -42,32 +42,47 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
 
     let null = Value::Null;
     let stats = participant.get("stats").unwrap_or(&null);
+    let team_id = first_i64(participant, &["teamId"]).unwrap_or(0);
 
-    let total_minions = first_i64(stats, &["totalMinionsKilled"])
-        .or_else(|| first_i64(participant, &["totalMinionsKilled"]))
-        .unwrap_or(0);
-    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"])
-        .or_else(|| first_i64(participant, &["neutralMinionsKilled"]))
-        .unwrap_or(0);
+    let total_minions =
+        participant_stat_i64(participant, stats, &["totalMinionsKilled"]).unwrap_or(0);
+    let neutral_minions =
+        participant_stat_i64(participant, stats, &["neutralMinionsKilled"]).unwrap_or(0);
+    let total_damage =
+        participant_stat_i64(participant, stats, &["totalDamageDealtToChampions"]).unwrap_or(0);
+
+    let team_total_damage: i64 = participants
+        .iter()
+        .filter(|entry| first_i64(entry, &["teamId"]).unwrap_or(0) == team_id)
+        .map(|entry| {
+            let entry_stats = entry.get("stats").unwrap_or(&null);
+            participant_stat_i64(entry, entry_stats, &["totalDamageDealtToChampions"]).unwrap_or(0)
+        })
+        .sum();
+    let damage_share = if team_total_damage > 0 {
+        total_damage as f64 / team_total_damage as f64
+    } else {
+        0.0
+    };
+    let items = participant_items(participant, stats);
 
     Ok(MatchSummary {
         game_id: parse_sgp_game_id(payload, game),
         champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
-        win: stats
-            .get("win")
-            .and_then(Value::as_bool)
-            .or_else(|| participant.get("win").and_then(Value::as_bool))
-            .unwrap_or(false),
-        kills: first_i64(stats, &["kills"])
-            .or_else(|| first_i64(participant, &["kills"]))
-            .unwrap_or(0),
-        deaths: first_i64(stats, &["deaths"])
-            .or_else(|| first_i64(participant, &["deaths"]))
-            .unwrap_or(0),
-        assists: first_i64(stats, &["assists"])
-            .or_else(|| first_i64(participant, &["assists"]))
-            .unwrap_or(0),
+        win: participant_stat_bool(participant, stats, "win").unwrap_or(false),
+        team_id,
+        kills: participant_stat_i64(participant, stats, &["kills"]).unwrap_or(0),
+        deaths: participant_stat_i64(participant, stats, &["deaths"]).unwrap_or(0),
+        assists: participant_stat_i64(participant, stats, &["assists"]).unwrap_or(0),
         cs: total_minions + neutral_minions,
+        total_damage_dealt_to_champions: total_damage,
+        damage_share,
+        spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
+        spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
+        perk_primary_rune_id: participant_primary_perk_rune_id(participant, stats).unwrap_or(0),
+        perk_sub_style_id: participant_perk_sub_style_id(participant, stats).unwrap_or(0),
+        items,
+        map_id: first_i64(payload, &["mapId", "map_id"]).unwrap_or(0),
         game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
         game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
         game_creation: first_i64(payload, &["gameCreation", "game_datetime"]).unwrap_or(0),
@@ -79,22 +94,11 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
     let null = Value::Null;
     let stats = participant.get("stats").unwrap_or(&null);
 
-    let mut items = [0i64; 7];
-    for (index, item) in items.iter_mut().enumerate() {
-        let key = format!("item{index}");
-        *item = stats
-            .get(&key)
-            .and_then(Value::as_i64)
-            .or_else(|| participant.get(&key).and_then(Value::as_i64))
-            .unwrap_or(0);
-    }
-
-    let total_minions = first_i64(stats, &["totalMinionsKilled"])
-        .or_else(|| first_i64(participant, &["totalMinionsKilled"]))
-        .unwrap_or(0);
-    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"])
-        .or_else(|| first_i64(participant, &["neutralMinionsKilled"]))
-        .unwrap_or(0);
+    let items = participant_items(participant, stats);
+    let total_minions =
+        participant_stat_i64(participant, stats, &["totalMinionsKilled"]).unwrap_or(0);
+    let neutral_minions =
+        participant_stat_i64(participant, stats, &["neutralMinionsKilled"]).unwrap_or(0);
 
     Participant {
         puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
@@ -105,42 +109,26 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
         )
         .unwrap_or_default(),
         team_id: first_i64(participant, &["teamId"]).unwrap_or(0),
-        kills: first_i64(stats, &["kills"])
-            .or_else(|| first_i64(participant, &["kills"]))
+        kills: participant_stat_i64(participant, stats, &["kills"]).unwrap_or(0),
+        deaths: participant_stat_i64(participant, stats, &["deaths"]).unwrap_or(0),
+        assists: participant_stat_i64(participant, stats, &["assists"]).unwrap_or(0),
+        total_damage_dealt_to_champions: participant_stat_i64(
+            participant,
+            stats,
+            &["totalDamageDealtToChampions"],
+        )
+        .unwrap_or(0),
+        total_damage_taken: participant_stat_i64(participant, stats, &["totalDamageTaken"])
             .unwrap_or(0),
-        deaths: first_i64(stats, &["deaths"])
-            .or_else(|| first_i64(participant, &["deaths"]))
-            .unwrap_or(0),
-        assists: first_i64(stats, &["assists"])
-            .or_else(|| first_i64(participant, &["assists"]))
-            .unwrap_or(0),
-        total_damage_dealt_to_champions: first_i64(stats, &["totalDamageDealtToChampions"])
-            .or_else(|| first_i64(participant, &["totalDamageDealtToChampions"]))
-            .unwrap_or(0),
-        total_damage_taken: first_i64(stats, &["totalDamageTaken"])
-            .or_else(|| first_i64(participant, &["totalDamageTaken"]))
-            .unwrap_or(0),
-        gold_earned: first_i64(stats, &["goldEarned"])
-            .or_else(|| first_i64(participant, &["goldEarned"]))
-            .unwrap_or(0),
-        vision_score: first_i64(stats, &["visionScore"])
-            .or_else(|| first_i64(participant, &["visionScore"]))
-            .unwrap_or(0),
+        gold_earned: participant_stat_i64(participant, stats, &["goldEarned"]).unwrap_or(0),
+        vision_score: participant_stat_i64(participant, stats, &["visionScore"]).unwrap_or(0),
         cs: total_minions + neutral_minions,
         items,
         spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
         spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
-        perk_primary_style: first_i64(stats, &["perkPrimaryStyle"])
-            .or_else(|| first_i64(participant, &["perkPrimaryStyle"]))
-            .unwrap_or(0),
-        perk_sub_style: first_i64(stats, &["perkSubStyle"])
-            .or_else(|| first_i64(participant, &["perkSubStyle"]))
-            .unwrap_or(0),
-        win: stats
-            .get("win")
-            .and_then(Value::as_bool)
-            .or_else(|| participant.get("win").and_then(Value::as_bool))
-            .unwrap_or(false),
+        perk_primary_style: participant_perk_primary_style_id(participant, stats).unwrap_or(0),
+        perk_sub_style: participant_perk_sub_style_id(participant, stats).unwrap_or(0),
+        win: participant_stat_bool(participant, stats, "win").unwrap_or(false),
     }
 }
 
@@ -190,6 +178,95 @@ fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
             .and_then(Value::as_i64)
             .or_else(|| value.get(*key).and_then(Value::as_u64).and_then(|v| i64::try_from(v).ok()))
     })
+}
+
+fn participant_stat_i64(participant: &Value, stats: &Value, keys: &[&str]) -> Option<i64> {
+    first_i64(stats, keys).or_else(|| first_i64(participant, keys))
+}
+
+fn participant_stat_bool(participant: &Value, stats: &Value, key: &str) -> Option<bool> {
+    stats
+        .get(key)
+        .and_then(Value::as_bool)
+        .or_else(|| participant.get(key).and_then(Value::as_bool))
+}
+
+fn participant_items(participant: &Value, stats: &Value) -> [i64; 7] {
+    let mut items = [0i64; 7];
+    for (index, item) in items.iter_mut().enumerate() {
+        let key = format!("item{index}");
+        *item = participant_stat_i64(participant, stats, &[&key]).unwrap_or(0);
+    }
+    items
+}
+
+fn participant_perk_primary_style_id(participant: &Value, stats: &Value) -> Option<i64> {
+    first_i64(stats, &["perkPrimaryStyle"])
+        .or_else(|| first_i64(participant, &["perkPrimaryStyle"]))
+        .or_else(|| {
+            participant
+                .get("perks")
+                .and_then(|perks| perks.get("styles"))
+                .and_then(Value::as_array)
+                .and_then(|styles| {
+                    styles
+                        .iter()
+                        .find(|style| {
+                            style
+                                .get("description")
+                                .and_then(Value::as_str)
+                                .is_some_and(|desc| desc.eq_ignore_ascii_case("primaryStyle"))
+                        })
+                        .or_else(|| styles.first())
+                })
+                .and_then(|style| first_i64(style, &["style"]))
+        })
+}
+
+fn participant_perk_sub_style_id(participant: &Value, stats: &Value) -> Option<i64> {
+    first_i64(stats, &["perkSubStyle"])
+        .or_else(|| first_i64(participant, &["perkSubStyle"]))
+        .or_else(|| {
+            participant
+                .get("perks")
+                .and_then(|perks| perks.get("styles"))
+                .and_then(Value::as_array)
+                .and_then(|styles| {
+                    styles.iter().find(|style| {
+                        style
+                            .get("description")
+                            .and_then(Value::as_str)
+                            .is_some_and(|desc| desc.eq_ignore_ascii_case("subStyle"))
+                    })
+                })
+                .and_then(|style| first_i64(style, &["style"]))
+        })
+}
+
+fn participant_primary_perk_rune_id(participant: &Value, stats: &Value) -> Option<i64> {
+    first_i64(stats, &["perk0"])
+        .or_else(|| first_i64(participant, &["perk0"]))
+        .or_else(|| {
+            participant
+                .get("perks")
+                .and_then(|perks| perks.get("styles"))
+                .and_then(Value::as_array)
+                .and_then(|styles| {
+                    styles
+                        .iter()
+                        .find(|style| {
+                            style
+                                .get("description")
+                                .and_then(Value::as_str)
+                                .is_some_and(|desc| desc.eq_ignore_ascii_case("primaryStyle"))
+                        })
+                        .or_else(|| styles.first())
+                })
+                .and_then(|style| style.get("selections"))
+                .and_then(Value::as_array)
+                .and_then(|selections| selections.first())
+                .and_then(|selection| first_i64(selection, &["perk"]))
+        })
 }
 
 fn queue_type_matches(entry: &Value, queue_type: &str) -> bool {
@@ -333,7 +410,7 @@ pub async fn get_ranked_summary(
 }
 
 #[tauri::command]
-pub async fn get_match_history(
+pub async fn get_match_summaries(
     puuid: String,
     begin_index: u32,
     end_index: u32,
@@ -361,7 +438,7 @@ pub async fn get_match_history(
     });
 
     let response = sgp_api
-        .get_match_history(
+        .get_match_summaries(
             &token_context,
             &puuid,
             begin_index,

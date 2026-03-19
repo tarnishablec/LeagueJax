@@ -1,122 +1,221 @@
 # LeagueJax Architecture
 
-Tauri v2 桌面应用，前端 React + TypeScript，后端 Rust + Tokio。前后端通过 Tauri IPC（invoke / emit）通信。
+## Scope
 
-## 总体结构
+This document describes the **foundation architecture** of LeagueJax:
 
-```
-Frontend (WebView)
-  ├─ Routes / Features / Stores
-  └─ invoke("command") / listen("event")
-           │
-           ▼
-Tauri IPC Bridge
-           │
-           ▼
-Backend (Rust)
-  ├─ Jax Shards（模块化功能单元）
-  └─ LCU Shard（多实例管理 + 事件转发）
-```
+- Runtime composition
+- Layer boundaries
+- IPC contract model
+- Type-sharing pipeline
+- Core directory responsibilities
 
-## Shard 架构
+This document intentionally does **not** describe business shard design or feature-level behavior.
 
-所有功能以 Shard 组织。每个 Shard 实现 `Shard` trait，注册到 Jax，上层可通过 `get_shard<T>()` 访问。
+## Technology Stack
 
-当前 LCU Shard 的对外暴露是 **LcuManager**，Shard 本身不再透传 tx/rx：
+- Desktop shell: Tauri v2
+- Frontend: React + TypeScript + Vite
+- Backend: Rust + Tokio
+- Runtime orchestration:
+  - Rust side: `jax` crate (`D:/Desktop/Web/LeagueJax/jax`)
+  - Web side: TS runtime (`D:/Desktop/Web/LeagueJax/src/jax`)
+- Styling: Vanilla Extract
+- UI primitives: Ark UI
 
-```
-Jax
- └─ LcuShard
-     └─ LcuManager (Arc)
-```
+## System Overview
 
-## LCU Shard（核心）
-
-LCU Shard 支持同时管理多个 League Client 进程，通过聚焦机制选择当前实例。
-
-### 主要组件
-
-- **LcuConnector**：平台适配层，负责发现本机 LCU 进程并解析认证信息。
-- **LcuManager**：全局管理器，轮询进程，维护实例列表与聚焦状态，向前端广播快照与事件。
-- **LcuInstance**：单个 LCU 实例容器，持有 auth、install_dir、API client 和状态机。
-- **LcuInstanceBridge**：实例内部 actor，持有状态机与 watcher/auth 任务，驱动生命周期。
-- **LcuWatcher**：纯数据源，只负责 WebSocket -> `LcuEvent` 的 stream。
-- **LcuApi**：LCU REST API 请求端（原 LcuClient，已迁移到 `api.rs`）。
-
-### 数据流
-
-```
-Connector.detect_all()
-  └─ LcuManager 创建/维护 LcuInstance
-        └─ LcuInstanceBridge 运行状态机
-              ├─ auth loop -> AuthOk/AuthFailed
-              ├─ watcher stream -> LcuEvent
-              └─ 生命周期信号 -> LcuManager
-
-LcuManager:
-  ├─ 维护 instances + focus_pid
-  ├─ 生成 LcuInstanceInfo 快照
-  └─ emit:
-      - "lcu-instances-changed"
-      - "lcu-ws-event"
-      - "lcu-focus-changed"
+```text
+React WebView (src/)
+  - Routes / Layout / Web Shards
+  - invoke(...) + event listeners
+            |
+            | Tauri IPC
+            v
+Rust Backend (src-tauri/src/)
+  - Tauri commands
+  - Jax shard runtime
+  - System integrations / persistence
 ```
 
-### 聚焦语义（update_focus）
+The frontend and backend are isolated by IPC.  
+All backend capabilities are exposed through explicit Tauri commands and event channels.
 
-`update_focus(pid: Option<u32>)` 的语义如下：
+## Startup Sequence
 
-- `None`：强制清空 focus，不自动聚焦。
-- `Some(0)`：自动选择  
-  - 若 ready 实例恰好 1 个 → 选中  
-  - 否则 → 不选
-- `Some(pid>0)`：只有该实例 ready 时才聚焦，否则清空。
+### 1) Backend process bootstrap
 
-**自动聚焦只在 focus 丢失/失效时显式触发**，不在周期性 tick 中隐式进行。
+Entry: `D:/Desktop/Web/LeagueJax/src-tauri/src/main.rs`
 
-### 状态机
+1. Install rustls crypto provider.
+2. Call `league_jax_lib::run()`.
 
-每个实例内部状态机（statig）是**单一真相**，运行于 `LcuInstanceBridge`：
+### 2) Tauri app initialization
 
+Entry: `D:/Desktop/Web/LeagueJax/src-tauri/src/lib.rs`
+
+1. Configure tracing.
+2. Create Tauri builder and register plugins.
+3. Register command handlers via `tauri::generate_handler![...]`.
+4. In `setup`:
+   - Resolve app paths and window handles.
+   - Build Rust Jax runtime by registering shards.
+   - Store shared runtime in Tauri state (`app.manage(...)`).
+   - Spawn async startup (`jax.start().await`).
+
+### 3) Frontend bootstrap
+
+Entry: `D:/Desktop/Web/LeagueJax/src/main.tsx`
+
+1. Create React root.
+2. Initialize web shards (`initializeWebShards()`).
+3. Build merged i18n resources from shard manifests.
+4. Initialize i18n.
+5. Render `<App />`.
+
+## Runtime Composition
+
+## Rust runtime (backend)
+
+The backend uses the Rust `jax` crate to compose shard dependencies and lifecycle:
+
+- Register shards
+- Build dependency graph
+- Start shards in dependency-aware order
+- Skip descendants on startup failure
+- Stop shards in reverse dependency order
+
+Core implementation:
+
+- `D:/Desktop/Web/LeagueJax/jax/src/lib.rs`
+- `D:/Desktop/Web/LeagueJax/jax/src/shard/*`
+
+## TypeScript runtime (web)
+
+The web side has a lightweight shard runtime with a similar dependency/lifecycle model:
+
+- Register web shards
+- Build graph
+- Start setup hooks
+- Teardown on shutdown
+
+Core implementation:
+
+- `D:/Desktop/Web/LeagueJax/src/jax/index.ts`
+- `D:/Desktop/Web/LeagueJax/src/features/registry.ts`
+- `D:/Desktop/Web/LeagueJax/src/runtime/web-contract.ts`
+
+## Backend Foundation Structure
+
+Root: `D:/Desktop/Web/LeagueJax/src-tauri/src`
+
+- `main.rs`: native entrypoint
+- `lib.rs`: Tauri runtime assembly and command registration
+- `commands/`: IPC command handlers (frontend-callable backend APIs)
+- `concepts/`: shared domain DTOs exported to TS (`ts-rs`)
+- `shards/`: backend modules wired by Rust Jax runtime
+- `storage/`: storage abstractions/helpers
+- `error.rs`: backend error model and serialization
+- `utils/`: shared utilities
+
+## Frontend Foundation Structure
+
+Root: `D:/Desktop/Web/LeagueJax/src`
+
+- `main.tsx`: web bootstrap sequence
+- `App.tsx`: router creation and root route tree
+- `layout/`: shell layout and page frame (`RootLayout`)
+- `features/registry.ts`: web shard registration and contribution aggregation
+- `runtime/web-contract.ts`: frontend shard contribution interfaces
+- `jax/`: TS lifecycle runtime
+- `bindings/`: generated TS types from Rust
+- `styles/`: global theme tokens and global styles
+- `infra/`: cross-cutting concerns (logger, error helpers)
+
+## Routing and Composition Model
+
+- Router is created in `App.tsx` (`createBrowserRouter`).
+- Feature routes are not hardcoded in one list; they are collected from web shard contributions.
+- Layout (`RootLayout`) consumes aggregated contributions for:
+  - Navigation items
+  - Toolbar slots
+  - Titlebar slots
+  - Sidebar slots
+
+This keeps feature modules composable while preserving a single shell.
+
+## IPC Boundary
+
+Frontend calls backend commands through:
+
+- `invoke("<command_name>", payload)` from `@tauri-apps/api/core`
+
+Backend exposes commands through:
+
+- `#[tauri::command]` functions in `src-tauri/src/commands/*`
+- Registration in `src-tauri/src/lib.rs` via `tauri::generate_handler![...]`
+
+Event-driven updates are sent from backend to frontend using Tauri events (emit/listen model).
+
+## Rust to TypeScript Type Sharing
+
+LeagueJax uses Rust as the source of truth for shared contract types.
+
+1. Define structs/enums in `src-tauri/src/concepts/*` (or shard-local exports).
+2. Derive `TS` via `ts-rs`.
+3. Export generated declarations to `src/bindings/*.ts`.
+4. Frontend imports these generated types directly.
+
+Project script:
+
+- `bun run sync_rs_types`
+
+This flow avoids manually duplicated DTO definitions.
+
+## Styling and UI Foundation
+
+- Theme tokens are defined in Vanilla Extract global theme files.
+- Component styles are co-located in `*.css.ts`.
+- Interactive primitives should use Ark UI components.
+
+## Configuration and Security Boundaries
+
+- App-level config: `D:/Desktop/Web/LeagueJax/src-tauri/tauri.conf.json`
+  - window config
+  - dev/build commands
+  - bundle targets
+- Capability permissions: `D:/Desktop/Web/LeagueJax/src-tauri/capabilities/default.json`
+  - granted APIs per window
+
+Frontend cannot directly access privileged native capabilities; access must go through approved Tauri surfaces.
+
+## Operational Notes
+
+- Backend startup is resilient: shard failures are reported and can block only dependents.
+- Frontend bootstrap fails fast with an on-screen error if initialization fails.
+- Logging is structured on both sides (`tracing` in Rust, `pino` in web).
+
+## Directory Map
+
+```text
+LeagueJax/
+  src/                    # React + TypeScript frontend
+    bindings/             # Generated TS contracts from Rust
+    features/             # Feature modules + web shard manifests
+    jax/                  # TS runtime lifecycle core
+    layout/               # App shell layout
+    runtime/              # Frontend shard contract interfaces
+    styles/               # Theme tokens and global styles
+    infra/                # Logger, error helpers, utilities
+  src-tauri/              # Tauri + Rust backend
+    src/
+      commands/           # Tauri command handlers
+      concepts/           # Shared DTOs for TS export
+      shards/             # Backend runtime modules
+      storage/            # Persistence infrastructure
+      error.rs            # Backend error type
+      lib.rs              # Backend assembly and Tauri integration
+      main.rs             # Native executable entry
+  jax/                    # Rust Jax runtime crate
 ```
-Authenticating
-  └─ AuthOk -> Ready
-Ready
-  └─ WsDisconnected / ProcessLost -> Closing
-Closing
-  └─ 等待 manager 清理移除
-```
 
-`LcuInstance` 通过持有状态机引用提供 `status()`，用于生成 `LcuInstanceInfo`。
-
-## IPC：Command / Event
-
-### Commands（前端 -> 后端）
-
-```
-invoke("lcu_update_focus", { pid })
-```
-
-### Events（后端 -> 前端）
-
-- `lcu-instances-changed`：实例快照列表
-- `lcu-ws-event`：聚焦实例的 WebSocket 事件
-- `lcu-focus-changed`：focus 变化（previous/requested/current）
-
-## 前端结构
-
-```
-src/
-  routes/       路由页面（TanStack Router）
-  features/     功能模块
-  stores/       Zustand 状态管理
-  hooks/        事件与数据访问
-  styles/       Vanilla Extract 主题
-  components/   通用 UI 组件
-```
-
-前端类型全部来自 Rust `ts-rs` 导出（`src/bindings/`），禁止手写重复类型。
-
-## 数据存储
-
-当前数据存储统一使用 `PersistentSled`（sled），实现位于 `persistence_sled` shard（`src-tauri/src/shards/persistence_sled.rs`），不再使用 SQLite。

@@ -25,7 +25,7 @@ impl SgpApi {
         Ok(Self { req_client })
     }
 
-    pub async fn get_match_history(
+    pub async fn get_match_summaries(
         &self,
         token_context: &SgpTokenContext,
         puuid: &str,

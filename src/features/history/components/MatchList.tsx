@@ -98,29 +98,31 @@ export function MatchList({ puuid }: { puuid: string }) {
           onValueChange={(value) => setPlaceholderFilter(value)}
         />
 
-        <button
-          type="button"
-          className={s.pageButton}
-          aria-label="Previous page"
-          disabled={!canGoPrev}
-          onClick={() => setPage((current) => Math.max(1, current - 1))}
-        >
-          <ChevronLeft size={14} />
-        </button>
-        <div className={s.pageIndicator}>
-          {t("history.pageNumber", {
-            page,
-          })}
+        <div className={s.pageControls}>
+          <button
+            type="button"
+            className={s.pageButton}
+            aria-label="Previous page"
+            disabled={!canGoPrev}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <div className={s.pageIndicator}>
+            {t("history.pageNumber", {
+              page,
+            })}
+          </div>
+          <button
+            type="button"
+            className={s.pageButton}
+            aria-label="Next page"
+            disabled={!canGoNext}
+            onClick={() => setPage((current) => current + 1)}
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
-        <button
-          type="button"
-          className={s.pageButton}
-          aria-label="Next page"
-          disabled={!canGoNext}
-          onClick={() => setPage((current) => current + 1)}
-        >
-          <ChevronRight size={14} />
-        </button>
       </div>
 
       {isLoading ? (

@@ -10,9 +10,21 @@ export const panel = style({
 
 export const toolbar = style({
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr) 30px 60px 30px",
+  width: "100%",
+  gridTemplateColumns: "repeat(3, 1fr) auto",
   gap: 8,
-  alignItems: "end",
+
+  "@media": {
+    "(max-width: 1000px)": {
+      // gridTemplateColumns: "1fr",
+    },
+  },
+});
+
+export const pageControls = style({
+  display: "grid",
+  gap: 8,
+  gridTemplateColumns: "1fr minmax(60px, auto) 1fr",
 });
 
 export const selectWrap = style({
@@ -62,6 +74,7 @@ export const pageIndicator = style({
   fontSize: "0.75rem",
   display: "grid",
   placeItems: "center",
+  padding: "0 6px",
   lineHeight: 1,
 });
 

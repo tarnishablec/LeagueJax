@@ -26,7 +26,7 @@ export function useMatchHistory(
   modeTag: MatchModeTag = "all",
 ) {
   const { data, error, isLoading, isValidating } = useSWR(
-    puuid ? ["get_match_history", puuid, page, pageSize, modeTag] : null,
+    puuid ? ["get_match_summaries", puuid, page, pageSize, modeTag] : null,
     ([cmd, resolvedPuuid, resolvedPage, resolvedPageSize, resolvedTag]) =>
       invoke<MatchSummary[]>(cmd, {
         puuid: resolvedPuuid,

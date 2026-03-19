@@ -38,7 +38,7 @@ pub fn run() {
             get_current_summoner,
             search_summoner,
             get_ranked_summary,
-            get_match_history,
+            get_match_summaries,
             get_match_detail,
             get_profile_icon,
             get_champion_icon,
