@@ -1,9 +1,29 @@
 import { X } from "lucide-react";
 import type React from "react";
-import { useTabStore } from "../stores/tabs";
-import * as s from "./TabBar.css";
+import type { SummonerInfo } from "@/bindings/summoner";
+import { useProfileIcon } from "@/hooks/use-profile-icon";
+import { useTabStore } from "@/stores/tabs.ts";
+import * as s from "./HistoryTabBar.css.ts";
 
-export function TabBar() {
+function TabIcon({ summoner }: { summoner: SummonerInfo }) {
+  const avatarUrl = useProfileIcon(summoner.profileIconId);
+
+  if (!avatarUrl) {
+    return <div className={s.tabIconFallback} />;
+  }
+
+  return (
+    <img
+      src={avatarUrl}
+      alt="Profile icon"
+      className={s.tabIcon}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+export function HistoryTabBar() {
   const { tabs, activeTabId, setActiveTab, closeTab } = useTabStore();
 
   if (tabs.length === 0) return <div />;
@@ -25,7 +45,7 @@ export function TabBar() {
           onClick={() => setActiveTab(tab.id)}
           onAuxClick={(e) => handleAuxClick(e, tab.id)}
         >
-          <div className={s.tabIconFallback} />
+          <TabIcon summoner={tab.summoner} />
           <span className={s.tabLabel}>
             {tab.summoner.gameName}#{tab.summoner.tagLine}
           </span>

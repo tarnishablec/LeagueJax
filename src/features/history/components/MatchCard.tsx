@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MatchSummary } from "@/bindings/matches.ts";
-import { useGameVersion } from "@/hooks/use-game-version";
-import { championIconUrl } from "@/utils/cdragon";
+import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useMatchDetail } from "../hooks/use-match-detail";
 import * as s from "./MatchCard.css";
 
@@ -16,11 +15,28 @@ function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString();
 }
 
+function ChampionIcon({
+  championId,
+  className,
+  fallbackClassName,
+}: {
+  championId: number;
+  className: string;
+  fallbackClassName: string;
+}) {
+  const iconUrl = useChampionIcon(championId);
+
+  if (!iconUrl) {
+    return <div className={fallbackClassName} />;
+  }
+
+  return <img src={iconUrl} alt="" className={className} />;
+}
+
 export function MatchCard({ match }: { match: MatchSummary }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const { data: detail } = useMatchDetail(expanded ? match.gameId : null);
-  const { data: version } = useGameVersion();
 
   return (
     <div>
@@ -29,15 +45,11 @@ export function MatchCard({ match }: { match: MatchSummary }) {
         className={s.card({ win: match.win })}
         onClick={() => setExpanded((v) => !v)}
       >
-        {version ? (
-          <img
-            src={championIconUrl(version, match.championId)}
-            alt=""
-            className={s.championIcon}
-          />
-        ) : (
-          <div className={s.championIconFallback} />
-        )}
+        <ChampionIcon
+          championId={match.championId}
+          className={s.championIcon}
+          fallbackClassName={s.championIconFallback}
+        />
         <div className={s.info}>
           <span className={s.kda}>
             {match.kills}/{match.deaths}/{match.assists}
@@ -66,15 +78,11 @@ export function MatchCard({ match }: { match: MatchSummary }) {
                 </div>
                 {team.map((p) => (
                   <div key={p.puuid} className={s.participantRow}>
-                    {version ? (
-                      <img
-                        src={championIconUrl(version, p.championId)}
-                        alt=""
-                        className={s.participantIcon}
-                      />
-                    ) : (
-                      <div className={s.participantIconFallback} />
-                    )}
+                    <ChampionIcon
+                      championId={p.championId}
+                      className={s.participantIcon}
+                      fallbackClassName={s.participantIconFallback}
+                    />
                     <span>{p.summonerName}</span>
                     <span>
                       {p.kills}/{p.deaths}/{p.assists}

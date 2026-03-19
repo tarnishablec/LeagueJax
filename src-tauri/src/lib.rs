@@ -39,6 +39,7 @@ pub fn run() {
             get_match_history,
             get_match_detail,
             get_profile_icon,
+            get_champion_icon,
             get_game_version,
         ])
         .setup(move |app| {

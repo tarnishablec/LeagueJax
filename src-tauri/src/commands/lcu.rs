@@ -32,6 +32,23 @@ pub async fn get_profile_icon(icon_id: i64, jax: State<'_, Arc<Jax>>) -> Result<
 }
 
 #[tauri::command]
+pub async fn get_champion_icon(
+    champion_id: i64,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Vec<u8>, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let client = manager
+        .focused_client()
+        .await
+        .ok_or(AppError::LcuNotConnected)?;
+    let path = format!("/lol-game-data/assets/v1/champion-icons/{champion_id}.png");
+    client.get_bytes(&path).await
+}
+
+#[tauri::command]
 pub async fn get_game_version(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
     let manager = jax
         .get_shard::<LcuShard>()
