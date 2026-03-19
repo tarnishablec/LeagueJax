@@ -12,7 +12,7 @@ export function SettingsSectionCard({
 }: SettingsSectionCardProps) {
   return (
     <section className={s.card}>
-      <h2 className={s.title}>{title}</h2>
+      <div className={s.title}>{title}</div>
       <div className={s.body}>{children}</div>
     </section>
   );

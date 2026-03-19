@@ -16,6 +16,12 @@ export const title = style({
 export const sections = style({
   display: "grid",
   gap: 12,
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  "@media": {
+    "(max-width: 1200px)": {
+      gridTemplateColumns: "1fr",
+    },
+  },
 });
 
 export const pageTabs = style({

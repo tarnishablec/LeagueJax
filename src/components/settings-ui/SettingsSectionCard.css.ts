@@ -8,12 +8,14 @@ export const card = style({
   borderRadius: 10,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.background,
+  alignContent: "start",
 });
 
 export const title = style({
-  fontSize: "0.9rem",
+  fontSize: "1rem",
   fontWeight: 600,
   color: vars.color.foreground,
+  margin: "0.4rem 0",
 });
 
 export const body = style({
