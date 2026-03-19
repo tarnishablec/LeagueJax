@@ -43,16 +43,30 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
     let null = Value::Null;
     let stats = participant.get("stats").unwrap_or(&null);
 
-    let total_minions = first_i64(stats, &["totalMinionsKilled"]).unwrap_or(0);
-    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"]).unwrap_or(0);
+    let total_minions = first_i64(stats, &["totalMinionsKilled"])
+        .or_else(|| first_i64(participant, &["totalMinionsKilled"]))
+        .unwrap_or(0);
+    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"])
+        .or_else(|| first_i64(participant, &["neutralMinionsKilled"]))
+        .unwrap_or(0);
 
     Ok(MatchSummary {
         game_id: parse_sgp_game_id(payload, game),
         champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
-        win: stats.get("win").and_then(Value::as_bool).unwrap_or(false),
-        kills: first_i64(stats, &["kills"]).unwrap_or(0),
-        deaths: first_i64(stats, &["deaths"]).unwrap_or(0),
-        assists: first_i64(stats, &["assists"]).unwrap_or(0),
+        win: stats
+            .get("win")
+            .and_then(Value::as_bool)
+            .or_else(|| participant.get("win").and_then(Value::as_bool))
+            .unwrap_or(false),
+        kills: first_i64(stats, &["kills"])
+            .or_else(|| first_i64(participant, &["kills"]))
+            .unwrap_or(0),
+        deaths: first_i64(stats, &["deaths"])
+            .or_else(|| first_i64(participant, &["deaths"]))
+            .unwrap_or(0),
+        assists: first_i64(stats, &["assists"])
+            .or_else(|| first_i64(participant, &["assists"]))
+            .unwrap_or(0),
         cs: total_minions + neutral_minions,
         game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
         game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
@@ -68,11 +82,19 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
     let mut items = [0i64; 7];
     for (index, item) in items.iter_mut().enumerate() {
         let key = format!("item{index}");
-        *item = stats.get(&key).and_then(Value::as_i64).unwrap_or(0);
+        *item = stats
+            .get(&key)
+            .and_then(Value::as_i64)
+            .or_else(|| participant.get(&key).and_then(Value::as_i64))
+            .unwrap_or(0);
     }
 
-    let total_minions = first_i64(stats, &["totalMinionsKilled"]).unwrap_or(0);
-    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"]).unwrap_or(0);
+    let total_minions = first_i64(stats, &["totalMinionsKilled"])
+        .or_else(|| first_i64(participant, &["totalMinionsKilled"]))
+        .unwrap_or(0);
+    let neutral_minions = first_i64(stats, &["neutralMinionsKilled"])
+        .or_else(|| first_i64(participant, &["neutralMinionsKilled"]))
+        .unwrap_or(0);
 
     Participant {
         puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
@@ -83,21 +105,42 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
         )
         .unwrap_or_default(),
         team_id: first_i64(participant, &["teamId"]).unwrap_or(0),
-        kills: first_i64(stats, &["kills"]).unwrap_or(0),
-        deaths: first_i64(stats, &["deaths"]).unwrap_or(0),
-        assists: first_i64(stats, &["assists"]).unwrap_or(0),
-        total_damage_dealt_to_champions: first_i64(stats, &["totalDamageDealtToChampions"])
+        kills: first_i64(stats, &["kills"])
+            .or_else(|| first_i64(participant, &["kills"]))
             .unwrap_or(0),
-        total_damage_taken: first_i64(stats, &["totalDamageTaken"]).unwrap_or(0),
-        gold_earned: first_i64(stats, &["goldEarned"]).unwrap_or(0),
-        vision_score: first_i64(stats, &["visionScore"]).unwrap_or(0),
+        deaths: first_i64(stats, &["deaths"])
+            .or_else(|| first_i64(participant, &["deaths"]))
+            .unwrap_or(0),
+        assists: first_i64(stats, &["assists"])
+            .or_else(|| first_i64(participant, &["assists"]))
+            .unwrap_or(0),
+        total_damage_dealt_to_champions: first_i64(stats, &["totalDamageDealtToChampions"])
+            .or_else(|| first_i64(participant, &["totalDamageDealtToChampions"]))
+            .unwrap_or(0),
+        total_damage_taken: first_i64(stats, &["totalDamageTaken"])
+            .or_else(|| first_i64(participant, &["totalDamageTaken"]))
+            .unwrap_or(0),
+        gold_earned: first_i64(stats, &["goldEarned"])
+            .or_else(|| first_i64(participant, &["goldEarned"]))
+            .unwrap_or(0),
+        vision_score: first_i64(stats, &["visionScore"])
+            .or_else(|| first_i64(participant, &["visionScore"]))
+            .unwrap_or(0),
         cs: total_minions + neutral_minions,
         items,
         spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
         spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
-        perk_primary_style: first_i64(stats, &["perkPrimaryStyle"]).unwrap_or(0),
-        perk_sub_style: first_i64(stats, &["perkSubStyle"]).unwrap_or(0),
-        win: stats.get("win").and_then(Value::as_bool).unwrap_or(false),
+        perk_primary_style: first_i64(stats, &["perkPrimaryStyle"])
+            .or_else(|| first_i64(participant, &["perkPrimaryStyle"]))
+            .unwrap_or(0),
+        perk_sub_style: first_i64(stats, &["perkSubStyle"])
+            .or_else(|| first_i64(participant, &["perkSubStyle"]))
+            .unwrap_or(0),
+        win: stats
+            .get("win")
+            .and_then(Value::as_bool)
+            .or_else(|| participant.get("win").and_then(Value::as_bool))
+            .unwrap_or(false),
     }
 }
 
@@ -294,6 +337,7 @@ pub async fn get_match_history(
     puuid: String,
     begin_index: u32,
     end_index: u32,
+    tag: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<MatchSummary>, AppError> {
     let sgp_shard = jax.get_shard::<SgpShard>();
@@ -307,8 +351,23 @@ pub async fn get_match_history(
         return Ok(Vec::new());
     }
 
+    let normalized_tag = tag.and_then(|raw| {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("all") {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+
     let response = sgp_api
-        .get_match_history(&token_context, &puuid, begin_index, count)
+        .get_match_history(
+            &token_context,
+            &puuid,
+            begin_index,
+            count,
+            normalized_tag.as_deref(),
+        )
         .await?;
 
     let games = response

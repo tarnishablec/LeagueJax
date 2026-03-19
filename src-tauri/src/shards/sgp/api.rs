@@ -31,6 +31,7 @@ impl SgpApi {
         puuid: &str,
         start_index: u32,
         count: u32,
+        tag: Option<&str>,
     ) -> Result<Value, AppError> {
         let endpoint = self.resolve_server_endpoint(&token_context.sgp_server_id)?;
         let Some(base_url) = endpoint.match_history.as_deref() else {
@@ -41,14 +42,20 @@ impl SgpApi {
         };
 
         let path = format!("/match-history-query/v1/products/lol/player/{puuid}/SUMMARY");
+        let mut query = vec![
+            ("startIndex", start_index.to_string()),
+            ("count", count.to_string()),
+        ];
+
+        if let Some(tag) = tag {
+            query.push(("tag", tag.to_string()));
+        }
+
         self.request_json(
             base_url,
             &path,
             &token_context.access_token,
-            Some(vec![
-                ("startIndex", start_index.to_string()),
-                ("count", count.to_string()),
-            ]),
+            Some(query),
         )
         .await
     }

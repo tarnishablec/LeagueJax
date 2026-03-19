@@ -107,6 +107,7 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 ## Component Styles
 
 - **Styling engine:** [Vanilla Extract](https://vanilla-extract.style/) — all styles live in co-located `.css.ts` files (for example `Component.css.ts` next to `Component.tsx`).
+- **UI primitives/components:** Frontend interactive primitives and common controls must use **Ark UI** (`@ark-ui/react`) or project-level wrappers built on Ark UI (for example `src/components/settings-ui`). Do not introduce custom native/select/dropdown implementations when an Ark UI equivalent exists.
 - **Variants:** Use `recipe()` from `@vanilla-extract/recipes` for component variants. Use `styleVariants()` for simple enumerated variants.
 - **Theme tokens:** Defined in `src/styles/theme.css.ts` via `createGlobalThemeContract` / `createGlobalTheme`. Access with `vars.color.*`.
 - **Dynamic values:** Use `assignInlineVars()` from `@vanilla-extract/dynamic` for runtime-dependent CSS values; avoid inline `style` for anything expressible statically.

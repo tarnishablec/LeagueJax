@@ -20,7 +20,7 @@ export const container = style({
 export const tab = recipe({
   base: {
     display: "grid",
-    gridTemplateColumns: "16px minmax(0, 1fr) 16px",
+    gridTemplateColumns: "minmax(0, 1fr) 16px",
     alignItems: "center",
     gap: 6,
     height: 32,
@@ -28,11 +28,8 @@ export const tab = recipe({
     paddingInline: 8,
     fontSize: "0.75rem",
     color: vars.color.mutedForeground,
-    cursor: "pointer",
-    border: "none",
+    cursor: "default",
     background: "transparent",
-    font: "inherit",
-    textAlign: "start",
     whiteSpace: "nowrap",
     borderBottom: "2px solid transparent",
     transition: "color 100ms, background 100ms",
@@ -55,6 +52,23 @@ export const tab = recipe({
   defaultVariants: {
     active: false,
   },
+});
+
+export const tabMain = style({
+  display: "grid",
+  gridTemplateColumns: "16px minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
+  height: "100%",
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+  padding: 0,
+  margin: 0,
+  font: "inherit",
+  textAlign: "start",
 });
 
 export const tabLabel = style({
