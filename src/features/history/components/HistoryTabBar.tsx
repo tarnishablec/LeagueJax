@@ -38,17 +38,18 @@ export function HistoryTabBar() {
   return (
     <div className={s.container}>
       {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          className={s.tab({ active: tab.id === activeTabId })}
-          onClick={() => setActiveTab(tab.id)}
-          onAuxClick={(e) => handleAuxClick(e, tab.id)}
-        >
-          <TabIcon summoner={tab.summoner} />
-          <span className={s.tabLabel}>
-            {tab.summoner.gameName}#{tab.summoner.tagLine}
-          </span>
+        <div key={tab.id} className={s.tab({ active: tab.id === activeTabId })}>
+          <button
+            type="button"
+            className={s.tabMain}
+            onClick={() => setActiveTab(tab.id)}
+            onAuxClick={(e) => handleAuxClick(e, tab.id)}
+          >
+            <TabIcon summoner={tab.summoner} />
+            <span className={s.tabLabel}>
+              {tab.summoner.gameName}#{tab.summoner.tagLine}
+            </span>
+          </button>
           <button
             type="button"
             className={s.closeButton}
@@ -60,7 +61,7 @@ export function HistoryTabBar() {
           >
             <X size={12} />
           </button>
-        </button>
+        </div>
       ))}
     </div>
   );
