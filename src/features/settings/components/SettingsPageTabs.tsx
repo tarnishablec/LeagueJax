@@ -12,15 +12,26 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
 
   return (
     <div className={s.pageTabs}>
-      {pages.map((page) => (
-        <NavLink
-          key={page.id}
-          to={`/settings/${page.id}`}
-          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
-        >
-          {t(`settings.pages.${page.id}.title`, { defaultValue: page.id })}
-        </NavLink>
-      ))}
+      <div className={s.pageTabsLeft}>
+        {pages.map((page) => (
+          <NavLink
+            key={page.id}
+            to={`/settings/${page.id}`}
+            className={({ isActive }) =>
+              isActive ? s.pageTabActive : s.pageTab
+            }
+          >
+            {t(`settings.pages.${page.id}.title`, { defaultValue: page.id })}
+          </NavLink>
+        ))}
+      </div>
+
+      <NavLink
+        to="/settings/registry"
+        className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
+      >
+        {t("settings.registry.tab", { defaultValue: "Registry" })}
+      </NavLink>
     </div>
   );
 }

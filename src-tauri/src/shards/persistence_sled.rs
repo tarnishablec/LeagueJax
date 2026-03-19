@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use core::error::Error;
 use jax::{depends, shard_id, Jax, Shard};
 use sled::Db;
@@ -19,12 +20,12 @@ impl PersistenceSled {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_db(&self) -> Db {
-        self.db
+    pub fn get_db(&self) -> Result<Db, AppError> {
+        Ok(self
+            .db
             .get()
-            .expect("Sled database not initialized")
-            .clone()
+            .ok_or_else(|| AppError::Other("Sled database is not initialized".to_string()))?
+            .clone())
     }
 }
 

@@ -16,6 +16,17 @@ type BrowserLogRecord = {
   scope?: string;
 } & Record<string, unknown>;
 
+const WEB_LOG_LEVELS = [
+  "trace",
+  "debug",
+  "info",
+  "warn",
+  "error",
+  "fatal",
+] as const;
+
+export type WebLogLevel = (typeof WEB_LOG_LEVELS)[number];
+
 const formatLogLine = (record: BrowserLogRecord): string => {
   const level = LEVEL_LABEL[record.level ?? 30] ?? "INFO";
   const scope = String(record.scope ?? "app");
@@ -70,6 +81,19 @@ const baseLogger = pino({
     write: writeHumanReadable,
   },
 });
+
+const isWebLogLevel = (value: unknown): value is WebLogLevel => {
+  return (
+    typeof value === "string" && WEB_LOG_LEVELS.includes(value as WebLogLevel)
+  );
+};
+
+export const setWebLogLevel = (level: unknown): void => {
+  if (!isWebLogLevel(level)) {
+    return;
+  }
+  baseLogger.level = level;
+};
 
 export const createLogger = (scope: string): Logger => {
   return baseLogger.child({ scope });

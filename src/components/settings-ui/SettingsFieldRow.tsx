@@ -3,14 +3,20 @@ import * as s from "./SettingsFieldRow.css";
 
 interface SettingsFieldRowProps {
   label: string;
+  scopeTag?: string;
   children?: React.ReactNode;
 }
 
-export function SettingsFieldRow({ label, children }: SettingsFieldRowProps) {
+export function SettingsFieldRow({
+  label,
+  scopeTag,
+  children,
+}: SettingsFieldRowProps) {
   return (
     <div className={s.row}>
       <span className={s.label}>{label}</span>
       <div className={s.control}>{children}</div>
+      {scopeTag ? <span className={s.scopeBadge}>{scopeTag}</span> : null}
     </div>
   );
 }

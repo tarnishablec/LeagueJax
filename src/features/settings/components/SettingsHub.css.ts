@@ -20,11 +20,18 @@ export const sections = style({
 
 export const pageTabs = style({
   display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) max-content",
+  alignItems: "center",
+  gap: 12,
+});
+
+export const pageTabsLeft = style({
+  display: "grid",
   gridAutoFlow: "column",
   gridAutoColumns: "max-content",
   gap: 8,
-  alignItems: "center",
   justifyContent: "start",
+  minWidth: 0,
 });
 
 const pageTabBase = style({
