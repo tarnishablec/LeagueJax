@@ -1,35 +1,16 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SettingsSelect } from "@/components/settings-ui";
+import { useHistoryRefresh } from "../hooks/use-history-refresh";
 import { type MatchModeTag, useMatchHistory } from "../hooks/use-match-history";
 import { MatchCard } from "./MatchCard";
 import * as s from "./MatchList.css";
-
-const modeOptions: Array<{
-  value: MatchModeTag;
-  labelKey: string;
-}> = [
-  { value: "all", labelKey: "history.mode.all" },
-  { value: "q_420", labelKey: "history.mode.q420" },
-  { value: "q_430", labelKey: "history.mode.q430" },
-  { value: "q_440", labelKey: "history.mode.q440" },
-  { value: "q_450", labelKey: "history.mode.q450" },
-  { value: "q_480", labelKey: "history.mode.q480" },
-  { value: "q_1700", labelKey: "history.mode.q1700" },
-  { value: "q_490", labelKey: "history.mode.q490" },
-  { value: "q_1900", labelKey: "history.mode.q1900" },
-  { value: "q_900", labelKey: "history.mode.q900" },
-  { value: "q_2300", labelKey: "history.mode.q2300" },
-];
-
-const pageSizeOptions = [20, 50, 100] as const;
-
-const placeholderFilterOptions = [
-  { value: "all", labelKey: "history.filter.all" },
-  { value: "preset_a", labelKey: "history.filter.presetA" },
-  { value: "preset_b", labelKey: "history.filter.presetB" },
-] as const;
+import { MatchListFilters } from "./MatchListFilters";
+import { MatchListPager } from "./MatchListPager";
+import {
+  modeOptions,
+  pageSizeOptions,
+  placeholderFilterOptions,
+} from "./match-list-options";
 
 export function MatchList({ puuid }: { puuid: string }) {
   const { t } = useTranslation();
@@ -37,6 +18,7 @@ export function MatchList({ puuid }: { puuid: string }) {
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(1);
   const [placeholderFilter, setPlaceholderFilter] = useState<string>("all");
+  const { refreshing, refresh } = useHistoryRefresh();
   const previousPuuidRef = useRef<string | null>(null);
   const { matches, error, isLoading, isRefreshing, hasNextPage } =
     useMatchHistory(puuid, page, pageSize, modeTag);
@@ -64,65 +46,40 @@ export function MatchList({ puuid }: { puuid: string }) {
     value: option.value,
     label: t(option.labelKey),
   }));
+  const canRefresh = !isLoading && !isRefreshing && !refreshing;
 
   return (
     <div className={s.panel}>
       <div className={s.toolbar}>
-        {/*<span className={s.selectLabel}>{t("history.modeLabel")}</span>*/}
-        <SettingsSelect
-          ariaLabel="History mode"
-          value={modeTag}
-          options={modeSelectOptions}
-          onValueChange={(value) => {
-            setModeTag(value as MatchModeTag);
+        <MatchListFilters
+          modeTag={modeTag}
+          pageSize={pageSize}
+          placeholderFilter={placeholderFilter}
+          modeSelectOptions={modeSelectOptions}
+          pageSizeSelectOptions={pageSizeSelectOptions}
+          filterSelectOptions={filterSelectOptions}
+          onModeChange={(value) => {
+            setModeTag(value);
             setPage(1);
           }}
-        />
-
-        {/*<span className={s.selectLabel}>{t("history.pageSizeLabel")}</span>*/}
-        <SettingsSelect
-          ariaLabel="History page size"
-          value={String(pageSize)}
-          options={pageSizeSelectOptions}
-          onValueChange={(value) => {
+          onPageSizeChange={(value) => {
             setPageSize(Number(value));
             setPage(1);
           }}
+          onFilterChange={(value) => setPlaceholderFilter(value)}
         />
 
-        {/*<span className={s.selectLabel}>{t("history.filterLabel")}</span>*/}
-        <SettingsSelect
-          ariaLabel="History filter placeholder"
-          value={placeholderFilter}
-          options={filterSelectOptions}
-          onValueChange={(value) => setPlaceholderFilter(value)}
+        <MatchListPager
+          page={page}
+          canGoPrev={canGoPrev}
+          canGoNext={canGoNext}
+          canRefresh={canRefresh}
+          onPrev={() => setPage((current) => Math.max(1, current - 1))}
+          onNext={() => setPage((current) => current + 1)}
+          onRefresh={() => {
+            void refresh();
+          }}
         />
-
-        <div className={s.pageControls}>
-          <button
-            type="button"
-            className={s.pageButton}
-            aria-label="Previous page"
-            disabled={!canGoPrev}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <div className={s.pageIndicator}>
-            {t("history.pageNumber", {
-              page,
-            })}
-          </div>
-          <button
-            type="button"
-            className={s.pageButton}
-            aria-label="Next page"
-            disabled={!canGoNext}
-            onClick={() => setPage((current) => current + 1)}
-          >
-            <ChevronRight size={14} />
-          </button>
-        </div>
       </div>
 
       {isLoading ? (

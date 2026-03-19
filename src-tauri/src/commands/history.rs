@@ -65,6 +65,28 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
         0.0
     };
     let items = participant_items(participant, stats);
+    let perk_ids = participant_perk_ids(participant, stats);
+    let perk_primary_rune_id = perk_ids.primary_rune_id.unwrap_or(0);
+    let perk_sub_style_id = perk_ids.sub_style_id.unwrap_or(0);
+
+    #[cfg(debug_assertions)]
+    {
+        tracing::debug!(
+            target_puuid,
+            game_id = parse_sgp_game_id(payload, game),
+            perk_primary_rune_id,
+            perk_sub_style_id,
+            raw_perk0 = first_i64(stats, &["perk0"])
+                .or_else(|| first_i64(participant, &["perk0"]))
+                .unwrap_or(0),
+            raw_perk_sub_style = first_i64(stats, &["perkSubStyle"])
+                .or_else(|| first_i64(participant, &["perkSubStyle"]))
+                .unwrap_or(0),
+            participant_styles = ?style_debug_entries(participant),
+            stats_styles = ?style_debug_entries(stats),
+            "parsed perk ids from SGP summary"
+        );
+    }
 
     Ok(MatchSummary {
         game_id: parse_sgp_game_id(payload, game),
@@ -79,8 +101,8 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
         damage_share,
         spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
         spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
-        perk_primary_rune_id: participant_primary_perk_rune_id(participant, stats).unwrap_or(0),
-        perk_sub_style_id: participant_perk_sub_style_id(participant, stats).unwrap_or(0),
+        perk_primary_rune_id,
+        perk_sub_style_id,
         items,
         map_id: first_i64(payload, &["mapId", "map_id"]).unwrap_or(0),
         game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
@@ -99,6 +121,7 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
         participant_stat_i64(participant, stats, &["totalMinionsKilled"]).unwrap_or(0);
     let neutral_minions =
         participant_stat_i64(participant, stats, &["neutralMinionsKilled"]).unwrap_or(0);
+    let perk_ids = participant_perk_ids(participant, stats);
 
     Participant {
         puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
@@ -126,8 +149,8 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
         items,
         spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
         spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
-        perk_primary_style: participant_perk_primary_style_id(participant, stats).unwrap_or(0),
-        perk_sub_style: participant_perk_sub_style_id(participant, stats).unwrap_or(0),
+        perk_primary_style: perk_ids.primary_style_id.unwrap_or(0),
+        perk_sub_style: perk_ids.sub_style_id.unwrap_or(0),
         win: participant_stat_bool(participant, stats, "win").unwrap_or(false),
     }
 }
@@ -173,10 +196,12 @@ fn first_string(value: &Value, keys: &[&str]) -> Option<String> {
 
 fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
     keys.iter().find_map(|key| {
-        value
-            .get(*key)
-            .and_then(Value::as_i64)
-            .or_else(|| value.get(*key).and_then(Value::as_u64).and_then(|v| i64::try_from(v).ok()))
+        value.get(*key).and_then(Value::as_i64).or_else(|| {
+            value
+                .get(*key)
+                .and_then(Value::as_u64)
+                .and_then(|v| i64::try_from(v).ok())
+        })
     })
 }
 
@@ -200,73 +225,164 @@ fn participant_items(participant: &Value, stats: &Value) -> [i64; 7] {
     items
 }
 
-fn participant_perk_primary_style_id(participant: &Value, stats: &Value) -> Option<i64> {
-    first_i64(stats, &["perkPrimaryStyle"])
-        .or_else(|| first_i64(participant, &["perkPrimaryStyle"]))
-        .or_else(|| {
-            participant
-                .get("perks")
-                .and_then(|perks| perks.get("styles"))
-                .and_then(Value::as_array)
-                .and_then(|styles| {
-                    styles
-                        .iter()
-                        .find(|style| {
-                            style
-                                .get("description")
-                                .and_then(Value::as_str)
-                                .is_some_and(|desc| desc.eq_ignore_ascii_case("primaryStyle"))
-                        })
-                        .or_else(|| styles.first())
-                })
-                .and_then(|style| first_i64(style, &["style"]))
-        })
+fn perks_styles(value: &Value) -> Option<&Vec<Value>> {
+    value
+        .get("perks")
+        .and_then(|perks| perks.get("styles"))
+        .and_then(Value::as_array)
 }
 
-fn participant_perk_sub_style_id(participant: &Value, stats: &Value) -> Option<i64> {
-    first_i64(stats, &["perkSubStyle"])
-        .or_else(|| first_i64(participant, &["perkSubStyle"]))
-        .or_else(|| {
-            participant
-                .get("perks")
-                .and_then(|perks| perks.get("styles"))
-                .and_then(Value::as_array)
-                .and_then(|styles| {
-                    styles.iter().find(|style| {
-                        style
-                            .get("description")
-                            .and_then(Value::as_str)
-                            .is_some_and(|desc| desc.eq_ignore_ascii_case("subStyle"))
-                    })
-                })
-                .and_then(|style| first_i64(style, &["style"]))
-        })
+fn style_matches_description(style: &Value, description: &str) -> bool {
+    style
+        .get("description")
+        .and_then(Value::as_str)
+        .is_some_and(|desc| desc.eq_ignore_ascii_case(description))
 }
 
-fn participant_primary_perk_rune_id(participant: &Value, stats: &Value) -> Option<i64> {
-    first_i64(stats, &["perk0"])
-        .or_else(|| first_i64(participant, &["perk0"]))
-        .or_else(|| {
-            participant
-                .get("perks")
-                .and_then(|perks| perks.get("styles"))
-                .and_then(Value::as_array)
-                .and_then(|styles| {
-                    styles
-                        .iter()
-                        .find(|style| {
-                            style
-                                .get("description")
-                                .and_then(Value::as_str)
-                                .is_some_and(|desc| desc.eq_ignore_ascii_case("primaryStyle"))
-                        })
-                        .or_else(|| styles.first())
-                })
-                .and_then(|style| style.get("selections"))
-                .and_then(Value::as_array)
-                .and_then(|selections| selections.first())
-                .and_then(|selection| first_i64(selection, &["perk"]))
+fn style_id(style: &Value) -> Option<i64> {
+    first_i64(style, &["style"])
+}
+
+fn first_style_selection_perk_id(style: &Value) -> Option<i64> {
+    style
+        .get("selections")
+        .and_then(Value::as_array)
+        .and_then(|selections| selections.first())
+        .and_then(|selection| first_i64(selection, &["perk"]))
+}
+
+#[derive(Clone, Copy, Default)]
+struct PerkIdsFromStyles {
+    primary_style_id: Option<i64>,
+    sub_style_id: Option<i64>,
+    primary_rune_id: Option<i64>,
+}
+
+fn pick_primary_style(styles: &[Value]) -> Option<&Value> {
+    styles
+        .iter()
+        .find(|style| style_matches_description(style, "primaryStyle"))
+        .or_else(|| styles.first())
+}
+
+fn pick_sub_style<'a>(styles: &'a [Value], primary_style: Option<&Value>) -> Option<&'a Value> {
+    let described_sub = styles
+        .iter()
+        .find(|style| style_matches_description(style, "subStyle"));
+    if described_sub.is_some() {
+        return described_sub;
+    }
+
+    let primary_id = primary_style.and_then(style_id);
+    if let Some(id) = primary_id {
+        let different_style = styles
+            .iter()
+            .find(|style| style_id(style).is_some_and(|candidate| candidate != id));
+        if different_style.is_some() {
+            return different_style;
+        }
+    }
+
+    styles.get(1)
+}
+
+fn fill_perk_ids_from_styles(styles: &[Value], result: &mut PerkIdsFromStyles) {
+    let primary_style = pick_primary_style(styles);
+    let sub_style = pick_sub_style(styles, primary_style);
+
+    if result.primary_style_id.is_none() {
+        result.primary_style_id = primary_style.and_then(style_id);
+    }
+    if result.sub_style_id.is_none() {
+        result.sub_style_id = sub_style.and_then(style_id);
+    }
+    if result.primary_rune_id.is_none() {
+        result.primary_rune_id = primary_style.and_then(first_style_selection_perk_id);
+    }
+}
+
+fn normalize_sub_style(participant: &Value, stats: &Value, result: &mut PerkIdsFromStyles) {
+    if result.sub_style_id != result.primary_style_id {
+        return;
+    }
+
+    let Some(primary_id) = result.primary_style_id else {
+        return;
+    };
+
+    for styles in [perks_styles(participant), perks_styles(stats)] {
+        let Some(styles) = styles else {
+            continue;
+        };
+
+        if let Some(id) = styles
+            .iter()
+            .filter_map(style_id)
+            .find(|candidate| *candidate != primary_id)
+        {
+            result.sub_style_id = Some(id);
+            break;
+        }
+    }
+}
+
+fn perk_ids_from_styles(participant: &Value, stats: &Value) -> PerkIdsFromStyles {
+    let mut result = PerkIdsFromStyles::default();
+
+    for styles in [perks_styles(participant), perks_styles(stats)] {
+        let Some(styles) = styles else {
+            continue;
+        };
+
+        fill_perk_ids_from_styles(styles, &mut result);
+
+        if result.primary_style_id.is_some()
+            && result.sub_style_id.is_some()
+            && result.primary_rune_id.is_some()
+        {
+            break;
+        }
+    }
+
+    normalize_sub_style(participant, stats, &mut result);
+    result
+}
+
+fn participant_perk_ids(participant: &Value, stats: &Value) -> PerkIdsFromStyles {
+    let from_styles = perk_ids_from_styles(participant, stats);
+    PerkIdsFromStyles {
+        primary_style_id: from_styles
+            .primary_style_id
+            .or_else(|| first_i64(stats, &["perkPrimaryStyle"]))
+            .or_else(|| first_i64(participant, &["perkPrimaryStyle"])),
+        sub_style_id: from_styles
+            .sub_style_id
+            .or_else(|| first_i64(stats, &["perkSubStyle"]))
+            .or_else(|| first_i64(participant, &["perkSubStyle"])),
+        primary_rune_id: from_styles
+            .primary_rune_id
+            .or_else(|| first_i64(stats, &["perk0"]))
+            .or_else(|| first_i64(participant, &["perk0"])),
+    }
+}
+
+#[cfg(debug_assertions)]
+fn style_debug_entries(value: &Value) -> Vec<String> {
+    let Some(styles) = perks_styles(value) else {
+        return Vec::new();
+    };
+
+    styles
+        .iter()
+        .map(|style| {
+            let description = style
+                .get("description")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            let id = style_id(style).unwrap_or(0);
+            format!("{description}:{id}")
         })
+        .collect()
 }
 
 fn queue_type_matches(entry: &Value, queue_type: &str) -> bool {
@@ -300,13 +416,11 @@ fn find_ranked_queue<'a>(value: &'a Value, queue_type: &str) -> Option<&'a Value
         }
     }
 
-    value
-        .as_array()
-        .and_then(|queues| {
-            queues
-                .iter()
-                .find(|entry| queue_type_matches(entry, queue_type))
-        })
+    value.as_array().and_then(|queues| {
+        queues
+            .iter()
+            .find(|entry| queue_type_matches(entry, queue_type))
+    })
 }
 
 fn parse_ranked_queue(entry: &Value, queue_type: &str) -> Option<RankedQueueStats> {
@@ -481,7 +595,8 @@ pub async fn get_match_detail(
         .cloned()
         .unwrap_or_default();
 
-    let participants: Vec<Participant> = participants_raw.iter().map(parse_sgp_participant).collect();
+    let participants: Vec<Participant> =
+        participants_raw.iter().map(parse_sgp_participant).collect();
 
     Ok(MatchDetail {
         game_id: {

@@ -4,16 +4,17 @@ import type { MatchSummary } from "@/bindings/matches.ts";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useMatchDetail } from "../hooks/use-match-detail";
 import * as s from "./MatchCard.css";
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const sec = seconds % 60;
-  return `${m}:${sec.toString().padStart(2, "0")}`;
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString();
-}
+import { MatchCardItems } from "./MatchCardItems";
+import { MatchCardRunes } from "./MatchCardRunes";
+import { MatchCardSpells } from "./MatchCardSpells";
+import {
+  formatDamage,
+  formatDamageShare,
+  formatDuration,
+  formatStartTime,
+  resolveMapLabel,
+  resolveModeLabel,
+} from "./match-card-display";
 
 function ChampionIcon({
   championId,
@@ -27,7 +28,7 @@ function ChampionIcon({
   const iconUrl = useChampionIcon(championId);
 
   if (!iconUrl) {
-    return <div className={fallbackClassName} />;
+    return <span className={fallbackClassName} aria-hidden="true" />;
   }
 
   return <img src={iconUrl} alt="" className={className} />;
@@ -38,37 +39,85 @@ export function MatchCard({ match }: { match: MatchSummary }) {
   const [expanded, setExpanded] = useState(false);
   const { data: detail } = useMatchDetail(expanded ? match.gameId : null);
 
+  const modeLabel = resolveModeLabel(t, match.queueId, match.gameMode);
+  const mapLabel = resolveMapLabel(t, match.mapId);
+  const startedAt = formatStartTime(match.gameCreation);
+  const csShort = t("history.match.csShort", { defaultValue: "CS" });
+
   return (
-    <div>
+    <div className={s.wrapper}>
       <button
         type="button"
         className={s.card({ win: match.win })}
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setExpanded((value) => !value)}
       >
         <ChampionIcon
           championId={match.championId}
           className={s.championIcon}
           fallbackClassName={s.championIconFallback}
         />
+
         <div className={s.info}>
-          <span className={s.kda}>
-            {match.kills}/{match.deaths}/{match.assists}
-          </span>
-          <span className={s.meta}>
-            CS {match.cs} · {formatDuration(match.gameDuration)} ·{" "}
-            {match.win ? t("history.victory") : t("history.defeat")}
-          </span>
+          <div className={s.headerRow}>
+            <span className={s.resultPill({ win: match.win })}>
+              {match.win ? t("history.victory") : t("history.defeat")}
+            </span>
+            <span className={s.metaPill}>{modeLabel}</span>
+            <span className={s.metaPill}>{mapLabel}</span>
+            <span className={s.metaPill}>
+              {t("history.match.duration", { defaultValue: "Duration" })}{" "}
+              {formatDuration(match.gameDuration)}
+            </span>
+            <span className={s.metaPill}>
+              {t("history.match.startedAt", { defaultValue: "Start" })}{" "}
+              {startedAt}
+            </span>
+          </div>
+
+          <div className={s.metricRow}>
+            <span className={s.kda}>
+              {match.kills}/{match.deaths}/{match.assists}
+            </span>
+            <span className={s.meta}>
+              {csShort} {new Intl.NumberFormat().format(match.cs)}
+            </span>
+            <span className={s.meta}>
+              {t("history.match.damage", { defaultValue: "Damage" })}{" "}
+              {formatDamage(match.totalDamageDealtToChampions)}
+            </span>
+            <span className={s.meta}>
+              {t("history.match.damageShare", { defaultValue: "Damage Share" })}{" "}
+              {formatDamageShare(match.damageShare)}
+            </span>
+          </div>
+
+          <div className={s.loadoutRow}>
+            <MatchCardSpells
+              spell1Id={match.spell1Id}
+              spell2Id={match.spell2Id}
+            />
+            <MatchCardRunes
+              perkPrimaryRuneId={match.perkPrimaryRuneId}
+              perkSubStyleId={match.perkSubStyleId}
+            />
+            <MatchCardItems gameId={match.gameId} items={match.items} />
+          </div>
         </div>
-        <span className={s.meta}>{formatDate(match.gameCreation)}</span>
       </button>
 
       {expanded && detail && (
         <div className={s.detail}>
           {[100, 200].map((teamId) => {
-            const team = detail.participants.filter((p) => p.teamId === teamId);
+            const team = detail.participants.filter((participant) => {
+              return participant.teamId === teamId;
+            });
             const maxDamage = Math.max(
-              ...detail.participants.map((p) => p.totalDamageDealtToChampions),
+              1,
+              ...detail.participants.map(
+                (participant) => participant.totalDamageDealtToChampions,
+              ),
             );
+
             return (
               <div key={teamId}>
                 <div className={s.teamHeader}>
@@ -76,23 +125,26 @@ export function MatchCard({ match }: { match: MatchSummary }) {
                     ? t("history.blueTeam")
                     : t("history.redTeam")}
                 </div>
-                {team.map((p) => (
-                  <div key={p.puuid} className={s.participantRow}>
+                {team.map((participant) => (
+                  <div key={participant.puuid} className={s.participantRow}>
                     <ChampionIcon
-                      championId={p.championId}
+                      championId={participant.championId}
                       className={s.participantIcon}
                       fallbackClassName={s.participantIconFallback}
                     />
-                    <span>{p.summonerName}</span>
+                    <span>{participant.summonerName}</span>
                     <span>
-                      {p.kills}/{p.deaths}/{p.assists}
+                      {participant.kills}/{participant.deaths}/
+                      {participant.assists}
                     </span>
-                    <span>{p.cs} CS</span>
+                    <span>
+                      {participant.cs} {csShort}
+                    </span>
                     <div>
                       <div
                         className={s.damageBar}
                         style={{
-                          width: `${(p.totalDamageDealtToChampions / maxDamage) * 100}%`,
+                          width: `${(participant.totalDamageDealtToChampions / maxDamage) * 100}%`,
                         }}
                       />
                     </div>
