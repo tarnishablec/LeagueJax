@@ -5,6 +5,7 @@ import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useMatchDetail } from "../hooks/use-match-detail";
 import * as s from "./MatchCard.css";
 import { MatchCardItems } from "./MatchCardItems";
+import { MatchCardPlayers } from "./MatchCardPlayers";
 import { MatchCardRunes } from "./MatchCardRunes";
 import { MatchCardSpells } from "./MatchCardSpells";
 import {
@@ -12,8 +13,10 @@ import {
   formatDamageShare,
   formatDuration,
   formatStartTime,
+  normalizeMatchOutcome,
   resolveMapLabel,
   resolveModeLabel,
+  resolveOutcomeLabel,
 } from "./match-card-display";
 
 function ChampionIcon({
@@ -43,67 +46,74 @@ export function MatchCard({ match }: { match: MatchSummary }) {
   const mapLabel = resolveMapLabel(t, match.mapId);
   const startedAt = formatStartTime(match.gameCreation);
   const csShort = t("history.match.csShort", { defaultValue: "CS" });
+  const outcome = normalizeMatchOutcome(match.outcome, match.win);
+  const outcomeLabel = resolveOutcomeLabel(t, match.outcome, match.win);
 
   return (
     <div className={s.wrapper}>
-      <button
-        type="button"
-        className={s.card({ win: match.win })}
-        onClick={() => setExpanded((value) => !value)}
-      >
-        <ChampionIcon
-          championId={match.championId}
-          className={s.championIcon}
-          fallbackClassName={s.championIconFallback}
-        />
+      <div className={s.card({ outcome })}>
+        <button
+          type="button"
+          className={s.cardMainButton}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <ChampionIcon
+            championId={match.championId}
+            className={s.championIcon}
+            fallbackClassName={s.championIconFallback}
+          />
 
-        <div className={s.info}>
-          <div className={s.headerRow}>
-            <span className={s.resultPill({ win: match.win })}>
-              {match.win ? t("history.victory") : t("history.defeat")}
-            </span>
-            <span className={s.metaPill}>{modeLabel}</span>
-            <span className={s.metaPill}>{mapLabel}</span>
-            <span className={s.metaPill}>
-              {t("history.match.duration", { defaultValue: "Duration" })}{" "}
-              {formatDuration(match.gameDuration)}
-            </span>
-            <span className={s.metaPill}>
-              {t("history.match.startedAt", { defaultValue: "Start" })}{" "}
-              {startedAt}
-            </span>
-          </div>
+          <div className={s.info}>
+            <div className={s.headerRow}>
+              <span className={s.resultPill({ outcome })}>{outcomeLabel}</span>
+              <span className={s.metaPill}>{modeLabel}</span>
+              <span className={s.metaPill}>{mapLabel}</span>
+              <span className={s.metaPill}>
+                {t("history.match.duration", { defaultValue: "Duration" })}{" "}
+                {formatDuration(match.gameDuration)}
+              </span>
+              <span className={s.metaPill}>
+                {t("history.match.startedAt", { defaultValue: "Start" })}{" "}
+                {startedAt}
+              </span>
+            </div>
 
-          <div className={s.metricRow}>
-            <span className={s.kda}>
-              {match.kills}/{match.deaths}/{match.assists}
-            </span>
-            <span className={s.meta}>
-              {csShort} {new Intl.NumberFormat().format(match.cs)}
-            </span>
-            <span className={s.meta}>
-              {t("history.match.damage", { defaultValue: "Damage" })}{" "}
-              {formatDamage(match.totalDamageDealtToChampions)}
-            </span>
-            <span className={s.meta}>
-              {t("history.match.damageShare", { defaultValue: "Damage Share" })}{" "}
-              {formatDamageShare(match.damageShare)}
-            </span>
-          </div>
+            <div className={s.metricRow}>
+              <span className={s.kda}>
+                {match.kills}/{match.deaths}/{match.assists}
+              </span>
+              <span className={s.meta}>
+                {csShort} {new Intl.NumberFormat().format(match.cs)}
+              </span>
+              <span className={s.meta}>
+                {t("history.match.damage", { defaultValue: "Damage" })}{" "}
+                {formatDamage(match.totalDamageDealtToChampions)}
+              </span>
+              <span className={s.meta}>
+                {t("history.match.damageShare", {
+                  defaultValue: "Damage Share",
+                })}{" "}
+                {formatDamageShare(match.damageShare)}
+              </span>
+            </div>
 
-          <div className={s.loadoutRow}>
-            <MatchCardSpells
-              spell1Id={match.spell1Id}
-              spell2Id={match.spell2Id}
-            />
-            <MatchCardRunes
-              perkPrimaryRuneId={match.perkPrimaryRuneId}
-              perkSubStyleId={match.perkSubStyleId}
-            />
-            <MatchCardItems gameId={match.gameId} items={match.items} />
+            <div className={s.loadoutRow}>
+              <MatchCardSpells
+                spell1Id={match.spell1Id}
+                spell2Id={match.spell2Id}
+              />
+              <MatchCardRunes
+                perkPrimaryRuneId={match.perkPrimaryRuneId}
+                perkSubStyleId={match.perkSubStyleId}
+              />
+              <MatchCardItems gameId={match.gameId} items={match.items} />
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+
+        <MatchCardPlayers participants={match.participants} />
+      </div>
 
       {expanded && detail && (
         <div className={s.detail}>

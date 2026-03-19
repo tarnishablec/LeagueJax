@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import type { MatchOutcome } from "@/bindings/matches.ts";
 
 export const CDRAGON_GAME_DATA_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";
@@ -18,10 +19,25 @@ const QUEUE_MODE_KEY_BY_ID: Record<number, string> = {
 };
 
 const MAP_NAME_KEY_BY_ID: Record<number, string> = {
+  8: "history.map.crystalScar",
+  10: "history.map.twistedTreeline",
   11: "history.map.summonersRift",
   12: "history.map.howlingAbyss",
+  14: "history.map.butchersBridge",
   21: "history.map.nexusBlitz",
   30: "history.map.arena",
+};
+
+const GAME_MODE_KEY_BY_CODE: Record<string, string> = {
+  PRACTICETOOL: "history.mode.practiceTool",
+  CLASSIC: "history.mode.classic",
+  ARAM: "history.mode.aram",
+  URF: "history.mode.urf",
+  ONEFORALL: "history.mode.oneForAll",
+  NEXUSBLITZ: "history.mode.nexusBlitz",
+  ULTBOOK: "history.mode.ultimateSpellbook",
+  CHERRY: "history.mode.arena",
+  TUTORIAL: "history.mode.tutorial",
 };
 
 const RUNE_STYLE_KEY_BY_ID: Record<number, string> = {
@@ -47,6 +63,14 @@ export const DDRAGON_PERK_STYLE_ICON_BY_ID: Record<number, string> = {
   8300: "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Inspiration/Inspiration.png",
   8400: "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Resolve/Resolve.png",
 };
+
+function normalizeGameModeCode(value: string): string {
+  return value
+    .toUpperCase()
+    .split("")
+    .filter((current) => /[A-Z0-9]/.test(current))
+    .join("");
+}
 
 export function formatDuration(seconds: number): string {
   const clamped = Math.max(0, seconds);
@@ -89,8 +113,14 @@ export function resolveModeLabel(
   if (key) {
     return t(key);
   }
+  const normalizedGameMode = normalizeGameModeCode(gameMode.trim());
+  const modeKey = GAME_MODE_KEY_BY_CODE[normalizedGameMode];
+  if (modeKey) {
+    return t(modeKey);
+  }
+
   if (gameMode.trim().length > 0) {
-    return gameMode;
+    return gameMode.trim();
   }
   return t("history.mode.unknown", {
     queueId,
@@ -121,4 +151,37 @@ export function resolveRuneSubStyleLabel(
     styleId,
     defaultValue: `Style ${styleId}`,
   });
+}
+
+export function normalizeMatchOutcome(
+  outcome: MatchOutcome | undefined,
+  win: boolean,
+): MatchOutcome {
+  if (outcome === "victory" || outcome === "defeat") {
+    return outcome;
+  }
+  if (outcome === "remake" || outcome === "terminated") {
+    return outcome;
+  }
+  return win ? "victory" : "defeat";
+}
+
+export function resolveOutcomeLabel(
+  t: TFunction,
+  outcome: MatchOutcome | undefined,
+  win: boolean,
+): string {
+  const normalized = normalizeMatchOutcome(outcome, win);
+  switch (normalized) {
+    case "victory":
+      return t("history.victory");
+    case "defeat":
+      return t("history.defeat");
+    case "remake":
+      return t("history.match.outcome.remake", { defaultValue: "Remake" });
+    case "terminated":
+      return t("history.match.outcome.terminated", {
+        defaultValue: "Terminated",
+      });
+  }
 }

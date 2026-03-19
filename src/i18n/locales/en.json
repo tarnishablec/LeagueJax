@@ -28,6 +28,45 @@
     "search": "Search",
     "victory": "Victory",
     "defeat": "Defeat",
+    "mode": {
+      "all": "All",
+      "q420": "Ranked Solo/Duo",
+      "q430": "Normal Blind",
+      "q440": "Ranked Flex",
+      "q450": "ARAM",
+      "q480": "Swiftplay",
+      "q1700": "Arena",
+      "q490": "Normal Quickplay",
+      "q1900": "URF",
+      "q900": "ARURF",
+      "q2300": "Brawl",
+      "practiceTool": "Practice Tool",
+      "classic": "Classic",
+      "aram": "ARAM",
+      "urf": "URF",
+      "oneForAll": "One for All",
+      "nexusBlitz": "Nexus Blitz",
+      "ultimateSpellbook": "Ultimate Spellbook",
+      "arena": "Arena",
+      "tutorial": "Tutorial",
+      "unknown": "Queue {{queueId}}"
+    },
+    "map": {
+      "summonersRift": "Summoner's Rift",
+      "howlingAbyss": "Howling Abyss",
+      "butchersBridge": "Butcher's Bridge",
+      "nexusBlitz": "Nexus Blitz",
+      "arena": "Arena",
+      "twistedTreeline": "Twisted Treeline",
+      "crystalScar": "Crystal Scar",
+      "unknown": "Map {{mapId}}"
+    },
+    "match": {
+      "outcome": {
+        "remake": "Remake",
+        "terminated": "Terminated"
+      }
+    },
     "blueTeam": "Blue Team",
     "redTeam": "Red Team",
     "noMatches": "No matches found",

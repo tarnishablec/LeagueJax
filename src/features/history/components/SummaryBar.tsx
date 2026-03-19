@@ -42,6 +42,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
   const avatarUrl = useProfileIcon(summoner.profileIconId);
   const { data: rankedSummary } = useRankedSummary(summoner.puuid);
   const [copied, setCopied] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
 
   useEffect(() => {
@@ -52,6 +53,10 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
     const timer = window.setTimeout(() => setCopied(false), 1200);
     return () => window.clearTimeout(timer);
   }, [copied]);
+
+  useEffect(() => {
+    setAvatarLoading(Boolean(avatarUrl));
+  }, [avatarUrl]);
 
   const copyId = async () => {
     try {
@@ -82,7 +87,14 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
       <div className={s.avatarSlot}>
         <div className={s.iconFallback}>
           {avatarUrl ? (
-            <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
+            <img
+              key={avatarUrl}
+              src={avatarUrl}
+              alt="Profile icon"
+              className={`${s.profileIcon} ${avatarLoading ? s.profileIconLoading : s.profileIconReady}`}
+              onLoad={() => setAvatarLoading(false)}
+              onError={() => setAvatarLoading(false)}
+            />
           ) : null}
         </div>
         <span className={s.levelBadge}>{summoner.summonerLevel}</span>

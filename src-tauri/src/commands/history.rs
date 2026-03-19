@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use crate::concepts::matches::{MatchDetail, MatchSummary, Participant};
+use crate::concepts::matches::{
+    MatchDetail, MatchOutcome, MatchSummary, MatchSummaryParticipant, Participant,
+};
 use crate::concepts::summoner::{RankedQueueStats, RankedSummary, SummonerInfo};
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
@@ -68,6 +70,8 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
     let perk_ids = participant_perk_ids(participant, stats);
     let perk_primary_rune_id = perk_ids.primary_rune_id.unwrap_or(0);
     let perk_sub_style_id = perk_ids.sub_style_id.unwrap_or(0);
+    let win = participant_stat_bool(participant, stats, "win").unwrap_or(false);
+    let outcome = participant_match_outcome(participant, stats, payload, win);
 
     #[cfg(debug_assertions)]
     {
@@ -91,7 +95,8 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
     Ok(MatchSummary {
         game_id: parse_sgp_game_id(payload, game),
         champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
-        win: participant_stat_bool(participant, stats, "win").unwrap_or(false),
+        win,
+        outcome,
         team_id,
         kills: participant_stat_i64(participant, stats, &["kills"]).unwrap_or(0),
         deaths: participant_stat_i64(participant, stats, &["deaths"]).unwrap_or(0),
@@ -109,7 +114,32 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
         game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
         game_creation: first_i64(payload, &["gameCreation", "game_datetime"]).unwrap_or(0),
         queue_id: first_i64(payload, &["queueId", "queue_id"]).unwrap_or(0),
+        participants: participants
+            .iter()
+            .map(parse_sgp_summary_participant)
+            .collect(),
     })
+}
+
+fn parse_sgp_summary_participant(participant: &Value) -> MatchSummaryParticipant {
+    let summoner_name = first_string(
+        participant,
+        &["summonerName", "riotIdGameName", "gameName", "name"],
+    )
+    .unwrap_or_default();
+    let (fallback_game_name, fallback_tag_line) = split_riot_id(&summoner_name);
+    let game_name = first_string(participant, &["riotIdGameName", "gameName"])
+        .unwrap_or(fallback_game_name);
+    let tag_line = first_string(participant, &["riotIdTagline", "riotIdTagLine", "tagLine"])
+        .unwrap_or(fallback_tag_line);
+
+    MatchSummaryParticipant {
+        puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
+        champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
+        game_name,
+        tag_line,
+        team_id: first_i64(participant, &["teamId"]).unwrap_or(0),
+    }
 }
 
 fn parse_sgp_participant(participant: &Value) -> Participant {
@@ -122,15 +152,23 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
     let neutral_minions =
         participant_stat_i64(participant, stats, &["neutralMinionsKilled"]).unwrap_or(0);
     let perk_ids = participant_perk_ids(participant, stats);
+    let summoner_name = first_string(
+        participant,
+        &["summonerName", "riotIdGameName", "gameName", "name"],
+    )
+    .unwrap_or_default();
+    let (fallback_game_name, fallback_tag_line) = split_riot_id(&summoner_name);
+    let game_name = first_string(participant, &["riotIdGameName", "gameName"])
+        .unwrap_or(fallback_game_name);
+    let tag_line = first_string(participant, &["riotIdTagline", "riotIdTagLine", "tagLine"])
+        .unwrap_or(fallback_tag_line);
 
     Participant {
         puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
         champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
-        summoner_name: first_string(
-            participant,
-            &["summonerName", "riotIdGameName", "gameName", "name"],
-        )
-        .unwrap_or_default(),
+        summoner_name,
+        game_name,
+        tag_line,
         team_id: first_i64(participant, &["teamId"]).unwrap_or(0),
         kills: participant_stat_i64(participant, stats, &["kills"]).unwrap_or(0),
         deaths: participant_stat_i64(participant, stats, &["deaths"]).unwrap_or(0),
@@ -194,6 +232,28 @@ fn first_string(value: &Value, keys: &[&str]) -> Option<String> {
         .map(ToString::to_string)
 }
 
+fn bool_from_value(value: &Value) -> Option<bool> {
+    value
+        .as_bool()
+        .or_else(|| value.as_i64().map(|current| current != 0))
+        .or_else(|| value.as_u64().map(|current| current != 0))
+        .or_else(|| {
+            value.as_str().and_then(|raw| {
+                let normalized = raw.trim().to_ascii_lowercase();
+                match normalized.as_str() {
+                    "true" | "1" => Some(true),
+                    "false" | "0" => Some(false),
+                    _ => None,
+                }
+            })
+        })
+}
+
+fn first_bool(value: &Value, keys: &[&str]) -> Option<bool> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(bool_from_value))
+}
+
 fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
     keys.iter().find_map(|key| {
         value.get(*key).and_then(Value::as_i64).or_else(|| {
@@ -205,15 +265,112 @@ fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
     })
 }
 
+fn split_riot_id(value: &str) -> (String, String) {
+    if let Some((game_name, tag_line)) = value.split_once('#') {
+        return (game_name.to_string(), tag_line.to_string());
+    }
+
+    (value.to_string(), String::new())
+}
+
 fn participant_stat_i64(participant: &Value, stats: &Value, keys: &[&str]) -> Option<i64> {
     first_i64(stats, keys).or_else(|| first_i64(participant, keys))
 }
 
 fn participant_stat_bool(participant: &Value, stats: &Value, key: &str) -> Option<bool> {
-    stats
-        .get(key)
-        .and_then(Value::as_bool)
-        .or_else(|| participant.get(key).and_then(Value::as_bool))
+    first_bool(stats, &[key]).or_else(|| first_bool(participant, &[key]))
+}
+
+fn participant_stat_string(participant: &Value, stats: &Value, keys: &[&str]) -> Option<String> {
+    first_string(stats, keys).or_else(|| first_string(participant, keys))
+}
+
+fn normalize_status_text(value: &str) -> String {
+    value
+        .chars()
+        .filter(|current| current.is_ascii_alphanumeric())
+        .map(|current| current.to_ascii_lowercase())
+        .collect()
+}
+
+fn is_terminated_result(value: &str) -> bool {
+    let normalized = normalize_status_text(value);
+    normalized.contains("abort")
+        || normalized.contains("terminated")
+        || normalized.contains("cancel")
+        || normalized.contains("invalid")
+}
+
+fn is_remake_result(value: &str) -> bool {
+    let normalized = normalize_status_text(value);
+    normalized.contains("remake")
+        || normalized.contains("earlysurrender")
+        || normalized.contains("surrenderedearly")
+}
+
+fn participant_match_outcome(
+    participant: &Value,
+    stats: &Value,
+    payload: &Value,
+    win: bool,
+) -> MatchOutcome {
+    let ended_in_early_surrender = participant_stat_bool(participant, stats, "gameEndedInEarlySurrender")
+        .or_else(|| first_bool(payload, &["gameEndedInEarlySurrender"]))
+        .unwrap_or(false);
+
+    let terminated_flag = participant_stat_bool(participant, stats, "aborted")
+        .or_else(|| participant_stat_bool(participant, stats, "gameTerminated"))
+        .or_else(|| participant_stat_bool(participant, stats, "gameEndedInAbort"))
+        .or_else(|| first_bool(payload, &["aborted", "gameTerminated", "gameEndedInAbort"]))
+        .unwrap_or(false);
+
+    let end_of_game_result = participant_stat_string(
+        participant,
+        stats,
+        &[
+            "endOfGameResult",
+            "end_of_game_result",
+            "gameEndResult",
+            "game_end_result",
+        ],
+    )
+    .or_else(|| {
+        first_string(
+            payload,
+            &[
+                "endOfGameResult",
+                "end_of_game_result",
+                "gameEndResult",
+                "game_end_result",
+            ],
+        )
+    });
+
+    if terminated_flag {
+        return MatchOutcome::Terminated;
+    }
+
+    if let Some(raw) = end_of_game_result.as_deref() {
+        if is_terminated_result(raw) {
+            return MatchOutcome::Terminated;
+        }
+    }
+
+    if ended_in_early_surrender {
+        return MatchOutcome::Remake;
+    }
+
+    if let Some(raw) = end_of_game_result.as_deref() {
+        if is_remake_result(raw) {
+            return MatchOutcome::Remake;
+        }
+    }
+
+    if win {
+        MatchOutcome::Victory
+    } else {
+        MatchOutcome::Defeat
+    }
 }
 
 fn participant_items(participant: &Value, stats: &Value) -> [i64; 7] {
@@ -501,6 +658,27 @@ pub async fn search_summoner(
     };
 
     parse_summoner(&summoner_val)
+}
+
+#[tauri::command]
+pub async fn get_summoner_by_puuid(
+    puuid: String,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<SummonerInfo, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager
+        .focused_client()
+        .await
+        .ok_or(AppError::LcuNotConnected)?;
+
+    let encoded_puuid = urlencoding::encode(&puuid);
+    let path = format!("/lol-summoner/v2/summoners/puuid/{encoded_puuid}");
+    let resp = lcu.get(&path).await?;
+
+    parse_summoner(&resp)
 }
 
 #[tauri::command]

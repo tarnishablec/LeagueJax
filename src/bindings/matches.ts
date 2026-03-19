@@ -9,10 +9,13 @@ export type MatchDetail = {
   participants: Array<Participant>;
 };
 
+export type MatchOutcome = "victory" | "defeat" | "remake" | "terminated";
+
 export type MatchSummary = {
   gameId: number;
   championId: number;
   win: boolean;
+  outcome: MatchOutcome;
   teamId: number;
   kills: number;
   deaths: number;
@@ -30,12 +33,23 @@ export type MatchSummary = {
   gameMode: string;
   gameCreation: number;
   queueId: number;
+  participants: Array<MatchSummaryParticipant>;
+};
+
+export type MatchSummaryParticipant = {
+  puuid: string;
+  championId: number;
+  gameName: string;
+  tagLine: string;
+  teamId: number;
 };
 
 export type Participant = {
   puuid: string;
   championId: number;
   summonerName: string;
+  gameName: string;
+  tagLine: string;
   teamId: number;
   kills: number;
   deaths: number;

@@ -63,6 +63,7 @@ export function RootLayout() {
       })}
     >
       <button
+        data-tauri-drag-region
         type="button"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         className={s.logoButton}

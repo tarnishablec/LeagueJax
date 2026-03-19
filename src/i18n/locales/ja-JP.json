@@ -28,6 +28,45 @@
     "search": "\u691c\u7d22",
     "victory": "\u52dd\u5229",
     "defeat": "\u6557\u5317",
+    "mode": {
+      "all": "すべて",
+      "q420": "ランク ソロ/デュオ",
+      "q430": "ノーマル ブラインド",
+      "q440": "ランク フレックス",
+      "q450": "ARAM",
+      "q480": "スイフトプレイ",
+      "q1700": "アリーナ",
+      "q490": "ノーマル クイックプレイ",
+      "q1900": "URF",
+      "q900": "ARURF",
+      "q2300": "ブロウル",
+      "practiceTool": "プラクティスツール",
+      "classic": "クラシック",
+      "aram": "ARAM",
+      "urf": "URF",
+      "oneForAll": "ワン・フォー・オール",
+      "nexusBlitz": "ネクサスブリッツ",
+      "ultimateSpellbook": "アルティメットスペルブック",
+      "arena": "アリーナ",
+      "tutorial": "チュートリアル",
+      "unknown": "キュー {{queueId}}"
+    },
+    "map": {
+      "summonersRift": "サモナーズリフト",
+      "howlingAbyss": "ハウリングアビス",
+      "butchersBridge": "ブッチャーズブリッジ",
+      "nexusBlitz": "ネクサスブリッツ",
+      "arena": "アリーナ",
+      "twistedTreeline": "ツイステッドツリーライン",
+      "crystalScar": "クリスタルスカー",
+      "unknown": "マップ {{mapId}}"
+    },
+    "match": {
+      "outcome": {
+        "remake": "リメイク",
+        "terminated": "中断"
+      }
+    },
     "blueTeam": "\u9752\u30c1\u30fc\u30e0",
     "redTeam": "\u8d64\u30c1\u30fc\u30e0",
     "noMatches": "\u5bfe\u6226\u5c65\u6b74\u304c\u3042\u308a\u307e\u305b\u3093",

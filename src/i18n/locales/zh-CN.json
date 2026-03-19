@@ -28,6 +28,45 @@
     "search": "搜索",
     "victory": "胜利",
     "defeat": "失败",
+    "mode": {
+      "all": "全部",
+      "q420": "单双排位",
+      "q430": "匹配盲选",
+      "q440": "灵活排位",
+      "q450": "极地大乱斗",
+      "q480": "迅捷模式",
+      "q1700": "斗魂竞技场",
+      "q490": "匹配快选",
+      "q1900": "无限火力",
+      "q900": "随机无限火力",
+      "q2300": "乱斗",
+      "practiceTool": "训练模式",
+      "classic": "经典模式",
+      "aram": "极地大乱斗",
+      "urf": "无限火力",
+      "oneForAll": "克隆大作战",
+      "nexusBlitz": "极限闪击",
+      "ultimateSpellbook": "终极魔典",
+      "arena": "斗魂竞技场",
+      "tutorial": "教学模式",
+      "unknown": "队列 {{queueId}}"
+    },
+    "map": {
+      "summonersRift": "召唤师峡谷",
+      "howlingAbyss": "嚎哭深渊",
+      "butchersBridge": "屠夫之桥",
+      "nexusBlitz": "极限闪击",
+      "arena": "斗魂竞技场",
+      "twistedTreeline": "扭曲丛林",
+      "crystalScar": "水晶之痕",
+      "unknown": "地图 {{mapId}}"
+    },
+    "match": {
+      "outcome": {
+        "remake": "重开",
+        "terminated": "已终止"
+      }
+    },
     "blueTeam": "蓝色方",
     "redTeam": "红色方",
     "noMatches": "暂无对局记录",

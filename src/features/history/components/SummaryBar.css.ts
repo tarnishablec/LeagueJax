@@ -38,6 +38,15 @@ export const profileIcon = style({
   objectFit: "cover",
 });
 
+export const profileIconLoading = style({
+  opacity: 0,
+});
+
+export const profileIconReady = style({
+  opacity: 1,
+  transition: "opacity 120ms ease-out",
+});
+
 export const levelBadge = style({
   position: "absolute",
   right: -1,
