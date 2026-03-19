@@ -1,15 +1,15 @@
+import type { Resource } from "i18next";
 import type React from "react";
 import { entries, mergeDeep, sortBy } from "remeda";
+import { AppError } from "@/infra/errors";
+import { createLogger } from "@/infra/logger";
+import { Jax } from "@/jax";
 import type {
-  I18nLocaleBundle,
   NavItem,
   RouteContribution,
   SidebarSlotContext,
   WebShard,
-} from "@/features/runtime/web-contract";
-import { AppError } from "@/infra/errors";
-import { createLogger } from "@/infra/logger";
-import { Jax, type JaxShardClass } from "@/jax";
+} from "@/runtime/web-contract";
 import { AutomationShard } from "./automation/manifest";
 import { HistoryShard } from "./history/manifest";
 import { OngoingGameShard } from "./ongoing-game/manifest";
@@ -22,15 +22,6 @@ export interface RenderedSlot {
   node: React.ReactElement;
   order: number;
 }
-
-export const SHARD_CLASSES: readonly JaxShardClass<WebShard>[] = [
-  SettingsShard,
-  ShellShard,
-  HistoryShard,
-  OngoingGameShard,
-  AutomationShard,
-  ToolsShard,
-];
 
 let jaxRuntime: Jax | null = null;
 let jaxInitialization: Promise<void> | null = null;
@@ -92,11 +83,15 @@ export const initializeWebShards = async (): Promise<void> => {
   }
 
   jaxInitialization = (async () => {
-    logger.info(
-      { shardCount: SHARD_CLASSES.length },
-      "Initializing web shards",
-    );
-    const runtime = new Jax().registerMany(SHARD_CLASSES).build();
+    logger.info("Initializing web shards");
+    const runtime = new Jax()
+      .register(new SettingsShard())
+      .register(new ShellShard())
+      .register(new HistoryShard())
+      .register(new OngoingGameShard())
+      .register(new AutomationShard())
+      .register(new ToolsShard())
+      .build();
     const report = await runtime.start();
     if (report.failed.length > 0) {
       const failedIds = report.failed.map((item) => String(item.id)).join(", ");
@@ -192,8 +187,8 @@ export const getSidebarSlots = (
   }));
 };
 
-export const getMergedI18nResources = (): I18nLocaleBundle => {
-  const merged: I18nLocaleBundle = {};
+export const getMergedI18nResources = (): Resource => {
+  const merged: Resource = {};
 
   for (const shard of listWebShards()) {
     const resources = shard.i18nResources?.();

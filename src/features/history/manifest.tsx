@@ -1,7 +1,7 @@
 import { BarChart3 } from "lucide-react";
 import { TabBar } from "@/components/TabBar";
-import type { WebShard } from "@/features/runtime/web-contract";
 import type { Jax } from "@/jax";
+import type { WebShard } from "@/runtime/web-contract";
 import { useLcuStore } from "@/stores/lcu";
 import { useTabStore } from "@/stores/tabs";
 import { SHARD_IDS } from "../shard-ids";
@@ -9,8 +9,13 @@ import { HistoryToolbar } from "./components/HistoryToolbar";
 import { HistoryRoute } from "./routes/HistoryRoute";
 
 export class HistoryShard implements WebShard {
-  public static readonly id = SHARD_IDS.HISTORY;
-  public static readonly dependsOn = [SHARD_IDS.SETTINGS];
+  public id() {
+    return SHARD_IDS.HISTORY;
+  }
+
+  public dependsOn() {
+    return [SHARD_IDS.SETTINGS];
+  }
 
   public setup(_jax: Jax): void {
     void useTabStore.getState();

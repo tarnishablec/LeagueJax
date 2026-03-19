@@ -1,10 +1,12 @@
 import { Bot } from "lucide-react";
-import type { WebShard } from "@/features/runtime/web-contract";
+import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { AutomationRoute } from "./routes/AutomationRoute";
 
 export class AutomationShard implements WebShard {
-  public static readonly id = SHARD_IDS.AUTOMATION;
+  public id() {
+    return SHARD_IDS.AUTOMATION;
+  }
 
   public routes() {
     return [

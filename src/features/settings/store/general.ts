@@ -9,14 +9,6 @@ export type Theme = "system" | "light" | "dark";
 export const GENERAL_LANGUAGE_SETTING_ID = "general.preferences.language";
 export const GENERAL_THEME_SETTING_ID = "general.preferences.theme";
 
-const applyLanguage = (next: unknown): void => {
-  if (typeof next === "string") {
-    void i18n.changeLanguage(next);
-  }
-};
-
-const noopOnSet = (_next: unknown, _prev: unknown): void => {};
-
 @settings
 export class GeneralSettings {
   @setting({
@@ -31,7 +23,9 @@ export class GeneralSettings {
     ],
     order: 10,
     onSet: (next) => {
-      applyLanguage(next);
+      if (typeof next === "string") {
+        void i18n.changeLanguage(next);
+      }
     },
   })
   public language: Language = "zh-CN";
@@ -50,6 +44,6 @@ export function registerGeneralSettings(api: SettingsShardApi): void {
       { value: "dark", labelKey: "settings.theme.dark" },
     ],
     order: 20,
-    onSet: noopOnSet,
+    onSet: () => {},
   });
 }
