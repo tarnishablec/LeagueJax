@@ -10,14 +10,14 @@ export const shardId = (uuid: string): ShardId => {
   return uuid as ShardId;
 };
 
-type ShardLifecycleResult = void | Promise<void>;
+type LifecycleResult = void | Promise<void>;
 
-export interface JaxShard {
-  setup?(jax: Jax): ShardLifecycleResult;
-  teardown?(jax: Jax): ShardLifecycleResult;
+export interface Shard {
+  setup?(jax: Jax): LifecycleResult;
+  teardown?(jax: Jax): LifecycleResult;
 }
 
-export type JaxShardClass<T extends JaxShard = JaxShard> = {
+export type JaxShardClass<T extends Shard = Shard> = {
   new (): T;
   id: ShardId;
   dependsOn?: readonly ShardId[];
@@ -44,8 +44,8 @@ const logger = createLogger("jax");
 export class Jax {
   private readonly pending = new Map<ShardId, JaxShardClass>();
   private registry: ShardRegistry | null = null;
-  private readonly shardInstancesByClass = new Map<JaxShardClass, JaxShard>();
-  private readonly shardInstancesById = new Map<ShardId, JaxShard>();
+  private readonly shardInstancesByClass = new Map<JaxShardClass, Shard>();
+  private readonly shardInstancesById = new Map<ShardId, Shard>();
   private started = false;
 
   public constructor(shardClasses: readonly JaxShardClass[] = []) {
@@ -56,7 +56,7 @@ export class Jax {
     );
   }
 
-  public register<T extends JaxShard>(shardClass: JaxShardClass<T>): this {
+  public register<T extends Shard>(shardClass: JaxShardClass<T>): this {
     if (this.started) {
       throw AppError.JaxRegisterAfterStart(String(shardClass.id));
     }
@@ -244,7 +244,7 @@ export class Jax {
     await this.shutdown();
   }
 
-  public getShard<T extends JaxShard>(shardClass: JaxShardClass<T>): T {
+  public getShard<T extends Shard>(shardClass: JaxShardClass<T>): T {
     this.requireRegistry();
 
     const shard = this.shardInstancesByClass.get(shardClass);
@@ -254,7 +254,7 @@ export class Jax {
     return shard as T;
   }
 
-  public getShardById(id: ShardId): JaxShard {
+  public getShardById(id: ShardId): Shard {
     this.requireRegistry();
 
     const shard = this.shardInstancesById.get(id);
@@ -264,7 +264,7 @@ export class Jax {
     return shard;
   }
 
-  public listShards(): JaxShard[] {
+  public listShards(): Shard[] {
     this.requireRegistry();
     return [...this.shardInstancesById.values()];
   }

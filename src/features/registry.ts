@@ -5,7 +5,7 @@ import type {
   NavItem,
   RouteContribution,
   SidebarSlotContext,
-  WebContribution,
+  WebShard,
 } from "@/features/runtime/web-contract";
 import { AppError } from "@/infra/errors";
 import { createLogger } from "@/infra/logger";
@@ -23,7 +23,7 @@ export interface RenderedSlot {
   order: number;
 }
 
-export const SHARD_CLASSES: readonly JaxShardClass<WebContribution>[] = [
+export const SHARD_CLASSES: readonly JaxShardClass<WebShard>[] = [
   SettingsShard,
   ShellShard,
   HistoryShard,
@@ -75,8 +75,8 @@ const getJaxRuntime = (): Jax => {
   return jaxRuntime;
 };
 
-const listWebShards = (): WebContribution[] => {
-  return getJaxRuntime().listShards() as WebContribution[];
+const listWebShards = (): WebShard[] => {
+  return getJaxRuntime().listShards() as WebShard[];
 };
 
 export const initializeWebShards = async (): Promise<void> => {
