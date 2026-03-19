@@ -48,6 +48,7 @@ const settingOptionSchema = z
   .object({
     value: z.string().min(1),
     labelKey: z.string().min(1),
+    displayLabel: z.string().min(1).optional(),
   })
   .strict();
 

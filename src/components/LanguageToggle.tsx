@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from "react";
-import { useTranslation } from "react-i18next";
 import { settingsApi } from "@/features/settings/store";
 import {
   type Language,
@@ -9,21 +8,27 @@ import * as s from "./LanguageToggle.css";
 
 const LANGUAGE_OPTIONS: Array<{
   value: Language;
-  labelKey: string;
+  displayLabel: string;
   short: string;
   ariaLabel: string;
 }> = [
   {
     value: "zh-CN",
-    labelKey: "settings.language.zhCN",
+    displayLabel: "简体中文",
     short: "ZH",
     ariaLabel: "Simplified Chinese",
   },
   {
     value: "en",
-    labelKey: "settings.language.en",
+    displayLabel: "English",
     short: "EN",
     ariaLabel: "English",
+  },
+  {
+    value: "ja-JP",
+    displayLabel: "日本語",
+    short: "JA",
+    ariaLabel: "Japanese",
   },
 ];
 
@@ -39,7 +44,6 @@ function useLanguageValue(): Language {
 }
 
 export function LanguageToggle() {
-  const { t } = useTranslation();
   const language = useLanguageValue();
   const current =
     LANGUAGE_OPTIONS.find((option) => option.value === language) ??
@@ -57,7 +61,7 @@ export function LanguageToggle() {
 
       <div className={s.dropdownOuter}>
         <div className={s.dropdownInner}>
-          {LANGUAGE_OPTIONS.map(({ value, labelKey, ariaLabel }) => (
+          {LANGUAGE_OPTIONS.map(({ value, displayLabel, ariaLabel }) => (
             <button
               key={value}
               type="button"
@@ -68,7 +72,7 @@ export function LanguageToggle() {
                 settingsApi.set(SYSTEM_LANGUAGE_SETTING_ID, value);
               }}
             >
-              <span>{t(labelKey)}</span>
+              <span>{displayLabel}</span>
             </button>
           ))}
         </div>
