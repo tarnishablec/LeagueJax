@@ -72,10 +72,45 @@ export class HistoryShard implements WebShard {
         nav: {
           history: "History",
         },
+        history: {
+          summary: {
+            solo: "Solo/Duo",
+            flex: "Flex",
+            unranked: "Unranked",
+            winsShort: "W",
+            lossesShort: "L",
+            lpShort: "LP",
+          },
+        },
       },
       "zh-CN": {
         nav: {
           history: "\u6218\u7ee9",
+        },
+        history: {
+          summary: {
+            solo: "\u5355/\u53cc\u6392",
+            flex: "\u7075\u6d3b\u6392\u4f4d",
+            unranked: "\u672a\u5b9a\u7ea7",
+            winsShort: "\u80dc",
+            lossesShort: "\u8d1f",
+            lpShort: "\u80dc\u70b9",
+          },
+        },
+      },
+      "ja-JP": {
+        nav: {
+          history: "\u5c65\u6b74",
+        },
+        history: {
+          summary: {
+            solo: "\u30bd\u30ed/\u30c7\u30e5\u30aa",
+            flex: "\u30d5\u30ec\u30c3\u30af\u30b9",
+            unranked: "\u672a\u30e9\u30f3\u30af",
+            winsShort: "\u52dd",
+            lossesShort: "\u6557",
+            lpShort: "LP",
+          },
         },
       },
     };

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::error::AppError;
+use crate::shards::cdragon;
 use crate::shards::lcu::LcuShard;
 use jax::Jax;
 use tauri::State;
@@ -63,4 +64,18 @@ pub async fn get_game_version(jax: State<'_, Arc<Jax>>) -> Result<String, AppErr
     // CDragon uses "major.minor" format
     let version = full.split('.').take(2).collect::<Vec<_>>().join(".");
     Ok(version)
+}
+
+#[tauri::command]
+pub async fn get_rank_icon(tier: String, jax: State<'_, Arc<Jax>>) -> Result<Vec<u8>, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let client = manager
+        .focused_client()
+        .await
+        .ok_or(AppError::LcuNotConnected)?;
+
+    cdragon::fetch_rank_icon_bytes(&client, &tier).await
 }

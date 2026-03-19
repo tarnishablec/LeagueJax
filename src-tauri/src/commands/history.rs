@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::concepts::matches::{MatchDetail, MatchSummary, Participant};
-use crate::concepts::summoner::SummonerInfo;
+use crate::concepts::summoner::{RankedQueueStats, RankedSummary, SummonerInfo};
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::SgpShard;
@@ -149,6 +149,70 @@ fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
     })
 }
 
+fn queue_type_matches(entry: &Value, queue_type: &str) -> bool {
+    first_string(entry, &["queueType", "queue_type"])
+        .is_some_and(|current| current.eq_ignore_ascii_case(queue_type))
+}
+
+fn find_ranked_queue<'a>(value: &'a Value, queue_type: &str) -> Option<&'a Value> {
+    if let Some(map) = value.get("queueMap").and_then(Value::as_object) {
+        if let Some(entry) = map.get(queue_type) {
+            return Some(entry);
+        }
+
+        let lower = queue_type.to_lowercase();
+        if let Some(entry) = map.get(&lower) {
+            return Some(entry);
+        }
+
+        let upper = queue_type.to_uppercase();
+        if let Some(entry) = map.get(&upper) {
+            return Some(entry);
+        }
+    }
+
+    if let Some(queues) = value.get("queues").and_then(Value::as_array) {
+        if let Some(entry) = queues
+            .iter()
+            .find(|entry| queue_type_matches(entry, queue_type))
+        {
+            return Some(entry);
+        }
+    }
+
+    value
+        .as_array()
+        .and_then(|queues| {
+            queues
+                .iter()
+                .find(|entry| queue_type_matches(entry, queue_type))
+        })
+}
+
+fn parse_ranked_queue(entry: &Value, queue_type: &str) -> Option<RankedQueueStats> {
+    if !entry.is_object() {
+        return None;
+    }
+
+    Some(RankedQueueStats {
+        queue_type: queue_type.to_string(),
+        tier: first_string(entry, &["tier"]).unwrap_or_else(|| "UNRANKED".to_string()),
+        division: first_string(entry, &["division", "rank"]).unwrap_or_default(),
+        league_points: first_i64(entry, &["leaguePoints", "league_points", "lp"]).unwrap_or(0),
+        wins: first_i64(entry, &["wins"]).unwrap_or(0),
+        losses: first_i64(entry, &["losses"]).unwrap_or(0),
+    })
+}
+
+fn parse_ranked_summary(value: &Value) -> RankedSummary {
+    let solo = find_ranked_queue(value, "RANKED_SOLO_5x5")
+        .and_then(|entry| parse_ranked_queue(entry, "RANKED_SOLO_5x5"));
+    let flex = find_ranked_queue(value, "RANKED_FLEX_SR")
+        .and_then(|entry| parse_ranked_queue(entry, "RANKED_FLEX_SR"));
+
+    RankedSummary { solo, flex }
+}
+
 // ─── Commands ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -206,19 +270,35 @@ pub async fn search_summoner(
 }
 
 #[tauri::command]
+pub async fn get_ranked_summary(
+    puuid: String,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<RankedSummary, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager
+        .focused_client()
+        .await
+        .ok_or(AppError::LcuNotConnected)?;
+
+    let path = format!("/lol-ranked/v1/ranked-stats/{puuid}");
+    let response = lcu.get(&path).await?;
+
+    Ok(parse_ranked_summary(&response))
+}
+
+#[tauri::command]
 pub async fn get_match_history(
     puuid: String,
     begin_index: u32,
     end_index: u32,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<MatchSummary>, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    let token_context = manager.exchange_sgp_token_context().await?;
-    let sgp_api = jax
-        .get_shard::<SgpShard>()
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let token_context = sgp_shard.get_or_refresh_token_context(jax.inner()).await?;
+    let sgp_api = sgp_shard
         .api()
         .ok_or_else(|| AppError::Other("SGP shard is not initialized".to_string()))?;
 
@@ -250,13 +330,9 @@ pub async fn get_match_detail(
     game_id: u64,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<MatchDetail, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    let token_context = manager.exchange_sgp_token_context().await?;
-    let sgp_api = jax
-        .get_shard::<SgpShard>()
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let token_context = sgp_shard.get_or_refresh_token_context(jax.inner()).await?;
+    let sgp_api = sgp_shard
         .api()
         .ok_or_else(|| AppError::Other("SGP shard is not initialized".to_string()))?;
 
