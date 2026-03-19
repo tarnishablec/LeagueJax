@@ -1,5 +1,5 @@
 import { BarChart3 } from "lucide-react";
-import { TabBar } from "@/components/TabBar";
+import { HistoryTabBar } from "@/features/history/components/HistoryTabBar.tsx";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { useLcuStore } from "@/stores/lcu";
@@ -59,7 +59,7 @@ export class HistoryShard implements WebShard {
     return [
       {
         id: "history-tabs",
-        node: <TabBar />,
+        node: <HistoryTabBar />,
         order: 10,
         routes: ["/history"],
       },

@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css";
+import { vars } from "@/styles/theme.css.ts";
 
 export const container = style({
   display: "grid",
@@ -60,6 +60,8 @@ export const tab = recipe({
 export const tabLabel = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
+  fontSize: "0.75rem",
+  lineHeight: 1,
 });
 
 export const tabIcon = style({
