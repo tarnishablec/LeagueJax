@@ -7,6 +7,7 @@ import type {
   SettingsPatchDto,
   SettingsPatchResultDto,
 } from "@/bindings/settings.ts";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { createLogger, setWebLogLevel } from "@/infra/logger";
 import type { Jax } from "@/jax";
@@ -163,6 +164,11 @@ export class SettingsShard implements WebShard, SettingsShardApi {
 
   public toolbarSlots() {
     return [
+      {
+        id: "settings-language-toggle",
+        node: <LanguageToggle />,
+        order: 99,
+      },
       {
         id: "settings-theme-toggle",
         node: <ThemeToggle />,

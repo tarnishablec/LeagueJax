@@ -10,8 +10,11 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "lint:check": "bunx biome check .",
-    "lint:fix": "bunx biome check --write .",
+    "lint:biome": "bunx biome check .",
+    "lint:biome:fix": "bunx biome check --write .",
+    "lint:clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings",
+    "lint:check_all": "bun run lint:biome && bun run lint:clippy",
+    "lint:fix_all": "bun run lint:biome:fix && bun run lint:clippy",
     "typecheck": "tsc --noEmit",
     "sync_rs_types": "cd src-tauri && cargo test export_bindings && cd .. && bunx biome check --write ./src/bindings && bun run typecheck"
   },
