@@ -1,6 +1,11 @@
 import { style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
+const columnsWithCurrentLanguage =
+  "minmax(20rem, 2fr) minmax(10rem, 1fr) minmax(10rem, 1fr) 6rem";
+const columnsWithoutCurrentLanguage =
+  "minmax(20rem, 2fr) minmax(10rem, 1fr) 6rem";
+
 export const card = style({
   border: `1px solid ${vars.color.border}`,
   borderRadius: 10,
@@ -10,8 +15,6 @@ export const card = style({
 
 export const header = style({
   display: "grid",
-  gridTemplateColumns:
-    "minmax(20rem, 2fr) minmax(10rem, 1fr) minmax(10rem, 1fr) 6rem",
   gap: 10,
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.color.border}`,
@@ -19,10 +22,16 @@ export const header = style({
   fontSize: "0.75rem",
 });
 
+export const headerWithCurrentLanguage = style({
+  gridTemplateColumns: columnsWithCurrentLanguage,
+});
+
+export const headerWithoutCurrentLanguage = style({
+  gridTemplateColumns: columnsWithoutCurrentLanguage,
+});
+
 export const row = style({
   display: "grid",
-  gridTemplateColumns:
-    "minmax(20rem, 2fr) minmax(10rem, 1fr) minmax(10rem, 1fr) 6rem",
   gap: 10,
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.color.border}`,
@@ -34,6 +43,14 @@ export const row = style({
       background: vars.color.accent,
     },
   },
+});
+
+export const rowWithCurrentLanguage = style({
+  gridTemplateColumns: columnsWithCurrentLanguage,
+});
+
+export const rowWithoutCurrentLanguage = style({
+  gridTemplateColumns: columnsWithoutCurrentLanguage,
 });
 
 export const key = style({
