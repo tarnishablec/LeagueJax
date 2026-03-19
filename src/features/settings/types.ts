@@ -18,6 +18,7 @@ export type SettingsPatchSender = (changes: Record<string, unknown>) => void;
 export interface SettingOption {
   value: string;
   labelKey: string;
+  displayLabel?: string;
 }
 
 export interface SelectSettingControl {

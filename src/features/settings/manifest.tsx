@@ -204,6 +204,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
             label: "Language",
             zhCN: "Simplified Chinese",
             en: "English",
+            jaJP: "Japanese",
           },
           theme: {
             label: "Theme",
@@ -256,6 +257,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
             label: "语言",
             zhCN: "简体中文",
             en: "English",
+            jaJP: "Japanese",
           },
           theme: {
             label: "主题",
@@ -279,6 +281,59 @@ export class SettingsShard implements WebShard, SettingsShardApi {
               zh: "中文",
               en: "英文",
               scope: "作用域",
+            },
+          },
+        },
+      },
+      "ja-JP": {
+        nav: {
+          settings: "\u8a2d\u5b9a",
+        },
+        settings: {
+          title: "\u8a2d\u5b9a",
+          pages: {
+            system: {
+              title: "\u30b7\u30b9\u30c6\u30e0",
+            },
+          },
+          sections: {
+            system: {
+              preferences: {
+                title: "\u74b0\u5883\u8a2d\u5b9a",
+              },
+              logging: {
+                title: "\u30ed\u30b0",
+              },
+            },
+          },
+          language: {
+            label: "\u8a00\u8a9e",
+            zhCN: "\u7c21\u4f53\u5b57\u4e2d\u56fd\u8a9e",
+            en: "\u82f1\u8a9e",
+            jaJP: "\u65e5\u672c\u8a9e",
+          },
+          theme: {
+            label: "\u30c6\u30fc\u30de",
+            system: "\u30b7\u30b9\u30c6\u30e0",
+            light: "\u30e9\u30a4\u30c8",
+            dark: "\u30c0\u30fc\u30af",
+          },
+          logging: {
+            level: {
+              label: "\u30ed\u30b0\u30ec\u30d9\u30eb",
+            },
+            levelDebug: "\u30c7\u30d0\u30c3\u30b0",
+            levelInfo: "\u60c5\u5831",
+            levelWarn: "\u8b66\u544a",
+            levelError: "\u30a8\u30e9\u30fc",
+          },
+          registry: {
+            tab: "\u30ec\u30b8\u30b9\u30c8\u30ea",
+            columns: {
+              key: "\u30ad\u30fc",
+              zh: "\u4e2d\u56fd\u8a9e",
+              en: "\u82f1\u8a9e",
+              scope: "\u30b9\u30b3\u30fc\u30d7",
             },
           },
         },

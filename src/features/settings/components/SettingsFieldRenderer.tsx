@@ -52,7 +52,7 @@ const SelectField = ({
   const value = useSettingValue(field.id);
   const options = field.options.map((option) => ({
     value: option.value,
-    label: t(option.labelKey),
+    label: option.displayLabel ?? t(option.labelKey),
   }));
 
   return (

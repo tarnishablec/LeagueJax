@@ -1,5 +1,6 @@
 import { ClientStatus } from "@/components/ClientStatus";
 import en from "@/i18n/locales/en.json";
+import jaJP from "@/i18n/locales/ja-JP.json";
 import zhCN from "@/i18n/locales/zh-CN.json";
 import type { SidebarSlot, WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
@@ -28,6 +29,7 @@ export class ShellShard implements WebShard {
   public i18nResources() {
     return {
       en,
+      "ja-JP": jaJP,
       "zh-CN": zhCN,
     };
   }

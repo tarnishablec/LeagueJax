@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { SettingsShardApi } from "@/features/settings/types";
 import { setting, settings } from "./index";
 
-export type Language = "zh-CN" | "en";
+export type Language = "zh-CN" | "en" | "ja-JP";
 export type Theme = "system" | "light" | "dark";
 
 export const SYSTEM_LANGUAGE_SETTING_ID = "system.preferences.language";
@@ -16,11 +16,24 @@ export class GeneralSettings {
     labelKey: "settings.language.label",
     scope: "frontend",
     control: { kind: "select" },
-    zod: z.enum(["zh-CN", "en"]),
+    zod: z.enum(["zh-CN", "en", "ja-JP"]),
     defaultValue: "zh-CN",
     options: [
-      { value: "zh-CN", labelKey: "settings.language.zhCN" },
-      { value: "en", labelKey: "settings.language.en" },
+      {
+        value: "zh-CN",
+        labelKey: "settings.language.zhCN",
+        displayLabel: "简体中文",
+      },
+      {
+        value: "en",
+        labelKey: "settings.language.en",
+        displayLabel: "English",
+      },
+      {
+        value: "ja-JP",
+        labelKey: "settings.language.jaJP",
+        displayLabel: "日本語",
+      },
     ],
     order: 10,
     onSet: (next) => {
