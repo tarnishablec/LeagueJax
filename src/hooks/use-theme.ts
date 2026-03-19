@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { settingsApi } from "@/features/settings/store";
 import {
-  GENERAL_THEME_SETTING_ID,
+  SYSTEM_THEME_SETTING_ID,
   type Theme,
 } from "@/features/settings/store/general";
 
@@ -9,9 +9,9 @@ export function useTheme() {
   const theme =
     useSyncExternalStore(
       (onStoreChange) =>
-        settingsApi.subscribe(GENERAL_THEME_SETTING_ID, onStoreChange),
-      () => settingsApi.get<Theme>(GENERAL_THEME_SETTING_ID),
-      () => settingsApi.get<Theme>(GENERAL_THEME_SETTING_ID),
+        settingsApi.subscribe(SYSTEM_THEME_SETTING_ID, onStoreChange),
+      () => settingsApi.get<Theme>(SYSTEM_THEME_SETTING_ID),
+      () => settingsApi.get<Theme>(SYSTEM_THEME_SETTING_ID),
     ) ?? "system";
 
   useEffect(() => {

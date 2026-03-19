@@ -1,7 +1,19 @@
 import type { ZodType } from "zod";
+import type {
+  SettingDefinitionDto,
+  SettingsSnapshotDto,
+} from "@/bindings/settings.ts";
 
 export type SettingControlKind = "select" | "toggle" | "text" | "number";
 export type SettingId = `${string}.${string}.${string}`;
+export type SettingScope = "frontend" | "backend" | "shared";
+
+export interface HydrateOptions {
+  notify?: boolean;
+  runOnSet?: boolean;
+}
+
+export type SettingsPatchSender = (changes: Record<string, unknown>) => void;
 
 export interface SettingOption {
   value: string;
@@ -38,6 +50,7 @@ export type SettingControl =
 interface SettingDefinitionBase<TControl extends SettingControl> {
   id: SettingId;
   labelKey: string;
+  scope?: SettingScope;
   control: TControl;
   zod: ZodType;
   defaultValue: unknown;
@@ -81,6 +94,15 @@ export type SettingClassCtor = new () => object;
 export interface SettingsShardApi {
   registerSetting(definition: SettingDefinition): void;
   registerClass(ctor: SettingClassCtor): void;
+  mergeRemoteDefinitions(definitions: SettingDefinitionDto[]): void;
+  hydrateFromSnapshot(
+    snapshot: SettingsSnapshotDto,
+    options?: HydrateOptions,
+  ): void;
+  applyRemotePatch(changes: Record<string, unknown>, version: number): void;
+  configureRemotePatchSender(sender: SettingsPatchSender | null): void;
+  getVersion(): number;
+  setVersion(version: number): void;
   get<T = unknown>(id: SettingId): T;
   set<T = unknown>(id: SettingId, value: T): boolean;
   subscribe(id: SettingId, callback: () => void): () => void;

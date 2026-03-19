@@ -6,7 +6,11 @@ import {
   SettingsSelect,
   SettingsSwitch,
 } from "@/components/settings-ui";
-import type { RegisteredSetting, SettingId } from "@/features/settings/types";
+import type {
+  RegisteredSetting,
+  SettingId,
+  SettingScope,
+} from "@/features/settings/types";
 import { settingsApi } from "../store";
 
 type RegisteredSelectSetting = Extract<
@@ -24,6 +28,17 @@ const useSettingValue = (id: SettingId): unknown => {
     () => settingsApi.get(id),
     () => settingsApi.get(id),
   );
+};
+
+const toScopeTag = (scope?: SettingScope): string => {
+  switch (scope) {
+    case "backend":
+      return "rs";
+    case "shared":
+      return "ts/rs";
+    default:
+      return "ts";
+  }
 };
 
 const SelectField = ({
@@ -120,6 +135,7 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
   const { t } = useTranslation();
   const label = t(field.labelKey);
   const ariaLabel = `Setting ${field.id}`;
+  const scopeTag = toScopeTag(field.scope);
 
   if (!field.visible) {
     return null;
@@ -128,7 +144,7 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
   switch (field.control.kind) {
     case "select":
       return (
-        <SettingsFieldRow label={label}>
+        <SettingsFieldRow label={label} scopeTag={scopeTag}>
           <SelectField
             ariaLabel={ariaLabel}
             field={field as RegisteredSelectSetting}
@@ -137,14 +153,14 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
       );
     case "toggle":
       return (
-        <SettingsFieldRow label={label}>
+        <SettingsFieldRow label={label} scopeTag={scopeTag}>
           <ToggleField ariaLabel={ariaLabel} field={field} />
         </SettingsFieldRow>
       );
     case "text":
     case "number":
       return (
-        <SettingsFieldRow label={label}>
+        <SettingsFieldRow label={label} scopeTag={scopeTag}>
           <InputField
             ariaLabel={ariaLabel}
             field={field as RegisteredInputSetting}

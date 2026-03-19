@@ -13,6 +13,7 @@ use window_vibrancy::{apply_acrylic, apply_mica};
 
 use crate::commands::history::*;
 use crate::commands::lcu::*;
+use crate::commands::settings::*;
 #[cfg(target_os = "macos")]
 use window_vibrancy::apply_acrylic;
 
@@ -41,6 +42,8 @@ pub fn run() {
             get_profile_icon,
             get_champion_icon,
             get_game_version,
+            get_settings_bootstrap,
+            apply_settings_patch,
         ])
         .setup(move |app| {
             let app_handle = app.handle().clone();
@@ -68,6 +71,8 @@ pub fn run() {
                 .register(Arc::new(shards::persistence_sled::PersistenceSled::new(
                     db_path,
                 )))
+                .register(Arc::new(shards::settings::SettingsShard::new()))
+                .register(Arc::new(shards::log::LogShard::new()))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
                 .register(Arc::new(shards::sgp::SgpShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))

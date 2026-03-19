@@ -6,14 +6,15 @@ import { setting, settings } from "./index";
 export type Language = "zh-CN" | "en";
 export type Theme = "system" | "light" | "dark";
 
-export const GENERAL_LANGUAGE_SETTING_ID = "general.preferences.language";
-export const GENERAL_THEME_SETTING_ID = "general.preferences.theme";
+export const SYSTEM_LANGUAGE_SETTING_ID = "system.preferences.language";
+export const SYSTEM_THEME_SETTING_ID = "system.preferences.theme";
 
 @settings
 export class GeneralSettings {
   @setting({
-    id: GENERAL_LANGUAGE_SETTING_ID,
+    id: SYSTEM_LANGUAGE_SETTING_ID,
     labelKey: "settings.language.label",
+    scope: "frontend",
     control: { kind: "select" },
     zod: z.enum(["zh-CN", "en"]),
     defaultValue: "zh-CN",
@@ -33,8 +34,9 @@ export class GeneralSettings {
 
 export function registerGeneralSettings(api: SettingsShardApi): void {
   api.registerSetting({
-    id: GENERAL_THEME_SETTING_ID,
+    id: SYSTEM_THEME_SETTING_ID,
     labelKey: "settings.theme.label",
+    scope: "frontend",
     control: { kind: "select" },
     zod: z.enum(["system", "light", "dark"]),
     defaultValue: "system",

@@ -2,8 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { settingsApi } from "@/features/settings/store";
 import {
-  GENERAL_LANGUAGE_SETTING_ID,
   type Language,
+  SYSTEM_LANGUAGE_SETTING_ID,
 } from "@/features/settings/store/general";
 import "./styles/theme.css";
 import "./styles/global.css";
@@ -26,7 +26,7 @@ async function bootstrap(): Promise<void> {
     logger.info("Starting app bootstrap");
     await initializeWebShards();
     const language =
-      settingsApi.get<Language>(GENERAL_LANGUAGE_SETTING_ID) ?? "zh-CN";
+      settingsApi.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? "zh-CN";
     logger.info({ language }, "Initializing i18n resources");
     await initializeI18n(getMergedI18nResources(), language);
 
