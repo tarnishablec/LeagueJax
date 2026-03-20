@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useDragonStaticData } from "../hooks/use-dragon-static-data";
+import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 
@@ -31,7 +31,7 @@ export function MatchCardRunes({
         alt={t("history.match.secondaryRuneStyle", {
           defaultValue: "Secondary rune style",
         })}
-        className={s.assetIcon}
+        className={s.subRuneStyleIcon}
         fallbackClassName={s.assetIconFallback}
       />
     </div>

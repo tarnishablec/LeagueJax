@@ -200,12 +200,107 @@ export const assetIcon = style({
   border: `1px solid ${vars.color.border}`,
 });
 
+export const subRuneStyleIcon = style({
+  width: 22,
+  height: 22,
+  borderRadius: 4,
+  objectFit: "contain",
+  border: `1px solid ${vars.color.border}`,
+  padding: 1,
+  background: vars.color.background,
+});
+
 export const assetIconFallback = style({
   width: 22,
   height: 22,
   borderRadius: 4,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.accent,
+});
+
+export const augmentIcon = recipe({
+  base: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    objectFit: "cover",
+    boxSizing: "border-box",
+    border: `1px solid ${vars.color.border}`,
+  },
+  variants: {
+    rarity: {
+      default: {
+        background: vars.color.background,
+      },
+      prismatic: {
+        border: "1px solid transparent",
+        background:
+          "linear-gradient(oklch(0.3 0.04 300), oklch(0.3 0.04 300)) padding-box, linear-gradient(135deg, oklch(0.82 0.2 322), oklch(0.56 0.23 296)) border-box",
+      },
+      gold: {
+        borderColor: "oklch(0.84 0.18 85)",
+        background: "oklch(0.3 0.05 85)",
+      },
+      silver: {
+        borderColor: "oklch(0.82 0 0)",
+        background: "oklch(0.3 0 0)",
+      },
+      bronze: {
+        borderColor: "oklch(0.55 0.12 52)",
+        background: "oklch(0.3 0.03 52)",
+      },
+    },
+  },
+  defaultVariants: {
+    rarity: "default",
+  },
+});
+
+export const augmentIconFallback = recipe({
+  base: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    boxSizing: "border-box",
+    border: `1px solid ${vars.color.border}`,
+    background: vars.color.accent,
+  },
+  variants: {
+    rarity: {
+      default: {
+        background: vars.color.accent,
+      },
+      prismatic: {
+        border: "1px solid transparent",
+        background:
+          "linear-gradient(oklch(0.3 0.04 300), oklch(0.3 0.04 300)) padding-box, linear-gradient(135deg, oklch(0.82 0.2 322), oklch(0.56 0.23 296)) border-box",
+      },
+      gold: {
+        borderColor: "oklch(0.84 0.18 85)",
+        background: "oklch(0.3 0.05 85)",
+      },
+      silver: {
+        borderColor: "oklch(0.82 0 0)",
+        background: "oklch(0.3 0 0)",
+      },
+      bronze: {
+        borderColor: "oklch(0.55 0.12 52)",
+        background: "oklch(0.3 0.03 52)",
+      },
+    },
+  },
+  defaultVariants: {
+    rarity: "default",
+  },
+});
+
+export const augmentEmptySlot = style({
+  width: 22,
+  height: 22,
+  borderRadius: 4,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.accent,
+  boxSizing: "border-box",
 });
 
 export const itemsGrid = style({
@@ -364,6 +459,33 @@ export const playerHoverContent = style({
   color: vars.color.foreground,
   padding: "4px 6px",
   fontSize: "0.6875rem",
+  boxShadow: `0 8px 24px ${vars.settings.selectMenuShadow}`,
+});
+
+export const augmentHoverTrigger = style({
+  display: "inline-grid",
+  alignItems: "center",
+});
+
+export const augmentGrid = style({
+  display: "grid",
+  gridTemplateColumns: "repeat(6, 22px)",
+  gap: 4,
+  alignItems: "center",
+});
+
+export const augmentHoverPositioner = style({
+  zIndex: 40,
+});
+
+export const augmentHoverContent = style({
+  borderRadius: 8,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popover,
+  color: vars.color.foreground,
+  padding: "4px 6px",
+  fontSize: "0.6875rem",
+  maxWidth: 220,
   boxShadow: `0 8px 24px ${vars.settings.selectMenuShadow}`,
 });
 

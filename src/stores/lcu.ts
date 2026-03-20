@@ -1,14 +1,22 @@
 import { create } from "zustand";
-import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
+import type { LcuInstanceInfo, LeagueClientCmdArgs } from "@/bindings/lcu.ts";
 
 interface LcuState {
   instances: LcuInstanceInfo[];
+  cmdArgsByPid: Record<number, LeagueClientCmdArgs>;
   setInstances: (instances: LcuInstanceInfo[]) => void;
 }
 
 export const useLcuStore = create<LcuState>((set) => ({
   instances: [],
-  setInstances: (instances) => set({ instances }),
+  cmdArgsByPid: {},
+  setInstances: (instances) =>
+    set({
+      instances,
+      cmdArgsByPid: Object.fromEntries(
+        instances.map((instance) => [instance.pid, instance.cmdArgs]),
+      ),
+    }),
 }));
 
 /** Selector: true when any instance is focused and ready */

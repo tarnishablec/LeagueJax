@@ -3,7 +3,17 @@ import { vars } from "@/styles/theme.css";
 
 export const page = style({
   display: "grid",
+  gridTemplateRows: "auto minmax(0, 1fr)",
   gap: 16,
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
+});
+
+export const outlet = style({
+  minHeight: 0,
+  overflowX: "hidden",
+  overflowY: "auto",
   alignContent: "start",
 });
 
@@ -38,6 +48,14 @@ export const pageTabsLeft = style({
   gap: 8,
   justifyContent: "start",
   minWidth: 0,
+});
+
+export const pageTabsRight = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  gridAutoColumns: "max-content",
+  gap: 8,
+  justifyContent: "end",
 });
 
 const pageTabBase = style({

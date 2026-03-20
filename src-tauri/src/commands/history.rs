@@ -1,28 +1,24 @@
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::concepts::maps::LcuMap;
 use crate::concepts::matches::{
-    MatchDetail, MatchOutcome, MatchSummary, MatchSummaryParticipant, Participant,
+    CherryAugment, MatchDetail, MatchOutcome, MatchSummary, MatchSummaryParticipant, Participant,
 };
-use crate::concepts::summoner::{RankedQueueStats, RankedSummary, SummonerInfo};
+use crate::concepts::summoner::{
+    RankedQueueStats, RankedSummary, SummonerInfo, SummonerSearchResult,
+};
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
+use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
 use crate::shards::sgp::SgpShard;
 use jax::Jax;
 use serde_json::Value;
 use tauri::State;
+use uuid::Uuid;
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-pub fn parse_summoner(v: &Value) -> Result<SummonerInfo, AppError> {
-    Ok(SummonerInfo {
-        puuid: v["puuid"].as_str().unwrap_or_default().to_string(),
-        game_name: v["gameName"].as_str().unwrap_or_default().to_string(),
-        tag_line: v["tagLine"].as_str().unwrap_or_default().to_string(),
-        profile_icon_id: v["profileIconId"].as_i64().unwrap_or(0),
-        summoner_level: v["summonerLevel"].as_i64().unwrap_or(0),
-    })
-}
 
 fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSummary, AppError> {
     let payload = sgp_summary_payload(game);
@@ -67,6 +63,7 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
         0.0
     };
     let items = participant_items(participant, stats);
+    let player_augments = participant_augments(participant, stats);
     let perk_ids = participant_perk_ids(participant, stats);
     let perk_primary_rune_id = perk_ids.primary_rune_id.unwrap_or(0);
     let perk_sub_style_id = perk_ids.sub_style_id.unwrap_or(0);
@@ -108,10 +105,16 @@ fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSumm
         spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
         perk_primary_rune_id,
         perk_sub_style_id,
+        player_augments,
         items,
         map_id: first_i64(payload, &["mapId", "map_id"]).unwrap_or(0),
         game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
         game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
+        game_mutator: first_string(
+            payload,
+            &["gameMutator", "game_mutator", "gameVariant", "game_variant"],
+        )
+        .unwrap_or_default(),
         game_creation: first_i64(payload, &["gameCreation", "game_datetime"]).unwrap_or(0),
         queue_id: first_i64(payload, &["queueId", "queue_id"]).unwrap_or(0),
         participants: participants
@@ -128,8 +131,8 @@ fn parse_sgp_summary_participant(participant: &Value) -> MatchSummaryParticipant
     )
     .unwrap_or_default();
     let (fallback_game_name, fallback_tag_line) = split_riot_id(&summoner_name);
-    let game_name = first_string(participant, &["riotIdGameName", "gameName"])
-        .unwrap_or(fallback_game_name);
+    let game_name =
+        first_string(participant, &["riotIdGameName", "gameName"]).unwrap_or(fallback_game_name);
     let tag_line = first_string(participant, &["riotIdTagline", "riotIdTagLine", "tagLine"])
         .unwrap_or(fallback_tag_line);
 
@@ -158,8 +161,8 @@ fn parse_sgp_participant(participant: &Value) -> Participant {
     )
     .unwrap_or_default();
     let (fallback_game_name, fallback_tag_line) = split_riot_id(&summoner_name);
-    let game_name = first_string(participant, &["riotIdGameName", "gameName"])
-        .unwrap_or(fallback_game_name);
+    let game_name =
+        first_string(participant, &["riotIdGameName", "gameName"]).unwrap_or(fallback_game_name);
     let tag_line = first_string(participant, &["riotIdTagline", "riotIdTagLine", "tagLine"])
         .unwrap_or(fallback_tag_line);
 
@@ -285,6 +288,28 @@ fn participant_stat_string(participant: &Value, stats: &Value, keys: &[&str]) ->
     first_string(stats, keys).or_else(|| first_string(participant, keys))
 }
 
+fn parse_cherry_augment(value: &Value) -> Option<CherryAugment> {
+    let id = first_i64(value, &["id"])?;
+    let name_tra = first_string(value, &["nameTRA", "nameTra", "name"]).unwrap_or_default();
+    let augment_small_icon_path =
+        first_string(value, &["augmentSmallIconPath", "iconPath"]).unwrap_or_default();
+    let rarity = first_string(value, &["rarity"]).unwrap_or_default();
+
+    Some(CherryAugment {
+        id,
+        name_tra,
+        augment_small_icon_path,
+        rarity,
+    })
+}
+
+fn parse_cherry_augments(value: &Value) -> Vec<CherryAugment> {
+    value
+        .as_array()
+        .map(|entries| entries.iter().filter_map(parse_cherry_augment).collect())
+        .unwrap_or_default()
+}
+
 fn normalize_status_text(value: &str) -> String {
     value
         .chars()
@@ -314,9 +339,10 @@ fn participant_match_outcome(
     payload: &Value,
     win: bool,
 ) -> MatchOutcome {
-    let ended_in_early_surrender = participant_stat_bool(participant, stats, "gameEndedInEarlySurrender")
-        .or_else(|| first_bool(payload, &["gameEndedInEarlySurrender"]))
-        .unwrap_or(false);
+    let ended_in_early_surrender =
+        participant_stat_bool(participant, stats, "gameEndedInEarlySurrender")
+            .or_else(|| first_bool(payload, &["gameEndedInEarlySurrender"]))
+            .unwrap_or(false);
 
     let terminated_flag = participant_stat_bool(participant, stats, "aborted")
         .or_else(|| participant_stat_bool(participant, stats, "gameTerminated"))
@@ -380,6 +406,15 @@ fn participant_items(participant: &Value, stats: &Value) -> [i64; 7] {
         *item = participant_stat_i64(participant, stats, &[&key]).unwrap_or(0);
     }
     items
+}
+
+fn participant_augments(participant: &Value, stats: &Value) -> [i64; 6] {
+    let mut augments = [0i64; 6];
+    for (index, augment_id) in augments.iter_mut().enumerate() {
+        let key = format!("playerAugment{}", index + 1);
+        *augment_id = participant_stat_i64(participant, stats, &[&key]).unwrap_or(0);
+    }
+    augments
 }
 
 fn perks_styles(value: &Value) -> Option<&Vec<Value>> {
@@ -604,20 +639,255 @@ fn parse_ranked_summary(value: &Value) -> RankedSummary {
     RankedSummary { solo, flex }
 }
 
+#[derive(Debug, Clone)]
+enum ParsedSummonerSearchQuery {
+    Puuid(String),
+    Exact { game_name: String, tag_line: String },
+    Fuzzy { game_name: String },
+}
+
+fn parse_summoner_search_query(query: &str) -> Result<ParsedSummonerSearchQuery, AppError> {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::Other("Search query is empty".to_string()));
+    }
+
+    if Uuid::parse_str(trimmed).is_ok() {
+        return Ok(ParsedSummonerSearchQuery::Puuid(trimmed.to_string()));
+    }
+
+    if let Some((game_name, tag_line)) = trimmed.split_once('#') {
+        let game_name = game_name.trim();
+        let tag_line = tag_line.trim();
+        if game_name.is_empty() || tag_line.is_empty() {
+            return Err(AppError::Other(
+                "Invalid exact query, expected gameName#tagLine".to_string(),
+            ));
+        }
+        return Ok(ParsedSummonerSearchQuery::Exact {
+            game_name: game_name.to_string(),
+            tag_line: tag_line.to_string(),
+        });
+    }
+
+    Ok(ParsedSummonerSearchQuery::Fuzzy {
+        game_name: trimmed.to_string(),
+    })
+}
+
+fn normalize_sgp_server_id(server_id: Option<String>, fallback: &str) -> String {
+    server_id
+        .map(|raw| raw.trim().to_uppercase())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| fallback.to_uppercase())
+}
+
+fn normalize_server_id(server_id: &str) -> String {
+    server_id.trim().to_uppercase()
+}
+
+fn tencent_server_set(config: &SgpServersConfig) -> HashSet<String> {
+    config
+        .tencent_server_summoner_interoperability
+        .iter()
+        .map(|server_id| normalize_server_id(server_id))
+        .collect()
+}
+
+fn to_tencent_canonical_server_id(server_id: &str, tencent_servers: &HashSet<String>) -> String {
+    let normalized = normalize_server_id(server_id);
+    if normalized.is_empty() {
+        return normalized;
+    }
+    if normalized.starts_with("TENCENT_") {
+        return normalized;
+    }
+
+    let prefixed = format!("TENCENT_{normalized}");
+    if tencent_servers.contains(&prefixed) {
+        return prefixed;
+    }
+
+    normalized
+}
+
+fn is_tencent_server_id(server_id: &str, tencent_servers: &HashSet<String>) -> bool {
+    let normalized = normalize_server_id(server_id);
+    if normalized.is_empty() {
+        return false;
+    }
+    if normalized.starts_with("TENCENT_") {
+        return true;
+    }
+    if tencent_servers.contains(&normalized) {
+        return true;
+    }
+    tencent_servers.contains(&format!("TENCENT_{normalized}"))
+}
+
+fn non_empty_or(value: &str, fallback: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        fallback.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn build_nameset_index(
+    namesets: &crate::shards::lcu::api::PlayerAccountNamesetsResponse,
+) -> HashMap<String, (String, String)> {
+    let mut index = HashMap::new();
+    for nameset in &namesets.namesets {
+        let Some(gnt) = &nameset.gnt else {
+            continue;
+        };
+        index.insert(
+            nameset.puuid.clone(),
+            (gnt.game_name.clone(), gnt.tag_line.clone()),
+        );
+    }
+    index
+}
+
+fn build_summoner_search_result(
+    summoner: SummonerInfo,
+    sgp_server_id: String,
+    fallback_game_name: &str,
+    fallback_tag_line: &str,
+) -> SummonerSearchResult {
+    SummonerSearchResult {
+        puuid: summoner.puuid,
+        game_name: non_empty_or(&summoner.game_name, fallback_game_name),
+        tag_line: non_empty_or(&summoner.tag_line, fallback_tag_line),
+        profile_icon_id: summoner.profile_icon_id,
+        summoner_level: summoner.summoner_level,
+        sgp_server_id,
+    }
+}
+
+fn resolve_target_sgp_server_id(
+    focused_sgp_server_id: &str,
+    requested_sgp_server_id: Option<String>,
+    config: &SgpServersConfig,
+) -> Result<String, AppError> {
+    let mut allowed_tencent_servers = tencent_server_set(config);
+    let focused = to_tencent_canonical_server_id(focused_sgp_server_id, &allowed_tencent_servers);
+    let requested = to_tencent_canonical_server_id(
+        &normalize_sgp_server_id(requested_sgp_server_id, &focused),
+        &allowed_tencent_servers,
+    );
+
+    if is_tencent_server_id(&focused, &allowed_tencent_servers) {
+        allowed_tencent_servers.insert(focused.clone());
+
+        if allowed_tencent_servers.contains(&requested) {
+            return Ok(requested);
+        }
+
+        return Err(AppError::Other(format!(
+            "Requested Tencent server is not in summoner interoperability list: {requested}"
+        )));
+    }
+
+    if requested == focused {
+        return Ok(requested);
+    }
+
+    Err(AppError::Other(format!(
+        "Cross-region summoner search is disabled for non-Tencent focused server: focused={focused}, requested={requested}"
+    )))
+}
+
+async fn search_aliases_with_target_server(
+    aliases: Vec<crate::shards::lcu::api::PlayerAccountAliasEntry>,
+    target_sgp_server_id: &str,
+    same_server: bool,
+    lcu_api: &crate::shards::lcu::api::LcuApi,
+    sgp_api: &crate::shards::sgp::api::SgpApi,
+) -> Result<Vec<SummonerSearchResult>, AppError> {
+    let mut dedupe = HashSet::new();
+    let aliases: Vec<_> = aliases
+        .into_iter()
+        .filter(|entry| dedupe.insert(entry.puuid.clone()))
+        .collect();
+
+    if aliases.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let puuids: Vec<String> = aliases.iter().map(|entry| entry.puuid.clone()).collect();
+    let nameset_index = lcu_api
+        .get_player_account_namesets(&puuids)
+        .await
+        .map(|response| build_nameset_index(&response))
+        .unwrap_or_default();
+
+    let mut results = Vec::new();
+    for alias in aliases {
+        let (resolved_game_name, resolved_tag_line) = nameset_index
+            .get(&alias.puuid)
+            .cloned()
+            .unwrap_or_else(|| (alias.alias.game_name.clone(), alias.alias.tag_line.clone()));
+
+        if same_server {
+            let Ok(summoner) = lcu_api.get_summoner_by_puuid(&alias.puuid).await else {
+                continue;
+            };
+            results.push(build_summoner_search_result(
+                summoner,
+                target_sgp_server_id.to_string(),
+                &resolved_game_name,
+                &resolved_tag_line,
+            ));
+            continue;
+        }
+
+        let Ok(summoner) = sgp_api
+            .get_summoner_by_puuid(target_sgp_server_id, &alias.puuid)
+            .await
+        else {
+            continue;
+        };
+        let Some(summoner) = summoner else {
+            continue;
+        };
+
+        results.push(SummonerSearchResult {
+            puuid: summoner.puuid,
+            game_name: resolved_game_name,
+            tag_line: resolved_tag_line,
+            profile_icon_id: summoner.profile_icon_id,
+            summoner_level: summoner.level,
+            sgp_server_id: target_sgp_server_id.to_string(),
+        });
+    }
+
+    Ok(results)
+}
+
 // ─── Commands ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerInfo, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    let lcu = manager
-        .focused_client()
+    jax.get_shard::<LcuShard>()
+        .focused()
+        .await?
+        .api()
+        .get_current_summoner()
         .await
-        .ok_or(AppError::LcuNotConnected)?;
-    let resp = lcu.get("/lol-summoner/v1/current-summoner").await?;
-    parse_summoner(&resp)
+}
+
+#[tauri::command]
+pub async fn get_current_sgp_server_id(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
+    let lcu_client = jax.get_shard::<LcuShard>().focused().await?;
+    let token_context = lcu_client.exchange_sgp_token_context().await?;
+    Ok(token_context.sgp_server_id)
+}
+
+#[tauri::command]
+pub async fn get_sgp_servers_config() -> Result<SgpServersConfig, AppError> {
+    Ok(sgp_servers_config()?.clone())
 }
 
 #[tauri::command]
@@ -625,39 +895,96 @@ pub async fn search_summoner(
     game_name: String,
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
-) -> Result<SummonerInfo, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    let lcu = manager
-        .focused_client()
-        .await
-        .ok_or(AppError::LcuNotConnected)?;
+) -> Result<Value, AppError> {
+    let lcu_api = jax.get_shard::<LcuShard>().focused().await?.api();
+    lcu_api.search_summoner(&game_name, &tag_line).await
+}
 
-    let encoded_name = urlencoding::encode(&game_name);
-    let encoded_tag = urlencoding::encode(&tag_line);
-    let path = format!("/lol-summoner/v2/summoners?name={encoded_name}&tagLine={encoded_tag}");
+#[tauri::command]
+pub async fn search_summoners(
+    query: String,
+    sgp_server_id: Option<String>,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Vec<SummonerSearchResult>, AppError> {
+    let parsed_query = parse_summoner_search_query(&query)?;
+    let lcu_client = jax.get_shard::<LcuShard>().focused().await?;
+    let lcu_api = lcu_client.api();
+    let current_token_context = lcu_client.exchange_sgp_token_context().await?;
+    let config = sgp_servers_config()?;
 
-    let resp = lcu.get(&path).await?;
+    let target_sgp_server_id =
+        resolve_target_sgp_server_id(&current_token_context.sgp_server_id, sgp_server_id, config)?;
+    let current_sgp_server_id = to_tencent_canonical_server_id(
+        &current_token_context.sgp_server_id,
+        &tencent_server_set(config),
+    );
+    let same_server = target_sgp_server_id == current_sgp_server_id;
 
-    // Handle both object and array responses
-    let summoner_val = if let Some(arr) = resp.as_array() {
-        arr.first()
-            .ok_or_else(|| AppError::Other("Summoner not found".to_string()))?
-            .clone()
-    } else if resp.is_object() {
-        // Check if it's an error response
-        if resp.get("puuid").is_some() {
-            resp
-        } else {
-            return Err(AppError::Other("Summoner not found".to_string()));
+    let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
+
+    match parsed_query {
+        ParsedSummonerSearchQuery::Puuid(puuid) => {
+            if same_server {
+                let summoner = lcu_api.get_summoner_by_puuid(&puuid).await?;
+                return Ok(vec![build_summoner_search_result(
+                    summoner,
+                    target_sgp_server_id,
+                    &puuid,
+                    "",
+                )]);
+            }
+
+            let Some(sgp_summoner) = sgp_api
+                .get_summoner_by_puuid(&target_sgp_server_id, &puuid)
+                .await?
+            else {
+                return Ok(Vec::new());
+            };
+
+            let (resolved_game_name, resolved_tag_line) = lcu_api
+                .get_player_account_namesets(std::slice::from_ref(&puuid))
+                .await
+                .ok()
+                .and_then(|response| build_nameset_index(&response).remove(&puuid))
+                .unwrap_or_else(|| (puuid.clone(), String::new()));
+
+            Ok(vec![SummonerSearchResult {
+                puuid: sgp_summoner.puuid,
+                game_name: resolved_game_name,
+                tag_line: resolved_tag_line,
+                profile_icon_id: sgp_summoner.profile_icon_id,
+                summoner_level: sgp_summoner.level,
+                sgp_server_id: target_sgp_server_id,
+            }])
         }
-    } else {
-        return Err(AppError::Other("Summoner not found".to_string()));
-    };
-
-    parse_summoner(&summoner_val)
+        ParsedSummonerSearchQuery::Exact {
+            game_name,
+            tag_line,
+        } => {
+            let aliases = lcu_api
+                .get_player_account_aliases(&game_name, Some(&tag_line))
+                .await?;
+            return search_aliases_with_target_server(
+                aliases,
+                &target_sgp_server_id,
+                same_server,
+                &lcu_api,
+                &sgp_api,
+            )
+            .await;
+        }
+        ParsedSummonerSearchQuery::Fuzzy { game_name } => {
+            let aliases = lcu_api.get_player_account_aliases(&game_name, None).await?;
+            return search_aliases_with_target_server(
+                aliases,
+                &target_sgp_server_id,
+                same_server,
+                &lcu_api,
+                &sgp_api,
+            )
+            .await;
+        }
+    }
 }
 
 #[tauri::command]
@@ -665,20 +992,12 @@ pub async fn get_summoner_by_puuid(
     puuid: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerInfo, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    let lcu = manager
-        .focused_client()
+    jax.get_shard::<LcuShard>()
+        .focused()
+        .await?
+        .api()
+        .get_summoner_by_puuid(&puuid)
         .await
-        .ok_or(AppError::LcuNotConnected)?;
-
-    let encoded_puuid = urlencoding::encode(&puuid);
-    let path = format!("/lol-summoner/v2/summoners/puuid/{encoded_puuid}");
-    let resp = lcu.get(&path).await?;
-
-    parse_summoner(&resp)
 }
 
 #[tauri::command]
@@ -686,17 +1005,8 @@ pub async fn get_ranked_summary(
     puuid: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<RankedSummary, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    let lcu = manager
-        .focused_client()
-        .await
-        .ok_or(AppError::LcuNotConnected)?;
-
-    let path = format!("/lol-ranked/v1/ranked-stats/{puuid}");
-    let response = lcu.get(&path).await?;
+    let lcu_api = jax.get_shard::<LcuShard>().focused().await?.api();
+    let response = lcu_api.get_ranked_stats(&puuid).await?;
 
     Ok(parse_ranked_summary(&response))
 }
@@ -707,13 +1017,12 @@ pub async fn get_match_summaries(
     begin_index: u32,
     end_index: u32,
     tag: Option<String>,
+    sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<MatchSummary>, AppError> {
-    let sgp_shard = jax.get_shard::<SgpShard>();
-    let token_context = sgp_shard.get_or_refresh_token_context(jax.inner()).await?;
-    let sgp_api = sgp_shard
-        .api()
-        .ok_or_else(|| AppError::Other("SGP shard is not initialized".to_string()))?;
+    let lcu_shard = jax.get_shard::<LcuShard>();
+    let lcu_client = lcu_shard.focused().await?;
+    let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
 
     let count = end_index.saturating_sub(begin_index);
     if count == 0 {
@@ -731,11 +1040,11 @@ pub async fn get_match_summaries(
 
     let response = sgp_api
         .get_match_summaries(
-            &token_context,
             &puuid,
             begin_index,
             count,
             normalized_tag.as_deref(),
+            sgp_server_id.as_deref(),
         )
         .await?;
 
@@ -754,17 +1063,49 @@ pub async fn get_match_summaries(
 }
 
 #[tauri::command]
+pub async fn get_cherry_augments(
+    _force_refresh: Option<bool>,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Vec<CherryAugment>, AppError> {
+    let response = jax
+        .get_shard::<LcuShard>()
+        .focused()
+        .await?
+        .api()
+        .get_cherry_augments()
+        .await?;
+    let parsed = parse_cherry_augments(&response);
+
+    Ok(parsed)
+}
+
+#[tauri::command]
+pub async fn get_lcu_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppError> {
+    let response = jax
+        .get_shard::<LcuShard>()
+        .focused()
+        .await?
+        .api()
+        .get_maps()
+        .await?;
+
+    Ok(serde_json::from_value::<Vec<LcuMap>>(response)?)
+}
+
+#[tauri::command]
 pub async fn get_match_detail(
     game_id: u64,
+    sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<MatchDetail, AppError> {
-    let sgp_shard = jax.get_shard::<SgpShard>();
-    let token_context = sgp_shard.get_or_refresh_token_context(jax.inner()).await?;
-    let sgp_api = sgp_shard
-        .api()
-        .ok_or_else(|| AppError::Other("SGP shard is not initialized".to_string()))?;
+    let lcu_shard = jax.get_shard::<LcuShard>();
+    let focused_pid = lcu_shard.focused_pid().await?;
+    let lcu_client = lcu_shard.client(focused_pid)?;
+    let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
 
-    let response = sgp_api.get_game_summary(&token_context, game_id).await?;
+    let response = sgp_api
+        .get_game_summary(game_id, sgp_server_id.as_deref())
+        .await?;
     let payload = sgp_summary_payload(&response);
 
     let participants_raw = payload

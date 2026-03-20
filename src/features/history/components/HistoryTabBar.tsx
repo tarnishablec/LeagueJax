@@ -11,12 +11,15 @@ import {
   useState,
 } from "react";
 import type { SummonerInfo } from "@/bindings/summoner";
-import { useProfileIcon } from "@/hooks/use-profile-icon";
+import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { useTabStore } from "@/stores/tabs.ts";
 import * as s from "./HistoryTabBar.css.ts";
 
 function TabIcon({ summoner }: { summoner: SummonerInfo }) {
-  const avatarUrl = useProfileIcon(summoner.profileIconId);
+  const { src: avatarUrl } = useDragonStaticData({
+    type: "profile-icon",
+    profileIconId: summoner.profileIconId,
+  });
 
   if (!avatarUrl) {
     return <div className={s.tabIconFallback} />;

@@ -132,3 +132,9 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 
 - **Frontend:** [Biome](https://biomejs.dev/) — replaces ESLint + Prettier. Config in `biome.json`. Run `bunx biome check --write src/` to auto-fix. CI uses `bunx biome check src/` (no `--write`).
 - **Rust:** Clippy with `-D warnings` (warnings are errors). Run `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings` before committing Rust changes.
+
+## Complexity Guardrails
+
+- Avoid high-complexity code paths in a single file/component.
+- If a function/component grows beyond reasonable cognitive complexity, split it into focused hooks/components/modules before adding more logic.
+- Do not mix UI rendering, orchestration state, server-region resolution, and request workflows in one component when they can be separated.

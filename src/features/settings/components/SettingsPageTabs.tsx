@@ -26,12 +26,21 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
         ))}
       </div>
 
-      <NavLink
-        to="/settings/registry"
-        className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
-      >
-        {t("settings.registry.tab", { defaultValue: "Registry" })}
-      </NavLink>
+      <div className={s.pageTabsRight}>
+        <NavLink
+          to="/settings/client-args"
+          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
+        >
+          {t("settings.clientArgs.tab", { defaultValue: "Client Args" })}
+        </NavLink>
+
+        <NavLink
+          to="/settings/registry"
+          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
+        >
+          {t("settings.registry.tab", { defaultValue: "Registry" })}
+        </NavLink>
+      </div>
     </div>
   );
 }

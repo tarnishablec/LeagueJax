@@ -4,6 +4,7 @@ import type { MatchSummary } from "@/bindings/matches.ts";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useMatchDetail } from "../hooks/use-match-detail";
 import * as s from "./MatchCard.css";
+import { MatchCardAugments } from "./MatchCardAugments";
 import { MatchCardItems } from "./MatchCardItems";
 import { MatchCardPlayers } from "./MatchCardPlayers";
 import { MatchCardRunes } from "./MatchCardRunes";
@@ -14,7 +15,6 @@ import {
   formatDuration,
   formatStartTime,
   normalizeMatchOutcome,
-  resolveMapLabel,
   resolveModeLabel,
   resolveOutcomeLabel,
 } from "./match-card-display";
@@ -37,17 +37,27 @@ function ChampionIcon({
   return <img src={iconUrl} alt="" className={className} />;
 }
 
-export function MatchCard({ match }: { match: MatchSummary }) {
+export function MatchCard({
+  match,
+  sgpServerId,
+}: {
+  match: MatchSummary;
+  sgpServerId: string | null;
+}) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const { data: detail } = useMatchDetail(expanded ? match.gameId : null);
-
+  const { data: detail } = useMatchDetail(
+    expanded ? match.gameId : null,
+    sgpServerId,
+  );
   const modeLabel = resolveModeLabel(t, match.queueId, match.gameMode);
-  const mapLabel = resolveMapLabel(t, match.mapId);
+  const mapLabel = match.mapId;
+
   const startedAt = formatStartTime(match.gameCreation);
   const csShort = t("history.match.csShort", { defaultValue: "CS" });
   const outcome = normalizeMatchOutcome(match.outcome, match.win);
   const outcomeLabel = resolveOutcomeLabel(t, match.outcome, match.win);
+  const hasAugments = match.playerAugments.some((id) => id > 0);
 
   return (
     <div className={s.wrapper}>
@@ -103,16 +113,23 @@ export function MatchCard({ match }: { match: MatchSummary }) {
                 spell1Id={match.spell1Id}
                 spell2Id={match.spell2Id}
               />
-              <MatchCardRunes
-                perkPrimaryRuneId={match.perkPrimaryRuneId}
-                perkSubStyleId={match.perkSubStyleId}
-              />
+              {hasAugments ? (
+                <MatchCardAugments augmentIds={match.playerAugments} />
+              ) : (
+                <MatchCardRunes
+                  perkPrimaryRuneId={match.perkPrimaryRuneId}
+                  perkSubStyleId={match.perkSubStyleId}
+                />
+              )}
               <MatchCardItems gameId={match.gameId} items={match.items} />
             </div>
           </div>
         </button>
 
-        <MatchCardPlayers participants={match.participants} />
+        <MatchCardPlayers
+          participants={match.participants}
+          sgpServerId={sgpServerId}
+        />
       </div>
 
       {expanded && detail && (

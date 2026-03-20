@@ -13,6 +13,8 @@ import { createLogger, setWebLogLevel } from "@/infra/logger";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
+import { SettingsIndexRoute } from "./routes/SettingsIndexRoute";
+import { SettingsPageRoute } from "./routes/SettingsPageRoute";
 import { SettingsRoute } from "./routes/SettingsRoute";
 import { settingsApi } from "./store";
 import { registerGeneralSettings } from "./store/general";
@@ -140,12 +142,17 @@ export class SettingsShard implements WebShard, SettingsShardApi {
       {
         path: "settings",
         element: <SettingsRoute />,
+        children: [
+          {
+            index: true,
+            element: <SettingsIndexRoute />,
+          },
+          {
+            path: ":pageId",
+            element: <SettingsPageRoute />,
+          },
+        ],
         order: 90,
-      },
-      {
-        path: "settings/:pageId",
-        element: <SettingsRoute />,
-        order: 91,
       },
     ];
   }

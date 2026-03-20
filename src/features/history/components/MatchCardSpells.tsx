@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useDragonStaticData } from "../hooks/use-dragon-static-data";
+import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 

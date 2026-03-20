@@ -15,6 +15,76 @@ export type LcuInstanceInfo = {
   installDir: string | null;
   region: string | null;
   summoner: SummonerInfo | null;
+  cmdArgs: LeagueClientCmdArgs;
 };
 
 export type LcuInstanceState = "idle" | "authenticating" | "ready" | "closing";
+
+export type LeagueClientCmdArgs =
+  | ({ family: "tencent" } & TencentLeagueClientCmdArgs)
+  | ({ family: "riot" } & RiotLeagueClientCmdArgs);
+
+export type RiotLeagueClientCmdArgs = {
+  region: string;
+  locale: string;
+  "riotclient-auth-token": string;
+  "riotclient-app-port": number;
+  "remoting-auth-token": string;
+  "app-port": number;
+  "install-directory": string;
+  "app-name": string;
+  "ux-name": string;
+  "ux-helper-name": string;
+  "log-dir": string;
+  "crash-reporting": string;
+  "crash-environment": string;
+  "app-log-file-path": string;
+  "app-pid": number;
+  "output-base-dir": string;
+  "no-rads": boolean;
+  "disable-self-update": boolean;
+  "no-proxy-server": boolean;
+  "ignore-certificate-errors": boolean;
+  "riotgamesapi-standalone": boolean;
+  "riotgamesapi-settings": string;
+  "rga-lite": boolean;
+  "respawn-command": string;
+  "respawn-display-name": string;
+};
+
+export type TencentLeagueClientCmdArgs = {
+  region: string;
+  locale: string;
+  rso_platform_id: string;
+  "rso-auth.url": string;
+  "rso-auth.client": string;
+  "riotclient-auth-token": string;
+  "riotclient-app-port": number;
+  "remoting-auth-token": string;
+  "app-port": number;
+  "install-directory": string;
+  "app-name": string;
+  "ux-name": string;
+  "ux-helper-name": string;
+  "log-dir": string;
+  "crash-reporting": string;
+  "crash-environment": string;
+  "app-log-file-path": string;
+  "app-pid": number;
+  "output-base-dir": string;
+  "no-rads": boolean;
+  "disable-self-update": boolean;
+  "no-proxy-server": boolean;
+  "ignore-certificate-errors": boolean;
+  "riotclient-tencent": boolean;
+  "t.lcdshost": string;
+  "t.chathost": string;
+  "t.storeurl": string;
+  "t.rmsurl": string;
+  "t.location": string;
+  "tglog-endpoint": string;
+  ccs: string;
+  "entitlements-url": string;
+  "dradis-endpoint": string;
+  tDALauncher: boolean;
+};

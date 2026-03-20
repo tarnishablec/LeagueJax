@@ -1,15 +1,16 @@
 ﻿import { useMemo, useSyncExternalStore } from "react";
 import useSWR from "swr";
+import {
+  CDRAGON_GAME_DATA_BASE,
+  CDRAGON_PERK_STYLE_ICON_BY_ID,
+  DDRAGON_PERK_STYLE_ICON_BY_ID,
+} from "@/features/history/components/match-card-display";
 import { settingsApi } from "@/features/settings/store";
 import type { AssetSource } from "@/features/settings/store/general";
 import { SYSTEM_ASSET_SOURCE_SETTING_ID } from "@/features/settings/store/general";
 import { toDdragonVersion } from "@/hooks/to-ddragon-version";
 import { useGameVersion } from "@/hooks/use-game-version";
-import {
-  CDRAGON_GAME_DATA_BASE,
-  CDRAGON_PERK_STYLE_ICON_BY_ID,
-  DDRAGON_PERK_STYLE_ICON_BY_ID,
-} from "../components/match-card-display";
+import { selectIsFocused, useLcuStore } from "@/stores/lcu";
 
 const DDRAGON_BASE = "https://ddragon.leagueoflegends.com";
 
@@ -90,11 +91,17 @@ export type RuneStyleAssetParam = {
   styleId: number;
 };
 
+export type ProfileIconAssetParam = {
+  type: "profile-icon";
+  profileIconId: number;
+};
+
 export type DragonAssetParam =
   | SpellAssetParam
   | ItemAssetParam
   | RuneAssetParam
-  | RuneStyleAssetParam;
+  | RuneStyleAssetParam
+  | ProfileIconAssetParam;
 
 export interface DragonAssetData {
   src: string | null;
@@ -191,6 +198,10 @@ function normalizeCdragonIconPath(iconPath: string): string {
   return `${CDRAGON_GAME_DATA_BASE}/${encoded}`;
 }
 
+function normalizeCdragonPerkIconPath(iconPath: string): string {
+  return normalizeCdragonIconPath(iconPath.toLowerCase());
+}
+
 function cdragonItemIcons(
   collection: CdragonItem[] | Record<string, CdragonItem> | null,
 ): Record<number, string> {
@@ -270,7 +281,7 @@ function cdragonPerkIcons(
       return;
     }
 
-    mapped[id] = normalizeCdragonIconPath(entry.iconPath);
+    mapped[id] = normalizeCdragonPerkIconPath(entry.iconPath);
   };
 
   if (Array.isArray(collection)) {
@@ -407,6 +418,7 @@ async function fetchDdragonStaticCatalog(
 
 interface ResolveContext {
   ddragonVersion: string | null;
+  connected: boolean;
   cdragonCatalog: CdragonStaticCatalog;
   ddragonCatalog: DdragonStaticCatalog;
 }
@@ -449,6 +461,15 @@ function resolveFromCdragon(
       }
       return {
         src: CDRAGON_PERK_STYLE_ICON_BY_ID[param.styleId] ?? null,
+        label: null,
+      };
+    }
+    case "profile-icon": {
+      if (param.profileIconId <= 0) {
+        return { src: null, label: null };
+      }
+      return {
+        src: `${CDRAGON_GAME_DATA_BASE}/v1/profile-icons/${param.profileIconId}.jpg`,
         label: null,
       };
     }
@@ -499,9 +520,25 @@ function resolveFromDdragon(
         label: null,
       };
     }
+    case "profile-icon": {
+      if (param.profileIconId <= 0 || !ddragonVersion) {
+        return { src: null, label: null };
+      }
+      return {
+        src: `${DDRAGON_BASE}/cdn/${ddragonVersion}/img/profileicon/${param.profileIconId}.png`,
+        label: null,
+      };
+    }
     default:
       return { src: null, label: null };
   }
+}
+
+function needsStaticCatalog(
+  param: DragonAssetParam | readonly DragonAssetParam[],
+): boolean {
+  const assets = Array.isArray(param) ? param : [param];
+  return assets.some((assetParam) => assetParam.type !== "profile-icon");
 }
 
 function resolveDragonAsset(
@@ -509,6 +546,10 @@ function resolveDragonAsset(
   context: ResolveContext,
   assetSource: AssetSource,
 ): DragonAssetData {
+  if (!context.connected && param.type === "profile-icon") {
+    return { src: null, label: null };
+  }
+
   if (assetSource === "cdragon") {
     return resolveFromCdragon(param, context.cdragonCatalog);
   }
@@ -527,9 +568,11 @@ export function useDragonStaticData(
 export function useDragonStaticData(
   param: DragonAssetParam | readonly DragonAssetParam[],
 ): DragonAssetData | DragonAssetData[] {
+  const connected = Boolean(useLcuStore(selectIsFocused));
   const assetSource = useSelectedAssetSource();
   const isCdragon = assetSource === "cdragon";
   const isDdragon = assetSource === "ddragon";
+  const requireCatalog = useMemo(() => needsStaticCatalog(param), [param]);
   const { data: gameVersion } = useGameVersion();
   const ddragonVersion = useMemo(
     () => toDdragonVersion(gameVersion),
@@ -537,7 +580,7 @@ export function useDragonStaticData(
   );
 
   const { data: cdragonCatalog = EMPTY_CDRAGON_CATALOG } = useSWR(
-    isCdragon ? "history:cdragon-static-catalog" : null,
+    isCdragon && requireCatalog ? "history:cdragon-static-catalog" : null,
     () => fetchCdragonStaticCatalog(),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
@@ -547,7 +590,7 @@ export function useDragonStaticData(
   );
 
   const { data: ddragonCatalog = EMPTY_DDRAGON_CATALOG } = useSWR(
-    isDdragon && ddragonVersion
+    isDdragon && requireCatalog && ddragonVersion
       ? ["history:ddragon-static-catalog", ddragonVersion]
       : null,
     ([, version]) => fetchDdragonStaticCatalog(version),
@@ -561,10 +604,11 @@ export function useDragonStaticData(
   const context = useMemo<ResolveContext>(
     () => ({
       ddragonVersion,
+      connected,
       cdragonCatalog,
       ddragonCatalog,
     }),
-    [ddragonVersion, cdragonCatalog, ddragonCatalog],
+    [ddragonVersion, connected, cdragonCatalog, ddragonCatalog],
   );
 
   return useMemo(() => {

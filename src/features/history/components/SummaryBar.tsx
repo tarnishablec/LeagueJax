@@ -2,7 +2,7 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { RankedQueueStats, SummonerInfo } from "@/bindings/summoner.ts";
-import { useProfileIcon } from "@/hooks/use-profile-icon.ts";
+import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { useRankedSummary } from "../hooks/use-ranked-summary";
 import * as s from "./SummaryBar.css";
@@ -39,7 +39,10 @@ function formatMeta(
 
 export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
   const { t } = useTranslation();
-  const avatarUrl = useProfileIcon(summoner.profileIconId);
+  const { src: avatarUrl } = useDragonStaticData({
+    type: "profile-icon",
+    profileIconId: summoner.profileIconId,
+  });
   const { data: rankedSummary } = useRankedSummary(summoner.puuid);
   const [copied, setCopied] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);

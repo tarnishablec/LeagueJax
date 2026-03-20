@@ -49,3 +49,14 @@ tokio = { version = "1", features = ["full", "test-util"] }
 
 [lints.clippy]
 unwrap_used = "deny"
+
+[profile.dev]
+opt-level = 0          # 彻底关闭优化
+debug = true           # 确保生成完整的调试信息
+debug-assertions = true # 启用运行时断言
+overflow-checks = true  # 启用整数溢出检查
+lto = false            # 关闭链接时优化
+incremental = true     # 保持增量编译以加快速度
+
+[profile.dev.package."*"]
+opt-level = 2

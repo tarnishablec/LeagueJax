@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 #[derive(TS)]
@@ -32,13 +32,26 @@ pub struct MatchSummary {
     pub spell2_id: i64,
     pub perk_primary_rune_id: i64,
     pub perk_sub_style_id: i64,
+    pub player_augments: [i64; 6],
     pub items: [i64; 7],
     pub map_id: i64,
     pub game_duration: i64,
     pub game_mode: String,
+    pub game_mutator: String,
     pub game_creation: i64,
     pub queue_id: i64,
     pub participants: Vec<MatchSummaryParticipant>,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CherryAugment {
+    pub id: i64,
+    pub name_tra: String,
+    pub augment_small_icon_path: String,
+    pub rarity: String,
 }
 
 #[derive(TS)]

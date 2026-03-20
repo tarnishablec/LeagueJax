@@ -21,3 +21,12 @@ export type SummonerInfo = {
   profileIconId: number;
   summonerLevel: number;
 };
+
+export type SummonerSearchResult = {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  profileIconId: number;
+  summonerLevel: number;
+  sgpServerId: string;
+};

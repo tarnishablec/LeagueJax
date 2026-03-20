@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { SummonerID } from "@/components/SummonerID.tsx";
-import { useProfileIcon } from "@/hooks/use-profile-icon.ts";
+import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
 import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
@@ -118,7 +118,10 @@ function ClientCardContent({
   isFocused: boolean;
 }) {
   const { t } = useTranslation();
-  const avatarUrl = useProfileIcon(inst.summoner?.profileIconId);
+  const { src: avatarUrl } = useDragonStaticData({
+    type: "profile-icon",
+    profileIconId: inst.summoner?.profileIconId ?? 0,
+  });
   const hasSummoner = !!inst.summoner;
   const stateLabel = renderInstanceStateLabel(displayState, t);
 
@@ -246,9 +249,10 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
 
   const summoner = focusedReady?.summoner;
   const hasFocusedSummoner = !!(focusedReady && summoner);
-  const avatarUrl = useProfileIcon(
-    hasFocusedSummoner ? summoner?.profileIconId : undefined,
-  );
+  const { src: avatarUrl } = useDragonStaticData({
+    type: "profile-icon",
+    profileIconId: hasFocusedSummoner ? (summoner?.profileIconId ?? 0) : 0,
+  });
   const isLoading = !!focusedInstance && focusedInstance.state !== "ready";
 
   const handleClick = () => {
