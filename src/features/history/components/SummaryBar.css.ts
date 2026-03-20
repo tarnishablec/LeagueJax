@@ -3,7 +3,7 @@ import { vars } from "@/styles/theme.css";
 
 export const bar = style({
   display: "grid",
-  gridTemplateColumns: "56px minmax(12rem, 1fr) minmax(20rem, 2fr)",
+  gridTemplateColumns: "56px minmax(12rem, 1fr) minmax(220px, 2fr)",
   alignItems: "center",
   gap: 16,
   padding: 12,
@@ -36,15 +36,6 @@ export const profileIcon = style({
   width: "100%",
   height: "100%",
   objectFit: "cover",
-});
-
-export const profileIconLoading = style({
-  opacity: 0,
-});
-
-export const profileIconReady = style({
-  opacity: 1,
-  transition: "opacity 120ms ease-out",
 });
 
 export const levelBadge = style({
