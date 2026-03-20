@@ -6,6 +6,15 @@ import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { CDRAGON_GAME_DATA_BASE } from "./match-card-display";
 
+const AUGMENT_SLOT_KEYS = [
+  "slot1",
+  "slot2",
+  "slot3",
+  "slot4",
+  "slot5",
+  "slot6",
+] as const;
+
 function normalizeAugmentIconPath(iconPath: string): string {
   const normalized = iconPath.replace(/\\/g, "/");
   const encoded = encodeURI(
@@ -75,20 +84,23 @@ export function MatchCardAugments({
   const { byId } = useLcuCherryAugments();
 
   const slots = useMemo(() => {
-    return augmentIds.slice(0, 6);
+    return AUGMENT_SLOT_KEYS.map((slotKey, slotIndex) => ({
+      slotKey,
+      id: augmentIds[slotIndex],
+    }));
   }, [augmentIds]);
 
-  if (!slots.some((id) => id > 0)) {
+  if (!slots.some((slot) => slot.id > 0)) {
     return null;
   }
 
   return (
     <div className={s.augmentGrid}>
-      {slots.map((id) => {
+      {slots.map(({ slotKey, id }) => {
         if (id <= 0) {
           return (
             <span
-              key={`augment-empty-${id}`}
+              key={`augment-empty-${slotKey}`}
               className={s.augmentEmptySlot}
               aria-hidden="true"
             />
@@ -106,7 +118,11 @@ export function MatchCardAugments({
           : null;
 
         return (
-          <HoverCard.Root key={`augment-${id}`} openDelay={100} closeDelay={60}>
+          <HoverCard.Root
+            key={`augment-${slotKey}-${id}`}
+            openDelay={100}
+            closeDelay={60}
+          >
             <HoverCard.Trigger asChild>
               <span className={s.augmentHoverTrigger}>
                 <MatchCardAssetIcon

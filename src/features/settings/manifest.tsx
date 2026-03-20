@@ -242,6 +242,15 @@ export class SettingsShard implements WebShard, SettingsShardApi {
               scope: "Scope",
             },
           },
+          clientArgs: {
+            tab: "Client Args",
+            commandTitle: "Command Line",
+            columns: {
+              key: "Key",
+              value: "Value",
+            },
+            empty: "No focused client.",
+          },
         },
       },
       "zh-CN": {
@@ -300,6 +309,15 @@ export class SettingsShard implements WebShard, SettingsShardApi {
               scope: "作用域",
             },
           },
+          clientArgs: {
+            tab: "客户端参数",
+            commandTitle: "命令行",
+            columns: {
+              key: "参数",
+              value: "值",
+            },
+            empty: "当前没有聚焦的客户端。",
+          },
         },
       },
       "ja-JP": {
@@ -357,6 +375,16 @@ export class SettingsShard implements WebShard, SettingsShardApi {
               en: "\u82f1\u8a9e",
               scope: "\u30b9\u30b3\u30fc\u30d7",
             },
+          },
+          clientArgs: {
+            tab: "\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u5f15\u6570",
+            commandTitle: "\u30b3\u30de\u30f3\u30c9\u30e9\u30a4\u30f3",
+            columns: {
+              key: "\u30ad\u30fc",
+              value: "\u5024",
+            },
+            empty:
+              "\u30d5\u30a9\u30fc\u30ab\u30b9\u4e2d\u306e\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u304c\u3042\u308a\u307e\u305b\u3093\u3002",
           },
         },
       },

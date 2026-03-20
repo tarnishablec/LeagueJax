@@ -1,5 +1,5 @@
 import { Check, Copy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { RankedQueueStats, SummonerInfo } from "@/bindings/summoner.ts";
 import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
@@ -45,28 +45,22 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
   });
   const { data: rankedSummary } = useRankedSummary(summoner.puuid);
   const [copied, setCopied] = useState(false);
-  const [avatarLoading, setAvatarLoading] = useState(false);
+  const copyResetTimerRef = useRef<number | null>(null);
   const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
-
-  useEffect(() => {
-    if (!copied) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => setCopied(false), 1200);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
-
-  useEffect(() => {
-    setAvatarLoading(Boolean(avatarUrl));
-  }, [avatarUrl]);
 
   const copyId = async () => {
     try {
       await navigator.clipboard.writeText(summonerId);
       setCopied(true);
+      if (copyResetTimerRef.current !== null) {
+        window.clearTimeout(copyResetTimerRef.current);
+      }
+      copyResetTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copyResetTimerRef.current = null;
+      }, 1200);
     } catch {
-      // no-op: keep UI stable when clipboard API is unavailable
+      // no-op: keep the UI stable when clipboard API is unavailable
     }
   };
 
@@ -90,14 +84,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
       <div className={s.avatarSlot}>
         <div className={s.iconFallback}>
           {avatarUrl ? (
-            <img
-              key={avatarUrl}
-              src={avatarUrl}
-              alt="Profile icon"
-              className={`${s.profileIcon} ${avatarLoading ? s.profileIconLoading : s.profileIconReady}`}
-              onLoad={() => setAvatarLoading(false)}
-              onError={() => setAvatarLoading(false)}
-            />
+            <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
           ) : null}
         </div>
         <span className={s.levelBadge}>{summoner.summonerLevel}</span>
