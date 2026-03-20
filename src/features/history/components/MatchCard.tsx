@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { MatchSummary } from "@/bindings/matches.ts";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useMatchDetail } from "../hooks/use-match-detail";
+import type { MatchSummary } from "../types/match-summary";
 import * as s from "./MatchCard.css";
 import { MatchCardAugments } from "./MatchCardAugments";
 import { MatchCardItems } from "./MatchCardItems";

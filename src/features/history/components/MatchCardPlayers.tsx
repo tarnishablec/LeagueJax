@@ -2,10 +2,10 @@ import { HoverCard } from "@ark-ui/react/hover-card";
 import { Portal } from "@ark-ui/react/portal";
 import { invoke } from "@tauri-apps/api/core";
 import { useMemo } from "react";
-import type { MatchSummaryParticipant } from "@/bindings/matches.ts";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useTabStore } from "@/stores/tabs";
+import type { MatchSummaryParticipant } from "../types/match-summary";
 import * as s from "./MatchCard.css";
 
 function resolvePlayerName(participant: MatchSummaryParticipant): {

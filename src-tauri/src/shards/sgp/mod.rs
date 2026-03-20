@@ -59,7 +59,10 @@ impl TryFrom<LcuClientHandle> for SgpClientHandle {
 
     fn try_from(lcu_client: LcuClientHandle) -> Result<Self, Self::Error> {
         let http_client = shared_http_client()?;
-        Ok(Self::new(Arc::new(SgpSession::new(lcu_client, http_client))))
+        Ok(Self::new(Arc::new(SgpSession::new(
+            lcu_client,
+            http_client,
+        ))))
     }
 }
 

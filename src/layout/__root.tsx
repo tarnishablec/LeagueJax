@@ -3,6 +3,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation } from "react-router";
+import { DebugCommandPanel } from "@/components/DebugCommandPanel";
 import { JaxLogo } from "@/components/JaxLogo";
 import { TitleBar } from "@/components/TitleBar";
 import {
@@ -127,6 +128,7 @@ export function RootLayout() {
       <main className={s.main}>
         <Outlet />
       </main>
+      <DebugCommandPanel />
     </div>
   );
 }

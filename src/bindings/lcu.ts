@@ -67,7 +67,7 @@ export type TencentLeagueClientCmdArgs = {
   "ux-name": string;
   "ux-helper-name": string;
   "log-dir": string;
-  "crash-reporting": string;
+  "crash-reporting": string | null;
   "crash-environment": string;
   "app-log-file-path": string;
   "app-pid": number;

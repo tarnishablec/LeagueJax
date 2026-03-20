@@ -58,7 +58,11 @@ impl Shard for LogShard {
             .and_then(|value| value.as_str().map(|value| value.to_string()))
             .unwrap_or_else(|| "info".to_string());
 
-        tracing::info!(setting_id = LOG_LEVEL_SETTING_ID, level, "Log level initialized");
+        tracing::info!(
+            setting_id = LOG_LEVEL_SETTING_ID,
+            level,
+            "Log level initialized"
+        );
         Ok(())
     }
 

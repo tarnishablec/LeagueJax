@@ -1,3 +1,4 @@
+use crate::concepts::match_summaries_raw::RawMatchSummariesResponse;
 use serde_json::Value;
 
 use super::config::{sgp_servers_config, SgpServerEndpoints};
@@ -58,6 +59,17 @@ impl SgpApi {
         sgp_server_id.to_string()
     }
 
+    fn normalize_server_id(server_id: &str) -> String {
+        server_id.trim().to_uppercase()
+    }
+
+    fn resolve_target_server_id(requested: Option<&str>, fallback: &str) -> String {
+        requested
+            .map(Self::normalize_server_id)
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| Self::normalize_server_id(fallback))
+    }
+
     pub async fn get_match_summaries(
         &self,
         puuid: &str,
@@ -65,12 +77,10 @@ impl SgpApi {
         count: u32,
         tag: Option<&str>,
         sgp_server_id: Option<&str>,
-    ) -> Result<Value, AppError> {
+    ) -> Result<RawMatchSummariesResponse, AppError> {
         let token_context = self.client.get_or_refresh_token_context().await?;
-        let target_server_id = sgp_server_id
-            .map(|value| value.trim().to_uppercase())
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| token_context.sgp_server_id.to_uppercase());
+        let target_server_id =
+            Self::resolve_target_server_id(sgp_server_id, &token_context.sgp_server_id);
 
         let base_url = Self::resolve_match_history_base_url(&target_server_id)?;
         let path = format!("/match-history-query/v1/products/lol/player/{puuid}/SUMMARY");
@@ -82,7 +92,8 @@ impl SgpApi {
             query.push(("tag", tag.to_string()));
         }
 
-        self.client
+        let response = self
+            .client
             .http_client()
             .request_json(
                 &base_url,
@@ -91,7 +102,19 @@ impl SgpApi {
                 Some(query),
                 None,
             )
-            .await
+            .await?;
+
+        let response_raw = serde_json::to_string(&response)?;
+        let mut deserializer = serde_json::Deserializer::from_str(&response_raw);
+        serde_path_to_error::deserialize::<_, RawMatchSummariesResponse>(&mut deserializer).map_err(
+            |error| {
+                let path = error.path().to_string();
+                let source = error.inner().to_string();
+                AppError::Other(format!(
+                    "Failed to parse get_match_summaries at path {path}: {source}"
+                ))
+            },
+        )
     }
 
     pub async fn get_game_summary(
@@ -100,10 +123,8 @@ impl SgpApi {
         sgp_server_id: Option<&str>,
     ) -> Result<Value, AppError> {
         let token_context = self.client.get_or_refresh_token_context().await?;
-        let target_server_id = sgp_server_id
-            .map(|value| value.trim().to_uppercase())
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| token_context.sgp_server_id.to_uppercase());
+        let target_server_id =
+            Self::resolve_target_server_id(sgp_server_id, &token_context.sgp_server_id);
 
         let base_url = Self::resolve_match_history_base_url(&target_server_id)?;
         let sub_id = Self::sub_id_from_server_id(&target_server_id);
@@ -122,7 +143,7 @@ impl SgpApi {
         puuid: &str,
     ) -> Result<Option<SgpSummoner>, AppError> {
         let token_context = self.client.get_or_refresh_token_context().await?;
-        let target_server = sgp_server_id.to_uppercase();
+        let target_server = Self::normalize_server_id(sgp_server_id);
         let base_url = Self::resolve_common_base_url(&target_server)?;
         let sub_id = Self::sub_id_from_server_id(&target_server).to_lowercase();
         let path = format!("/summoner-ledge/v1/regions/{sub_id}/summoners/puuids");
