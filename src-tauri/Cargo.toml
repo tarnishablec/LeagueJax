@@ -22,9 +22,9 @@ tauri-plugin-store = "2"
 #tauri-plugin-updater = "2"
 tauri-plugin-opener = "2"
 
-reqwest = { version = "0.13.2", features = ["json", "rustls"] }
-tokio-tungstenite = { version = "0.29.0", features = ["rustls-tls-webpki-roots"] }
-rustls = { version = "0.23", features = ["ring"] }
+reqwest = { version = "0.13.2", default-features = false, features = ["json", "rustls-no-provider"] }
+tokio-tungstenite = { version = "0.29.0", default-features = true, features = ["rustls-tls-webpki-roots", "__rustls-tls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
 tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
 serde = { version = "1", features = ["derive"] }
@@ -49,14 +49,3 @@ tokio = { version = "1", features = ["full", "test-util"] }
 
 [lints.clippy]
 unwrap_used = "deny"
-
-[profile.dev]
-opt-level = 0          # 彻底关闭优化
-debug = true           # 确保生成完整的调试信息
-debug-assertions = true # 启用运行时断言
-overflow-checks = true  # 启用整数溢出检查
-lto = false            # 关闭链接时优化
-incremental = true     # 保持增量编译以加快速度
-
-[profile.dev.package."*"]
-opt-level = 2
