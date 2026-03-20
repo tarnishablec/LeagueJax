@@ -103,6 +103,7 @@ export class HistoryShard implements WebShard {
           map: {
             summonersRift: "Summoner's Rift",
             howlingAbyss: "Howling Abyss",
+            random: "Random Map",
             nexusBlitz: "Nexus Blitz",
             arena: "Arena",
             unknown: "Map {{mapId}}",
@@ -179,6 +180,7 @@ export class HistoryShard implements WebShard {
           map: {
             summonersRift: "\u53ec\u5524\u5e08\u5ce1\u8c37",
             howlingAbyss: "\u568e\u54ed\u6df1\u6e0a",
+            random: "随机地图",
             nexusBlitz: "\u6781\u9650\u95ea\u51fb",
             arena: "\u6597\u9b42\u7ade\u6280\u573a",
             unknown: "\u5730\u56fe {{mapId}}",
@@ -258,6 +260,7 @@ export class HistoryShard implements WebShard {
           map: {
             summonersRift: "\u30b5\u30e2\u30ca\u30fc\u30ba\u30ea\u30d5\u30c8",
             howlingAbyss: "\u30cf\u30a6\u30ea\u30f3\u30b0\u30a2\u30d3\u30b9",
+            random: "ランダムマップ",
             nexusBlitz: "\u30cd\u30af\u30b5\u30b9\u30d6\u30ea\u30c3\u30c4",
             arena: "\u30a2\u30ea\u30fc\u30ca",
             unknown: "\u30de\u30c3\u30d7 {{mapId}}",

@@ -36,11 +36,16 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             lcu_update_focus,
             get_current_summoner,
+            get_current_sgp_server_id,
+            get_sgp_servers_config,
             search_summoner,
+            search_summoners,
             get_summoner_by_puuid,
             get_ranked_summary,
             get_match_summaries,
             get_match_detail,
+            get_cherry_augments,
+            get_lcu_maps,
             get_game_version,
             get_settings_bootstrap,
             apply_settings_patch,
@@ -74,6 +79,7 @@ pub fn run() {
                 .register(Arc::new(shards::settings::SettingsShard::new()))
                 .register(Arc::new(shards::log::LogShard::new()))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
+                .register(Arc::new(shards::lcu_event_bridge::LcuEventBridgeShard::new()))
                 .register(Arc::new(shards::sgp::SgpShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
                 .register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()))

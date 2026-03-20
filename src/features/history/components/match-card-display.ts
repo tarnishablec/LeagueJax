@@ -5,41 +5,6 @@ export const CDRAGON_GAME_DATA_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";
 const CDRAGON_PERK_STYLES_ICON_BASE = `${CDRAGON_GAME_DATA_BASE}/v1/perk-images/styles`;
 
-const QUEUE_MODE_KEY_BY_ID: Record<number, string> = {
-  420: "history.mode.q420",
-  430: "history.mode.q430",
-  440: "history.mode.q440",
-  450: "history.mode.q450",
-  480: "history.mode.q480",
-  1700: "history.mode.q1700",
-  490: "history.mode.q490",
-  1900: "history.mode.q1900",
-  900: "history.mode.q900",
-  2300: "history.mode.q2300",
-};
-
-const MAP_NAME_KEY_BY_ID: Record<number, string> = {
-  8: "history.map.crystalScar",
-  10: "history.map.twistedTreeline",
-  11: "history.map.summonersRift",
-  12: "history.map.howlingAbyss",
-  14: "history.map.butchersBridge",
-  21: "history.map.nexusBlitz",
-  30: "history.map.arena",
-};
-
-const GAME_MODE_KEY_BY_CODE: Record<string, string> = {
-  PRACTICETOOL: "history.mode.practiceTool",
-  CLASSIC: "history.mode.classic",
-  ARAM: "history.mode.aram",
-  URF: "history.mode.urf",
-  ONEFORALL: "history.mode.oneForAll",
-  NEXUSBLITZ: "history.mode.nexusBlitz",
-  ULTBOOK: "history.mode.ultimateSpellbook",
-  CHERRY: "history.mode.arena",
-  TUTORIAL: "history.mode.tutorial",
-};
-
 const RUNE_STYLE_KEY_BY_ID: Record<number, string> = {
   8000: "history.runeStyle.precision",
   8100: "history.runeStyle.domination",
@@ -108,35 +73,18 @@ export function resolveModeLabel(
   t: TFunction,
   queueId: number,
   gameMode: string,
+  queueName?: string | null,
 ): string {
-  const key = QUEUE_MODE_KEY_BY_ID[queueId];
-  if (key) {
-    return t(key);
-  }
   const normalizedGameMode = normalizeGameModeCode(gameMode.trim());
-  const modeKey = GAME_MODE_KEY_BY_CODE[normalizedGameMode];
-  if (modeKey) {
-    return t(modeKey);
+  if (normalizedGameMode === "PRACTICETOOL") {
+    return t("history.mode.practiceTool");
   }
 
-  if (gameMode.trim().length > 0) {
-    return gameMode.trim();
+  if (queueName && queueName.trim().length > 0) {
+    return queueName.trim();
   }
-  return t("history.mode.unknown", {
-    queueId,
-    defaultValue: `Queue ${queueId}`,
-  });
-}
 
-export function resolveMapLabel(t: TFunction, mapId: number): string {
-  const key = MAP_NAME_KEY_BY_ID[mapId];
-  if (key) {
-    return t(key);
-  }
-  return t("history.map.unknown", {
-    mapId,
-    defaultValue: `Map ${mapId}`,
-  });
+  return `Queue ${queueId}`;
 }
 
 export function resolveRuneSubStyleLabel(

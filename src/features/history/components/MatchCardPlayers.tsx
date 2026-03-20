@@ -3,7 +3,7 @@ import { Portal } from "@ark-ui/react/portal";
 import { invoke } from "@tauri-apps/api/core";
 import { useMemo } from "react";
 import type { MatchSummaryParticipant } from "@/bindings/matches.ts";
-import type { SummonerInfo } from "@/bindings/summoner.ts";
+import type { SummonerSearchResult } from "@/bindings/summoner.ts";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useTabStore } from "@/stores/tabs";
 import * as s from "./MatchCard.css";
@@ -33,8 +33,10 @@ function PlayerIcon({ championId }: { championId: number }) {
 
 export function MatchCardPlayers({
   participants,
+  sgpServerId,
 }: {
   participants: MatchSummaryParticipant[];
+  sgpServerId: string | null;
 }) {
   const openTab = useTabStore((state) => state.openTab);
 
@@ -44,35 +46,72 @@ export function MatchCardPlayers({
     tagLine: string,
   ) => {
     try {
-      const summoner = await invoke<SummonerInfo>("get_summoner_by_puuid", {
-        puuid: participant.puuid,
+      const query = participant.puuid;
+      const byPuuid = await invoke<SummonerSearchResult[]>("search_summoners", {
+        query,
+        ...(sgpServerId ? { sgpServerId } : {}),
       });
-      openTab(summoner);
-      return;
+      const resolved = byPuuid.find(
+        (entry) => entry.puuid === participant.puuid,
+      );
+      if (resolved) {
+        openTab(
+          {
+            puuid: resolved.puuid,
+            gameName: resolved.gameName,
+            tagLine: resolved.tagLine,
+            profileIconId: resolved.profileIconId,
+            summonerLevel: resolved.summonerLevel,
+          },
+          resolved.sgpServerId,
+        );
+        return;
+      }
     } catch {
-      // fallback to name + tag search below
+      // fallback to exact query below
     }
 
     if (tagLine.length > 0) {
       try {
-        const summoner = await invoke<SummonerInfo>("search_summoner", {
-          gameName,
-          tagLine,
-        });
-        openTab(summoner);
-        return;
+        const query = `${gameName}#${tagLine}`;
+        const byRiotId = await invoke<SummonerSearchResult[]>(
+          "search_summoners",
+          {
+            query,
+            ...(sgpServerId ? { sgpServerId } : {}),
+          },
+        );
+        const resolved =
+          byRiotId.find((entry) => entry.puuid === participant.puuid) ??
+          byRiotId[0];
+        if (resolved) {
+          openTab(
+            {
+              puuid: resolved.puuid,
+              gameName: resolved.gameName,
+              tagLine: resolved.tagLine,
+              profileIconId: resolved.profileIconId,
+              summonerLevel: resolved.summonerLevel,
+            },
+            resolved.sgpServerId,
+          );
+          return;
+        }
       } catch {
         // fallback below
       }
     }
 
-    openTab({
-      puuid: participant.puuid,
-      gameName,
-      tagLine,
-      profileIconId: 0,
-      summonerLevel: 0,
-    });
+    openTab(
+      {
+        puuid: participant.puuid,
+        gameName,
+        tagLine,
+        profileIconId: 0,
+        summonerLevel: 0,
+      },
+      sgpServerId,
+    );
   };
 
   const participantsByTeam = useMemo(

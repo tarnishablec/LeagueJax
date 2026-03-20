@@ -35,7 +35,7 @@ pub struct SgpServerEndpoints {
     pub common: Option<String>,
 }
 
-static BUILTIN_SGP_CONFIG: &str = include_str!("league-servers.json");
+static BUILTIN_SGP_CONFIG: &str = include_str!("../../../../resources/league-servers.json");
 static SGP_CONFIG: LazyLock<Result<SgpServersConfig, String>> = LazyLock::new(|| {
     serde_json::from_str(BUILTIN_SGP_CONFIG)
         .map_err(|error| format!("Failed to parse builtin SGP server config: {error}"))

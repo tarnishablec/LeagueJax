@@ -21,17 +21,28 @@ function modeTagToQueryTag(tag: MatchModeTag): string | undefined {
 
 export function useMatchHistory(
   puuid: string | undefined,
+  sgpServerId: string | null,
   page: number,
   pageSize = 20,
   modeTag: MatchModeTag = "all",
 ) {
   const { data, error, isLoading, isValidating } = useSWR(
-    puuid ? ["get_match_summaries", puuid, page, pageSize, modeTag] : null,
-    ([cmd, resolvedPuuid, resolvedPage, resolvedPageSize, resolvedTag]) =>
+    puuid
+      ? ["get_match_summaries", puuid, sgpServerId, page, pageSize, modeTag]
+      : null,
+    ([
+      cmd,
+      resolvedPuuid,
+      resolvedSgpServerId,
+      resolvedPage,
+      resolvedPageSize,
+      resolvedTag,
+    ]) =>
       invoke<MatchSummary[]>(cmd, {
         puuid: resolvedPuuid,
         beginIndex: (resolvedPage - 1) * resolvedPageSize,
         endIndex: resolvedPage * resolvedPageSize,
+        ...(resolvedSgpServerId ? { sgpServerId: resolvedSgpServerId } : {}),
         ...(modeTagToQueryTag(resolvedTag) ? { tag: resolvedTag } : {}),
       }),
     {

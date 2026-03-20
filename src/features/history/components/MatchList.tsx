@@ -12,7 +12,13 @@ import {
   placeholderFilterOptions,
 } from "./match-list-options";
 
-export function MatchList({ puuid }: { puuid: string }) {
+export function MatchList({
+  puuid,
+  sgpServerId,
+}: {
+  puuid: string;
+  sgpServerId: string | null;
+}) {
   const { t } = useTranslation();
   const [modeTag, setModeTag] = useState<MatchModeTag>("all");
   const [pageSize, setPageSize] = useState<number>(20);
@@ -21,7 +27,7 @@ export function MatchList({ puuid }: { puuid: string }) {
   const { refreshing, refresh } = useHistoryRefresh();
   const previousPuuidRef = useRef<string | null>(null);
   const { matches, error, isLoading, isRefreshing, hasNextPage } =
-    useMatchHistory(puuid, page, pageSize, modeTag);
+    useMatchHistory(puuid, sgpServerId, page, pageSize, modeTag);
 
   const hasMatch = matches.length > 0;
   const canGoPrev = page > 1 && !isLoading && !isRefreshing;
@@ -107,7 +113,11 @@ export function MatchList({ puuid }: { puuid: string }) {
       {!isLoading && !error && hasMatch ? (
         <div className={s.list}>
           {matches.map((match) => (
-            <MatchCard key={match.gameId} match={match} />
+            <MatchCard
+              key={match.gameId}
+              match={match}
+              sgpServerId={sgpServerId}
+            />
           ))}
         </div>
       ) : null}

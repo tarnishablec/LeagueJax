@@ -16,6 +16,7 @@ export interface NavItem {
 
 export interface RouteContribution
   extends Pick<RouteObject, "path" | "index" | "element"> {
+  children?: RouteContribution[];
   order?: number;
 }
 
