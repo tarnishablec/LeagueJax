@@ -2,9 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::concepts::maps::LcuMap;
-use crate::concepts::matches::{
-    CherryAugment, MatchDetail, MatchOutcome, MatchSummary, MatchSummaryParticipant, Participant,
-};
+use crate::concepts::match_summaries_raw::RawMatchSummariesResponse;
+use crate::concepts::matches::{CherryAugment, MatchDetail, Participant};
 use crate::concepts::summoner::{
     RankedQueueStats, RankedSummary, SummonerInfo, SummonerSearchResult,
 };
@@ -19,131 +18,6 @@ use uuid::Uuid;
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-fn parse_sgp_match_summary(game: &Value, target_puuid: &str) -> Result<MatchSummary, AppError> {
-    let payload = sgp_summary_payload(game);
-    let participants = payload
-        .get("participants")
-        .and_then(Value::as_array)
-        .ok_or_else(|| AppError::Other("SGP summary is missing participants".to_string()))?;
-
-    let participant = participants
-        .iter()
-        .find(|participant| {
-            participant
-                .get("puuid")
-                .and_then(Value::as_str)
-                .is_some_and(|puuid| puuid == target_puuid)
-        })
-        .or_else(|| participants.first())
-        .ok_or_else(|| AppError::Other("SGP summary participants are empty".to_string()))?;
-
-    let null = Value::Null;
-    let stats = participant.get("stats").unwrap_or(&null);
-    let team_id = first_i64(participant, &["teamId"]).unwrap_or(0);
-
-    let total_minions =
-        participant_stat_i64(participant, stats, &["totalMinionsKilled"]).unwrap_or(0);
-    let neutral_minions =
-        participant_stat_i64(participant, stats, &["neutralMinionsKilled"]).unwrap_or(0);
-    let total_damage =
-        participant_stat_i64(participant, stats, &["totalDamageDealtToChampions"]).unwrap_or(0);
-
-    let team_total_damage: i64 = participants
-        .iter()
-        .filter(|entry| first_i64(entry, &["teamId"]).unwrap_or(0) == team_id)
-        .map(|entry| {
-            let entry_stats = entry.get("stats").unwrap_or(&null);
-            participant_stat_i64(entry, entry_stats, &["totalDamageDealtToChampions"]).unwrap_or(0)
-        })
-        .sum();
-    let damage_share = if team_total_damage > 0 {
-        total_damage as f64 / team_total_damage as f64
-    } else {
-        0.0
-    };
-    let items = participant_items(participant, stats);
-    let player_augments = participant_augments(participant, stats);
-    let perk_ids = participant_perk_ids(participant, stats);
-    let perk_primary_rune_id = perk_ids.primary_rune_id.unwrap_or(0);
-    let perk_sub_style_id = perk_ids.sub_style_id.unwrap_or(0);
-    let win = participant_stat_bool(participant, stats, "win").unwrap_or(false);
-    let outcome = participant_match_outcome(participant, stats, payload, win);
-
-    #[cfg(debug_assertions)]
-    {
-        tracing::debug!(
-            target_puuid,
-            game_id = parse_sgp_game_id(payload, game),
-            perk_primary_rune_id,
-            perk_sub_style_id,
-            raw_perk0 = first_i64(stats, &["perk0"])
-                .or_else(|| first_i64(participant, &["perk0"]))
-                .unwrap_or(0),
-            raw_perk_sub_style = first_i64(stats, &["perkSubStyle"])
-                .or_else(|| first_i64(participant, &["perkSubStyle"]))
-                .unwrap_or(0),
-            participant_styles = ?style_debug_entries(participant),
-            stats_styles = ?style_debug_entries(stats),
-            "parsed perk ids from SGP summary"
-        );
-    }
-
-    Ok(MatchSummary {
-        game_id: parse_sgp_game_id(payload, game),
-        champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
-        win,
-        outcome,
-        team_id,
-        kills: participant_stat_i64(participant, stats, &["kills"]).unwrap_or(0),
-        deaths: participant_stat_i64(participant, stats, &["deaths"]).unwrap_or(0),
-        assists: participant_stat_i64(participant, stats, &["assists"]).unwrap_or(0),
-        cs: total_minions + neutral_minions,
-        total_damage_dealt_to_champions: total_damage,
-        damage_share,
-        spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
-        spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
-        perk_primary_rune_id,
-        perk_sub_style_id,
-        player_augments,
-        items,
-        map_id: first_i64(payload, &["mapId", "map_id"]).unwrap_or(0),
-        game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
-        game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
-        game_mutator: first_string(
-            payload,
-            &["gameMutator", "game_mutator", "gameVariant", "game_variant"],
-        )
-        .unwrap_or_default(),
-        game_creation: first_i64(payload, &["gameCreation", "game_datetime"]).unwrap_or(0),
-        queue_id: first_i64(payload, &["queueId", "queue_id"]).unwrap_or(0),
-        participants: participants
-            .iter()
-            .map(parse_sgp_summary_participant)
-            .collect(),
-    })
-}
-
-fn parse_sgp_summary_participant(participant: &Value) -> MatchSummaryParticipant {
-    let summoner_name = first_string(
-        participant,
-        &["summonerName", "riotIdGameName", "gameName", "name"],
-    )
-    .unwrap_or_default();
-    let (fallback_game_name, fallback_tag_line) = split_riot_id(&summoner_name);
-    let game_name =
-        first_string(participant, &["riotIdGameName", "gameName"]).unwrap_or(fallback_game_name);
-    let tag_line = first_string(participant, &["riotIdTagline", "riotIdTagLine", "tagLine"])
-        .unwrap_or(fallback_tag_line);
-
-    MatchSummaryParticipant {
-        puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
-        champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
-        game_name,
-        tag_line,
-        team_id: first_i64(participant, &["teamId"]).unwrap_or(0),
-    }
-}
 
 fn parse_sgp_participant(participant: &Value) -> Participant {
     let null = Value::Null;
@@ -284,10 +158,6 @@ fn participant_stat_bool(participant: &Value, stats: &Value, key: &str) -> Optio
     first_bool(stats, &[key]).or_else(|| first_bool(participant, &[key]))
 }
 
-fn participant_stat_string(participant: &Value, stats: &Value, keys: &[&str]) -> Option<String> {
-    first_string(stats, keys).or_else(|| first_string(participant, keys))
-}
-
 fn parse_cherry_augment(value: &Value) -> Option<CherryAugment> {
     let id = first_i64(value, &["id"])?;
     let name_tra = first_string(value, &["nameTRA", "nameTra", "name"]).unwrap_or_default();
@@ -310,95 +180,6 @@ fn parse_cherry_augments(value: &Value) -> Vec<CherryAugment> {
         .unwrap_or_default()
 }
 
-fn normalize_status_text(value: &str) -> String {
-    value
-        .chars()
-        .filter(|current| current.is_ascii_alphanumeric())
-        .map(|current| current.to_ascii_lowercase())
-        .collect()
-}
-
-fn is_terminated_result(value: &str) -> bool {
-    let normalized = normalize_status_text(value);
-    normalized.contains("abort")
-        || normalized.contains("terminated")
-        || normalized.contains("cancel")
-        || normalized.contains("invalid")
-}
-
-fn is_remake_result(value: &str) -> bool {
-    let normalized = normalize_status_text(value);
-    normalized.contains("remake")
-        || normalized.contains("earlysurrender")
-        || normalized.contains("surrenderedearly")
-}
-
-fn participant_match_outcome(
-    participant: &Value,
-    stats: &Value,
-    payload: &Value,
-    win: bool,
-) -> MatchOutcome {
-    let ended_in_early_surrender =
-        participant_stat_bool(participant, stats, "gameEndedInEarlySurrender")
-            .or_else(|| first_bool(payload, &["gameEndedInEarlySurrender"]))
-            .unwrap_or(false);
-
-    let terminated_flag = participant_stat_bool(participant, stats, "aborted")
-        .or_else(|| participant_stat_bool(participant, stats, "gameTerminated"))
-        .or_else(|| participant_stat_bool(participant, stats, "gameEndedInAbort"))
-        .or_else(|| first_bool(payload, &["aborted", "gameTerminated", "gameEndedInAbort"]))
-        .unwrap_or(false);
-
-    let end_of_game_result = participant_stat_string(
-        participant,
-        stats,
-        &[
-            "endOfGameResult",
-            "end_of_game_result",
-            "gameEndResult",
-            "game_end_result",
-        ],
-    )
-    .or_else(|| {
-        first_string(
-            payload,
-            &[
-                "endOfGameResult",
-                "end_of_game_result",
-                "gameEndResult",
-                "game_end_result",
-            ],
-        )
-    });
-
-    if terminated_flag {
-        return MatchOutcome::Terminated;
-    }
-
-    if let Some(raw) = end_of_game_result.as_deref() {
-        if is_terminated_result(raw) {
-            return MatchOutcome::Terminated;
-        }
-    }
-
-    if ended_in_early_surrender {
-        return MatchOutcome::Remake;
-    }
-
-    if let Some(raw) = end_of_game_result.as_deref() {
-        if is_remake_result(raw) {
-            return MatchOutcome::Remake;
-        }
-    }
-
-    if win {
-        MatchOutcome::Victory
-    } else {
-        MatchOutcome::Defeat
-    }
-}
-
 fn participant_items(participant: &Value, stats: &Value) -> [i64; 7] {
     let mut items = [0i64; 7];
     for (index, item) in items.iter_mut().enumerate() {
@@ -406,15 +187,6 @@ fn participant_items(participant: &Value, stats: &Value) -> [i64; 7] {
         *item = participant_stat_i64(participant, stats, &[&key]).unwrap_or(0);
     }
     items
-}
-
-fn participant_augments(participant: &Value, stats: &Value) -> [i64; 6] {
-    let mut augments = [0i64; 6];
-    for (index, augment_id) in augments.iter_mut().enumerate() {
-        let key = format!("playerAugment{}", index + 1);
-        *augment_id = participant_stat_i64(participant, stats, &[&key]).unwrap_or(0);
-    }
-    augments
 }
 
 fn perks_styles(value: &Value) -> Option<&Vec<Value>> {
@@ -559,6 +331,7 @@ fn participant_perk_ids(participant: &Value, stats: &Value) -> PerkIdsFromStyles
 }
 
 #[cfg(debug_assertions)]
+#[allow(dead_code)]
 fn style_debug_entries(value: &Value) -> Vec<String> {
     let Some(styles) = perks_styles(value) else {
         return Vec::new();
@@ -1019,14 +792,14 @@ pub async fn get_match_summaries(
     tag: Option<String>,
     sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
-) -> Result<Vec<MatchSummary>, AppError> {
+) -> Result<RawMatchSummariesResponse, AppError> {
     let lcu_shard = jax.get_shard::<LcuShard>();
     let lcu_client = lcu_shard.focused().await?;
     let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
 
     let count = end_index.saturating_sub(begin_index);
     if count == 0 {
-        return Ok(Vec::new());
+        return Ok(RawMatchSummariesResponse { games: vec![] });
     }
 
     let normalized_tag = tag.and_then(|raw| {
@@ -1038,7 +811,7 @@ pub async fn get_match_summaries(
         }
     });
 
-    let response = sgp_api
+    sgp_api
         .get_match_summaries(
             &puuid,
             begin_index,
@@ -1046,20 +819,7 @@ pub async fn get_match_summaries(
             normalized_tag.as_deref(),
             sgp_server_id.as_deref(),
         )
-        .await?;
-
-    let games = response
-        .get("games")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-
-    let mut summaries = Vec::with_capacity(games.len());
-    for game in &games {
-        summaries.push(parse_sgp_match_summary(game, &puuid)?);
-    }
-
-    Ok(summaries)
+        .await
 }
 
 #[tauri::command]

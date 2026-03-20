@@ -36,7 +36,7 @@ pub struct TencentLeagueClientCmdArgs {
     #[serde(rename = "log-dir")]
     pub log_dir: String,
     #[serde(rename = "crash-reporting")]
-    pub crash_reporting: String,
+    pub crash_reporting: Option<String>,
     #[serde(rename = "crash-environment")]
     pub crash_environment: String,
     #[serde(rename = "app-log-file-path")]
@@ -313,12 +313,7 @@ pub fn parse_league_client_cmd_args(raw_cmdline: String) -> Result<LeagueClientC
                 "rso_platform_id",
                 false,
             )?,
-            rso_auth_url: get_required_string(
-                &values,
-                &["rso_auth_url"],
-                "rso-auth.url",
-                false,
-            )?,
+            rso_auth_url: get_required_string(&values, &["rso_auth_url"], "rso-auth.url", false)?,
             rso_auth_client: get_required_string(
                 &values,
                 &["rso_auth_client"],
@@ -358,12 +353,7 @@ pub fn parse_league_client_cmd_args(raw_cmdline: String) -> Result<LeagueClientC
                 false,
             )?,
             log_dir: get_required_string(&values, &["log_dir"], "log-dir", false)?,
-            crash_reporting: get_required_string(
-                &values,
-                &["crash_reporting"],
-                "crash-reporting",
-                true,
-            )?,
+            crash_reporting: get_optional_string(&values, &["crash_reporting"]),
             crash_environment: get_required_string(
                 &values,
                 &["crash_environment"],
@@ -389,11 +379,7 @@ pub fn parse_league_client_cmd_args(raw_cmdline: String) -> Result<LeagueClientC
                 &["disable_self_update"],
                 "disable-self-update",
             )?,
-            no_proxy_server: get_required_flag(
-                &values,
-                &["no_proxy_server"],
-                "no-proxy-server",
-            )?,
+            no_proxy_server: get_required_flag(&values, &["no_proxy_server"], "no-proxy-server")?,
             ignore_certificate_errors: get_required_flag(
                 &values,
                 &["ignore_certificate_errors"],
@@ -465,14 +451,14 @@ pub fn parse_league_client_cmd_args(raw_cmdline: String) -> Result<LeagueClientC
         )?,
         app_name: get_required_string(&values, &["app_name"], "app-name", false)?,
         ux_name: get_required_string(&values, &["ux_name"], "ux-name", false)?,
-        ux_helper_name: get_required_string(
-            &values,
-            &["ux_helper_name"],
-            "ux-helper-name",
-            false,
-        )?,
+        ux_helper_name: get_required_string(&values, &["ux_helper_name"], "ux-helper-name", false)?,
         log_dir: get_required_string(&values, &["log_dir"], "log-dir", false)?,
-        crash_reporting: get_required_string(&values, &["crash_reporting"], "crash-reporting", true)?,
+        crash_reporting: get_required_string(
+            &values,
+            &["crash_reporting"],
+            "crash-reporting",
+            true,
+        )?,
         crash_environment: get_required_string(
             &values,
             &["crash_environment"],
@@ -498,11 +484,7 @@ pub fn parse_league_client_cmd_args(raw_cmdline: String) -> Result<LeagueClientC
             &["disable_self_update"],
             "disable-self-update",
         )?,
-        no_proxy_server: get_required_flag(
-            &values,
-            &["no_proxy_server"],
-            "no-proxy-server",
-        )?,
+        no_proxy_server: get_required_flag(&values, &["no_proxy_server"], "no-proxy-server")?,
         ignore_certificate_errors: get_required_flag(
             &values,
             &["ignore_certificate_errors"],

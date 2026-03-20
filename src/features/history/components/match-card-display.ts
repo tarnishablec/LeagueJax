@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { MatchOutcome } from "@/bindings/matches.ts";
+import type { MatchOutcome } from "../types/match-summary";
 
 export const CDRAGON_GAME_DATA_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";

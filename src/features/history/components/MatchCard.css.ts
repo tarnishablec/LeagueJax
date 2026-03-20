@@ -180,16 +180,8 @@ export const loadoutGroup = style({
   gridAutoFlow: "column",
   gridAutoColumns: "max-content",
   alignItems: "center",
-  gap: 6,
+  gap: 4,
   minWidth: 0,
-});
-
-export const iconRow = style({
-  display: "grid",
-  gridAutoFlow: "column",
-  gridAutoColumns: "max-content",
-  alignItems: "center",
-  gap: 6,
 });
 
 export const assetIcon = style({
@@ -391,14 +383,6 @@ export const playerTeamColumn = style({
   display: "grid",
   gap: 4,
   alignContent: "start",
-});
-
-export const playerTeamHeader = style({
-  fontSize: "0.625rem",
-  lineHeight: 1,
-  fontWeight: 600,
-  color: vars.color.mutedForeground,
-  paddingBottom: 2,
 });
 
 export const playerRow = style({

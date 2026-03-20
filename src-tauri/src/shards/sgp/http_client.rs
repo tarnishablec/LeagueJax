@@ -11,7 +11,8 @@ pub struct SgpHttpClient {
 
 impl SgpHttpClient {
     const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
-    const USER_AGENT: &'static str = "LeagueOfLegendsClient/14.13.596.7996 (rcp-be-lol-match-history)";
+    const USER_AGENT: &'static str =
+        "LeagueOfLegendsClient/14.13.596.7996 (rcp-be-lol-match-history)";
 
     pub fn new() -> Result<Self, AppError> {
         let req_client = Client::builder()

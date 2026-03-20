@@ -16,7 +16,10 @@ use uuid::Uuid;
 const SETTINGS_TREE: &str = "settings";
 const SETTINGS_SNAPSHOT_KEY: &[u8] = b"snapshot";
 const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 3] = [
-    ("general.preferences.language", "system.preferences.language"),
+    (
+        "general.preferences.language",
+        "system.preferences.language",
+    ),
     ("general.preferences.theme", "system.preferences.theme"),
     ("core.logging.level", "system.logging.level"),
 ];
@@ -70,10 +73,7 @@ impl SettingsShard {
 
         let mut snapshot_to_persist: Option<SettingsSnapshotDto> = None;
         {
-            let mut snapshot = self
-                .snapshot
-                .write()
-                .map_err(|_| AppError::MutexPoisoned)?;
+            let mut snapshot = self.snapshot.write().map_err(|_| AppError::MutexPoisoned)?;
 
             if !snapshot.values.contains_key(&definition.id) {
                 snapshot
@@ -111,10 +111,7 @@ impl SettingsShard {
     }
 
     pub fn get_value(&self, id: &str) -> Result<Option<Value>, AppError> {
-        let snapshot = self
-            .snapshot
-            .read()
-            .map_err(|_| AppError::MutexPoisoned)?;
+        let snapshot = self.snapshot.read().map_err(|_| AppError::MutexPoisoned)?;
         Ok(snapshot.values.get(id).cloned())
     }
 
@@ -127,10 +124,7 @@ impl SettingsShard {
 
         let mut changed = BTreeMap::new();
         let snapshot_to_persist = {
-            let mut snapshot = self
-                .snapshot
-                .write()
-                .map_err(|_| AppError::MutexPoisoned)?;
+            let mut snapshot = self.snapshot.write().map_err(|_| AppError::MutexPoisoned)?;
 
             if let Some(expected) = patch.expected_version {
                 if expected != snapshot.version {
@@ -146,10 +140,7 @@ impl SettingsShard {
 
                 if let Some(definition) = definitions.get(id) {
                     if !is_value_compatible(definition, value) {
-                        return Err(AppError::Other(format!(
-                            "Invalid value for setting {}",
-                            id
-                        )));
+                        return Err(AppError::Other(format!("Invalid value for setting {}", id)));
                     }
                 }
 
@@ -296,7 +287,10 @@ fn validate_definition(definition: &SettingDefinitionDto) -> Result<(), AppError
     }
 
     if matches!(definition.control, SettingControlDto::Select)
-        && definition.options.as_ref().is_none_or(|items| items.is_empty())
+        && definition
+            .options
+            .as_ref()
+            .is_none_or(|items| items.is_empty())
     {
         return Err(AppError::Other(format!(
             "Select setting {} requires non-empty options",

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import useSWR from "swr";
-import type { MatchSummary } from "@/bindings/matches.ts";
+import type { RawMatchSummariesResponse } from "@/bindings/matches.ts";
+import { parseRawMatchSummaries } from "./parse-raw-match-summaries";
 
 export type MatchModeTag =
   | "all"
@@ -38,13 +39,13 @@ export function useMatchHistory(
       resolvedPageSize,
       resolvedTag,
     ]) =>
-      invoke<MatchSummary[]>(cmd, {
+      invoke<RawMatchSummariesResponse>(cmd, {
         puuid: resolvedPuuid,
         beginIndex: (resolvedPage - 1) * resolvedPageSize,
         endIndex: resolvedPage * resolvedPageSize,
         ...(resolvedSgpServerId ? { sgpServerId: resolvedSgpServerId } : {}),
         ...(modeTagToQueryTag(resolvedTag) ? { tag: resolvedTag } : {}),
-      }),
+      }).then((response) => parseRawMatchSummaries(response, resolvedPuuid)),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
     },

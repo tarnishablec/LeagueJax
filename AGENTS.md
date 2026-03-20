@@ -7,6 +7,12 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - **Do NOT run any git commands** (commit, push, branch, etc.) unless the user explicitly asks.
 - **Subagents are also forbidden from running git commands** — this rule applies to all agents, not just the top-level conversation.
 
+## Commit Message Guideline
+
+- When the user asks to generate a commit message, the message **must be based on the current changed files** (for example, from `git status` / diff context) and must reflect real changes in the workspace.
+- Commit messages **must follow Conventional Commits** format (for example `feat(scope): ...`, `fix(scope): ...`, `refactor(scope): ...`).
+- The generated commit message **must be returned in a Markdown code block** for direct copy/paste.
+
 ## Change Approval Workflow
 
 - For every new user request, the agent must first provide an implementation plan for review.

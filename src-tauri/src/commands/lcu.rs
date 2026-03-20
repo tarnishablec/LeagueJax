@@ -6,10 +6,7 @@ use jax::Jax;
 use tauri::State;
 
 #[tauri::command]
-pub async fn lcu_update_focus(
-    pid: Option<u32>,
-    jax: State<'_, Arc<Jax>>,
-) -> Result<(), AppError> {
+pub async fn lcu_update_focus(pid: Option<u32>, jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
     jax.get_shard::<LcuShard>().update_focus(pid).await?;
     Ok(())
 }

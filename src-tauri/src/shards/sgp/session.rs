@@ -5,8 +5,8 @@ use tokio::sync::Mutex;
 
 use super::http_client::SgpHttpClient;
 use crate::error::AppError;
-use crate::shards::lcu::LcuClientHandle;
 use crate::shards::lcu::session::SgpTokenContext;
+use crate::shards::lcu::LcuClientHandle;
 
 struct CachedSgpTokenContext {
     fetched_at: Instant,
