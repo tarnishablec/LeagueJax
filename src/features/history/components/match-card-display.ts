@@ -1,5 +1,4 @@
 import type { TFunction } from "i18next";
-import type { MatchOutcome } from "../types/match-summary";
 
 export const CDRAGON_GAME_DATA_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";
@@ -99,37 +98,4 @@ export function resolveRuneSubStyleLabel(
     styleId,
     defaultValue: `Style ${styleId}`,
   });
-}
-
-export function normalizeMatchOutcome(
-  outcome: MatchOutcome | undefined,
-  win: boolean,
-): MatchOutcome {
-  if (outcome === "victory" || outcome === "defeat") {
-    return outcome;
-  }
-  if (outcome === "remake" || outcome === "terminated") {
-    return outcome;
-  }
-  return win ? "victory" : "defeat";
-}
-
-export function resolveOutcomeLabel(
-  t: TFunction,
-  outcome: MatchOutcome | undefined,
-  win: boolean,
-): string {
-  const normalized = normalizeMatchOutcome(outcome, win);
-  switch (normalized) {
-    case "victory":
-      return t("history.victory");
-    case "defeat":
-      return t("history.defeat");
-    case "remake":
-      return t("history.match.outcome.remake", { defaultValue: "Remake" });
-    case "terminated":
-      return t("history.match.outcome.terminated", {
-        defaultValue: "Terminated",
-      });
-  }
 }

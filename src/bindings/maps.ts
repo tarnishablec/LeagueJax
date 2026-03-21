@@ -15,22 +15,22 @@ export type LcuMap = {
   locStrings: { [key in string]: string };
   mapStringId: string;
   name: string;
-  perPositionDisallowedSummonerSpells: { [key in string]: LcuMapSpellRule };
-  perPositionRequiredSummonerSpells: { [key in string]: LcuMapSpellRule };
+  perPositionDisallowedSummonerSpells: { [key in string]: MapSpellRule };
+  perPositionRequiredSummonerSpells: { [key in string]: MapSpellRule };
   platformId: string;
   platformName: string;
   properties: LcuMapProperties;
   setModalButtonBottom: number;
   setModalButtonLeft: number;
   tftSetOverride: string;
-  tutorialCards: Array<LcuMapTutorialCard>;
+  tutorialCards: Array<MapTutorialCard>;
 };
 
 export type LcuMapProperties = { suppressRunesMasteriesPerks: boolean };
 
-export type LcuMapSpellRule = { spells: Array<number> };
+export type MapSpellRule = { spells: Array<number> };
 
-export type LcuMapTutorialCard = {
+export type MapTutorialCard = {
   description: string;
   footer: string;
   header: string;

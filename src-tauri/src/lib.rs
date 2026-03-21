@@ -8,17 +8,18 @@ mod utils;
 use std::sync::Arc;
 use tauri::Manager;
 
+use crate::commands::history::*;
+use crate::commands::lcu::*;
+use crate::commands::map::*;
+use crate::commands::settings::*;
+
 #[cfg(target_os = "windows")]
 use window_vibrancy::{apply_acrylic, apply_mica};
 
-use crate::commands::history::*;
-use crate::commands::lcu::*;
-use crate::commands::settings::*;
 #[cfg(target_os = "macos")]
 use window_vibrancy::apply_acrylic;
 
 use jax::Jax;
-
 // ─── Runtime ─────────────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,6 +29,9 @@ pub fn run() {
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "league_jax_lib=debug".into()),
         )
+        .with_file(true)
+        .with_line_number(true)
+        .with_target(true)
         .init();
 
     tauri::Builder::default()
@@ -43,9 +47,10 @@ pub fn run() {
             get_summoner_by_puuid,
             get_ranked_summary,
             get_match_summaries,
-            get_match_detail,
+            get_match_summary,
             get_cherry_augments,
             get_lcu_maps,
+            get_lcu_queues,
             get_game_version,
             get_settings_bootstrap,
             apply_settings_patch,
@@ -82,6 +87,7 @@ pub fn run() {
                 .register(Arc::new(
                     shards::lcu_event_bridge::LcuEventBridgeShard::new(),
                 ))
+                .register(Arc::new(shards::static_cache::StaticCacheShard::new()))
                 .register(Arc::new(shards::sgp::SgpShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
                 .register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()))

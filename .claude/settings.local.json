@@ -46,7 +46,12 @@
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:crates.io)",
       "WebFetch(domain:api.github.com)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(gh search:*)",
+      "Bash(npx biome:*)",
+      "WebFetch(domain:raw.communitydragon.org)",
+      "Read(//d/Desktop/Web/LeagueJax/**)",
+      "Read(//d/Desktop/Web/LeagueJax/$HOME/**)"
     ]
   }
 }

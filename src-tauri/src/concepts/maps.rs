@@ -7,7 +7,7 @@ use ts_rs::TS;
 #[derive(TS, Debug, Clone, Default, Serialize, Deserialize)]
 #[ts(export, export_to = "maps.ts")]
 #[serde(rename_all = "camelCase")]
-pub struct LcuMapSpellRule {
+pub struct MapSpellRule {
     #[serde(default)]
     pub spells: Vec<i64>,
 }
@@ -23,7 +23,7 @@ pub struct LcuMapProperties {
 #[derive(TS, Debug, Clone, Default, Serialize, Deserialize)]
 #[ts(export, export_to = "maps.ts")]
 #[serde(rename_all = "camelCase")]
-pub struct LcuMapTutorialCard {
+pub struct MapTutorialCard {
     #[serde(default)]
     pub description: String,
     #[serde(default)]
@@ -68,9 +68,9 @@ pub struct LcuMap {
     #[serde(default)]
     pub name: String,
     #[serde(default)]
-    pub per_position_disallowed_summoner_spells: HashMap<String, LcuMapSpellRule>,
+    pub per_position_disallowed_summoner_spells: HashMap<String, MapSpellRule>,
     #[serde(default)]
-    pub per_position_required_summoner_spells: HashMap<String, LcuMapSpellRule>,
+    pub per_position_required_summoner_spells: HashMap<String, MapSpellRule>,
     #[serde(default)]
     pub platform_id: String,
     #[serde(default)]
@@ -84,5 +84,5 @@ pub struct LcuMap {
     #[serde(default)]
     pub tft_set_override: String,
     #[serde(default)]
-    pub tutorial_cards: Vec<LcuMapTutorialCard>,
+    pub tutorial_cards: Vec<MapTutorialCard>,
 }
