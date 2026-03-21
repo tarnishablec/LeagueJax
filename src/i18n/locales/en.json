@@ -71,8 +71,20 @@
     "blueTeam": "Blue Team",
     "redTeam": "Red Team",
     "noMatches": "No matches found",
+    "itemsPerPage": "{{count}} / page",
     "selectClient": "Select a client to view match history",
     "emptyState": "Search for a summoner to view match history",
-    "closeTab": "Close tab"
+    "closeTab": "Close tab",
+    "searchDialog": {
+      "open": "Search",
+      "title": "Search Summoner",
+      "subtitle": "Supports puuid, gameName#tagLine.",
+      "placeholder": "gameName#tagLine / puuid",
+      "submit": "Search",
+      "loadingServers": "Loading server context...",
+      "noResults": "No summoner found for this query.",
+      "hint": "Search results will appear here.",
+      "focused": "Current Server"
+    }
   }
 }

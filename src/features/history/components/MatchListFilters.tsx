@@ -1,48 +1,60 @@
-import { SettingsSelect } from "@/components/settings-ui";
+import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import type { MatchModeTag } from "../hooks/use-match-history";
 
 export function MatchListFilters({
   modeTag,
   pageSize,
-  placeholderFilter,
   modeSelectOptions,
   pageSizeSelectOptions,
-  filterSelectOptions,
   onModeChange,
   onPageSizeChange,
-  onFilterChange,
 }: {
   modeTag: MatchModeTag;
   pageSize: number;
-  placeholderFilter: string;
   modeSelectOptions: Array<{ value: string; label: string }>;
   pageSizeSelectOptions: Array<{ value: string; label: string }>;
-  filterSelectOptions: Array<{ value: string; label: string }>;
   onModeChange: (value: MatchModeTag) => void;
   onPageSizeChange: (value: number) => void;
-  onFilterChange: (value: string) => void;
 }) {
+  const modeCollection = useMemo(
+    () => createListCollection({ items: modeSelectOptions }),
+    [modeSelectOptions],
+  );
+  const pageSizeCollection = useMemo(
+    () => createListCollection({ items: pageSizeSelectOptions }),
+    [pageSizeSelectOptions],
+  );
+
+  const { t } = useTranslation();
+  const formatPageSize = useCallback(
+    (label: string) =>
+      String(t("history.itemsPerPage", { count: label } as never)),
+    [t],
+  );
+
   return (
     <>
       <SettingsSelect
-        ariaLabel="History mode"
-        value={modeTag}
-        options={modeSelectOptions}
-        onValueChange={(value) => onModeChange(value as MatchModeTag)}
+        collection={modeCollection}
+        value={[modeTag]}
+        onValueChange={(details) => {
+          const next = details.value[0];
+          if (next) onModeChange(next as MatchModeTag);
+        }}
       />
 
-      <SettingsSelect
-        ariaLabel="History page size"
-        value={String(pageSize)}
-        options={pageSizeSelectOptions}
-        onValueChange={(value) => onPageSizeChange(Number(value))}
-      />
+      <div></div>
 
       <SettingsSelect
-        ariaLabel="History filter placeholder"
-        value={placeholderFilter}
-        options={filterSelectOptions}
-        onValueChange={(value) => onFilterChange(value)}
+        collection={pageSizeCollection}
+        value={[String(pageSize)]}
+        onValueChange={(details) => {
+          const next = details.value[0];
+          if (next) onPageSizeChange(Number(next));
+        }}
+        formatValue={formatPageSize}
       />
     </>
   );

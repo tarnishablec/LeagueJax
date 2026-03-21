@@ -2,11 +2,12 @@ import { style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 export const root = style({
-  // minWidth: 180,
+  minWidth: 0,
 });
 
 export const control = style({
   width: "100%",
+  minWidth: 0,
 });
 
 export const trigger = style({
@@ -34,10 +35,14 @@ export const trigger = style({
     "&[data-state='open']": {
       borderColor: vars.color.primary,
     },
+    "&[data-disabled]": {
+      opacity: 0.6,
+      cursor: "not-allowed",
+    },
   },
 });
 
-export const value = style({
+export const valueText = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -46,17 +51,12 @@ export const value = style({
 
 export const indicator = style({
   color: vars.settings.selectChevron,
-  transition: "transform 120ms ease-out, color 120ms ease-out",
-  selectors: {
-    "[data-state='open'] &": {
-      transform: "rotate(180deg)",
-      color: vars.settings.controlText,
-    },
-  },
+  display: "grid",
+  placeItems: "center",
 });
 
 export const positioner = style({
-  zIndex: 30,
+  zIndex: 50,
 });
 
 export const content = style({

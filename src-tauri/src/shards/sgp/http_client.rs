@@ -24,8 +24,9 @@ impl SgpHttpClient {
         Ok(Self { req_client })
     }
 
-    pub async fn request_json(
+    pub async fn request(
         &self,
+        method: reqwest::Method,
         base_url: &str,
         path: &str,
         access_token: &str,
@@ -45,14 +46,7 @@ impl SgpHttpClient {
 
         let mut req = self
             .req_client
-            .request(
-                if body.is_some() {
-                    reqwest::Method::POST
-                } else {
-                    reqwest::Method::GET
-                },
-                request_url,
-            )
+            .request(method.clone(), &request_url)
             .header("Authorization", format!("Bearer {access_token}"))
             .header("Accept", "application/json");
 
@@ -68,13 +62,21 @@ impl SgpHttpClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_else(|_| String::new());
+            tracing::debug!("[SGP] {method} {request_url} -> {status}: {body}");
             return Err(AppError::Other(format!(
                 "SGP request failed with status {status}: {body}"
             )));
         }
 
-        resp.json::<Value>()
-            .await
-            .map_err(|error| AppError::Other(format!("Failed to parse SGP response JSON: {error}")))
+        let json = resp.json::<Value>().await.map_err(|error| {
+            AppError::Other(format!("Failed to parse SGP response JSON: {error}"))
+        })?;
+
+        #[cfg(debug_assertions)]
+        {
+            tracing::debug!("[SGP] {method} {request_url} -> {status}: {json}");
+        }
+
+        Ok(json)
     }
 }

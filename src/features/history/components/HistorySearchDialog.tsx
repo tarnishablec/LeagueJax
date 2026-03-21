@@ -2,70 +2,53 @@ import { Dialog } from "@ark-ui/react/dialog";
 import { Portal } from "@ark-ui/react/portal";
 import { Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner";
 import { SettingsSelect } from "@/components/settings-ui";
+import { useHistorySearch } from "@/features/history/hooks/useHistorySearch";
 import * as s from "./HistoryToolbar.css";
-
-type SelectOption = {
-  value: string;
-  label: string;
-};
 
 type HistorySearchDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  showServerSelect: boolean;
-  selectedServerId: string;
-  onSelectedServerIdChange: (serverId: string) => void;
-  serverOptions: SelectOption[];
-  query: string;
-  onQueryChange: (query: string) => void;
-  onSearch: () => Promise<void>;
-  isSearching: boolean;
-  isBootstrapping: boolean;
-  errorMessage: string | null;
-  results: SummonerSearchResult[];
-  searched: boolean;
+  config: SgpServersConfig;
   onOpenResult: (result: SummonerSearchResult) => void;
 };
 
 export function HistorySearchDialog({
   open,
   onOpenChange,
-  showServerSelect,
-  selectedServerId,
-  onSelectedServerIdChange,
-  serverOptions,
-  query,
-  onQueryChange,
-  onSearch,
-  isSearching,
-  isBootstrapping,
-  errorMessage,
-  results,
-  searched,
+  config,
   onOpenResult,
 }: HistorySearchDialogProps) {
   const { t } = useTranslation();
+  const { server, search, errorMessage } = useHistorySearch({ open, config });
 
-  const hasResults = results.length > 0;
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      server.reset();
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const hasResults = search.results.length > 0;
 
   return (
     <Dialog.Root
       open={open}
       lazyMount
       unmountOnExit
-      onOpenChange={(details) => onOpenChange(details.open)}
+      onOpenChange={(details) => handleOpenChange(details.open)}
       closeOnEscape
     >
       <Dialog.Trigger asChild>
         <button
           type="button"
           className={s.triggerButton}
-          aria-label="Open summoner search dialog"
+          aria-label={t("history.searchDialog.open")}
         >
           <Search size={14} aria-hidden="true" />
-          <span>{t("history.search.open", { defaultValue: "Search" })}</span>
+          <span>{t("history.searchDialog.open")}</span>
         </button>
       </Dialog.Trigger>
 
@@ -76,22 +59,17 @@ export function HistorySearchDialog({
             <div className={s.headerRow}>
               <div className={s.headerText}>
                 <Dialog.Title className={s.title}>
-                  {t("history.search.title", {
-                    defaultValue: "Search Summoner",
-                  })}
+                  {t("history.searchDialog.title")}
                 </Dialog.Title>
                 <Dialog.Description className={s.subtitle}>
-                  {t("history.search.subtitle", {
-                    defaultValue:
-                      "Supports puuid, gameName#tagLine, or fuzzy gameName.",
-                  })}
+                  {t("history.searchDialog.subtitle")}
                 </Dialog.Description>
               </div>
               <Dialog.CloseTrigger asChild>
                 <button
                   type="button"
                   className={s.closeButton}
-                  aria-label="Close search dialog"
+                  aria-label={t("common.cancel")}
                 >
                   <X size={14} aria-hidden="true" />
                 </button>
@@ -99,50 +77,51 @@ export function HistorySearchDialog({
             </div>
 
             <form
-              className={showServerSelect ? s.searchRow : s.searchRowNoServer}
+              className={server.show ? s.searchRow : s.searchRowNoServer}
               onSubmit={(event) => {
                 event.preventDefault();
-                void onSearch();
+                void search.handleSearch();
               }}
             >
-              {showServerSelect ? (
+              {server.show ? (
                 <SettingsSelect
-                  ariaLabel="Summoner search server"
-                  value={selectedServerId}
-                  options={serverOptions}
-                  onValueChange={onSelectedServerIdChange}
+                  collection={server.collection}
+                  value={[server.selectedId]}
+                  onValueChange={(details) => {
+                    const next = details.value[0];
+                    if (next != null) server.setSelectedId(next);
+                  }}
+                  disabled={server.disabled}
+                  placeholder={t("history.searchDialog.focused")}
                 />
               ) : null}
               <input
                 type="text"
                 className={s.searchInput}
-                placeholder={t("history.search.placeholder", {
-                  defaultValue: "gameName#tagLine / gameName / puuid",
-                })}
-                value={query}
-                disabled={isSearching}
-                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder={t("history.searchDialog.placeholder")}
+                value={search.query}
+                disabled={search.isSearching}
+                onChange={(event) => search.setQuery(event.target.value)}
               />
               <button
                 type="submit"
                 className={s.searchButton}
-                aria-label="Execute summoner search"
                 disabled={
-                  isSearching || isBootstrapping || query.trim().length === 0
+                  search.isSearching ||
+                  server.isBootstrapping ||
+                  search.query.trim().length === 0
                 }
               >
-                {isSearching
-                  ? t("common.loading", { defaultValue: "Loading..." })
-                  : t("history.search.submit", { defaultValue: "Search" })}
+                {search.isSearching
+                  ? t("common.loading")
+                  : t("history.searchDialog.submit")}
               </button>
             </form>
 
             <div className={s.metaRow}>
-              {isBootstrapping ? (
+              {server.isBootstrapping ? (
                 <span className={s.metaText}>
-                  {t("history.search.loadingServers", {
-                    defaultValue: "Loading server context...",
-                  })}
+                  {t("history.searchDialog.loadingServers")}
                 </span>
               ) : null}
               {errorMessage ? (
@@ -153,12 +132,11 @@ export function HistorySearchDialog({
             <div className={s.resultPanel}>
               {hasResults ? (
                 <div className={s.resultList}>
-                  {results.map((result) => (
+                  {search.results.map((result) => (
                     <button
                       key={`${result.puuid}:${result.sgpServerId}`}
                       type="button"
                       className={s.resultButton}
-                      aria-label={`Open history tab for ${result.gameName}#${result.tagLine}`}
                       onClick={() => onOpenResult(result)}
                     >
                       <span className={s.resultName}>
@@ -172,17 +150,13 @@ export function HistorySearchDialog({
                     </button>
                   ))}
                 </div>
-              ) : searched && !isSearching && !errorMessage ? (
+              ) : search.searched && !search.isSearching && !errorMessage ? (
                 <div className={s.emptyText}>
-                  {t("history.search.noResults", {
-                    defaultValue: "No summoner found for this query.",
-                  })}
+                  {t("history.searchDialog.noResults")}
                 </div>
               ) : (
                 <div className={s.emptyText}>
-                  {t("history.search.hint", {
-                    defaultValue: "Search results will appear here.",
-                  })}
+                  {t("history.searchDialog.hint")}
                 </div>
               )}
             </div>

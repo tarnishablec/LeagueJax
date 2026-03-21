@@ -54,6 +54,7 @@
     "map": {
       "summonersRift": "サモナーズリフト",
       "howlingAbyss": "ハウリングアビス",
+      "spiritBlossom": "スピリットブロッサム",
       "butchersBridge": "ブッチャーズブリッジ",
       "nexusBlitz": "ネクサスブリッツ",
       "arena": "アリーナ",
@@ -70,8 +71,20 @@
     "blueTeam": "\u9752\u30c1\u30fc\u30e0",
     "redTeam": "\u8d64\u30c1\u30fc\u30e0",
     "noMatches": "\u5bfe\u6226\u5c65\u6b74\u304c\u3042\u308a\u307e\u305b\u3093",
+    "itemsPerPage": "{{count}} 件",
     "selectClient": "\u5c65\u6b74\u3092\u898b\u308b\u306b\u306f\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044",
     "emptyState": "\u5c65\u6b74\u3092\u898b\u308b\u306b\u306f\u30b5\u30e2\u30ca\u30fc\u3092\u691c\u7d22\u3057\u3066\u304f\u3060\u3055\u3044",
-    "closeTab": "\u30bf\u30d6\u3092\u9589\u3058\u308b"
+    "closeTab": "タブを閉じる",
+    "searchDialog": {
+      "open": "検索",
+      "title": "サモナー検索",
+      "subtitle": "puuid / gameName#tagLine",
+      "placeholder": "gameName#tagLine / puuid",
+      "submit": "検索",
+      "loadingServers": "サーバー情報を読み込み中...",
+      "noResults": "該当するサモナーが見つかりません",
+      "hint": "検索結果がここに表示されます",
+      "focused": "現在のサーバー"
+    }
   }
 }

@@ -14,9 +14,12 @@ export function SettingsFieldRow({
 }: SettingsFieldRowProps) {
   return (
     <div className={s.row}>
-      <span className={s.label}>{label}</span>
+      <span className={s.label}>
+        <span>{label}</span>
+        <span className={s.scopeBadge}>{scopeTag ?? ""}</span>
+      </span>
+
       <div className={s.control}>{children}</div>
-      {scopeTag ? <span className={s.scopeBadge}>{scopeTag}</span> : null}
     </div>
   );
 }

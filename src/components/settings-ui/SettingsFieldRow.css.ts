@@ -3,7 +3,7 @@ import { vars } from "@/styles/theme.css";
 
 export const row = style({
   display: "grid",
-  gridTemplateColumns: "12rem minmax(0, 1fr) 1.5rem",
+  gridTemplateColumns: "12rem minmax(0, 1fr)",
   alignItems: "center",
   gap: 12,
 });
@@ -11,6 +11,9 @@ export const row = style({
 export const label = style({
   color: vars.color.mutedForeground,
   fontSize: "0.875rem",
+  lineHeight: 1,
+  display: "grid",
+  gridTemplateColumns: "1fr auto",
 });
 
 export const scopeBadge = style({

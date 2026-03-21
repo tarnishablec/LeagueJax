@@ -11,7 +11,7 @@ export const panel = style({
 export const toolbar = style({
   display: "grid",
   width: "100%",
-  gridTemplateColumns: "repeat(3, 1fr) auto",
+  gridTemplateColumns: "repeat(1, minmax(auto, 300px)) 1fr 105px auto",
   gap: 8,
 
   "@media": {
@@ -25,6 +25,7 @@ export const pageControls = style({
   display: "grid",
   gap: 8,
   gridTemplateColumns: "1fr minmax(60px, auto) 1fr auto",
+  justifySelf: "end",
 });
 
 export const selectWrap = style({
