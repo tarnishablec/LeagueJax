@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LazyImage } from "@/components/LazyImage";
 
 type IconSource = string | null | undefined;
 
@@ -33,12 +34,11 @@ export function MatchCardAssetIcon({
   }
 
   return (
-    <img
+    <LazyImage
       src={current}
       alt={alt}
       className={className}
-      loading="lazy"
-      decoding="async"
+      fallbackClassName={fallbackClassName}
       onError={() =>
         setState({
           signature,

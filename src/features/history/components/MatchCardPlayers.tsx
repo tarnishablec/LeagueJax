@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useMemo } from "react";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
+import { LazyImage } from "@/components/LazyImage";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useTabStore } from "@/stores/tabs";
 import * as s from "./MatchCard.css";
@@ -74,7 +75,14 @@ function PlayerIcon({ championId }: { championId: number }) {
     return <span className={s.playerIconFallback} aria-hidden="true" />;
   }
 
-  return <img src={iconUrl} alt="" className={s.playerIcon} />;
+  return (
+    <LazyImage
+      src={iconUrl}
+      alt=""
+      className={s.playerIcon}
+      fallbackClassName={s.playerIconFallback}
+    />
+  );
 }
 
 export function MatchCardPlayers({

@@ -4,6 +4,7 @@ import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
+import { LazyImage } from "@/components/LazyImage";
 import { useParticipantBrief } from "@/features/history/hooks/use-participant-brief.ts";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useLcuMapQuery } from "@/hooks/use-lcu-maps.ts";
@@ -44,7 +45,14 @@ function ChampionIcon({
     return <span className={fallbackClassName} aria-hidden="true" />;
   }
 
-  return <img src={iconUrl} alt="" className={className} />;
+  return (
+    <LazyImage
+      src={iconUrl}
+      alt=""
+      className={className}
+      fallbackClassName={fallbackClassName}
+    />
+  );
 }
 
 function getPerkIds(me: RawMatchSummaryParticipant): {
