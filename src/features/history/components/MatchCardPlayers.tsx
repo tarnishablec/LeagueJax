@@ -94,42 +94,41 @@ export function MatchCardPlayers({
 }) {
   const openTab = useTabStore((state) => state.openTab);
 
-  const openPlayerTab = async (
+  const openPlayerTab = (
     participant: RawMatchSummaryParticipant,
     gameName: string,
     tagLine: string,
   ) => {
-    const resolved = await resolvePlayerTab(
-      participant,
-      gameName,
-      tagLine,
+    // Open tab immediately with available data for instant feedback
+    openTab(
+      {
+        puuid: participant.puuid ?? "",
+        gameName,
+        tagLine,
+        profileIconId: 0,
+        summonerLevel: 0,
+      },
       sgpServerId,
     );
 
-    if (resolved) {
-      const { summoner } = resolved;
-      openTab(
-        {
-          puuid: summoner.puuid,
-          gameName: summoner.gameName,
-          tagLine: summoner.tagLine,
-          profileIconId: summoner.profileIconId,
-          summonerLevel: summoner.summonerLevel,
-        },
-        summoner.sgpServerId,
-      );
-    } else {
-      openTab(
-        {
-          puuid: participant.puuid ?? "",
-          gameName,
-          tagLine,
-          profileIconId: 0,
-          summonerLevel: 0,
-        },
-        sgpServerId,
-      );
-    }
+    // Resolve full summoner info in background, then update the tab
+    resolvePlayerTab(participant, gameName, tagLine, sgpServerId).then(
+      (resolved) => {
+        if (resolved) {
+          const { summoner } = resolved;
+          openTab(
+            {
+              puuid: summoner.puuid,
+              gameName: summoner.gameName,
+              tagLine: summoner.tagLine,
+              profileIconId: summoner.profileIconId,
+              summonerLevel: summoner.summonerLevel,
+            },
+            summoner.sgpServerId,
+          );
+        }
+      },
+    );
   };
 
   const teams = useMemo(() => {
@@ -166,7 +165,7 @@ export function MatchCardPlayers({
                     aria-label="Open player history tab"
                     className={s.playerNameButton}
                     onClick={() => {
-                      void openPlayerTab(participant, gameName, tagLine);
+                      openPlayerTab(participant, gameName, tagLine);
                     }}
                   >
                     {gameName}

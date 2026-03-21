@@ -12,6 +12,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - When the user asks to generate a commit message, the message **must be based on the current changed files** (for example, from `git status` / diff context) and must reflect real changes in the workspace.
 - Commit messages **must follow Conventional Commits** format (for example `feat(scope): ...`, `fix(scope): ...`, `refactor(scope): ...`).
 - The generated commit message **must be returned in a Markdown code block** for direct copy/paste.
+- **Do NOT add `Co-Authored-By` trailers** (or any agent/AI attribution lines) to commit messages.
 
 ## Change Approval Workflow
 
