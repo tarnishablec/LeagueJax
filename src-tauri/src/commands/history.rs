@@ -248,12 +248,19 @@ fn resolve_target_sgp_server_id(
         )));
     }
 
-    if requested == focused {
+    // Allow cross-region for international servers if the target is a known server
+    let known_servers: HashSet<String> = config
+        .servers
+        .keys()
+        .map(|k| normalize_server_id(k))
+        .collect();
+
+    if known_servers.contains(&requested) {
         return Ok(requested);
     }
 
     Err(AppError::Other(format!(
-        "Cross-region summoner search is disabled for non-Tencent focused server: focused={focused}, requested={requested}"
+        "Unknown target SGP server: {requested}"
     )))
 }
 

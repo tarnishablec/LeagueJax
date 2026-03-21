@@ -6,7 +6,7 @@ mod storage;
 mod utils;
 
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Manager, RunEvent};
 
 use crate::commands::history::*;
 use crate::commands::lcu::*;
@@ -134,6 +134,22 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if let RunEvent::Exit = event {
+                let jax = app.state::<Arc<Jax>>();
+                let jax = Arc::clone(&jax);
+                // Signal all background tasks to stop, then run formal teardown
+                jax.get_shard::<shards::tauri_host::TauriHost>()
+                    .initiate_shutdown();
+                tauri::async_runtime::block_on(async move {
+                    if let Err(e) = jax.stop().await {
+                        tracing::error!(error = %e, "Jax shutdown error");
+                    } else {
+                        tracing::info!("Jax stopped gracefully.");
+                    }
+                });
+            }
+        });
 }

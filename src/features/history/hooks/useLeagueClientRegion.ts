@@ -76,14 +76,18 @@ function resolveAvailableServerCodes(
     tencentServers,
   );
 
-  if (!isTencentServerId(canonicalFocused, tencentServers)) {
-    return [canonicalFocused];
+  if (isTencentServerId(canonicalFocused, tencentServers)) {
+    return normalizeServerIds([
+      canonicalFocused,
+      ...(config.tencentServerSummonerInteroperability ?? []),
+    ]);
   }
 
-  return normalizeServerIds([
-    canonicalFocused,
-    ...(config.tencentServerSummonerInteroperability ?? []),
-  ]);
+  // International servers: list all non-Tencent servers, focused first
+  const allInternational = Object.keys(config.servers)
+    .map(normalizeServerId)
+    .filter((id) => !id.startsWith("TENCENT_"));
+  return normalizeServerIds([canonicalFocused, ...allInternational]);
 }
 
 type UseLeagueClientRegionParams = {
