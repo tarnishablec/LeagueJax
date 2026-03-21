@@ -16,7 +16,7 @@ function isHistorySWRKey(key: unknown): boolean {
       command === "history:ddragon-static-catalog" ||
       command === "history:lcu-cherry-augments" ||
       command === "get_match_summaries" ||
-      command === "get_match_detail" ||
+      command === "get_match_summary" ||
       command === "get_ranked_summary"
     );
   }

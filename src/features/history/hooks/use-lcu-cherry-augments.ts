@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useMemo } from "react";
 import useSWR from "swr";
-import type { CherryAugment } from "@/bindings/matches.ts";
+import type { CherryAugment } from "@/bindings/cherry";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
 
 const EMPTY_AUGMENTS: CherryAugment[] = [];
@@ -11,9 +11,9 @@ export function useLcuCherryAugments() {
   const focused = useLcuStore(selectIsFocused);
 
   const { data: augments = EMPTY_AUGMENTS } = useSWR(
-    focused ? ["history:lcu-cherry-augments", focused.pid] : null,
-    () =>
-      invoke<CherryAugment[]>("get_cherry_augments", {
+    focused ? ["get_cherry_augments", focused.pid] : null,
+    ([cmd]) =>
+      invoke<CherryAugment[]>(cmd, {
         forceRefresh: false,
       }),
     {

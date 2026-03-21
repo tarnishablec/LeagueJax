@@ -106,8 +106,8 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
       },
     },
     {
-      id: "get-match-detail-first-summary",
-      label: "get_match_detail(first summary)",
+      id: "get-match-summary-first",
+      label: "get_match_summary(first summary)",
       run: async () => {
         const tab = requireActiveTab(activeTab);
         const raw = await invoke<RawMatchSummariesResponse>(
@@ -124,11 +124,11 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
         const gameId = firstGameIdFromRawSummary(raw);
         if (!gameId || gameId <= 0) {
           throw new Error(
-            "No match summary gameId available for get_match_detail.",
+            "No match summary gameId available for get_match_summary.",
           );
         }
 
-        return invoke<unknown>("get_match_detail", {
+        return invoke<unknown>("get_match_summary", {
           gameId,
           sgpServerId: tab.sgpServerId,
         });

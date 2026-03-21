@@ -19,7 +19,15 @@ export function MatchCardItems({
   items,
 }: {
   gameId: number;
-  items: [number, number, number, number, number, number, number];
+  items: readonly [
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+  ];
 }) {
   const { t } = useTranslation();
   const itemParams = useMemo(

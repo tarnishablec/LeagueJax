@@ -1,17 +1,8 @@
-use crate::concepts::match_summaries_raw::RawMatchSummariesResponse;
-use serde_json::Value;
-
 use super::config::{sgp_servers_config, SgpServerEndpoints};
 use super::SgpClientHandle;
+use crate::concepts::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
+use crate::concepts::summoner::SummonerInfo;
 use crate::error::AppError;
-
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SgpSummoner {
-    pub puuid: String,
-    pub profile_icon_id: i64,
-    pub level: i64,
-}
 
 pub struct SgpApi {
     client: SgpClientHandle,
@@ -117,11 +108,11 @@ impl SgpApi {
         )
     }
 
-    pub async fn get_game_summary(
+    pub async fn get_match_summary(
         &self,
         game_id: u64,
         sgp_server_id: Option<&str>,
-    ) -> Result<Value, AppError> {
+    ) -> Result<RawMatchSummaryGame, AppError> {
         let token_context = self.client.get_or_refresh_token_context().await?;
         let target_server_id =
             Self::resolve_target_server_id(sgp_server_id, &token_context.sgp_server_id);
@@ -131,17 +122,30 @@ impl SgpApi {
         let game_key = format!("{}_{}", sub_id.to_uppercase(), game_id);
         let path = format!("/match-history-query/v1/products/lol/{game_key}/SUMMARY");
 
-        self.client
+        let response = self
+            .client
             .http_client()
             .request_json(&base_url, &path, &token_context.access_token, None, None)
-            .await
+            .await?;
+
+        let response_raw = serde_json::to_string(&response)?;
+        let mut deserializer = serde_json::Deserializer::from_str(&response_raw);
+        serde_path_to_error::deserialize::<_, RawMatchSummaryGame>(&mut deserializer).map_err(
+            |error| {
+                let path = error.path().to_string();
+                let source = error.inner().to_string();
+                AppError::Other(format!(
+                    "Failed to parse get_match_summary at path {path}: {source}"
+                ))
+            },
+        )
     }
 
     pub async fn get_summoner_by_puuid(
         &self,
         sgp_server_id: &str,
         puuid: &str,
-    ) -> Result<Option<SgpSummoner>, AppError> {
+    ) -> Result<Option<SummonerInfo>, AppError> {
         let token_context = self.client.get_or_refresh_token_context().await?;
         let target_server = Self::normalize_server_id(sgp_server_id);
         let base_url = Self::resolve_common_base_url(&target_server)?;
@@ -160,7 +164,7 @@ impl SgpApi {
             )
             .await?;
 
-        let entries: Vec<SgpSummoner> = serde_json::from_value(response).map_err(|error| {
+        let entries: Vec<SummonerInfo> = serde_json::from_value(response).map_err(|error| {
             AppError::Other(format!(
                 "Failed to parse SGP response for get_summoner_by_puuid: {error}"
             ))

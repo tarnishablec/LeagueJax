@@ -29,7 +29,7 @@ export function MatchList({
   const { matches, error, isLoading, isRefreshing, hasNextPage } =
     useMatchHistory(puuid, sgpServerId, page, pageSize, modeTag);
 
-  const hasMatch = matches.length > 0;
+  const hasMatch = matches?.length ?? 0;
   const canGoPrev = page > 1 && !isLoading && !isRefreshing;
   const canGoNext = hasNextPage && !isLoading && !isRefreshing;
 
@@ -112,10 +112,11 @@ export function MatchList({
 
       {!isLoading && !error && hasMatch ? (
         <div className={s.list}>
-          {matches.map((match) => (
+          {matches?.map((match) => (
             <MatchCard
-              key={match.gameId}
+              key={match.json.gameId}
               match={match}
+              me={match.me}
               sgpServerId={sgpServerId}
             />
           ))}

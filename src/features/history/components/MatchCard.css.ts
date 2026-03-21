@@ -64,6 +64,7 @@ export const cardMainButton = style({
   alignItems: "start",
   gap: 12,
   cursor: "pointer",
+  height: "100%",
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${vars.color.primary}`,

@@ -79,7 +79,14 @@ function rarityVariant(
 export function MatchCardAugments({
   augmentIds,
 }: {
-  augmentIds: [number, number, number, number, number, number];
+  augmentIds: readonly [
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+  ];
 }) {
   const { byId } = useLcuCherryAugments();
 
@@ -90,14 +97,14 @@ export function MatchCardAugments({
     }));
   }, [augmentIds]);
 
-  if (!slots.some((slot) => slot.id > 0)) {
+  if (!slots.some((slot) => slot.id != null && slot.id > 0)) {
     return null;
   }
 
   return (
     <div className={s.augmentGrid}>
       {slots.map(({ slotKey, id }) => {
-        if (id <= 0) {
+        if (id == null || id <= 0) {
           return (
             <span
               key={`augment-empty-${slotKey}`}
@@ -109,7 +116,7 @@ export function MatchCardAugments({
 
         const augment = byId[id];
         const rarity = rarityVariant(augment?.rarity);
-        const name = augment?.nameTra?.trim() || `Augment #${id}`;
+        const name = augment?.nameTRA?.trim() || `Augment #${id}`;
         const iconSrc = augment?.augmentSmallIconPath
           ? normalizeAugmentIconPath(augment.augmentSmallIconPath)
           : null;

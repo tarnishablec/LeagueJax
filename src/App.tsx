@@ -6,12 +6,13 @@ import { getRouteContributions } from "@/features/registry";
 import { RootLayout } from "@/layout/__root";
 import type { RouteContribution } from "@/runtime/web-contract";
 
-const toRouteObject = (route: RouteContribution): RouteObject => ({
-  path: route.path,
-  index: route.index,
-  element: route.element,
-  children: route.children?.map(toRouteObject),
-});
+const toRouteObject = (route: RouteContribution): RouteObject =>
+  ({
+    path: route.path,
+    index: route.index,
+    element: route.element,
+    children: route.children?.map(toRouteObject),
+  }) as RouteObject;
 
 export default function App() {
   const router = useMemo(() => {

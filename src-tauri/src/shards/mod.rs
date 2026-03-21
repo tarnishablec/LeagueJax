@@ -10,6 +10,7 @@ pub mod persistence_sled;
 pub mod saved_player;
 pub mod settings;
 pub mod sgp;
+pub mod static_cache;
 pub mod statistics;
 pub mod tauri_host;
 pub mod tray;

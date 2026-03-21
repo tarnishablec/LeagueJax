@@ -1,9 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::concepts::maps::LcuMap;
-use crate::concepts::match_summaries_raw::RawMatchSummariesResponse;
-use crate::concepts::matches::{CherryAugment, MatchDetail, Participant};
+use crate::concepts::cherry::CherryAugment;
+use crate::concepts::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
 use crate::concepts::summoner::{
     RankedQueueStats, RankedSummary, SummonerInfo, SummonerSearchResult,
 };
@@ -11,124 +10,18 @@ use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
 use crate::shards::sgp::SgpShard;
+use crate::shards::static_cache::StaticCacheShard;
 use jax::Jax;
 use serde_json::Value;
 use tauri::State;
 use uuid::Uuid;
-// ─── DTOs ────────────────────────────────────────────────────────────────────
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-fn parse_sgp_participant(participant: &Value) -> Participant {
-    let null = Value::Null;
-    let stats = participant.get("stats").unwrap_or(&null);
-
-    let items = participant_items(participant, stats);
-    let total_minions =
-        participant_stat_i64(participant, stats, &["totalMinionsKilled"]).unwrap_or(0);
-    let neutral_minions =
-        participant_stat_i64(participant, stats, &["neutralMinionsKilled"]).unwrap_or(0);
-    let perk_ids = participant_perk_ids(participant, stats);
-    let summoner_name = first_string(
-        participant,
-        &["summonerName", "riotIdGameName", "gameName", "name"],
-    )
-    .unwrap_or_default();
-    let (fallback_game_name, fallback_tag_line) = split_riot_id(&summoner_name);
-    let game_name =
-        first_string(participant, &["riotIdGameName", "gameName"]).unwrap_or(fallback_game_name);
-    let tag_line = first_string(participant, &["riotIdTagline", "riotIdTagLine", "tagLine"])
-        .unwrap_or(fallback_tag_line);
-
-    Participant {
-        puuid: first_string(participant, &["puuid"]).unwrap_or_default(),
-        champion_id: first_i64(participant, &["championId"]).unwrap_or(0),
-        summoner_name,
-        game_name,
-        tag_line,
-        team_id: first_i64(participant, &["teamId"]).unwrap_or(0),
-        kills: participant_stat_i64(participant, stats, &["kills"]).unwrap_or(0),
-        deaths: participant_stat_i64(participant, stats, &["deaths"]).unwrap_or(0),
-        assists: participant_stat_i64(participant, stats, &["assists"]).unwrap_or(0),
-        total_damage_dealt_to_champions: participant_stat_i64(
-            participant,
-            stats,
-            &["totalDamageDealtToChampions"],
-        )
-        .unwrap_or(0),
-        total_damage_taken: participant_stat_i64(participant, stats, &["totalDamageTaken"])
-            .unwrap_or(0),
-        gold_earned: participant_stat_i64(participant, stats, &["goldEarned"]).unwrap_or(0),
-        vision_score: participant_stat_i64(participant, stats, &["visionScore"]).unwrap_or(0),
-        cs: total_minions + neutral_minions,
-        items,
-        spell1_id: first_i64(participant, &["spell1Id"]).unwrap_or(0),
-        spell2_id: first_i64(participant, &["spell2Id"]).unwrap_or(0),
-        perk_primary_style: perk_ids.primary_style_id.unwrap_or(0),
-        perk_sub_style: perk_ids.sub_style_id.unwrap_or(0),
-        win: participant_stat_bool(participant, stats, "win").unwrap_or(false),
-    }
-}
-
-fn sgp_summary_payload(game: &Value) -> &Value {
-    if let Some(payload) = game.get("json") {
-        payload
-    } else {
-        game
-    }
-}
-
-fn parse_sgp_game_id(payload: &Value, game: &Value) -> u64 {
-    if let Some(game_id) = payload
-        .get("gameId")
-        .and_then(Value::as_u64)
-        .or_else(|| payload.get("game_id").and_then(Value::as_u64))
-    {
-        return game_id;
-    }
-
-    let match_id = game
-        .get("metadata")
-        .and_then(|metadata| metadata.get("match_id"))
-        .and_then(Value::as_str)
-        .or_else(|| {
-            game.get("metadata")
-                .and_then(|metadata| metadata.get("matchId"))
-                .and_then(Value::as_str)
-        });
-
-    match_id
-        .and_then(|identifier| identifier.rsplit('_').next())
-        .and_then(|suffix| suffix.parse::<u64>().ok())
-        .unwrap_or(0)
-}
 
 fn first_string(value: &Value, keys: &[&str]) -> Option<String> {
     keys.iter()
         .find_map(|key| value.get(*key).and_then(Value::as_str))
         .map(ToString::to_string)
-}
-
-fn bool_from_value(value: &Value) -> Option<bool> {
-    value
-        .as_bool()
-        .or_else(|| value.as_i64().map(|current| current != 0))
-        .or_else(|| value.as_u64().map(|current| current != 0))
-        .or_else(|| {
-            value.as_str().and_then(|raw| {
-                let normalized = raw.trim().to_ascii_lowercase();
-                match normalized.as_str() {
-                    "true" | "1" => Some(true),
-                    "false" | "0" => Some(false),
-                    _ => None,
-                }
-            })
-        })
-}
-
-fn first_bool(value: &Value, keys: &[&str]) -> Option<bool> {
-    keys.iter()
-        .find_map(|key| value.get(*key).and_then(bool_from_value))
 }
 
 fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
@@ -140,214 +33,6 @@ fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
                 .and_then(|v| i64::try_from(v).ok())
         })
     })
-}
-
-fn split_riot_id(value: &str) -> (String, String) {
-    if let Some((game_name, tag_line)) = value.split_once('#') {
-        return (game_name.to_string(), tag_line.to_string());
-    }
-
-    (value.to_string(), String::new())
-}
-
-fn participant_stat_i64(participant: &Value, stats: &Value, keys: &[&str]) -> Option<i64> {
-    first_i64(stats, keys).or_else(|| first_i64(participant, keys))
-}
-
-fn participant_stat_bool(participant: &Value, stats: &Value, key: &str) -> Option<bool> {
-    first_bool(stats, &[key]).or_else(|| first_bool(participant, &[key]))
-}
-
-fn parse_cherry_augment(value: &Value) -> Option<CherryAugment> {
-    let id = first_i64(value, &["id"])?;
-    let name_tra = first_string(value, &["nameTRA", "nameTra", "name"]).unwrap_or_default();
-    let augment_small_icon_path =
-        first_string(value, &["augmentSmallIconPath", "iconPath"]).unwrap_or_default();
-    let rarity = first_string(value, &["rarity"]).unwrap_or_default();
-
-    Some(CherryAugment {
-        id,
-        name_tra,
-        augment_small_icon_path,
-        rarity,
-    })
-}
-
-fn parse_cherry_augments(value: &Value) -> Vec<CherryAugment> {
-    value
-        .as_array()
-        .map(|entries| entries.iter().filter_map(parse_cherry_augment).collect())
-        .unwrap_or_default()
-}
-
-fn participant_items(participant: &Value, stats: &Value) -> [i64; 7] {
-    let mut items = [0i64; 7];
-    for (index, item) in items.iter_mut().enumerate() {
-        let key = format!("item{index}");
-        *item = participant_stat_i64(participant, stats, &[&key]).unwrap_or(0);
-    }
-    items
-}
-
-fn perks_styles(value: &Value) -> Option<&Vec<Value>> {
-    value
-        .get("perks")
-        .and_then(|perks| perks.get("styles"))
-        .and_then(Value::as_array)
-}
-
-fn style_matches_description(style: &Value, description: &str) -> bool {
-    style
-        .get("description")
-        .and_then(Value::as_str)
-        .is_some_and(|desc| desc.eq_ignore_ascii_case(description))
-}
-
-fn style_id(style: &Value) -> Option<i64> {
-    first_i64(style, &["style"])
-}
-
-fn first_style_selection_perk_id(style: &Value) -> Option<i64> {
-    style
-        .get("selections")
-        .and_then(Value::as_array)
-        .and_then(|selections| selections.first())
-        .and_then(|selection| first_i64(selection, &["perk"]))
-}
-
-#[derive(Clone, Copy, Default)]
-struct PerkIdsFromStyles {
-    primary_style_id: Option<i64>,
-    sub_style_id: Option<i64>,
-    primary_rune_id: Option<i64>,
-}
-
-fn pick_primary_style(styles: &[Value]) -> Option<&Value> {
-    styles
-        .iter()
-        .find(|style| style_matches_description(style, "primaryStyle"))
-        .or_else(|| styles.first())
-}
-
-fn pick_sub_style<'a>(styles: &'a [Value], primary_style: Option<&Value>) -> Option<&'a Value> {
-    let described_sub = styles
-        .iter()
-        .find(|style| style_matches_description(style, "subStyle"));
-    if described_sub.is_some() {
-        return described_sub;
-    }
-
-    let primary_id = primary_style.and_then(style_id);
-    if let Some(id) = primary_id {
-        let different_style = styles
-            .iter()
-            .find(|style| style_id(style).is_some_and(|candidate| candidate != id));
-        if different_style.is_some() {
-            return different_style;
-        }
-    }
-
-    styles.get(1)
-}
-
-fn fill_perk_ids_from_styles(styles: &[Value], result: &mut PerkIdsFromStyles) {
-    let primary_style = pick_primary_style(styles);
-    let sub_style = pick_sub_style(styles, primary_style);
-
-    if result.primary_style_id.is_none() {
-        result.primary_style_id = primary_style.and_then(style_id);
-    }
-    if result.sub_style_id.is_none() {
-        result.sub_style_id = sub_style.and_then(style_id);
-    }
-    if result.primary_rune_id.is_none() {
-        result.primary_rune_id = primary_style.and_then(first_style_selection_perk_id);
-    }
-}
-
-fn normalize_sub_style(participant: &Value, stats: &Value, result: &mut PerkIdsFromStyles) {
-    if result.sub_style_id != result.primary_style_id {
-        return;
-    }
-
-    let Some(primary_id) = result.primary_style_id else {
-        return;
-    };
-
-    for styles in [perks_styles(participant), perks_styles(stats)] {
-        let Some(styles) = styles else {
-            continue;
-        };
-
-        if let Some(id) = styles
-            .iter()
-            .filter_map(style_id)
-            .find(|candidate| *candidate != primary_id)
-        {
-            result.sub_style_id = Some(id);
-            break;
-        }
-    }
-}
-
-fn perk_ids_from_styles(participant: &Value, stats: &Value) -> PerkIdsFromStyles {
-    let mut result = PerkIdsFromStyles::default();
-
-    for styles in [perks_styles(participant), perks_styles(stats)] {
-        let Some(styles) = styles else {
-            continue;
-        };
-
-        fill_perk_ids_from_styles(styles, &mut result);
-
-        if result.primary_style_id.is_some()
-            && result.sub_style_id.is_some()
-            && result.primary_rune_id.is_some()
-        {
-            break;
-        }
-    }
-
-    normalize_sub_style(participant, stats, &mut result);
-    result
-}
-
-fn participant_perk_ids(participant: &Value, stats: &Value) -> PerkIdsFromStyles {
-    let from_styles = perk_ids_from_styles(participant, stats);
-    PerkIdsFromStyles {
-        primary_style_id: from_styles
-            .primary_style_id
-            .or_else(|| first_i64(stats, &["perkPrimaryStyle"]))
-            .or_else(|| first_i64(participant, &["perkPrimaryStyle"])),
-        sub_style_id: from_styles
-            .sub_style_id
-            .or_else(|| first_i64(stats, &["perkSubStyle"]))
-            .or_else(|| first_i64(participant, &["perkSubStyle"])),
-        primary_rune_id: from_styles
-            .primary_rune_id
-            .or_else(|| first_i64(stats, &["perk0"]))
-            .or_else(|| first_i64(participant, &["perk0"])),
-    }
-}
-
-#[cfg(debug_assertions)]
-#[allow(dead_code)]
-fn style_debug_entries(value: &Value) -> Vec<String> {
-    let Some(styles) = perks_styles(value) else {
-        return Vec::new();
-    };
-
-    styles
-        .iter()
-        .map(|style| {
-            let description = style
-                .get("description")
-                .and_then(Value::as_str)
-                .unwrap_or("unknown");
-            let id = style_id(style).unwrap_or(0);
-            format!("{description}:{id}")
-        })
-        .collect()
 }
 
 fn queue_type_matches(entry: &Value, queue_type: &str) -> bool {
@@ -631,7 +316,7 @@ async fn search_aliases_with_target_server(
             game_name: resolved_game_name,
             tag_line: resolved_tag_line,
             profile_icon_id: summoner.profile_icon_id,
-            summoner_level: summoner.level,
+            summoner_level: summoner.summoner_level,
             sgp_server_id: target_sgp_server_id.to_string(),
         });
     }
@@ -726,7 +411,7 @@ pub async fn search_summoners(
                 game_name: resolved_game_name,
                 tag_line: resolved_tag_line,
                 profile_icon_id: sgp_summoner.profile_icon_id,
-                summoner_level: sgp_summoner.level,
+                summoner_level: sgp_summoner.summoner_level,
                 sgp_server_id: target_sgp_server_id,
             }])
         }
@@ -737,25 +422,25 @@ pub async fn search_summoners(
             let aliases = lcu_api
                 .get_player_account_aliases(&game_name, Some(&tag_line))
                 .await?;
-            return search_aliases_with_target_server(
+            search_aliases_with_target_server(
                 aliases,
                 &target_sgp_server_id,
                 same_server,
                 &lcu_api,
                 &sgp_api,
             )
-            .await;
+            .await
         }
         ParsedSummonerSearchQuery::Fuzzy { game_name } => {
             let aliases = lcu_api.get_player_account_aliases(&game_name, None).await?;
-            return search_aliases_with_target_server(
+            search_aliases_with_target_server(
                 aliases,
                 &target_sgp_server_id,
                 same_server,
                 &lcu_api,
                 &sgp_api,
             )
-            .await;
+            .await
         }
     }
 }
@@ -827,69 +512,32 @@ pub async fn get_cherry_augments(
     _force_refresh: Option<bool>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<CherryAugment>, AppError> {
-    let response = jax
-        .get_shard::<LcuShard>()
-        .focused()
-        .await?
-        .api()
-        .get_cherry_augments()
-        .await?;
-    let parsed = parse_cherry_augments(&response);
+    let lcu = jax.get_shard::<LcuShard>().focused().await?;
+    let api = lcu.api();
+    let version = api.get_game_version().await?;
+    let cache = jax.get_shard::<StaticCacheShard>();
 
-    Ok(parsed)
+    if let Some(cached) = cache.get::<Vec<CherryAugment>>("lcu-cache.json", "lcu_cherry_augments", &version) {
+        return Ok(cached);
+    }
+
+    let data = api.get_cherry_augments().await?;
+    cache.set("lcu-cache.json", "lcu_cherry_augments", &version, &data);
+    Ok(data)
 }
 
 #[tauri::command]
-pub async fn get_lcu_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppError> {
-    let response = jax
-        .get_shard::<LcuShard>()
-        .focused()
-        .await?
-        .api()
-        .get_maps()
-        .await?;
-
-    Ok(serde_json::from_value::<Vec<LcuMap>>(response)?)
-}
-
-#[tauri::command]
-pub async fn get_match_detail(
+pub async fn get_match_summary(
     game_id: u64,
     sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
-) -> Result<MatchDetail, AppError> {
+) -> Result<RawMatchSummaryGame, AppError> {
     let lcu_shard = jax.get_shard::<LcuShard>();
     let focused_pid = lcu_shard.focused_pid().await?;
     let lcu_client = lcu_shard.client(focused_pid)?;
     let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
 
-    let response = sgp_api
-        .get_game_summary(game_id, sgp_server_id.as_deref())
-        .await?;
-    let payload = sgp_summary_payload(&response);
-
-    let participants_raw = payload
-        .get("participants")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-
-    let participants: Vec<Participant> =
-        participants_raw.iter().map(parse_sgp_participant).collect();
-
-    Ok(MatchDetail {
-        game_id: {
-            let parsed = parse_sgp_game_id(payload, &response);
-            if parsed == 0 {
-                game_id
-            } else {
-                parsed
-            }
-        },
-        game_duration: first_i64(payload, &["gameDuration", "game_length"]).unwrap_or(0),
-        game_mode: first_string(payload, &["gameMode", "game_mode"]).unwrap_or_default(),
-        game_creation: first_i64(payload, &["gameCreation", "game_datetime"]).unwrap_or(0),
-        queue_id: first_i64(payload, &["queueId", "queue_id"]).unwrap_or(0),
-        participants,
-    })
+    sgp_api
+        .get_match_summary(game_id, sgp_server_id.as_deref())
+        .await
 }

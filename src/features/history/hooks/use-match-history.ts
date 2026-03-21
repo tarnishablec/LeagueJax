@@ -1,7 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import useSWR from "swr";
-import type { RawMatchSummariesResponse } from "@/bindings/matches.ts";
-import { parseRawMatchSummaries } from "./parse-raw-match-summaries";
+import type {
+  RawMatchSummariesResponse,
+  RawMatchSummaryGame,
+  RawMatchSummaryParticipant,
+} from "@/bindings/matches.ts";
 
 export type MatchModeTag =
   | "all"
@@ -15,6 +18,10 @@ export type MatchModeTag =
   | "q_1900"
   | "q_900"
   | "q_2300";
+
+export type EnrichedMatch = RawMatchSummaryGame & {
+  me: RawMatchSummaryParticipant;
+};
 
 function modeTagToQueryTag(tag: MatchModeTag): string | undefined {
   return tag === "all" ? undefined : tag;
@@ -31,33 +38,44 @@ export function useMatchHistory(
     puuid
       ? ["get_match_summaries", puuid, sgpServerId, page, pageSize, modeTag]
       : null,
-    ([
+    async ([
       cmd,
       resolvedPuuid,
       resolvedSgpServerId,
       resolvedPage,
       resolvedPageSize,
       resolvedTag,
-    ]) =>
-      invoke<RawMatchSummariesResponse>(cmd, {
+    ]) => {
+      const res = await invoke<RawMatchSummariesResponse>(cmd, {
         puuid: resolvedPuuid,
         beginIndex: (resolvedPage - 1) * resolvedPageSize,
         endIndex: resolvedPage * resolvedPageSize,
         ...(resolvedSgpServerId ? { sgpServerId: resolvedSgpServerId } : {}),
         ...(modeTagToQueryTag(resolvedTag) ? { tag: resolvedTag } : {}),
-      }).then((response) => parseRawMatchSummaries(response, resolvedPuuid)),
+      });
+
+      return res.games.map((game) => {
+        const me = game.json.participants.find(
+          (p) => p.puuid === resolvedPuuid,
+        );
+        if (!me) {
+          throw new Error(
+            `Self participant not found for ${resolvedPuuid} in game ${game.json.gameId}`,
+          );
+        }
+        return { ...game, me };
+      });
+    },
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
     },
   );
 
-  const matches = data ?? [];
-
   return {
-    matches,
+    matches: data,
     error,
     isLoading,
     isRefreshing: isValidating && !isLoading,
-    hasNextPage: matches.length === pageSize,
+    hasNextPage: (data?.length ?? 0) === pageSize,
   };
 }

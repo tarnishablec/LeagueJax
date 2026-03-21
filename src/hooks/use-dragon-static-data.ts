@@ -78,7 +78,7 @@ export type SpellAssetParam = {
 
 export type ItemAssetParam = {
   type: "item";
-  itemId: number;
+  itemId: number | null;
 };
 
 export type RuneAssetParam = {
@@ -438,7 +438,7 @@ function resolveFromCdragon(
       };
     }
     case "item": {
-      if (param.itemId <= 0) {
+      if (param.itemId === null || param.itemId <= 0) {
         return { src: null, label: null };
       }
       return {
@@ -494,7 +494,7 @@ function resolveFromDdragon(
       };
     }
     case "item": {
-      if (param.itemId <= 0 || !ddragonVersion) {
+      if (!param.itemId || param.itemId <= 0 || !ddragonVersion) {
         return { src: null, label: null };
       }
       return {

@@ -1,15 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import useSWR from "swr";
-import type { MatchDetail } from "@/bindings/matches.ts";
+import type { RawMatchSummaryGame } from "@/bindings/matches.ts";
 
-export function useMatchDetail(
+export function useMatchSummary(
   gameId: number | null,
   sgpServerId: string | null,
 ) {
   return useSWR(
-    gameId ? ["get_match_detail", gameId, sgpServerId] : null,
+    gameId ? ["get_match_summary", gameId, sgpServerId] : null,
     () =>
-      invoke<MatchDetail>("get_match_detail", {
+      invoke<RawMatchSummaryGame>("get_match_summary", {
         gameId,
         ...(sgpServerId ? { sgpServerId } : {}),
       }),
