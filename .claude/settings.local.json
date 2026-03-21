@@ -51,7 +51,10 @@
       "Bash(npx biome:*)",
       "WebFetch(domain:raw.communitydragon.org)",
       "Read(//d/Desktop/Web/LeagueJax/**)",
-      "Read(//d/Desktop/Web/LeagueJax/$HOME/**)"
+      "Read(//d/Desktop/Web/LeagueJax/$HOME/**)",
+      "Bash(gh auth:*)",
+      "WebFetch(domain:ark-ui.com)",
+      "Bash(git commit:*)"
     ]
   }
 }

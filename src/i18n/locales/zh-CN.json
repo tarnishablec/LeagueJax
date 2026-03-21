@@ -71,8 +71,20 @@
     "blueTeam": "蓝色方",
     "redTeam": "红色方",
     "noMatches": "暂无对局记录",
+    "itemsPerPage": "{{count}} 项",
     "selectClient": "选择客户端以查看战绩",
     "emptyState": "搜索召唤师以查看战绩",
-    "closeTab": "关闭标签页"
+    "closeTab": "关闭标签页",
+    "searchDialog": {
+      "open": "搜索",
+      "title": "搜索召唤师",
+      "subtitle": "支持 puuid / gameName#tagLine ",
+      "placeholder": "gameName#tagLine / puuid",
+      "submit": "搜索",
+      "loadingServers": "正在加载区服信息...",
+      "noResults": "未找到匹配的召唤师",
+      "hint": "搜索结果将显示在这里",
+      "focused": "当前区服"
+    }
   }
 }

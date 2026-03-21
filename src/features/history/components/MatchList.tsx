@@ -6,11 +6,7 @@ import { MatchCard } from "./MatchCard";
 import * as s from "./MatchList.css";
 import { MatchListFilters } from "./MatchListFilters";
 import { MatchListPager } from "./MatchListPager";
-import {
-  modeOptions,
-  pageSizeOptions,
-  placeholderFilterOptions,
-} from "./match-list-options";
+import { modeOptions, pageSizeOptions } from "./match-list-options";
 
 export function MatchList({
   puuid,
@@ -23,7 +19,6 @@ export function MatchList({
   const [modeTag, setModeTag] = useState<MatchModeTag>("all");
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(1);
-  const [placeholderFilter, setPlaceholderFilter] = useState<string>("all");
   const { refreshing, refresh } = useHistoryRefresh();
   const previousPuuidRef = useRef<string | null>(null);
   const { matches, error, isLoading, isRefreshing, hasNextPage } =
@@ -48,10 +43,7 @@ export function MatchList({
     value: String(option),
     label: String(option),
   }));
-  const filterSelectOptions = placeholderFilterOptions.map((option) => ({
-    value: option.value,
-    label: t(option.labelKey),
-  }));
+
   const canRefresh = !isLoading && !isRefreshing && !refreshing;
 
   return (
@@ -60,10 +52,8 @@ export function MatchList({
         <MatchListFilters
           modeTag={modeTag}
           pageSize={pageSize}
-          placeholderFilter={placeholderFilter}
           modeSelectOptions={modeSelectOptions}
           pageSizeSelectOptions={pageSizeSelectOptions}
-          filterSelectOptions={filterSelectOptions}
           onModeChange={(value) => {
             setModeTag(value);
             setPage(1);
@@ -72,7 +62,6 @@ export function MatchList({
             setPageSize(Number(value));
             setPage(1);
           }}
-          onFilterChange={(value) => setPlaceholderFilter(value)}
         />
 
         <MatchListPager

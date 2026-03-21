@@ -1,6 +1,7 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  createListCollection,
   SettingsFieldRow,
   SettingsInput,
   SettingsSelect,
@@ -41,27 +42,27 @@ const toScopeTag = (scope?: SettingScope): string => {
   }
 };
 
-const SelectField = ({
-  ariaLabel,
-  field,
-}: {
-  ariaLabel: string;
-  field: RegisteredSelectSetting;
-}) => {
+const SelectField = ({ field }: { field: RegisteredSelectSetting }) => {
   const { t } = useTranslation();
   const value = useSettingValue(field.id);
-  const options = field.options.map((option) => ({
-    value: option.value,
-    label: option.displayLabel ?? t(option.labelKey),
-  }));
+  const collection = useMemo(
+    () =>
+      createListCollection({
+        items: field.options.map((option) => ({
+          value: option.value,
+          label: option.displayLabel ?? t(option.labelKey),
+        })),
+      }),
+    [field.options, t],
+  );
 
   return (
     <SettingsSelect
-      ariaLabel={ariaLabel}
-      value={String(value ?? "")}
-      options={options}
-      onValueChange={(next) => {
-        settingsApi.set(field.id, next);
+      collection={collection}
+      value={[String(value ?? "")]}
+      onValueChange={(details) => {
+        const next = details.value[0];
+        if (next != null) settingsApi.set(field.id, next);
       }}
     />
   );
@@ -145,10 +146,7 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
     case "select":
       return (
         <SettingsFieldRow label={label} scopeTag={scopeTag}>
-          <SelectField
-            ariaLabel={ariaLabel}
-            field={field as RegisteredSelectSetting}
-          />
+          <SelectField field={field as RegisteredSelectSetting} />
         </SettingsFieldRow>
       );
     case "toggle":

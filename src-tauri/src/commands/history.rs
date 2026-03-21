@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::concepts::cherry::CherryAugment;
@@ -192,38 +192,6 @@ fn non_empty_or(value: &str, fallback: &str) -> String {
     }
 }
 
-fn build_nameset_index(
-    namesets: &crate::shards::lcu::api::PlayerAccountNamesetsResponse,
-) -> HashMap<String, (String, String)> {
-    let mut index = HashMap::new();
-    for nameset in &namesets.namesets {
-        let Some(gnt) = &nameset.gnt else {
-            continue;
-        };
-        index.insert(
-            nameset.puuid.clone(),
-            (gnt.game_name.clone(), gnt.tag_line.clone()),
-        );
-    }
-    index
-}
-
-fn build_summoner_search_result(
-    summoner: SummonerInfo,
-    sgp_server_id: String,
-    fallback_game_name: &str,
-    fallback_tag_line: &str,
-) -> SummonerSearchResult {
-    SummonerSearchResult {
-        puuid: summoner.puuid,
-        game_name: non_empty_or(&summoner.game_name, fallback_game_name),
-        tag_line: non_empty_or(&summoner.tag_line, fallback_tag_line),
-        profile_icon_id: summoner.profile_icon_id,
-        summoner_level: summoner.summoner_level,
-        sgp_server_id,
-    }
-}
-
 fn resolve_target_sgp_server_id(
     focused_sgp_server_id: &str,
     requested_sgp_server_id: Option<String>,
@@ -248,27 +216,21 @@ fn resolve_target_sgp_server_id(
         )));
     }
 
-    // Allow cross-region for international servers if the target is a known server
-    let known_servers: HashSet<String> = config
-        .servers
-        .keys()
-        .map(|k| normalize_server_id(k))
-        .collect();
-
-    if known_servers.contains(&requested) {
+    // International servers: LCU alias lookup is local-only, so restrict
+    // to the focused server.
+    if requested == focused {
         return Ok(requested);
     }
 
     Err(AppError::Other(format!(
-        "Unknown target SGP server: {requested}"
+        "Cross-region search is not supported for international servers (focused: {focused}, requested: {requested})"
     )))
 }
 
 async fn search_aliases_with_target_server(
-    aliases: Vec<crate::shards::lcu::api::PlayerAccountAliasEntry>,
+    aliases: Vec<crate::shards::lcu::api::SummonerAliasEntry>,
     target_sgp_server_id: &str,
     same_server: bool,
-    lcu_api: &crate::shards::lcu::api::LcuApi,
     sgp_api: &crate::shards::sgp::api::SgpApi,
 ) -> Result<Vec<SummonerSearchResult>, AppError> {
     let mut dedupe = HashSet::new();
@@ -281,47 +243,36 @@ async fn search_aliases_with_target_server(
         return Ok(Vec::new());
     }
 
-    let puuids: Vec<String> = aliases.iter().map(|entry| entry.puuid.clone()).collect();
-    let nameset_index = lcu_api
-        .get_player_account_namesets(&puuids)
-        .await
-        .map(|response| build_nameset_index(&response))
-        .unwrap_or_default();
+    // The aliases response already contains gameName, tagLine, profileIconId,
+    // summonerLevel — use them directly for same-server searches.
+    if same_server {
+        return Ok(aliases
+            .into_iter()
+            .map(|alias| SummonerSearchResult {
+                puuid: alias.puuid,
+                game_name: alias.game_name,
+                tag_line: alias.tag_line,
+                profile_icon_id: alias.profile_icon_id,
+                summoner_level: alias.summoner_level,
+                sgp_server_id: target_sgp_server_id.to_string(),
+            })
+            .collect());
+    }
 
+    // Cross-region: verify the summoner exists on the target server via SGP.
     let mut results = Vec::new();
     for alias in aliases {
-        let (resolved_game_name, resolved_tag_line) = nameset_index
-            .get(&alias.puuid)
-            .cloned()
-            .unwrap_or_else(|| (alias.alias.game_name.clone(), alias.alias.tag_line.clone()));
-
-        if same_server {
-            let Ok(summoner) = lcu_api.get_summoner_by_puuid(&alias.puuid).await else {
-                continue;
-            };
-            results.push(build_summoner_search_result(
-                summoner,
-                target_sgp_server_id.to_string(),
-                &resolved_game_name,
-                &resolved_tag_line,
-            ));
-            continue;
-        }
-
-        let Ok(summoner) = sgp_api
+        let Ok(Some(summoner)) = sgp_api
             .get_summoner_by_puuid(target_sgp_server_id, &alias.puuid)
             .await
         else {
             continue;
         };
-        let Some(summoner) = summoner else {
-            continue;
-        };
 
         results.push(SummonerSearchResult {
             puuid: summoner.puuid,
-            game_name: resolved_game_name,
-            tag_line: resolved_tag_line,
+            game_name: alias.game_name,
+            tag_line: alias.tag_line,
             profile_icon_id: summoner.profile_icon_id,
             summoner_level: summoner.summoner_level,
             sgp_server_id: target_sgp_server_id.to_string(),
@@ -389,16 +340,6 @@ pub async fn search_summoners(
 
     match parsed_query {
         ParsedSummonerSearchQuery::Puuid(puuid) => {
-            if same_server {
-                let summoner = lcu_api.get_summoner_by_puuid(&puuid).await?;
-                return Ok(vec![build_summoner_search_result(
-                    summoner,
-                    target_sgp_server_id,
-                    &puuid,
-                    "",
-                )]);
-            }
-
             let Some(sgp_summoner) = sgp_api
                 .get_summoner_by_puuid(&target_sgp_server_id, &puuid)
                 .await?
@@ -406,17 +347,10 @@ pub async fn search_summoners(
                 return Ok(Vec::new());
             };
 
-            let (resolved_game_name, resolved_tag_line) = lcu_api
-                .get_player_account_namesets(std::slice::from_ref(&puuid))
-                .await
-                .ok()
-                .and_then(|response| build_nameset_index(&response).remove(&puuid))
-                .unwrap_or_else(|| (puuid.clone(), String::new()));
-
             Ok(vec![SummonerSearchResult {
-                puuid: sgp_summoner.puuid,
-                game_name: resolved_game_name,
-                tag_line: resolved_tag_line,
+                puuid: sgp_summoner.puuid.clone(),
+                game_name: non_empty_or(&sgp_summoner.game_name, &puuid),
+                tag_line: sgp_summoner.tag_line.clone(),
                 profile_icon_id: sgp_summoner.profile_icon_id,
                 summoner_level: sgp_summoner.summoner_level,
                 sgp_server_id: target_sgp_server_id,
@@ -427,24 +361,22 @@ pub async fn search_summoners(
             tag_line,
         } => {
             let aliases = lcu_api
-                .get_player_account_aliases(&game_name, Some(&tag_line))
+                .get_summoner_aliases(&game_name, Some(&tag_line))
                 .await?;
             search_aliases_with_target_server(
                 aliases,
                 &target_sgp_server_id,
                 same_server,
-                &lcu_api,
                 &sgp_api,
             )
             .await
         }
         ParsedSummonerSearchQuery::Fuzzy { game_name } => {
-            let aliases = lcu_api.get_player_account_aliases(&game_name, None).await?;
+            let aliases = lcu_api.get_summoner_aliases(&game_name, None).await?;
             search_aliases_with_target_server(
                 aliases,
                 &target_sgp_server_id,
                 same_server,
-                &lcu_api,
                 &sgp_api,
             )
             .await

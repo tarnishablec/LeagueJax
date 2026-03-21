@@ -132,24 +132,33 @@ export function MatchCardPlayers({
     }
   };
 
-  const participantsByTeam = useMemo(
-    () => ({
-      100: participants.filter((participant) => participant.teamId === 100),
-      200: participants.filter((participant) => participant.teamId === 200),
-    }),
-    [participants],
-  );
+  const teams = useMemo(() => {
+    const map = new Map<number, RawMatchSummaryParticipant[]>();
+    for (const p of participants) {
+      const team = p.teamId ?? 0;
+      let list = map.get(team);
+      if (!list) {
+        list = [];
+        map.set(team, list);
+      }
+      list.push(p);
+    }
+    return [...map.entries()];
+  }, [participants]);
 
   return (
     <div className={s.playersPanel}>
-      {[100, 200].map((teamId) => (
+      {teams.map(([teamId, members]) => (
         <div key={teamId} className={s.playerTeamColumn}>
-          {participantsByTeam[teamId as 100 | 200].map((participant) => {
+          {members.map((participant) => {
             const { gameName, tagLine } = resolvePlayerName(participant);
             const fullName = tagLine ? `${gameName}#${tagLine}` : gameName;
 
             return (
-              <div key={participant.puuid} className={s.playerRow}>
+              <div
+                key={`${participant.puuid}-${participant.championId}`}
+                className={s.playerRow}
+              >
                 <PlayerIcon championId={participant.championId} />
                 <HoverCard.Root openDelay={100} closeDelay={60}>
                   <HoverCard.Trigger

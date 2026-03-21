@@ -86,7 +86,8 @@ impl SgpApi {
         let response = self
             .client
             .http_client()
-            .request_json(
+            .request(
+                reqwest::Method::GET,
                 &base_url,
                 &path,
                 &token_context.access_token,
@@ -125,7 +126,7 @@ impl SgpApi {
         let response = self
             .client
             .http_client()
-            .request_json(&base_url, &path, &token_context.access_token, None, None)
+            .request(reqwest::Method::GET, &base_url, &path, &token_context.access_token, None, None)
             .await?;
 
         let response_raw = serde_json::to_string(&response)?;
@@ -155,7 +156,8 @@ impl SgpApi {
         let response = self
             .client
             .http_client()
-            .request_json(
+            .request(
+                reqwest::Method::POST,
                 &base_url,
                 &path,
                 &token_context.league_session_token,

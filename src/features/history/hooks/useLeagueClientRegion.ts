@@ -83,11 +83,9 @@ function resolveAvailableServerCodes(
     ]);
   }
 
-  // International servers: list all non-Tencent servers, focused first
-  const allInternational = Object.keys(config.servers)
-    .map(normalizeServerId)
-    .filter((id) => !id.startsWith("TENCENT_"));
-  return normalizeServerIds([canonicalFocused, ...allInternational]);
+  // International servers: only the focused server (cross-region name search
+  // is not supported by LCU, so offering other servers would be misleading).
+  return [canonicalFocused];
 }
 
 type UseLeagueClientRegionParams = {

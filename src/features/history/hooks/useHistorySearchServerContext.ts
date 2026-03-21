@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useMemo, useState } from "react";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import { useLeagueClientRegion } from "./useLeagueClientRegion";
+import { useServerBootstrap } from "./useServerBootstrap";
 
 type UseHistorySearchServerContextParams = {
   open: boolean;
@@ -14,6 +14,7 @@ type UseHistorySearchServerContextResult = {
   isBootstrapping: boolean;
   bootstrapError: string | null;
   showServerSelect: boolean;
+  serverSelectDisabled: boolean;
   region: ReturnType<typeof useLeagueClientRegion>;
   resetServerContext: () => void;
 };
@@ -22,66 +23,32 @@ export function useHistorySearchServerContext({
   open,
   config,
 }: UseHistorySearchServerContextParams): UseHistorySearchServerContextResult {
-  const [focusedServerId, setFocusedServerId] = useState<string | null>(null);
+  const bootstrap = useServerBootstrap({ enabled: open });
   const [selectedServerId, setSelectedServerId] = useState("");
-  const [isBootstrapping, setIsBootstrapping] = useState(false);
-  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
   const region = useLeagueClientRegion({
-    focusedServerId,
+    focusedServerId: bootstrap.focusedServerId,
     selectedServerId,
     config,
   });
 
   const showServerSelect = useMemo(
-    () => region.availableServerCodes.length > 1,
+    () => region.availableServerCodes.length >= 1,
+    [region.availableServerCodes.length],
+  );
+
+  const serverSelectDisabled = useMemo(
+    () => region.availableServerCodes.length <= 1,
     [region.availableServerCodes.length],
   );
 
   const resetServerContext = () => {
-    setFocusedServerId(null);
+    bootstrap.reset();
     setSelectedServerId("");
-    setBootstrapError(null);
   };
 
   useEffect(() => {
-    if (!open || focusedServerId || isBootstrapping) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsBootstrapping(true);
-    void invoke<string>("get_current_sgp_server_id")
-      .then((serverId) => {
-        if (cancelled) {
-          return;
-        }
-        setBootstrapError(null);
-        setFocusedServerId(serverId.trim().toUpperCase());
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to load server context.";
-        setBootstrapError(message);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsBootstrapping(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, focusedServerId, isBootstrapping]);
-
-  useEffect(() => {
-    if (!region.focusedServerCode || !showServerSelect) {
+    if (!region.focusedServerCode) {
       setSelectedServerId("");
       return;
     }
@@ -93,14 +60,15 @@ export function useHistorySearchServerContext({
       }
       return region.focusedServerCode ?? "";
     });
-  }, [region.focusedServerCode, region.availableServerCodes, showServerSelect]);
+  }, [region.focusedServerCode, region.availableServerCodes]);
 
   return {
     selectedServerId,
     setSelectedServerId,
-    isBootstrapping,
-    bootstrapError,
+    isBootstrapping: bootstrap.isBootstrapping,
+    bootstrapError: bootstrap.bootstrapError,
     showServerSelect,
+    serverSelectDisabled,
     region,
     resetServerContext,
   };
