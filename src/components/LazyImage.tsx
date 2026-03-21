@@ -1,4 +1,23 @@
 import { useCallback, useState } from "react";
+import { lazyFadeIn } from "./LazyImage.css.ts";
+
+const listeners = new Map<Element, () => void>();
+
+const sharedObserver = new IntersectionObserver(
+  (entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        const callback = listeners.get(entry.target);
+        if (callback) {
+          callback();
+          listeners.delete(entry.target);
+          sharedObserver.unobserve(entry.target);
+        }
+      }
+    }
+  },
+  { rootMargin: "100px" },
+);
 
 export function LazyImage({
   src,
@@ -14,21 +33,16 @@ export function LazyImage({
   onError?: () => void;
 }) {
   const [visible, setVisible] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
 
-  const ref = useCallback((node: HTMLImageElement | HTMLSpanElement | null) => {
+  const ref = useCallback((node: HTMLSpanElement | null) => {
     if (!node) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "100px" },
-    );
-    observer.observe(node);
+    listeners.set(node, () => setVisible(true));
+    sharedObserver.observe(node);
+    return () => {
+      listeners.delete(node);
+      sharedObserver.unobserve(node);
+    };
   }, []);
 
   if (errored && !onError && fallbackClassName) {
@@ -38,7 +52,7 @@ export function LazyImage({
   if (!visible) {
     return (
       <span
-        ref={ref as (node: HTMLSpanElement | null) => void}
+        ref={ref}
         className={fallbackClassName ?? className}
         aria-hidden="true"
       />
@@ -48,22 +62,19 @@ export function LazyImage({
   return (
     <img
       key={src}
-      ref={ref as (node: HTMLImageElement | null) => void}
       src={src}
       alt={alt}
-      className={className}
+      className={`${className} ${lazyFadeIn}`}
       decoding="async"
-      onLoad={() => setLoaded(true)}
+      onLoad={(e) => {
+        e.currentTarget.dataset.loaded = "";
+      }}
       onError={() => {
         if (onError) {
           onError();
         } else {
           setErrored(true);
         }
-      }}
-      style={{
-        opacity: loaded ? 1 : 0,
-        transition: "opacity 200ms ease-in",
       }}
     />
   );

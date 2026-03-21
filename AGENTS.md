@@ -110,6 +110,12 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 
 - All `aria-label` values must be written in **English**.
 
+## Browser Compatibility
+
+- This app runs in a **Tauri WebView** (Chromium-based). Target only the **latest stable browser engine**.
+- Freely use the newest CSS and Web API features (`@starting-style`, `content-visibility`, `oklch()`, `@layer`, `@container`, etc.) without polyfills or fallbacks.
+- Do not add vendor prefixes or compatibility workarounds for older browsers.
+
 ## Component Styles
 
 - **Styling engine:** [Vanilla Extract](https://vanilla-extract.style/) — all styles live in co-located `.css.ts` files (for example `Component.css.ts` next to `Component.tsx`).

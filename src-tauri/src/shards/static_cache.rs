@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::sync::OnceLock;
 
 use async_trait::async_trait;
@@ -6,6 +7,8 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
+
+use crate::error::AppError;
 
 use crate::shards::tauri_host::TauriHost;
 
@@ -40,6 +43,26 @@ impl StaticCacheShard {
         } else {
             None
         }
+    }
+
+    pub async fn get_or_init<T, F, Fut>(
+        &self,
+        store_file: &str,
+        key: &str,
+        version: &str,
+        init: F,
+    ) -> Result<T, AppError>
+    where
+        T: Serialize + DeserializeOwned,
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<T, AppError>>,
+    {
+        if let Some(cached) = self.get::<T>(store_file, key, version) {
+            return Ok(cached);
+        }
+        let data = init().await?;
+        self.set(store_file, key, version, &data);
+        Ok(data)
     }
 
     pub fn set<T: Serialize>(&self, store_file: &str, key: &str, version: &str, data: &T) {
