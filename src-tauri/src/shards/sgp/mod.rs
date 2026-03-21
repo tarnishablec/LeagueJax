@@ -7,13 +7,13 @@ use core::error::Error;
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use jax::{shard_id, Jax, Shard};
+use jax::{depends, shard_id, Jax, Shard};
 
 use self::api::SgpApi;
 use self::http_client::SgpHttpClient;
 use self::session::SgpSession;
 use crate::error::AppError;
-use crate::shards::lcu::LcuClientHandle;
+use crate::shards::lcu::{LcuClientHandle, LcuShard};
 
 static SGP_HTTP_CLIENT: OnceLock<Arc<SgpHttpClient>> = OnceLock::new();
 
@@ -41,7 +41,7 @@ impl SgpClientHandle {
 
     pub async fn get_or_refresh_token_context(
         &self,
-    ) -> Result<crate::shards::lcu::session::SgpTokenContext, AppError> {
+    ) -> Result<session::SgpTokenContext, AppError> {
         self.session.get_or_refresh_token_context().await
     }
 
@@ -90,6 +90,6 @@ impl Shard for SgpShard {
     }
 
     fn dependencies(&self) -> Vec<uuid::Uuid> {
-        vec![]
+        depends![LcuShard]
     }
 }

@@ -1,5 +1,18 @@
-import { style } from "@vanilla-extract/css";
+import { keyframes, style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
+
+const fadeIn = keyframes({
+  from: { opacity: 0 },
+  to: { opacity: 1 },
+});
+
+export const rankCardInner = style({
+  display: "grid",
+  gridColumn: "1 / -1",
+  gridTemplateColumns: "subgrid",
+  alignItems: "center",
+  animation: `${fadeIn} 300ms ease-out`,
+});
 
 export const bar = style({
   display: "grid",
@@ -36,21 +49,6 @@ export const profileIcon = style({
   width: "100%",
   height: "100%",
   objectFit: "cover",
-});
-
-export const levelBadge = style({
-  position: "absolute",
-  right: -1,
-  bottom: -4,
-  background: vars.color.background,
-  minWidth: 30,
-  height: 20,
-  paddingInline: 6,
-  display: "grid",
-  placeItems: "center",
-  color: vars.color.foreground,
-  fontSize: "0.6875rem",
-  fontWeight: 400,
 });
 
 export const identity = style({
@@ -102,7 +100,7 @@ export const ranks = style({
   "@media": {
     "(max-width: 1000px)": {
       gridColumn: "1 / -1",
-      // gridTemplateColumns: "1fr",
+      gridTemplateColumns: "1fr",
     },
   },
 });
@@ -111,15 +109,12 @@ export const rankCard = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
   alignItems: "center",
+  height: "80px",
   gap: 10,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.background,
   padding: "10px 12px",
-});
-
-export const rankTop = style({
-  display: "none",
 });
 
 export const rankIconWrap = style({

@@ -16,11 +16,24 @@ impl SgpApi {
     fn resolve_server_endpoint(sgp_server_id: &str) -> Result<SgpServerEndpoints, AppError> {
         let config = sgp_servers_config()?;
         let server_key = sgp_server_id.to_uppercase();
-        config
+
+        if let Some(endpoint) = config.servers.get(&server_key) {
+            return Ok(endpoint.clone());
+        }
+
+        // Prefix-match fallback: e.g. "JP" -> "JP1"
+        let matches: Vec<(&String, &SgpServerEndpoints)> = config
             .servers
-            .get(&server_key)
-            .cloned()
-            .ok_or_else(|| AppError::Other(format!("Unknown SGP server id: {sgp_server_id}")))
+            .iter()
+            .filter(|(k, _)| !k.starts_with("TENCENT_") && k.starts_with(&server_key))
+            .collect();
+        if matches.len() == 1 {
+            return Ok(matches[0].1.clone());
+        }
+
+        Err(AppError::Other(format!(
+            "Unknown SGP server id: {sgp_server_id}"
+        )))
     }
 
     fn resolve_match_history_base_url(sgp_server_id: &str) -> Result<String, AppError> {

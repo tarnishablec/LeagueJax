@@ -4,9 +4,10 @@ import { Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner";
-import { SettingsSelect } from "@/components/settings-ui";
 import { useHistorySearch } from "@/features/history/hooks/useHistorySearch";
 import * as s from "./HistoryToolbar.css";
+import { SearchForm } from "./SearchForm";
+import { SearchResultList } from "./SearchResultList";
 
 type HistorySearchDialogProps = {
   open: boolean;
@@ -30,8 +31,6 @@ export function HistorySearchDialog({
     }
     onOpenChange(nextOpen);
   };
-
-  const hasResults = search.results.length > 0;
 
   return (
     <Dialog.Root
@@ -76,47 +75,7 @@ export function HistorySearchDialog({
               </Dialog.CloseTrigger>
             </div>
 
-            <form
-              className={server.show ? s.searchRow : s.searchRowNoServer}
-              onSubmit={(event) => {
-                event.preventDefault();
-                void search.handleSearch();
-              }}
-            >
-              {server.show ? (
-                <SettingsSelect
-                  collection={server.collection}
-                  value={[server.selectedId]}
-                  onValueChange={(details) => {
-                    const next = details.value[0];
-                    if (next != null) server.setSelectedId(next);
-                  }}
-                  disabled={server.disabled}
-                  placeholder={t("history.searchDialog.focused")}
-                />
-              ) : null}
-              <input
-                type="text"
-                className={s.searchInput}
-                placeholder={t("history.searchDialog.placeholder")}
-                value={search.query}
-                disabled={search.isSearching}
-                onChange={(event) => search.setQuery(event.target.value)}
-              />
-              <button
-                type="submit"
-                className={s.searchButton}
-                disabled={
-                  search.isSearching ||
-                  server.isBootstrapping ||
-                  search.query.trim().length === 0
-                }
-              >
-                {search.isSearching
-                  ? t("common.loading")
-                  : t("history.searchDialog.submit")}
-              </button>
-            </form>
+            <SearchForm server={server} search={search} />
 
             <div className={s.metaRow}>
               {server.isBootstrapping ? (
@@ -130,35 +89,13 @@ export function HistorySearchDialog({
             </div>
 
             <div className={s.resultPanel}>
-              {hasResults ? (
-                <div className={s.resultList}>
-                  {search.results.map((result) => (
-                    <button
-                      key={`${result.puuid}:${result.sgpServerId}`}
-                      type="button"
-                      className={s.resultButton}
-                      onClick={() => onOpenResult(result)}
-                    >
-                      <span className={s.resultName}>
-                        {result.gameName}
-                        {result.tagLine.length > 0 ? `#${result.tagLine}` : ""}
-                      </span>
-                      <span className={s.resultMeta}>
-                        <span>{result.sgpServerId}</span>
-                        <span>Lv.{result.summonerLevel}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : search.searched && !search.isSearching && !errorMessage ? (
-                <div className={s.emptyText}>
-                  {t("history.searchDialog.noResults")}
-                </div>
-              ) : (
-                <div className={s.emptyText}>
-                  {t("history.searchDialog.hint")}
-                </div>
-              )}
+              <SearchResultList
+                results={search.results}
+                searched={search.searched}
+                isSearching={search.isSearching}
+                hasError={!!errorMessage}
+                onOpenResult={onOpenResult}
+              />
             </div>
           </Dialog.Content>
         </Dialog.Positioner>

@@ -14,6 +14,10 @@ function serverDisplayName(
   return names[language]?.[serverId] ?? names.en?.[serverId] ?? serverId;
 }
 
+function serverDisplayCode(code: string): string {
+  return code.startsWith("TENCENT_") ? code.slice("TENCENT_".length) : code;
+}
+
 type UseHistorySearchParams = {
   open: boolean;
   config: SgpServersConfig;
@@ -39,7 +43,7 @@ export function useHistorySearch({ open, config }: UseHistorySearchParams) {
     const items = [
       {
         value: focused,
-        label: `${serverDisplayName(config, focused, lang)} (${focused})`,
+        label: `${serverDisplayName(config, focused, lang)} (${serverDisplayCode(focused)})`,
       },
     ];
 
@@ -47,7 +51,7 @@ export function useHistorySearch({ open, config }: UseHistorySearchParams) {
       if (code === focused) continue;
       items.push({
         value: code,
-        label: `${serverDisplayName(config, code, lang)} (${code})`,
+        label: `${serverDisplayName(config, code, lang)} (${serverDisplayCode(code)})`,
       });
     }
 

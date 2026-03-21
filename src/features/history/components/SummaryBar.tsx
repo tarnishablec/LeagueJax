@@ -43,7 +43,9 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
     type: "profile-icon",
     profileIconId: summoner.profileIconId,
   });
-  const { data: rankedSummary } = useRankedSummary(summoner.puuid);
+  const { data: rankedSummary, isLoading: rankedLoading } = useRankedSummary(
+    summoner.puuid,
+  );
   const [copied, setCopied] = useState(false);
   const copyResetTimerRef = useRef<number | null>(null);
   const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
@@ -87,7 +89,6 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
             <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
           ) : null}
         </div>
-        <span className={s.levelBadge}>{summoner.summonerLevel}</span>
       </div>
       <div className={s.identity}>
         <div className={s.nameRow}>
@@ -111,58 +112,68 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
       </div>
       <div className={s.ranks}>
         <div className={s.rankCard}>
-          <div className={s.rankContent}>
-            <span className={s.rankQueue}>
-              {t("history.summary.solo", { defaultValue: "Solo/Duo" })}
-            </span>
-            <span className={s.rankTier}>
-              {formatTier(rankedSummary?.solo ?? null, unrankedLabel)}
-            </span>
-            <span className={s.rankMeta}>
-              {formatMeta(
-                rankedSummary?.solo ?? null,
-                winsShort,
-                lossesShort,
-                lpShort,
-              )}
-            </span>
-          </div>
-          <div className={s.rankIconWrap}>
-            {soloIconUrl ? (
-              <img
-                src={soloIconUrl}
-                alt={t("history.summary.solo", { defaultValue: "Solo/Duo" })}
-                className={s.rankIcon}
-              />
-            ) : null}
-          </div>
+          {!rankedLoading && (
+            <div className={s.rankCardInner}>
+              <div className={s.rankContent}>
+                <span className={s.rankQueue}>
+                  {t("history.summary.solo", { defaultValue: "Solo/Duo" })}
+                </span>
+                <span className={s.rankTier}>
+                  {formatTier(rankedSummary?.solo ?? null, unrankedLabel)}
+                </span>
+                <span className={s.rankMeta}>
+                  {formatMeta(
+                    rankedSummary?.solo ?? null,
+                    winsShort,
+                    lossesShort,
+                    lpShort,
+                  )}
+                </span>
+              </div>
+              <div className={s.rankIconWrap}>
+                {soloIconUrl ? (
+                  <img
+                    src={soloIconUrl}
+                    alt={t("history.summary.solo", {
+                      defaultValue: "Solo/Duo",
+                    })}
+                    className={s.rankIcon}
+                  />
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
         <div className={s.rankCard}>
-          <div className={s.rankContent}>
-            <span className={s.rankQueue}>
-              {t("history.summary.flex", { defaultValue: "Flex" })}
-            </span>
-            <span className={s.rankTier}>
-              {formatTier(rankedSummary?.flex ?? null, unrankedLabel)}
-            </span>
-            <span className={s.rankMeta}>
-              {formatMeta(
-                rankedSummary?.flex ?? null,
-                winsShort,
-                lossesShort,
-                lpShort,
-              )}
-            </span>
-          </div>
-          <div className={s.rankIconWrap}>
-            {flexIconUrl ? (
-              <img
-                src={flexIconUrl}
-                alt={t("history.summary.flex", { defaultValue: "Flex" })}
-                className={s.rankIcon}
-              />
-            ) : null}
-          </div>
+          {!rankedLoading && (
+            <div className={s.rankCardInner}>
+              <div className={s.rankContent}>
+                <span className={s.rankQueue}>
+                  {t("history.summary.flex", { defaultValue: "Flex" })}
+                </span>
+                <span className={s.rankTier}>
+                  {formatTier(rankedSummary?.flex ?? null, unrankedLabel)}
+                </span>
+                <span className={s.rankMeta}>
+                  {formatMeta(
+                    rankedSummary?.flex ?? null,
+                    winsShort,
+                    lossesShort,
+                    lpShort,
+                  )}
+                </span>
+              </div>
+              <div className={s.rankIconWrap}>
+                {flexIconUrl ? (
+                  <img
+                    src={flexIconUrl}
+                    alt={t("history.summary.flex", { defaultValue: "Flex" })}
+                    className={s.rankIcon}
+                  />
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

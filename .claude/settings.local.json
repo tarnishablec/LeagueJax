@@ -54,7 +54,8 @@
       "Read(//d/Desktop/Web/LeagueJax/$HOME/**)",
       "Bash(gh auth:*)",
       "WebFetch(domain:ark-ui.com)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx --yes tsc --noEmit --pretty)"
     ]
   }
 }

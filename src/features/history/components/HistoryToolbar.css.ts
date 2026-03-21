@@ -207,7 +207,11 @@ export const resultButton = style({
   padding: "8px 10px",
   cursor: "pointer",
   display: "grid",
-  gap: 3,
+  gridTemplateColumns: "32px minmax(0, 1fr)",
+  gridTemplateRows: "auto auto",
+  columnGap: 10,
+  rowGap: 3,
+  alignItems: "center",
   textAlign: "left",
   selectors: {
     "&:hover": {
@@ -215,6 +219,23 @@ export const resultButton = style({
       background: vars.color.background,
     },
   },
+});
+
+export const resultAvatar = style({
+  width: 35,
+  height: 35,
+  borderRadius: 6,
+  objectFit: "cover",
+  gridRow: "1 / -1",
+  border: `1px solid ${vars.color.border}`,
+});
+
+export const resultAvatarFallback = style({
+  width: 35,
+  height: 35,
+  borderRadius: 6,
+  gridRow: "1 / -1",
+  background: vars.color.border,
 });
 
 export const resultName = style({
