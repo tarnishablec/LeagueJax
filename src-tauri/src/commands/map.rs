@@ -14,15 +14,9 @@ pub async fn get_lcu_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppEr
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
     let version = api.get_game_version().await?;
-    let cache = jax.get_shard::<StaticCacheShard>();
-
-    if let Some(cached) = cache.get::<Vec<LcuMap>>(LCU_CACHE, "lcu_maps", &version) {
-        return Ok(cached);
-    }
-
-    let data = api.get_maps().await?;
-    cache.set(LCU_CACHE, "lcu_maps", &version, &data);
-    Ok(data)
+    jax.get_shard::<StaticCacheShard>()
+        .get_or_init(LCU_CACHE, "lcu_maps", &version, || api.get_maps())
+        .await
 }
 
 #[tauri::command]
@@ -30,13 +24,7 @@ pub async fn get_lcu_queues(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuQueue>, A
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
     let version = api.get_game_version().await?;
-    let cache = jax.get_shard::<StaticCacheShard>();
-
-    if let Some(cached) = cache.get::<Vec<LcuQueue>>(LCU_CACHE, "lcu_queues", &version) {
-        return Ok(cached);
-    }
-
-    let data = api.get_queues().await?;
-    cache.set(LCU_CACHE, "lcu_queues", &version, &data);
-    Ok(data)
+    jax.get_shard::<StaticCacheShard>()
+        .get_or_init(LCU_CACHE, "lcu_queues", &version, || api.get_queues())
+        .await
 }

@@ -515,15 +515,11 @@ pub async fn get_cherry_augments(
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
     let version = api.get_game_version().await?;
-    let cache = jax.get_shard::<StaticCacheShard>();
-
-    if let Some(cached) = cache.get::<Vec<CherryAugment>>("lcu-cache.json", "lcu_cherry_augments", &version) {
-        return Ok(cached);
-    }
-
-    let data = api.get_cherry_augments().await?;
-    cache.set("lcu-cache.json", "lcu_cherry_augments", &version, &data);
-    Ok(data)
+    jax.get_shard::<StaticCacheShard>()
+        .get_or_init("lcu-cache.json", "lcu_cherry_augments", &version, || {
+            api.get_cherry_augments()
+        })
+        .await
 }
 
 #[tauri::command]
