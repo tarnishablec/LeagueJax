@@ -296,9 +296,9 @@ pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerIn
 
 #[tauri::command]
 pub async fn get_current_sgp_server_id(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
-    let lcu_client = jax.get_shard::<LcuShard>().focused().await?;
-    let token_context = lcu_client.exchange_sgp_token_context().await?;
-    Ok(token_context.sgp_server_id)
+    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
+    Ok(sgp_session.api().token_context().sgp_server_id.clone())
 }
 
 #[tauri::command]
@@ -312,8 +312,8 @@ pub async fn search_summoner(
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Value, AppError> {
-    let lcu_api = jax.get_shard::<LcuShard>().focused().await?.api();
-    lcu_api.search_summoner(&game_name, &tag_line).await
+    let session = jax.get_shard::<LcuShard>().focused().await?;
+    session.api().search_summoner(&game_name, &tag_line).await
 }
 
 #[tauri::command]
@@ -323,20 +323,20 @@ pub async fn search_summoners(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<SummonerSearchResult>, AppError> {
     let parsed_query = parse_summoner_search_query(&query)?;
-    let lcu_client = jax.get_shard::<LcuShard>().focused().await?;
-    let lcu_api = lcu_client.api();
-    let current_token_context = lcu_client.exchange_sgp_token_context().await?;
+    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let lcu_api = session.api();
+    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session.clone()).await?;
+    let sgp_api = sgp_session.api();
+    let current_sgp_server_id = &sgp_api.token_context().sgp_server_id;
     let config = sgp_servers_config()?;
 
     let target_sgp_server_id =
-        resolve_target_sgp_server_id(&current_token_context.sgp_server_id, sgp_server_id, config)?;
-    let current_sgp_server_id = to_tencent_canonical_server_id(
-        &current_token_context.sgp_server_id,
+        resolve_target_sgp_server_id(current_sgp_server_id, sgp_server_id, config)?;
+    let current_sgp_server_id_canonical = to_tencent_canonical_server_id(
+        current_sgp_server_id,
         &tencent_server_set(config),
     );
-    let same_server = target_sgp_server_id == current_sgp_server_id;
-
-    let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
+    let same_server = target_sgp_server_id == current_sgp_server_id_canonical;
 
     match parsed_query {
         ParsedSummonerSearchQuery::Puuid(puuid) => {
@@ -367,7 +367,7 @@ pub async fn search_summoners(
                 aliases,
                 &target_sgp_server_id,
                 same_server,
-                &sgp_api,
+                sgp_api,
             )
             .await
         }
@@ -377,7 +377,7 @@ pub async fn search_summoners(
                 aliases,
                 &target_sgp_server_id,
                 same_server,
-                &sgp_api,
+                sgp_api,
             )
             .await
         }
@@ -402,8 +402,8 @@ pub async fn get_ranked_summary(
     puuid: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<RankedSummary, AppError> {
-    let lcu_api = jax.get_shard::<LcuShard>().focused().await?.api();
-    let response = lcu_api.get_ranked_stats(&puuid).await?;
+    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let response = session.api().get_ranked_stats(&puuid).await?;
 
     Ok(parse_ranked_summary(&response))
 }
@@ -417,9 +417,8 @@ pub async fn get_match_summaries(
     sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<RawMatchSummariesResponse, AppError> {
-    let lcu_shard = jax.get_shard::<LcuShard>();
-    let lcu_client = lcu_shard.focused().await?;
-    let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
+    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
 
     let count = end_index.saturating_sub(begin_index);
     if count == 0 {
@@ -435,7 +434,8 @@ pub async fn get_match_summaries(
         }
     });
 
-    sgp_api
+    sgp_session
+        .api()
         .get_match_summaries(
             &puuid,
             begin_index,
@@ -454,7 +454,7 @@ pub async fn get_cherry_augments(
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
     let version = api.get_game_version().await?;
-    let region = lcu.auth_region().unwrap_or_default();
+    let region = lcu.auth().region.clone().unwrap_or_default();
     let cache_version = format!("{version}_{region}");
     jax.get_shard::<StaticCacheShard>()
         .get_or_init("lcu-cache.json", "lcu_cherry_augments", &cache_version, || {
@@ -471,10 +471,11 @@ pub async fn get_match_summary(
 ) -> Result<RawMatchSummaryGame, AppError> {
     let lcu_shard = jax.get_shard::<LcuShard>();
     let focused_pid = lcu_shard.focused_pid().await?;
-    let lcu_client = lcu_shard.client(focused_pid)?;
-    let sgp_api = jax.get_shard::<SgpShard>().spg_from_lcu(lcu_client)?.api();
+    let session = lcu_shard.client(focused_pid)?;
+    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
 
-    sgp_api
+    sgp_session
+        .api()
         .get_match_summary(game_id, sgp_server_id.as_deref())
         .await
 }

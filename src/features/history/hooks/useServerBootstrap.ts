@@ -27,18 +27,18 @@ export function useServerBootstrap({
   };
 
   useEffect(() => {
-    if (!enabled || focusedServerId || isBootstrapping) {
+    if (!enabled || focusedServerId) {
       return;
     }
 
     const currentRequestId = ++requestIdRef.current;
     setIsBootstrapping(true);
+    setBootstrapError(null);
     void invoke<string>("get_current_sgp_server_id")
       .then((serverId) => {
         if (requestIdRef.current !== currentRequestId) {
           return;
         }
-        setBootstrapError(null);
         setFocusedServerId(serverId.trim().toUpperCase());
       })
       .catch((error: unknown) => {
@@ -54,7 +54,7 @@ export function useServerBootstrap({
           setIsBootstrapping(false);
         }
       });
-  }, [enabled, focusedServerId, isBootstrapping]);
+  }, [enabled, focusedServerId]);
 
   return { focusedServerId, isBootstrapping, bootstrapError, reset };
 }

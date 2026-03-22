@@ -10,7 +10,8 @@ This file provides guidance to Ai agents (Codex/claude code etc.) when working w
 ## Commit Message Guideline
 
 - When the user asks to generate a commit message, the message **must be based on the current changed files** (for example, from `git status` / diff context) and must reflect real changes in the workspace.
-- Commit messages **must follow Conventional Commits** format (for example `feat(scope): ...`, `fix(scope): ...`, `refactor(scope): ...`).
+- Commit messages **must follow Conventional Commits** format with a module scope: `type(module): description` (for example `feat(history): ...`, `fix(lcu): ...`, `refactor(jax): ...`).
+- **If changes span multiple modules, generate multiple separate commit messages** — one per module. Never combine unrelated module changes into a single commit message.
 - The generated commit message **must be returned in a Markdown code block** for direct copy/paste.
 - **Do NOT add `Co-Authored-By` trailers** (or any agent/AI attribution lines) to commit messages.
 
