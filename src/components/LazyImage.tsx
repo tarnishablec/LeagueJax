@@ -3,21 +3,18 @@ import { lazyFadeIn } from "./LazyImage.css.ts";
 
 const listeners = new Map<Element, () => void>();
 
-const sharedObserver = new IntersectionObserver(
-  (entries) => {
-    for (const entry of entries) {
-      if (entry.isIntersecting) {
-        const callback = listeners.get(entry.target);
-        if (callback) {
-          callback();
-          listeners.delete(entry.target);
-          sharedObserver.unobserve(entry.target);
-        }
+const sharedObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (entry.isIntersecting) {
+      const callback = listeners.get(entry.target);
+      if (callback) {
+        callback();
+        listeners.delete(entry.target);
+        sharedObserver.unobserve(entry.target);
       }
     }
-  },
-  { rootMargin: "100px" },
-);
+  }
+});
 
 export function LazyImage({
   src,

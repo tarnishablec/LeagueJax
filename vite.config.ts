@@ -43,10 +43,18 @@ export default defineConfig(async () => ({
         codeSplitting: {
           groups: [
             {
-              name: "large-libs",
-              test: /node_modules/,
-              minSize: 100000, // 100KB
-              maxSize: 300000, // 300KB
+              name: "vendor-react",
+              test: /node_modules[\\/](react|react-dom|react-router|scheduler)/,
+              priority: 20,
+            },
+            {
+              name: "vendor-ui",
+              test: /node_modules[\\/](@ark-ui|@floating-ui|lucide-react)/,
+              priority: 15,
+            },
+            {
+              name: "vendor-misc",
+              test: /node_modules[\\/](i18next|react-i18next|swr|remeda|zod|zustand|pino|graphology|uuid)/,
               priority: 10,
             },
           ],

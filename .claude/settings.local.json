@@ -46,7 +46,6 @@
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:crates.io)",
       "WebFetch(domain:api.github.com)",
-      "Bash(git add:*)",
       "Bash(gh search:*)",
       "Bash(npx biome:*)",
       "WebFetch(domain:raw.communitydragon.org)",
@@ -54,12 +53,13 @@
       "Read(//d/Desktop/Web/LeagueJax/$HOME/**)",
       "Bash(gh auth:*)",
       "WebFetch(domain:ark-ui.com)",
-      "Bash(git commit:*)",
       "Bash(npx --yes tsc --noEmit --pretty)",
       "Bash(npx tsc:*)",
       "Bash(cargo add:*)",
       "Bash(cargo rm:*)",
-      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in d[''''servers''''].items\\(\\) if ''''TENCENT'''' in k or ''''HN1'''' in k.upper\\(\\)]\")"
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in d[''''servers''''].items\\(\\) if ''''TENCENT'''' in k or ''''HN1'''' in k.upper\\(\\)]\")",
+      "Bash(git log:*)",
+      "Bash(bun tauri:*)"
     ]
   }
 }

@@ -60,6 +60,7 @@ pub fn run() {
             let app_handle = app.handle().clone();
 
             let win = app.get_webview_window("main").expect("no main window");
+            // win.open_devtools();
 
             #[cfg(target_os = "windows")]
             {

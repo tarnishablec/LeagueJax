@@ -15,7 +15,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 jax = { path = "../jax" }
 
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "devtools"] }
 window-vibrancy = "0.7.1"
 uuid = { version = "1", features = ["serde"] }
 tauri-plugin-store = "2"
