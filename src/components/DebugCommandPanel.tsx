@@ -61,13 +61,13 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
       run: () => invoke<unknown>("get_current_summoner"),
     },
     {
-      id: "search-summoner-active-tab",
-      label: "search_summoner(active tab)",
+      id: "search-summoners-active-tab",
+      label: "search_summoners(active tab)",
       run: async () => {
         const tab = requireActiveTab(activeTab);
-        return invoke<unknown>("search_summoner", {
-          gameName: tab.summoner.gameName,
-          tagLine: tab.summoner.tagLine,
+        return invoke<unknown>("search_summoners", {
+          query: `${tab.summoner.gameName}#${tab.summoner.tagLine}`,
+          sgpServerId: tab.sgpServerId,
         });
       },
     },

@@ -1,6 +1,32 @@
 import { create } from "zustand";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 
+export function defaultSummonerInfo(
+  partial: Partial<SummonerInfo> & { puuid: string },
+): SummonerInfo {
+  return {
+    gameName: "",
+    tagLine: "",
+    profileIconId: 0,
+    summonerLevel: 0,
+    level: 0,
+    privacy: "",
+    accountId: 0,
+    id: 0,
+    name: "",
+    internalName: "",
+    expPoints: 0,
+    expToNextLevel: 0,
+    levelAndXpVersion: 0,
+    lastGameDate: 0,
+    revisionDate: 0,
+    revisionId: 0,
+    nameChangeFlag: false,
+    unnamed: false,
+    ...partial,
+  };
+}
+
 export interface HistoryTab {
   id: string;
   puuid: string;
@@ -23,7 +49,7 @@ function mergeSummoner(
   next: SummonerInfo,
 ): SummonerInfo {
   return {
-    puuid: existing.puuid,
+    ...existing,
     gameName:
       next.gameName.trim().length > 0 ? next.gameName : existing.gameName,
     tagLine: next.tagLine.trim().length > 0 ? next.tagLine : existing.tagLine,
@@ -31,6 +57,7 @@ function mergeSummoner(
       next.profileIconId > 0 ? next.profileIconId : existing.profileIconId,
     summonerLevel:
       next.summonerLevel > 0 ? next.summonerLevel : existing.summonerLevel,
+    privacy: next.privacy.trim().length > 0 ? next.privacy : existing.privacy,
   };
 }
 

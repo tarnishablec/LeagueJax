@@ -181,12 +181,18 @@ impl SgpApi {
             )
             .await?;
 
-        let entries: Vec<SummonerInfo> = serde_json::from_value(response).map_err(|error| {
-            AppError::other(format!(
-                "Failed to parse SGP response for get_summoner_by_puuid: {error}"
-            ))
-        })?;
+        let entries: Vec<SummonerInfo> =
+            serde_json::from_value(response).map_err(|error| {
+                AppError::other(format!(
+                    "Failed to parse SGP response for get_summoner_by_puuid: {error}"
+                ))
+            })?;
 
-        Ok(entries.into_iter().next())
+        Ok(entries.into_iter().next().map(|mut info| {
+            if info.summoner_level == 0 && info.level > 0 {
+                info.summoner_level = info.level;
+            }
+            info
+        }))
     }
 }

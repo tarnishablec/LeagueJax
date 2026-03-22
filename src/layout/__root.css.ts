@@ -22,9 +22,8 @@ export const shell = style({
 });
 
 export const logoButton = style({
-  display: "grid",
+  display: "inline-grid",
   placeItems: "center",
-  position: "relative",
   borderRight: `1px solid ${vars.color.border}`,
   borderBottom: `1px solid ${vars.color.border}`,
   background: "transparent",
@@ -34,6 +33,7 @@ export const logoButton = style({
 
 export const logoIcon = style({
   transition: "all 200ms",
+  cursor: "pointer",
   selectors: {
     [`${logoButton}:hover &`]: {
       opacity: 0,

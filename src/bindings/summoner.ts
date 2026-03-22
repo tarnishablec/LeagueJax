@@ -6,6 +6,20 @@ export type SummonerInfo = {
   tagLine: string;
   profileIconId: number;
   summonerLevel: number;
+  level: number;
+  privacy: string;
+  accountId: number;
+  id: number;
+  name: string;
+  internalName: string;
+  expPoints: number;
+  expToNextLevel: number;
+  levelAndXpVersion: number;
+  lastGameDate: number;
+  revisionDate: number;
+  revisionId: number;
+  nameChangeFlag: boolean;
+  unnamed: boolean;
 };
 
 export type SummonerSearchResult = {
@@ -15,4 +29,5 @@ export type SummonerSearchResult = {
   profileIconId: number;
   summonerLevel: number;
   sgpServerId: string;
+  privacy: string;
 };

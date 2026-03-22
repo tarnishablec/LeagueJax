@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { RankEntry } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
@@ -77,6 +78,12 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
             className={s.copyButton}
             aria-label={`Copy summoner id ${summonerId}`}
           />
+          {summoner.privacy === "PRIVATE" && (
+            <span className={s.privacyBadge}>
+              <Lock size={12} />
+              {/*{t("history.summary.private", { defaultValue: "Private" })}*/}
+            </span>
+          )}
         </div>
         <div className={s.tag}>#{summoner.tagLine}</div>
       </div>

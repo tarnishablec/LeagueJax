@@ -16,7 +16,7 @@ export const rankCardInner = style({
 
 export const bar = style({
   display: "grid",
-  gridTemplateColumns: "56px minmax(12rem, 1fr) minmax(220px, 2fr)",
+  gridTemplateColumns: "56px minmax(12rem, 1fr) auto",
   alignItems: "center",
   gap: 16,
   padding: 12,
@@ -93,6 +93,20 @@ export const copyButton = style({
 export const tag = style({
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
+});
+
+export const privacyBadge = style({
+  display: "inline-grid",
+  placeItems: "center",
+  gap: 4,
+  fontSize: "0.6875rem",
+  fontWeight: 500,
+  height: 20,
+  width: 20,
+  color: vars.color.mutedForeground,
+  background: vars.color.border,
+  borderRadius: 4,
+  lineHeight: 1,
 });
 
 export const ranks = style({

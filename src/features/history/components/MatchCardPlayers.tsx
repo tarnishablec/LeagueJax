@@ -6,7 +6,7 @@ import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
 import { LazyImage } from "@/components/LazyImage";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
-import { useTabStore } from "@/stores/tabs";
+import { defaultSummonerInfo, useTabStore } from "@/stores/tabs";
 import * as s from "./MatchCard.css";
 
 function resolvePlayerName(participant: RawMatchSummaryParticipant): {
@@ -101,13 +101,11 @@ export function MatchCardPlayers({
   ) => {
     // Open tab immediately with available data for instant feedback
     openTab(
-      {
+      defaultSummonerInfo({
         puuid: participant.puuid ?? "",
         gameName,
         tagLine,
-        profileIconId: 0,
-        summonerLevel: 0,
-      },
+      }),
       sgpServerId,
     );
 
@@ -117,13 +115,14 @@ export function MatchCardPlayers({
         if (resolved) {
           const { summoner } = resolved;
           openTab(
-            {
+            defaultSummonerInfo({
               puuid: summoner.puuid,
               gameName: summoner.gameName,
               tagLine: summoner.tagLine,
               profileIconId: summoner.profileIconId,
               summonerLevel: summoner.summonerLevel,
-            },
+              privacy: summoner.privacy,
+            }),
             summoner.sgpServerId,
           );
         }
