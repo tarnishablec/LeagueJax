@@ -1,14 +1,15 @@
 import { useTranslation } from "react-i18next";
 import { Navigate, useOutletContext, useParams } from "react-router";
+import { useSettings } from "@/features/settings/context";
 import { SettingsClientArgsView } from "../components/SettingsClientArgsView";
 import type { SettingsOutletContext } from "../components/SettingsHub";
 import * as s from "../components/SettingsHub.css";
 import { resolveActivePage } from "../components/SettingsHub.utils";
 import { SettingsRegistryList } from "../components/SettingsRegistryList";
 import { SettingsSections } from "../components/SettingsSections";
-import { settingsApi } from "../store";
 
 export function SettingsPageRoute() {
+  const settings = useSettings();
   const { t } = useTranslation();
   const { pages } = useOutletContext<SettingsOutletContext>();
   const { pageId } = useParams();
@@ -18,7 +19,7 @@ export function SettingsPageRoute() {
   }
 
   if (pageId === "registry") {
-    return <SettingsRegistryList definitions={settingsApi.listDefinitions()} />;
+    return <SettingsRegistryList definitions={settings.listDefinitions()} />;
   }
 
   const activePage = resolveActivePage(pages, pageId);

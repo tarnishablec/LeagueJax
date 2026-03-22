@@ -99,7 +99,7 @@ export function MatchCardPlayers({
     gameName: string,
     tagLine: string,
   ) => {
-    // Open tab immediately with available data for instant feedback
+    // Open the tab immediately with available data for instant feedback
     openTab(
       defaultSummonerInfo({
         puuid: participant.puuid ?? "",
@@ -109,7 +109,7 @@ export function MatchCardPlayers({
       sgpServerId,
     );
 
-    // Resolve full summoner info in background, then update the tab
+    // Resolve full summoner info in the background, then update the tab
     resolvePlayerTab(participant, gameName, tagLine, sgpServerId).then(
       (resolved) => {
         if (resolved) {

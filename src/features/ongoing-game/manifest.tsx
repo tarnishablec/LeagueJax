@@ -1,6 +1,7 @@
 import { Gamepad2 } from "lucide-react";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
+import { ongoingGameI18n } from "./i18n";
 import { OngoingGameRoute } from "./routes/OngoingGameRoute";
 
 export class OngoingGameShard implements WebShard {
@@ -35,17 +36,6 @@ export class OngoingGameShard implements WebShard {
   }
 
   public i18nResources() {
-    return {
-      en: {
-        nav: {
-          game: "Game",
-        },
-      },
-      "zh-CN": {
-        nav: {
-          game: "\u5bf9\u5c40",
-        },
-      },
-    };
+    return ongoingGameI18n;
   }
 }

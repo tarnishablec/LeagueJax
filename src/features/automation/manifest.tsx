@@ -1,6 +1,7 @@
 import { Bot } from "lucide-react";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
+import { automationI18n } from "./i18n";
 import { AutomationRoute } from "./routes/AutomationRoute";
 
 export class AutomationShard implements WebShard {
@@ -31,17 +32,6 @@ export class AutomationShard implements WebShard {
   }
 
   public i18nResources() {
-    return {
-      en: {
-        nav: {
-          automation: "Automation",
-        },
-      },
-      "zh-CN": {
-        nav: {
-          automation: "\u81ea\u52a8\u5316",
-        },
-      },
-    };
+    return automationI18n;
   }
 }

@@ -115,9 +115,9 @@ export const ranks = style({
   gap: 8,
   alignContent: "center",
   "@media": {
-    "(max-width: 1000px)": {
+    "(max-width: 1050px)": {
       gridColumn: "1 / -1",
-      gridTemplateColumns: "1fr",
+      gridTemplateColumns: "1fr 1fr",
     },
   },
 });

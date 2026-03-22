@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { settingsApi } from "@/features/settings/store";
+import { SettingsProvider } from "@/features/settings/context";
+import { SettingsShard } from "@/features/settings/manifest";
 import {
   type Language,
   SYSTEM_LANGUAGE_SETTING_ID,
@@ -10,6 +11,7 @@ import "./styles/global.css";
 import { initializeI18n } from "@/i18n";
 import App from "./App";
 import {
+  getJaxRuntime,
   getMergedI18nResources,
   initializeWebShards,
 } from "./features/registry";
@@ -25,14 +27,17 @@ async function bootstrap(): Promise<void> {
   try {
     logger.info("Starting app bootstrap");
     await initializeWebShards();
+    const settings = getJaxRuntime().getShard(SettingsShard);
     const language =
-      settingsApi.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? "zh-CN";
+      settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? "zh-CN";
     logger.info({ language }, "Initializing i18n resources");
     await initializeI18n(getMergedI18nResources(), language);
 
     root.render(
       <React.StrictMode>
-        <App />
+        <SettingsProvider value={settings}>
+          <App />
+        </SettingsProvider>
       </React.StrictMode>,
     );
     logger.info("App bootstrap completed");

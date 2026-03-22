@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Moon, Sparkle, Sun } from "lucide-react";
 import { useSyncExternalStore } from "react";
-import { settingsApi } from "@/features/settings/store";
+import { useSettings } from "@/features/settings/context";
 import {
   SYSTEM_THEME_SETTING_ID,
   type Theme,
@@ -15,17 +15,19 @@ const THEME_OPTIONS: { value: Theme; label: string; Icon: LucideIcon }[] = [
 ];
 
 function useThemeValue(): Theme {
+  const settings = useSettings();
   const value = useSyncExternalStore(
     (onStoreChange) =>
-      settingsApi.subscribe(SYSTEM_THEME_SETTING_ID, onStoreChange),
-    () => settingsApi.get<Theme>(SYSTEM_THEME_SETTING_ID),
-    () => settingsApi.get<Theme>(SYSTEM_THEME_SETTING_ID),
+      settings.subscribe(SYSTEM_THEME_SETTING_ID, onStoreChange),
+    () => settings.get<Theme>(SYSTEM_THEME_SETTING_ID),
+    () => settings.get<Theme>(SYSTEM_THEME_SETTING_ID),
   );
 
   return value ?? "system";
 }
 
 export function ThemeToggle() {
+  const settings = useSettings();
   const theme = useThemeValue();
   const current =
     THEME_OPTIONS.find((option) => option.value === theme) ?? THEME_OPTIONS[1];
@@ -51,7 +53,7 @@ export function ThemeToggle() {
               aria-pressed={theme === value}
               className={s.dropdownItem({ active: theme === value })}
               onClick={() => {
-                settingsApi.set(SYSTEM_THEME_SETTING_ID, value);
+                settings.set(SYSTEM_THEME_SETTING_ID, value);
               }}
             >
               <Icon size={14} aria-hidden="true" />
