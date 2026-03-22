@@ -55,7 +55,8 @@
       "Bash(gh auth:*)",
       "WebFetch(domain:ark-ui.com)",
       "Bash(git commit:*)",
-      "Bash(npx --yes tsc --noEmit --pretty)"
+      "Bash(npx --yes tsc --noEmit --pretty)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

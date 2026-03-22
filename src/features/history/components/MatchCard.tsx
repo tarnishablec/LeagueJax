@@ -151,7 +151,7 @@ export function MatchCard({
                 {outcomeLabel}
               </span>
               <span className={s.metaPill}>{queueName}</span>
-              <span className={s.metaPill}>{map?.name ?? "unknown map"}</span>
+              <span className={s.metaPill}>{map?.name ?? "..."}</span>
               <span className={s.metaPill}>
                 {t("history.match.duration", { defaultValue: "Duration" })}{" "}
                 {formatDuration(gameDuration)}
@@ -163,25 +163,49 @@ export function MatchCard({
             </div>
 
             <div className={s.metricRow}>
-              <span className={s.kda}>
-                {me.kills ?? 0}/{me.deaths ?? 0}/{me.assists ?? 0}
-              </span>
-              <span className={s.meta}>
-                {csShort}{" "}
-                {new Intl.NumberFormat().format(
-                  me.totalMinionsKilled + me.neutralMinionsKilled,
-                )}
-              </span>
-              <span className={s.meta}>
-                {t("history.match.damage", { defaultValue: "Damage" })}{" "}
-                {formatDamage(me.totalDamageDealtToChampions)}
-              </span>
-              <span className={s.meta}>
-                {t("history.match.damageShare", {
-                  defaultValue: "Damage Share",
-                })}{" "}
-                {`${(damageShare * 100).toFixed(1)}%`}
-              </span>
+              <div className={s.metricGroup}>
+                <span className={s.metricPrimary}>
+                  {me.kills ?? 0}/{me.deaths ?? 0}/{me.assists ?? 0}
+                </span>
+                <span className={s.metricSecondary}>
+                  KDA{" "}
+                  {(me.deaths ?? 0) === 0
+                    ? "Perfect"
+                    : (
+                        ((me.kills ?? 0) + (me.assists ?? 0)) /
+                        (me.deaths ?? 1)
+                      ).toFixed(2)}
+                </span>
+              </div>
+              <div className={s.metricGroup}>
+                <span className={s.metricPrimary}>
+                  {csShort}{" "}
+                  {new Intl.NumberFormat().format(
+                    me.totalMinionsKilled + me.neutralMinionsKilled,
+                  )}
+                </span>
+                <span className={s.metricSecondary}>
+                  {t("history.match.csPerMin", { defaultValue: "CS/min" })}{" "}
+                  {gameDuration > 0
+                    ? (
+                        (me.totalMinionsKilled + me.neutralMinionsKilled) /
+                        (gameDuration / 60)
+                      ).toFixed(1)
+                    : "0.0"}
+                </span>
+              </div>
+              <div className={s.metricGroup}>
+                <span className={s.metricPrimary}>
+                  {t("history.match.damage", { defaultValue: "Damage" })}{" "}
+                  {formatDamage(me.totalDamageDealtToChampions)}
+                </span>
+                <span className={s.metricSecondary}>
+                  {t("history.match.damageShare", {
+                    defaultValue: "Damage Share",
+                  })}{" "}
+                  {`${(damageShare * 100).toFixed(1)}%`}
+                </span>
+              </div>
             </div>
 
             <div className={s.loadoutRow}>

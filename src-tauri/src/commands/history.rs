@@ -454,8 +454,10 @@ pub async fn get_cherry_augments(
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
     let version = api.get_game_version().await?;
+    let region = lcu.auth_region().unwrap_or_default();
+    let cache_version = format!("{version}_{region}");
     jax.get_shard::<StaticCacheShard>()
-        .get_or_init("lcu-cache.json", "lcu_cherry_augments", &version, || {
+        .get_or_init("lcu-cache.json", "lcu_cherry_augments", &cache_version, || {
             api.get_cherry_augments()
         })
         .await
