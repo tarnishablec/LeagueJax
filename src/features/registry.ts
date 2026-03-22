@@ -23,11 +23,7 @@ export interface RenderedSlot {
   order: number;
 }
 
-// Persist runtime on globalThis so it survives Vite HMR module re-evaluation
-const HMR_RUNTIME_KEY = "__jax_registry_runtime__";
-let jaxRuntime: Jax | null =
-  ((globalThis as Record<string, unknown>)[HMR_RUNTIME_KEY] as Jax | null) ??
-  null;
+let jaxRuntime: Jax | null = null;
 let jaxInitialization: Promise<void> | null = null;
 const logger = createLogger("registry");
 
@@ -117,7 +113,6 @@ export const initializeWebShards = async (): Promise<void> => {
       "Web shard startup completed",
     );
     jaxRuntime = runtime;
-    (globalThis as Record<string, unknown>)[HMR_RUNTIME_KEY] = runtime;
   })();
 
   try {
@@ -138,7 +133,6 @@ export const shutdownWebShards = async (): Promise<void> => {
   logger.info("Shutting down web shards");
   await jaxRuntime.stop();
   jaxRuntime = null;
-  (globalThis as Record<string, unknown>)[HMR_RUNTIME_KEY] = null;
   logger.info("Web shard shutdown completed");
 };
 
