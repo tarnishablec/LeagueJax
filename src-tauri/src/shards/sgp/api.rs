@@ -1,16 +1,25 @@
 use super::config::{sgp_servers_config, SgpServerEndpoints};
-use super::SgpClientHandle;
+use super::http_client::SgpHttpClient;
+use super::session::SgpTokenContext;
 use crate::concepts::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
 use crate::concepts::summoner::SummonerInfo;
 use crate::error::AppError;
 
 pub struct SgpApi {
-    client: SgpClientHandle,
+    http_client: SgpHttpClient,
+    token_context: SgpTokenContext,
 }
 
 impl SgpApi {
-    pub(crate) fn new(client: SgpClientHandle) -> Self {
-        Self { client }
+    pub(crate) fn new(http_client: SgpHttpClient, token_context: SgpTokenContext) -> Self {
+        Self {
+            http_client,
+            token_context,
+        }
+    }
+
+    pub fn token_context(&self) -> &SgpTokenContext {
+        &self.token_context
     }
 
     fn resolve_server_endpoint(sgp_server_id: &str) -> Result<SgpServerEndpoints, AppError> {
@@ -21,7 +30,6 @@ impl SgpApi {
             return Ok(endpoint.clone());
         }
 
-        // Prefix-match fallback: e.g. "JP" -> "JP1"
         let matches: Vec<(&String, &SgpServerEndpoints)> = config
             .servers
             .iter()
@@ -67,11 +75,11 @@ impl SgpApi {
         server_id.trim().to_uppercase()
     }
 
-    fn resolve_target_server_id(requested: Option<&str>, fallback: &str) -> String {
+    fn resolve_target_server_id(&self, requested: Option<&str>) -> String {
         requested
             .map(Self::normalize_server_id)
             .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| Self::normalize_server_id(fallback))
+            .unwrap_or_else(|| Self::normalize_server_id(&self.token_context.sgp_server_id))
     }
 
     pub async fn get_match_summaries(
@@ -82,9 +90,7 @@ impl SgpApi {
         tag: Option<&str>,
         sgp_server_id: Option<&str>,
     ) -> Result<RawMatchSummariesResponse, AppError> {
-        let token_context = self.client.get_or_refresh_token_context().await?;
-        let target_server_id =
-            Self::resolve_target_server_id(sgp_server_id, &token_context.sgp_server_id);
+        let target_server_id = self.resolve_target_server_id(sgp_server_id);
 
         let base_url = Self::resolve_match_history_base_url(&target_server_id)?;
         let path = format!("/match-history-query/v1/products/lol/player/{puuid}/SUMMARY");
@@ -97,13 +103,12 @@ impl SgpApi {
         }
 
         let response = self
-            .client
-            .http_client()
+            .http_client
             .request(
                 reqwest::Method::GET,
                 &base_url,
                 &path,
-                &token_context.access_token,
+                &self.token_context.access_token,
                 Some(query),
                 None,
             )
@@ -127,9 +132,7 @@ impl SgpApi {
         game_id: u64,
         sgp_server_id: Option<&str>,
     ) -> Result<RawMatchSummaryGame, AppError> {
-        let token_context = self.client.get_or_refresh_token_context().await?;
-        let target_server_id =
-            Self::resolve_target_server_id(sgp_server_id, &token_context.sgp_server_id);
+        let target_server_id = self.resolve_target_server_id(sgp_server_id);
 
         let base_url = Self::resolve_match_history_base_url(&target_server_id)?;
         let sub_id = Self::sub_id_from_server_id(&target_server_id);
@@ -137,9 +140,8 @@ impl SgpApi {
         let path = format!("/match-history-query/v1/products/lol/{game_key}/SUMMARY");
 
         let response = self
-            .client
-            .http_client()
-            .request(reqwest::Method::GET, &base_url, &path, &token_context.access_token, None, None)
+            .http_client
+            .request(reqwest::Method::GET, &base_url, &path, &self.token_context.access_token, None, None)
             .await?;
 
         let response_raw = serde_json::to_string(&response)?;
@@ -160,20 +162,18 @@ impl SgpApi {
         sgp_server_id: &str,
         puuid: &str,
     ) -> Result<Option<SummonerInfo>, AppError> {
-        let token_context = self.client.get_or_refresh_token_context().await?;
         let target_server = Self::normalize_server_id(sgp_server_id);
         let base_url = Self::resolve_common_base_url(&target_server)?;
         let sub_id = Self::sub_id_from_server_id(&target_server).to_lowercase();
         let path = format!("/summoner-ledge/v1/regions/{sub_id}/summoners/puuids");
 
         let response = self
-            .client
-            .http_client()
+            .http_client
             .request(
                 reqwest::Method::POST,
                 &base_url,
                 &path,
-                &token_context.league_session_token,
+                &self.token_context.league_session_token,
                 None,
                 Some(serde_json::json!([puuid])),
             )

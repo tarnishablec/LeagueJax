@@ -64,7 +64,9 @@ export function useHistorySearch({ open, config }: UseHistorySearchParams) {
     t,
   ]);
 
-  const errorMessage = search.searchError ?? serverContext.bootstrapError;
+  const errorMessage =
+    search.searchError ??
+    (serverContext.bootstrapError ? t("history.searchDialog.noClient") : null);
 
   return {
     server: {

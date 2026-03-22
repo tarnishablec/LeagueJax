@@ -84,7 +84,8 @@
       "loadingServers": "正在加载区服信息...",
       "noResults": "未找到匹配的召唤师",
       "hint": "搜索结果将显示在这里",
-      "focused": "当前区服"
+      "focused": "当前区服",
+      "noClient": "未连接到客户端"
     }
   }
 }

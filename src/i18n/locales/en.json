@@ -84,7 +84,8 @@
       "loadingServers": "Loading server context...",
       "noResults": "No summoner found for this query.",
       "hint": "Search results will appear here.",
-      "focused": "Current Server"
+      "focused": "Current Server",
+      "noClient": "No League client connected"
     }
   }
 }

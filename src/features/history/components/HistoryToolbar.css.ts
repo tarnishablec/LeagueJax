@@ -171,6 +171,7 @@ export const metaRow = style({
   display: "grid",
   minHeight: 18,
   alignItems: "center",
+  paddingLeft: "0.5rem",
 });
 
 export const metaText = style({
