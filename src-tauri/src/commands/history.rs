@@ -11,7 +11,6 @@ use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
 use crate::shards::sgp::SgpShard;
 use crate::shards::static_cache::StaticCacheShard;
 use jax::Jax;
-use serde_json::Value;
 use tauri::State;
 use uuid::Uuid;
 
@@ -101,15 +100,6 @@ fn is_tencent_server_id(server_id: &str, tencent_servers: &HashSet<String>) -> b
     tencent_servers.contains(&format!("TENCENT_{normalized}"))
 }
 
-fn non_empty_or(value: &str, fallback: &str) -> String {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        fallback.to_string()
-    } else {
-        trimmed.to_string()
-    }
-}
-
 fn resolve_target_sgp_server_id(
     focused_sgp_server_id: &str,
     requested_sgp_server_id: Option<String>,
@@ -173,6 +163,7 @@ async fn search_aliases_with_target_server(
                 profile_icon_id: alias.profile_icon_id,
                 summoner_level: alias.summoner_level,
                 sgp_server_id: target_sgp_server_id.to_string(),
+                privacy: alias.privacy,
             })
             .collect());
     }
@@ -194,6 +185,7 @@ async fn search_aliases_with_target_server(
             profile_icon_id: summoner.profile_icon_id,
             summoner_level: summoner.summoner_level,
             sgp_server_id: target_sgp_server_id.to_string(),
+            privacy: summoner.privacy,
         });
     }
 
@@ -229,7 +221,7 @@ pub async fn search_summoner(
     game_name: String,
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
-) -> Result<Value, AppError> {
+) -> Result<SummonerSearchResult, AppError> {
     let session = jax.get_shard::<LcuShard>().focused().await?;
     session.api().search_summoner(&game_name, &tag_line).await
 }
@@ -268,11 +260,12 @@ pub async fn search_summoners(
 
             Ok(vec![SummonerSearchResult {
                 puuid: sgp_summoner.puuid.clone(),
-                game_name: non_empty_or(&sgp_summoner.game_name, &puuid),
+                game_name: sgp_summoner.game_name.clone(),
                 tag_line: sgp_summoner.tag_line.clone(),
                 profile_icon_id: sgp_summoner.profile_icon_id,
                 summoner_level: sgp_summoner.summoner_level,
                 sgp_server_id: target_sgp_server_id,
+                privacy: sgp_summoner.privacy.clone(),
             }])
         }
         ParsedSummonerSearchQuery::Exact {

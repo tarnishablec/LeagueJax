@@ -63,28 +63,29 @@ export function RootLayout() {
           : "12rem 1fr",
       })}
     >
-      <button
-        data-tauri-drag-region
-        type="button"
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className={s.logoButton}
-        onClick={() => setCollapsed((value) => !value)}
-      >
-        <JaxLogo size={20} className={s.logoIcon} />
-        {collapsed ? (
-          <PanelLeftOpen
-            size={20}
-            aria-hidden="true"
-            className={s.collapseIcon}
-          />
-        ) : (
-          <PanelLeftClose
-            size={20}
-            aria-hidden="true"
-            className={s.collapseIcon}
-          />
-        )}
-      </button>
+      <div data-tauri-drag-region className={s.logoButton}>
+        <button
+          type="button"
+          style={{ display: "grid", placeItems: "center" }}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={() => setCollapsed((value) => !value)}
+        >
+          <JaxLogo size={25} className={s.logoIcon} />
+          {collapsed ? (
+            <PanelLeftOpen
+              size={25}
+              aria-hidden="true"
+              className={s.collapseIcon}
+            />
+          ) : (
+            <PanelLeftClose
+              size={25}
+              aria-hidden="true"
+              className={s.collapseIcon}
+            />
+          )}
+        </button>
+      </div>
 
       <TitleBar toolbarSlots={toolbarSlots} titlebarSlots={titlebarSlots} />
 
