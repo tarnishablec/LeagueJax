@@ -62,7 +62,7 @@ impl SettingsShard {
                 if existing == &definition {
                     return Ok(());
                 }
-                return Err(AppError::Other(format!(
+                return Err(AppError::other(format!(
                     "Setting definition conflict for id {}",
                     definition.id
                 )));
@@ -128,7 +128,7 @@ impl SettingsShard {
 
             if let Some(expected) = patch.expected_version {
                 if expected != snapshot.version {
-                    return Err(AppError::Other(format!(
+                    return Err(AppError::other(format!(
                         "Settings version mismatch: expected {}, got {}",
                         expected, snapshot.version
                     )));
@@ -140,7 +140,7 @@ impl SettingsShard {
 
                 if let Some(definition) = definitions.get(id) {
                     if !is_value_compatible(definition, value) {
-                        return Err(AppError::Other(format!("Invalid value for setting {}", id)));
+                        return Err(AppError::other(format!("Invalid value for setting {}", id)));
                     }
                 }
 
@@ -223,7 +223,7 @@ impl SettingsShard {
         Ok(self
             .db
             .get()
-            .ok_or_else(|| AppError::Other("Settings DB is not initialized".to_string()))?
+            .ok_or_else(|| AppError::other("Settings DB is not initialized".to_string()))?
             .clone())
     }
 }
@@ -270,7 +270,7 @@ impl Shard for SettingsShard {
 fn validate_setting_id(id: &str) -> Result<(), AppError> {
     let segments = id.split('.').collect::<Vec<_>>();
     if segments.len() != 3 || segments.iter().any(|segment| segment.is_empty()) {
-        return Err(AppError::Other(format!(
+        return Err(AppError::other(format!(
             "Invalid setting id {}, expected page.section.field format",
             id
         )));
@@ -280,7 +280,7 @@ fn validate_setting_id(id: &str) -> Result<(), AppError> {
 
 fn validate_definition(definition: &SettingDefinitionDto) -> Result<(), AppError> {
     if !is_value_compatible(definition, &definition.default_value) {
-        return Err(AppError::Other(format!(
+        return Err(AppError::other(format!(
             "Default value is incompatible with setting {}",
             definition.id
         )));
@@ -292,7 +292,7 @@ fn validate_definition(definition: &SettingDefinitionDto) -> Result<(), AppError
             .as_ref()
             .is_none_or(|items| items.is_empty())
     {
-        return Err(AppError::Other(format!(
+        return Err(AppError::other(format!(
             "Select setting {} requires non-empty options",
             definition.id
         )));
@@ -322,7 +322,7 @@ fn parse_snapshot_bytes(bytes: &[u8]) -> Result<SettingsSnapshotDto, AppError> {
 
     let legacy_value = serde_json::from_slice::<Value>(bytes)?;
     let legacy_object = legacy_value.as_object().ok_or_else(|| {
-        AppError::Other("Settings snapshot must be an object or snapshot payload".to_string())
+        AppError::other("Settings snapshot must be an object or snapshot payload".to_string())
     })?;
 
     let mut values = BTreeMap::new();

@@ -223,20 +223,20 @@ fn get_required_string(
     for key in keys {
         if let Some(value) = values.get(*key) {
             let Some(value) = value.clone() else {
-                return Err(AppError::Other(format!(
+                return Err(AppError::other(format!(
                     "Missing value for required cmd arg `{field}`"
                 )));
             };
             let trimmed = value.trim().to_string();
             if !allow_empty && trimmed.is_empty() {
-                return Err(AppError::Other(format!(
+                return Err(AppError::other(format!(
                     "Empty value for required cmd arg `{field}`"
                 )));
             }
             return if allow_empty { Ok(value) } else { Ok(trimmed) };
         }
     }
-    Err(AppError::Other(format!(
+    Err(AppError::other(format!(
         "Missing required cmd arg `{field}`"
     )))
 }
@@ -248,7 +248,7 @@ fn get_required_u16(
 ) -> Result<u16, AppError> {
     let value = get_required_string(values, keys, field, false)?;
     value.parse::<u16>().map_err(|_| {
-        AppError::Other(format!(
+        AppError::other(format!(
             "Invalid u16 value for required cmd arg `{field}`: {value}"
         ))
     })
@@ -261,7 +261,7 @@ fn get_required_u32(
 ) -> Result<u32, AppError> {
     let value = get_required_string(values, keys, field, false)?;
     value.parse::<u32>().map_err(|_| {
-        AppError::Other(format!(
+        AppError::other(format!(
             "Invalid u32 value for required cmd arg `{field}`: {value}"
         ))
     })
@@ -286,7 +286,7 @@ fn get_required_flag(
             return Ok(parse_bool_flag(value.as_deref()));
         }
     }
-    Err(AppError::Other(format!(
+    Err(AppError::other(format!(
         "Missing required cmd arg `{field}`"
     )))
 }

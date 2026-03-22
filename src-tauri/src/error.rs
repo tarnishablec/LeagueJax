@@ -1,35 +1,61 @@
 use serde::Serialize;
-use thiserror::Error;
+use snafu::prelude::*;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Snafu)]
 pub enum AppError {
-    #[error("LCU not connected")]
+    #[snafu(display("LCU not connected"))]
     LcuNotConnected,
 
-    #[error("LCU request failed: {0}")]
-    LcuRequest(#[from] reqwest::Error),
+    #[snafu(display("LCU request failed: {source}"))]
+    LcuRequest { source: reqwest::Error },
 
-    #[error("JSON error: {0}")]
-    Json(#[from] serde_json::Error),
+    #[snafu(display("JSON error: {source}"))]
+    Json { source: serde_json::Error },
 
-    #[error("Database error: {0}")]
-    Database(#[from] rusqlite::Error),
+    #[snafu(display("Database error: {source}"))]
+    Database { source: rusqlite::Error },
 
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    #[snafu(display("IO error: {source}"))]
+    Io { source: std::io::Error },
 
-    #[error("Sled error: {0}")]
-    Sled(#[from] sled::Error),
+    #[snafu(display("Sled error: {source}"))]
+    Sled { source: sled::Error },
 
-    #[allow(dead_code)]
-    #[error("Mutex poisoned")]
+    #[snafu(display("Mutex poisoned"))]
     MutexPoisoned,
 
-    #[error("{0}")]
-    Other(String),
+    #[snafu(whatever, display("{message}"))]
+    Other {
+        message: String,
+        #[snafu(source(from(Box<dyn std::error::Error + Send + Sync>, Some)))]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 }
 
+macro_rules! from_variant {
+    ($v:ident => $t:ty) => {
+        impl From<$t> for AppError {
+            fn from(source: $t) -> Self {
+                Self::$v { source }
+            }
+        }
+    };
+}
+
+from_variant!(LcuRequest => reqwest::Error);
+from_variant!(Json      => serde_json::Error);
+from_variant!(Database  => rusqlite::Error);
+from_variant!(Io        => std::io::Error);
+from_variant!(Sled      => sled::Error);
+
 impl AppError {
+    pub fn other(message: impl Into<String>) -> Self {
+        Self::Other {
+            message: message.into(),
+            source: None,
+        }
+    }
+
     fn to_client_message(&self) -> &'static str {
         "Internal error. Check backend logs."
     }

@@ -1,5 +1,7 @@
 import { BarChart3 } from "lucide-react";
+import { z } from "zod";
 import { HistoryTabBar } from "@/features/history/components/HistoryTabBar.tsx";
+import { settingsApi } from "@/features/settings/store";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { useLcuStore } from "@/stores/lcu";
@@ -7,6 +9,9 @@ import { useTabStore } from "@/stores/tabs";
 import { SHARD_IDS } from "../shard-ids";
 import { HistoryToolbar } from "./components/HistoryToolbar";
 import { HistoryRoute } from "./routes/HistoryRoute";
+
+export const HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_ID =
+  "history.behavior.autoRefreshOnTabSwitch";
 
 export class HistoryShard implements WebShard {
   public id() {
@@ -20,6 +25,17 @@ export class HistoryShard implements WebShard {
   public setup(_jax: Jax): void {
     void useTabStore.getState();
     void useLcuStore.getState();
+
+    settingsApi.registerSetting({
+      id: HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_ID,
+      labelKey: "settings.history.autoRefreshOnTabSwitch.label",
+      scope: "frontend",
+      control: { kind: "toggle" },
+      zod: z.boolean(),
+      defaultValue: false,
+      order: 10,
+      onSet: () => {},
+    });
   }
 
   public routes() {
@@ -71,6 +87,21 @@ export class HistoryShard implements WebShard {
       en: {
         nav: {
           history: "History",
+        },
+        settings: {
+          pages: {
+            history: { title: "History" },
+          },
+          sections: {
+            history: {
+              behavior: { title: "Behavior" },
+            },
+          },
+          history: {
+            autoRefreshOnTabSwitch: {
+              label: "Auto-refresh on tab switch",
+            },
+          },
         },
         history: {
           modeLabel: "Mode",
@@ -151,6 +182,21 @@ export class HistoryShard implements WebShard {
         nav: {
           history: "战绩",
         },
+        settings: {
+          pages: {
+            history: { title: "战绩" },
+          },
+          sections: {
+            history: {
+              behavior: { title: "行为" },
+            },
+          },
+          history: {
+            autoRefreshOnTabSwitch: {
+              label: "切换标签页时自动刷新",
+            },
+          },
+        },
         history: {
           modeLabel: "模式",
           pageSizeLabel: "每页",
@@ -229,6 +275,21 @@ export class HistoryShard implements WebShard {
       "ja-JP": {
         nav: {
           history: "履歴",
+        },
+        settings: {
+          pages: {
+            history: { title: "履歴" },
+          },
+          sections: {
+            history: {
+              behavior: { title: "動作" },
+            },
+          },
+          history: {
+            autoRefreshOnTabSwitch: {
+              label: "タブ切り替え時に自動更新",
+            },
+          },
         },
         history: {
           modeLabel: "モード",

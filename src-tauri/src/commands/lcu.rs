@@ -13,10 +13,8 @@ pub async fn lcu_update_focus(pid: Option<u32>, jax: State<'_, Arc<Jax>>) -> Res
 
 #[tauri::command]
 pub async fn get_game_version(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
-    jax.get_shard::<LcuShard>()
-        .focused()
-        .await?
-        .api()
-        .get_game_version()
+    let lcu = jax.get_shard::<LcuShard>().focused().await?;
+    lcu.cache()
+        .get_or_try_init("game_version", || lcu.api().get_game_version())
         .await
 }

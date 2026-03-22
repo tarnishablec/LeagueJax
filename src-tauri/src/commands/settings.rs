@@ -31,7 +31,7 @@ pub async fn apply_settings_patch(
             source: patch.source,
         };
         app.emit("settings_changed", payload)
-            .map_err(|err| AppError::Other(format!("Failed to emit settings event: {err}")))?;
+            .map_err(|err| AppError::other(format!("Failed to emit settings event: {err}")))?;
     }
 
     Ok(SettingsPatchResultDto {

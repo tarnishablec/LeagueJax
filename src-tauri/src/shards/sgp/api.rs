@@ -1,25 +1,20 @@
 use super::config::{sgp_servers_config, SgpServerEndpoints};
-use super::http_client::SgpHttpClient;
-use super::session::SgpTokenContext;
+use super::http_client::{SgpHttpClient, SgpTokenKind};
 use crate::concepts::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
 use crate::concepts::summoner::SummonerInfo;
 use crate::error::AppError;
 
 pub struct SgpApi {
     http_client: SgpHttpClient,
-    token_context: SgpTokenContext,
 }
 
 impl SgpApi {
-    pub(crate) fn new(http_client: SgpHttpClient, token_context: SgpTokenContext) -> Self {
-        Self {
-            http_client,
-            token_context,
-        }
+    pub(crate) fn new(http_client: SgpHttpClient) -> Self {
+        Self { http_client }
     }
 
-    pub fn token_context(&self) -> &SgpTokenContext {
-        &self.token_context
+    pub fn sgp_server_id(&self) -> &str {
+        self.http_client.sgp_server_id()
     }
 
     fn resolve_server_endpoint(sgp_server_id: &str) -> Result<SgpServerEndpoints, AppError> {
@@ -39,7 +34,7 @@ impl SgpApi {
             return Ok(matches[0].1.clone());
         }
 
-        Err(AppError::Other(format!(
+        Err(AppError::other(format!(
             "Unknown SGP server id: {sgp_server_id}"
         )))
     }
@@ -47,7 +42,7 @@ impl SgpApi {
     fn resolve_match_history_base_url(sgp_server_id: &str) -> Result<String, AppError> {
         let endpoint = Self::resolve_server_endpoint(sgp_server_id)?;
         endpoint.match_history.ok_or_else(|| {
-            AppError::Other(format!(
+            AppError::other(format!(
                 "matchHistory endpoint is not configured for server {}",
                 sgp_server_id
             ))
@@ -57,7 +52,7 @@ impl SgpApi {
     fn resolve_common_base_url(sgp_server_id: &str) -> Result<String, AppError> {
         let endpoint = Self::resolve_server_endpoint(sgp_server_id)?;
         endpoint.common.ok_or_else(|| {
-            AppError::Other(format!(
+            AppError::other(format!(
                 "common endpoint is not configured for server {}",
                 sgp_server_id
             ))
@@ -79,7 +74,7 @@ impl SgpApi {
         requested
             .map(Self::normalize_server_id)
             .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| Self::normalize_server_id(&self.token_context.sgp_server_id))
+            .unwrap_or_else(|| Self::normalize_server_id(self.http_client.sgp_server_id()))
     }
 
     pub async fn get_match_summaries(
@@ -108,7 +103,7 @@ impl SgpApi {
                 reqwest::Method::GET,
                 &base_url,
                 &path,
-                &self.token_context.access_token,
+                SgpTokenKind::Access,
                 Some(query),
                 None,
             )
@@ -120,7 +115,7 @@ impl SgpApi {
             |error| {
                 let path = error.path().to_string();
                 let source = error.inner().to_string();
-                AppError::Other(format!(
+                AppError::other(format!(
                     "Failed to parse get_match_summaries at path {path}: {source}"
                 ))
             },
@@ -141,7 +136,14 @@ impl SgpApi {
 
         let response = self
             .http_client
-            .request(reqwest::Method::GET, &base_url, &path, &self.token_context.access_token, None, None)
+            .request(
+                reqwest::Method::GET,
+                &base_url,
+                &path,
+                SgpTokenKind::Access,
+                None,
+                None,
+            )
             .await?;
 
         let response_raw = serde_json::to_string(&response)?;
@@ -150,7 +152,7 @@ impl SgpApi {
             |error| {
                 let path = error.path().to_string();
                 let source = error.inner().to_string();
-                AppError::Other(format!(
+                AppError::other(format!(
                     "Failed to parse get_match_summary at path {path}: {source}"
                 ))
             },
@@ -173,14 +175,14 @@ impl SgpApi {
                 reqwest::Method::POST,
                 &base_url,
                 &path,
-                &self.token_context.league_session_token,
+                SgpTokenKind::LeagueSession,
                 None,
                 Some(serde_json::json!([puuid])),
             )
             .await?;
 
         let entries: Vec<SummonerInfo> = serde_json::from_value(response).map_err(|error| {
-            AppError::Other(format!(
+            AppError::other(format!(
                 "Failed to parse SGP response for get_summoner_by_puuid: {error}"
             ))
         })?;

@@ -35,6 +35,7 @@ pub fn run() {
         .init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
@@ -140,16 +141,14 @@ pub fn run() {
             if let RunEvent::Exit = event {
                 let jax = app.state::<Arc<Jax>>();
                 let jax = Arc::clone(&jax);
-                // Signal all background tasks to stop, then run formal teardown
                 jax.get_shard::<shards::tauri_host::TauriHost>()
                     .initiate_shutdown();
                 tauri::async_runtime::block_on(async move {
                     if let Err(e) = jax.stop().await {
                         tracing::error!(error = %e, "Jax shutdown error");
-                    } else {
-                        tracing::info!("Jax stopped gracefully.");
                     }
                 });
+                std::process::exit(0);
             }
         });
 }

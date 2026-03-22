@@ -3,9 +3,8 @@ use std::sync::Arc;
 
 use crate::concepts::cherry::CherryAugment;
 use crate::concepts::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
-use crate::concepts::summoner::{
-    RankedQueueStats, RankedSummary, SummonerInfo, SummonerSearchResult,
-};
+use crate::concepts::rank::RankStats;
+use crate::concepts::summoner::{SummonerInfo, SummonerSearchResult};
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
@@ -15,87 +14,6 @@ use jax::Jax;
 use serde_json::Value;
 use tauri::State;
 use uuid::Uuid;
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-fn first_string(value: &Value, keys: &[&str]) -> Option<String> {
-    keys.iter()
-        .find_map(|key| value.get(*key).and_then(Value::as_str))
-        .map(ToString::to_string)
-}
-
-fn first_i64(value: &Value, keys: &[&str]) -> Option<i64> {
-    keys.iter().find_map(|key| {
-        value.get(*key).and_then(Value::as_i64).or_else(|| {
-            value
-                .get(*key)
-                .and_then(Value::as_u64)
-                .and_then(|v| i64::try_from(v).ok())
-        })
-    })
-}
-
-fn queue_type_matches(entry: &Value, queue_type: &str) -> bool {
-    first_string(entry, &["queueType", "queue_type"])
-        .is_some_and(|current| current.eq_ignore_ascii_case(queue_type))
-}
-
-fn find_ranked_queue<'a>(value: &'a Value, queue_type: &str) -> Option<&'a Value> {
-    if let Some(map) = value.get("queueMap").and_then(Value::as_object) {
-        if let Some(entry) = map.get(queue_type) {
-            return Some(entry);
-        }
-
-        let lower = queue_type.to_lowercase();
-        if let Some(entry) = map.get(&lower) {
-            return Some(entry);
-        }
-
-        let upper = queue_type.to_uppercase();
-        if let Some(entry) = map.get(&upper) {
-            return Some(entry);
-        }
-    }
-
-    if let Some(queues) = value.get("queues").and_then(Value::as_array) {
-        if let Some(entry) = queues
-            .iter()
-            .find(|entry| queue_type_matches(entry, queue_type))
-        {
-            return Some(entry);
-        }
-    }
-
-    value.as_array().and_then(|queues| {
-        queues
-            .iter()
-            .find(|entry| queue_type_matches(entry, queue_type))
-    })
-}
-
-fn parse_ranked_queue(entry: &Value, queue_type: &str) -> Option<RankedQueueStats> {
-    if !entry.is_object() {
-        return None;
-    }
-
-    Some(RankedQueueStats {
-        queue_type: queue_type.to_string(),
-        tier: first_string(entry, &["tier"]).unwrap_or_else(|| "UNRANKED".to_string()),
-        division: first_string(entry, &["division", "rank"]).unwrap_or_default(),
-        league_points: first_i64(entry, &["leaguePoints", "league_points", "lp"]).unwrap_or(0),
-        wins: first_i64(entry, &["wins"]).unwrap_or(0),
-        losses: first_i64(entry, &["losses"]).unwrap_or(0),
-    })
-}
-
-fn parse_ranked_summary(value: &Value) -> RankedSummary {
-    let solo = find_ranked_queue(value, "RANKED_SOLO_5x5")
-        .and_then(|entry| parse_ranked_queue(entry, "RANKED_SOLO_5x5"));
-    let flex = find_ranked_queue(value, "RANKED_FLEX_SR")
-        .and_then(|entry| parse_ranked_queue(entry, "RANKED_FLEX_SR"));
-
-    RankedSummary { solo, flex }
-}
 
 #[derive(Debug, Clone)]
 enum ParsedSummonerSearchQuery {
@@ -107,7 +25,7 @@ enum ParsedSummonerSearchQuery {
 fn parse_summoner_search_query(query: &str) -> Result<ParsedSummonerSearchQuery, AppError> {
     let trimmed = query.trim();
     if trimmed.is_empty() {
-        return Err(AppError::Other("Search query is empty".to_string()));
+        return Err(AppError::other("Search query is empty".to_string()));
     }
 
     if Uuid::parse_str(trimmed).is_ok() {
@@ -118,7 +36,7 @@ fn parse_summoner_search_query(query: &str) -> Result<ParsedSummonerSearchQuery,
         let game_name = game_name.trim();
         let tag_line = tag_line.trim();
         if game_name.is_empty() || tag_line.is_empty() {
-            return Err(AppError::Other(
+            return Err(AppError::other(
                 "Invalid exact query, expected gameName#tagLine".to_string(),
             ));
         }
@@ -211,7 +129,7 @@ fn resolve_target_sgp_server_id(
             return Ok(requested);
         }
 
-        return Err(AppError::Other(format!(
+        return Err(AppError::other(format!(
             "Requested Tencent server is not in summoner interoperability list: {requested}"
         )));
     }
@@ -222,7 +140,7 @@ fn resolve_target_sgp_server_id(
         return Ok(requested);
     }
 
-    Err(AppError::Other(format!(
+    Err(AppError::other(format!(
         "Cross-region search is not supported for international servers (focused: {focused}, requested: {requested})"
     )))
 }
@@ -298,7 +216,7 @@ pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerIn
 pub async fn get_current_sgp_server_id(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
     let session = jax.get_shard::<LcuShard>().focused().await?;
     let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
-    Ok(sgp_session.api().token_context().sgp_server_id.clone())
+    Ok(sgp_session.api().sgp_server_id().to_string())
 }
 
 #[tauri::command]
@@ -325,17 +243,18 @@ pub async fn search_summoners(
     let parsed_query = parse_summoner_search_query(&query)?;
     let session = jax.get_shard::<LcuShard>().focused().await?;
     let lcu_api = session.api();
-    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session.clone()).await?;
+    let sgp_session = jax
+        .get_shard::<SgpShard>()
+        .spg_from_lcu(session.clone())
+        .await?;
     let sgp_api = sgp_session.api();
-    let current_sgp_server_id = &sgp_api.token_context().sgp_server_id;
+    let current_sgp_server_id = sgp_api.sgp_server_id();
     let config = sgp_servers_config()?;
 
     let target_sgp_server_id =
         resolve_target_sgp_server_id(current_sgp_server_id, sgp_server_id, config)?;
-    let current_sgp_server_id_canonical = to_tencent_canonical_server_id(
-        current_sgp_server_id,
-        &tencent_server_set(config),
-    );
+    let current_sgp_server_id_canonical =
+        to_tencent_canonical_server_id(current_sgp_server_id, &tencent_server_set(config));
     let same_server = target_sgp_server_id == current_sgp_server_id_canonical;
 
     match parsed_query {
@@ -363,23 +282,13 @@ pub async fn search_summoners(
             let aliases = lcu_api
                 .get_summoner_aliases(&game_name, Some(&tag_line))
                 .await?;
-            search_aliases_with_target_server(
-                aliases,
-                &target_sgp_server_id,
-                same_server,
-                sgp_api,
-            )
-            .await
+            search_aliases_with_target_server(aliases, &target_sgp_server_id, same_server, sgp_api)
+                .await
         }
         ParsedSummonerSearchQuery::Fuzzy { game_name } => {
             let aliases = lcu_api.get_summoner_aliases(&game_name, None).await?;
-            search_aliases_with_target_server(
-                aliases,
-                &target_sgp_server_id,
-                same_server,
-                sgp_api,
-            )
-            .await
+            search_aliases_with_target_server(aliases, &target_sgp_server_id, same_server, sgp_api)
+                .await
         }
     }
 }
@@ -401,11 +310,10 @@ pub async fn get_summoner_by_puuid(
 pub async fn get_ranked_summary(
     puuid: String,
     jax: State<'_, Arc<Jax>>,
-) -> Result<RankedSummary, AppError> {
+) -> Result<RankStats, AppError> {
     let session = jax.get_shard::<LcuShard>().focused().await?;
     let response = session.api().get_ranked_stats(&puuid).await?;
-
-    Ok(parse_ranked_summary(&response))
+    Ok(response)
 }
 
 #[tauri::command]
@@ -453,13 +361,19 @@ pub async fn get_cherry_augments(
 ) -> Result<Vec<CherryAugment>, AppError> {
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
-    let version = api.get_game_version().await?;
+    let version = lcu
+        .cache()
+        .get_or_try_init("game_version", || api.get_game_version())
+        .await?;
     let region = lcu.auth().region.clone().unwrap_or_default();
     let cache_version = format!("{version}_{region}");
     jax.get_shard::<StaticCacheShard>()
-        .get_or_init("lcu-cache.json", "lcu_cherry_augments", &cache_version, || {
-            api.get_cherry_augments()
-        })
+        .get_or_init(
+            "lcu-cache.json",
+            "lcu_cherry_augments",
+            &cache_version,
+            || api.get_cherry_augments(),
+        )
         .await
 }
 

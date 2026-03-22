@@ -1,40 +1,37 @@
-import { Check, Copy } from "lucide-react";
-import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { RankedQueueStats, SummonerInfo } from "@/bindings/summoner.ts";
+import type { RankEntry } from "@/bindings/rank.ts";
+import type { SummonerInfo } from "@/bindings/summoner.ts";
+import { CopyButton } from "@/components/CopyButton";
 import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { useRankedSummary } from "../hooks/use-ranked-summary";
 import * as s from "./SummaryBar.css";
 
-function formatTier(
-  queue: RankedQueueStats | null,
-  unrankedLabel: string,
-): string {
-  if (!queue) {
+function formatTier(entry: RankEntry | null, unrankedLabel: string): string {
+  if (!entry) {
     return unrankedLabel;
   }
 
-  const tier = queue.tier.trim();
+  const tier = entry.tier.trim();
   if (tier.length === 0 || tier.toUpperCase() === "UNRANKED") {
     return unrankedLabel;
   }
 
-  const division = queue.division.trim();
+  const division = entry.division.trim();
   return division.length > 0 ? `${tier} ${division}` : tier;
 }
 
 function formatMeta(
-  queue: RankedQueueStats | null,
+  entry: RankEntry | null,
   winsShort: string,
   lossesShort: string,
   lpShort: string,
 ): string {
-  if (!queue) {
+  if (!entry) {
     return `-- ${winsShort} / -- ${lossesShort} / -- ${lpShort}`;
   }
 
-  return `${queue.wins}${winsShort} / ${queue.losses}${lossesShort} / ${queue.leaguePoints} ${lpShort}`;
+  return `${entry.wins}${winsShort} / ${entry.losses}${lossesShort} / ${entry.leaguePoints} ${lpShort}`;
 }
 
 export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
@@ -46,25 +43,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
   const { data: rankedSummary, isLoading: rankedLoading } = useRankedSummary(
     summoner.puuid,
   );
-  const [copied, setCopied] = useState(false);
-  const copyResetTimerRef = useRef<number | null>(null);
   const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
-
-  const copyId = async () => {
-    try {
-      await navigator.clipboard.writeText(summonerId);
-      setCopied(true);
-      if (copyResetTimerRef.current !== null) {
-        window.clearTimeout(copyResetTimerRef.current);
-      }
-      copyResetTimerRef.current = window.setTimeout(() => {
-        setCopied(false);
-        copyResetTimerRef.current = null;
-      }, 1200);
-    } catch {
-      // no-op: keep the UI stable when clipboard API is unavailable
-    }
-  };
 
   const unrankedLabel = t("history.summary.unranked", {
     defaultValue: "Unranked",
@@ -73,11 +52,11 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
   const lossesShort = t("history.summary.lossesShort", { defaultValue: "L" });
   const lpShort = t("history.summary.lpShort", { defaultValue: "LP" });
   const soloIconUrl = useRankIcon(
-    rankedSummary?.solo?.tier ?? "UNRANKED",
+    rankedSummary?.queueMap.RANKED_SOLO_5x5?.tier ?? "UNRANKED",
     false,
   );
   const flexIconUrl = useRankIcon(
-    rankedSummary?.flex?.tier ?? "UNRANKED",
+    rankedSummary?.queueMap.RANKED_FLEX_SR?.tier ?? "UNRANKED",
     false,
   );
 
@@ -93,20 +72,11 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
       <div className={s.identity}>
         <div className={s.nameRow}>
           <span className={s.name}>{summoner.gameName}</span>
-          <button
-            type="button"
+          <CopyButton
+            text={summonerId}
             className={s.copyButton}
             aria-label={`Copy summoner id ${summonerId}`}
-            onClick={() => {
-              void copyId();
-            }}
-          >
-            {copied ? (
-              <Check size={12} aria-hidden="true" />
-            ) : (
-              <Copy size={12} aria-hidden="true" />
-            )}
-          </button>
+          />
         </div>
         <div className={s.tag}>#{summoner.tagLine}</div>
       </div>
@@ -119,11 +89,14 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
                   {t("history.summary.solo", { defaultValue: "Solo/Duo" })}
                 </span>
                 <span className={s.rankTier}>
-                  {formatTier(rankedSummary?.solo ?? null, unrankedLabel)}
+                  {formatTier(
+                    rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null,
+                    unrankedLabel,
+                  )}
                 </span>
                 <span className={s.rankMeta}>
                   {formatMeta(
-                    rankedSummary?.solo ?? null,
+                    rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null,
                     winsShort,
                     lossesShort,
                     lpShort,
@@ -152,11 +125,14 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
                   {t("history.summary.flex", { defaultValue: "Flex" })}
                 </span>
                 <span className={s.rankTier}>
-                  {formatTier(rankedSummary?.flex ?? null, unrankedLabel)}
+                  {formatTier(
+                    rankedSummary?.queueMap.RANKED_FLEX_SR ?? null,
+                    unrankedLabel,
+                  )}
                 </span>
                 <span className={s.rankMeta}>
                   {formatMeta(
-                    rankedSummary?.flex ?? null,
+                    rankedSummary?.queueMap.RANKED_FLEX_SR ?? null,
                     winsShort,
                     lossesShort,
                     lpShort,

@@ -24,7 +24,7 @@ impl PersistenceSled {
         Ok(self
             .db
             .get()
-            .ok_or_else(|| AppError::Other("Sled database is not initialized".to_string()))?
+            .ok_or_else(|| AppError::other("Sled database is not initialized".to_string()))?
             .clone())
     }
 }

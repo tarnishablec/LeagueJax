@@ -20,8 +20,8 @@ pub struct SgpSession {
 impl SgpSession {
     pub(crate) async fn new(lcu_session: &Arc<LcuSession>) -> Result<Self, AppError> {
         let token_context = exchange_token_context(lcu_session).await?;
-        let http_client = SgpHttpClient::new()?;
-        let api = SgpApi::new(http_client, token_context);
+        let http_client = SgpHttpClient::new(lcu_session.clone(), token_context)?;
+        let api = SgpApi::new(http_client);
         Ok(Self { api })
     }
 
@@ -41,9 +41,7 @@ async fn exchange_token_context(
         .and_then(|value| value.as_str())
         .filter(|token| !token.is_empty())
         .map(ToString::to_string)
-        .ok_or_else(|| {
-            AppError::Other("LCU entitlements accessToken is missing".to_string())
-        })?;
+        .ok_or_else(|| AppError::other("LCU entitlements accessToken is missing".to_string()))?;
 
     let league_session_token = client
         .get("/lol-league-session/v1/league-session-token")
@@ -51,7 +49,7 @@ async fn exchange_token_context(
         .as_str()
         .filter(|token| !token.is_empty())
         .map(ToString::to_string)
-        .ok_or_else(|| AppError::Other("LCU league session token is missing".to_string()))?;
+        .ok_or_else(|| AppError::other("LCU league session token is missing".to_string()))?;
 
     let locale_region = client
         .get("/riotclient/region-locale")
@@ -93,14 +91,14 @@ fn derive_sgp_server_id(
         .filter(|platform| !platform.is_empty());
 
     let Some(region) = normalized_region else {
-        return Err(AppError::Other(
+        return Err(AppError::other(
             "Unable to derive SGP server id: missing LCU region context".to_string(),
         ));
     };
 
     if region == "TENCENT" {
         let Some(rso_platform_id) = normalized_rso_platform_id else {
-            return Err(AppError::Other(
+            return Err(AppError::other(
                 "Unable to derive SGP server id for Tencent: missing rso_platform_id".to_string(),
             ));
         };

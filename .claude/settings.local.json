@@ -56,7 +56,10 @@
       "WebFetch(domain:ark-ui.com)",
       "Bash(git commit:*)",
       "Bash(npx --yes tsc --noEmit --pretty)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(cargo add:*)",
+      "Bash(cargo rm:*)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in d[''''servers''''].items\\(\\) if ''''TENCENT'''' in k or ''''HN1'''' in k.upper\\(\\)]\")"
     ]
   }
 }

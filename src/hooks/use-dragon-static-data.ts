@@ -584,7 +584,6 @@ export function useDragonStaticData(
     () => fetchCdragonStaticCatalog(),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
-      revalidateOnFocus: false,
       fallbackData: EMPTY_CDRAGON_CATALOG,
     },
   );
@@ -596,7 +595,6 @@ export function useDragonStaticData(
     ([, version]) => fetchDdragonStaticCatalog(version),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
-      revalidateOnFocus: false,
       fallbackData: EMPTY_DDRAGON_CATALOG,
     },
   );

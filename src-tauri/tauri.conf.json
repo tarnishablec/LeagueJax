@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "league-jax",
-        "width": 800,
-        "height": 600,
+        "width": 1200,
+        "height": 1000,
         "minHeight": 600,
         "minWidth": 800,
         "decorations": false,
