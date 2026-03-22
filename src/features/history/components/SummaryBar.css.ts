@@ -76,8 +76,11 @@ export const copyButton = style({
   placeItems: "center",
   width: 18,
   height: 18,
+  border: "none",
+  background: "none",
   borderRadius: 4,
   color: vars.color.mutedForeground,
+  cursor: "pointer",
   transition: "color 120ms, background-color 120ms",
   selectors: {
     "&:hover": {

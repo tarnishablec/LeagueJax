@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { CopyButton } from "@/components/CopyButton";
 import type { RegisteredSetting } from "@/features/settings/types";
 import * as s from "./SettingsRegistryList.css";
 
@@ -88,7 +89,10 @@ export function SettingsRegistryList({
               : s.rowWithoutCurrentLanguage
           }`}
         >
-          <span className={s.key}>{setting.id}</span>
+          <span className={s.keyCell}>
+            <span className={s.key}>{setting.id}</span>
+            <CopyButton text={setting.id} className={s.copyButton} />
+          </span>
           {showCurrentLanguageColumn ? (
             <span className={s.text}>
               {t(setting.labelKey, {

@@ -37,6 +37,23 @@ export default defineConfig(async () => ({
     react(),
     vanillaExtractPlugin(),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "large-libs",
+              test: /node_modules/,
+              minSize: 100000, // 100KB
+              maxSize: 300000, // 300KB
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(dirname, "./src"),

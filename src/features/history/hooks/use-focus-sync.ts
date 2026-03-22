@@ -1,15 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { useTabStore } from "@/stores/tabs";
 
+/** Track the last synced pid outside of React so it survives unmount/remount. */
+let lastSyncedPid: number | undefined;
+
 export function useFocusSync(connected: LcuInstanceInfo | null | undefined) {
   const { openTab, closeAllTabs } = useTabStore();
-  const prevFocusedPidRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const focusedPid = connected?.pid;
-    if (focusedPid === prevFocusedPidRef.current) return;
-    prevFocusedPidRef.current = focusedPid;
+    if (focusedPid === lastSyncedPid) return;
+    lastSyncedPid = focusedPid;
 
     if (!connected) return;
 

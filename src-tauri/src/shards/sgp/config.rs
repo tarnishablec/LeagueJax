@@ -44,6 +44,6 @@ static SGP_CONFIG: LazyLock<Result<SgpServersConfig, String>> = LazyLock::new(||
 pub fn sgp_servers_config() -> Result<&'static SgpServersConfig, AppError> {
     match &*SGP_CONFIG {
         Ok(config) => Ok(config),
-        Err(message) => Err(AppError::Other(message.clone())),
+        Err(message) => Err(AppError::other(message.clone())),
     }
 }

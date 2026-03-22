@@ -18,7 +18,6 @@ export function useLcuCherryAugments() {
       }),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
-      revalidateOnFocus: false,
       fallbackData: EMPTY_AUGMENTS,
     },
   );

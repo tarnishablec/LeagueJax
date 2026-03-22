@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { RouteObject } from "react-router";
 import { createBrowserRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
+import { SWRConfig } from "swr";
 import { getRouteContributions } from "@/features/registry";
 import { RootLayout } from "@/layout/__root";
 import type { RouteContribution } from "@/runtime/web-contract";
@@ -33,5 +34,9 @@ export default function App() {
     ]);
   }, []);
 
-  return <RouterProvider router={router} />;
+  return (
+    <SWRConfig value={{ revalidateOnFocus: false }}>
+      <RouterProvider router={router} />
+    </SWRConfig>
+  );
 }

@@ -53,10 +53,41 @@ export const rowWithoutCurrentLanguage = style({
   gridTemplateColumns: columnsWithoutCurrentLanguage,
 });
 
+export const keyCell = style({
+  display: "grid",
+  alignItems: "center",
+  gridAutoFlow: "column",
+  justifyContent: "space-between",
+  paddingRight: "1rem",
+});
+
 export const key = style({
   color: vars.color.foreground,
   fontSize: "0.8125rem",
   wordBreak: "break-all",
+});
+
+export const copyButton = style({
+  flexShrink: 0,
+  display: "grid",
+  placeItems: "center",
+  width: 18,
+  height: 18,
+  border: "none",
+  background: "none",
+  color: vars.color.mutedForeground,
+  cursor: "pointer",
+  borderRadius: 4,
+  opacity: 0,
+  selectors: {
+    [`${row}:hover &`]: {
+      opacity: 1,
+    },
+    "&:hover": {
+      color: vars.color.foreground,
+      background: vars.color.accent,
+    },
+  },
 });
 
 export const text = style({
