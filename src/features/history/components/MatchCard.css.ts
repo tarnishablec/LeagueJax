@@ -164,9 +164,9 @@ export const metricGroup = style({
 });
 
 export const metricPrimary = style({
-  fontSize: "0.875rem",
-  fontWeight: 500,
-  color: "#fff",
+  fontSize: "0.8rem",
+  fontWeight: 600,
+  color: vars.color.foreground,
   lineHeight: 1,
   whiteSpace: "nowrap",
   textAlign: "center",

@@ -7,12 +7,12 @@ import {
   SettingsSelect,
   SettingsSwitch,
 } from "@/components/settings-ui";
+import { useSettings } from "@/features/settings/context";
 import type {
   RegisteredSetting,
   SettingId,
   SettingScope,
 } from "@/features/settings/types";
-import { settingsApi } from "../store";
 
 type RegisteredSelectSetting = Extract<
   RegisteredSetting,
@@ -24,10 +24,11 @@ type RegisteredInputSetting = Extract<
 >;
 
 const useSettingValue = (id: SettingId): unknown => {
+  const settings = useSettings();
   return useSyncExternalStore(
-    (onStoreChange) => settingsApi.subscribe(id, onStoreChange),
-    () => settingsApi.get(id),
-    () => settingsApi.get(id),
+    (onStoreChange) => settings.subscribe(id, onStoreChange),
+    () => settings.get(id),
+    () => settings.get(id),
   );
 };
 
@@ -43,6 +44,7 @@ const toScopeTag = (scope?: SettingScope): string => {
 };
 
 const SelectField = ({ field }: { field: RegisteredSelectSetting }) => {
+  const settings = useSettings();
   const { t } = useTranslation();
   const value = useSettingValue(field.id);
   const collection = useMemo(
@@ -62,7 +64,7 @@ const SelectField = ({ field }: { field: RegisteredSelectSetting }) => {
       value={[String(value ?? "")]}
       onValueChange={(details) => {
         const next = details.value[0];
-        if (next != null) settingsApi.set(field.id, next);
+        if (next != null) settings.set(field.id, next);
       }}
     />
   );
@@ -75,6 +77,7 @@ const ToggleField = ({
   ariaLabel: string;
   field: RegisteredSetting;
 }) => {
+  const settings = useSettings();
   const value = useSettingValue(field.id);
 
   return (
@@ -82,7 +85,7 @@ const ToggleField = ({
       ariaLabel={ariaLabel}
       checked={Boolean(value)}
       onCheckedChange={(checked) => {
-        settingsApi.set(field.id, checked);
+        settings.set(field.id, checked);
       }}
     />
   );
@@ -95,6 +98,7 @@ const InputField = ({
   ariaLabel: string;
   field: RegisteredInputSetting;
 }) => {
+  const settings = useSettings();
   const { t } = useTranslation();
   const value = useSettingValue(field.id);
   const inputType = field.control.kind === "number" ? "number" : "text";
@@ -121,12 +125,12 @@ const InputField = ({
 
           const parsed = Number(next);
           if (!Number.isNaN(parsed)) {
-            settingsApi.set(field.id, parsed);
+            settings.set(field.id, parsed);
           }
           return;
         }
 
-        settingsApi.set(field.id, next);
+        settings.set(field.id, next);
       }}
     />
   );

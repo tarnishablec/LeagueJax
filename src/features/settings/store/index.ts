@@ -12,7 +12,6 @@ import type {
   SettingDefinition,
   SettingId,
   SettingsPatchSender,
-  SettingsShardApi,
 } from "@/features/settings/types";
 import { AppError, type AppThatError } from "@/infra/errors";
 import { createLogger, setWebLogLevel } from "@/infra/logger";
@@ -23,24 +22,6 @@ interface SettingsState {
 }
 
 type DecoratedFieldDefinition = SettingDefinition;
-
-const settingsStateStore = createStore<SettingsState>()(() => ({
-  values: {},
-  version: 0,
-}));
-
-const settingsClasses = new WeakSet<SettingClassCtor>();
-const classFieldDefinitions = new WeakMap<
-  SettingClassCtor,
-  DecoratedFieldDefinition[]
->();
-const registeredClasses = new WeakSet<SettingClassCtor>();
-const registeredDefinitions = new Map<SettingId, RegisteredSetting>();
-const fieldSubscribers = new Map<SettingId, Set<() => void>>();
-
-let declarationSequence = 0;
-let remotePatchSender: SettingsPatchSender | null = null;
-const logger = createLogger("settings-store");
 
 const settingIdRegex = /^[^.]+\.[^.]+\.[^.]+$/;
 const SHARED_LOG_LEVEL_SETTING_ID = "system.logging.level";
@@ -132,62 +113,18 @@ const settingDefinitionSchema = z.union([
   numberSettingDefinitionSchema,
 ]);
 
-function reportRegistrationError(error: AppThatError): void {
-  if (import.meta.env.DEV) {
-    throw error;
-  }
-  logger.error({ error }, error.message);
-}
+const settingsClasses = new WeakSet<SettingClassCtor>();
+const classFieldDefinitions = new WeakMap<
+  SettingClassCtor,
+  DecoratedFieldDefinition[]
+>();
 
 function settingClassName(ctor: SettingClassCtor): string {
   return ctor.name || "AnonymousSettingsClass";
 }
 
-function getFieldSubscribers(id: SettingId): Set<() => void> {
-  const existing = fieldSubscribers.get(id);
-  if (existing) {
-    return existing;
-  }
-  const created = new Set<() => void>();
-  fieldSubscribers.set(id, created);
-  return created;
-}
-
-function notifySubscribers(id: SettingId): void {
-  const subscribers = fieldSubscribers.get(id);
-  if (!subscribers) {
-    return;
-  }
-  for (const callback of subscribers) {
-    callback();
-  }
-}
-
 function isSettingId(value: string): value is SettingId {
   return settingIdRegex.test(value);
-}
-
-function updateVersion(version: number): void {
-  settingsStateStore.setState((state) => ({
-    ...state,
-    version,
-  }));
-}
-
-function updateRawValue(id: string, value: unknown): boolean {
-  const current = settingsStateStore.getState().values[id];
-  if (Object.is(current, value)) {
-    return false;
-  }
-
-  settingsStateStore.setState((state) => ({
-    ...state,
-    values: {
-      ...state.values,
-      [id]: value,
-    },
-  }));
-  return true;
 }
 
 function definitionSignature(definition: SettingDefinition): string {
@@ -202,88 +139,6 @@ function definitionSignature(definition: SettingDefinition): string {
     options: "options" in definition ? definition.options : undefined,
   };
   return JSON.stringify(normalized);
-}
-
-function applyParsedValue(
-  id: SettingId,
-  definition: RegisteredSetting,
-  parsedValue: unknown,
-  options: Required<HydrateOptions>,
-): boolean {
-  const previous = get(id);
-  const updated = updateRawValue(id, parsedValue);
-  if (!updated) {
-    return false;
-  }
-
-  if (options.runOnSet) {
-    definition.onSet(parsedValue, previous);
-  }
-  if (options.notify) {
-    notifySubscribers(id);
-  }
-
-  return true;
-}
-
-function normalizeDefinition(definition: SettingDefinition): RegisteredSetting {
-  return {
-    ...definition,
-    order: definition.order ?? 99,
-    visible: definition.visible ?? true,
-    declarationOrder: declarationSequence++,
-  };
-}
-
-function registerDefinition(definition: SettingDefinition): void {
-  const parsedDefinition = settingDefinitionSchema.safeParse(definition);
-  if (!parsedDefinition.success) {
-    const issue = parsedDefinition.error.issues[0];
-    reportRegistrationError(
-      AppError.SettingsRegistration(
-        `Invalid setting definition: ${issue?.message ?? "unknown error"}.`,
-      ),
-    );
-    return;
-  }
-
-  const validatedDefinition = parsedDefinition.data as SettingDefinition;
-
-  const defaultValueParsed = validatedDefinition.zod.safeParse(
-    validatedDefinition.defaultValue,
-  );
-  if (!defaultValueParsed.success) {
-    reportRegistrationError(
-      AppError.SettingsRegistration(
-        `Default value for "${validatedDefinition.id}" does not match its zod schema.`,
-      ),
-    );
-    return;
-  }
-
-  const existing = registeredDefinitions.get(validatedDefinition.id);
-  if (existing) {
-    const compatible =
-      definitionSignature(existing) ===
-      definitionSignature(validatedDefinition);
-    if (!compatible) {
-      reportRegistrationError(
-        AppError.SettingsRegistration(
-          `Duplicate setting id "${validatedDefinition.id}" was registered.`,
-        ),
-      );
-    }
-    return;
-  }
-
-  const normalized = normalizeDefinition(validatedDefinition);
-  registeredDefinitions.set(validatedDefinition.id, normalized);
-
-  const existingValue =
-    settingsStateStore.getState().values[validatedDefinition.id];
-  if (existingValue === undefined) {
-    updateRawValue(validatedDefinition.id, normalized.defaultValue);
-  }
 }
 
 function buildRemoteZod(
@@ -313,185 +168,11 @@ function buildRemoteZod(
   }
 }
 
-const buildRemoteOnSet = (
-  id: string,
-): ((next: unknown, prev: unknown) => void) => {
-  if (id === SHARED_LOG_LEVEL_SETTING_ID) {
-    return (next) => {
-      setWebLogLevel(next);
-    };
-  }
-
-  return () => {};
-};
-
-function registerRemoteDefinition(definition: SettingDefinitionDto): void {
-  if (!isSettingId(definition.id)) {
-    logger.warn({ id: definition.id }, "Skip remote setting with invalid id");
-    return;
-  }
-
-  const remoteOptions = (definition.options ?? []).map((option) => ({
-    value: option.value,
-    labelKey: option.labelKey,
-  }));
-
-  let mapped: SettingDefinition;
-  switch (definition.control.kind) {
-    case "select":
-      mapped = {
-        id: definition.id,
-        labelKey: definition.labelKey,
-        scope: definition.scope,
-        control: { kind: "select" },
-        zod: buildRemoteZod(definition.control, remoteOptions),
-        defaultValue: definition.defaultValue,
-        options: remoteOptions,
-        order: definition.order ?? undefined,
-        visible: definition.visible ?? undefined,
-        onSet: buildRemoteOnSet(definition.id),
-      };
-      break;
-    case "toggle":
-      mapped = {
-        id: definition.id,
-        labelKey: definition.labelKey,
-        scope: definition.scope,
-        control: { kind: "toggle" },
-        zod: buildRemoteZod(definition.control, remoteOptions),
-        defaultValue: definition.defaultValue,
-        order: definition.order ?? undefined,
-        visible: definition.visible ?? undefined,
-        onSet: buildRemoteOnSet(definition.id),
-      };
-      break;
-    case "text":
-      mapped = {
-        id: definition.id,
-        labelKey: definition.labelKey,
-        scope: definition.scope,
-        control: {
-          kind: "text",
-          placeholderKey: definition.control.placeholder_key ?? undefined,
-        },
-        zod: buildRemoteZod(definition.control, remoteOptions),
-        defaultValue: definition.defaultValue,
-        order: definition.order ?? undefined,
-        visible: definition.visible ?? undefined,
-        onSet: buildRemoteOnSet(definition.id),
-      };
-      break;
-    case "number":
-      mapped = {
-        id: definition.id,
-        labelKey: definition.labelKey,
-        scope: definition.scope,
-        control: {
-          kind: "number",
-          placeholderKey: definition.control.placeholder_key ?? undefined,
-          min: definition.control.min ?? undefined,
-          max: definition.control.max ?? undefined,
-          step: definition.control.step ?? undefined,
-        },
-        zod: buildRemoteZod(definition.control, remoteOptions),
-        defaultValue: definition.defaultValue,
-        order: definition.order ?? undefined,
-        visible: definition.visible ?? undefined,
-        onSet: buildRemoteOnSet(definition.id),
-      };
-      break;
-    default:
-      return;
-  }
-
-  registerDefinition(mapped);
-}
-
-function mergeRemoteDefinitions(definitions: SettingDefinitionDto[]): void {
-  for (const definition of definitions) {
-    registerRemoteDefinition(definition);
-  }
-}
-
-function hydrateFromSnapshot(
-  snapshot: SettingsSnapshotDto,
-  options?: HydrateOptions,
-): void {
-  const effective: Required<HydrateOptions> = {
-    notify: options?.notify ?? false,
-    runOnSet: options?.runOnSet ?? false,
-  };
-
-  for (const [rawId, rawValue] of Object.entries(snapshot.values)) {
-    if (!isSettingId(rawId)) {
-      updateRawValue(rawId, rawValue);
-      continue;
-    }
-
-    const definition = registeredDefinitions.get(rawId);
-    if (!definition) {
-      updateRawValue(rawId, rawValue);
-      continue;
-    }
-
-    const parsed = definition.zod.safeParse(rawValue);
-    if (!parsed.success) {
-      logger.warn(
-        { id: rawId },
-        "Skip snapshot value because it does not match setting schema",
-      );
-      continue;
-    }
-
-    applyParsedValue(rawId, definition, parsed.data, effective);
-  }
-
-  updateVersion(snapshot.version);
-}
-
-function applyRemotePatch(
-  changes: Record<string, unknown>,
-  version: number,
-): void {
-  for (const [rawId, rawValue] of Object.entries(changes)) {
-    if (!isSettingId(rawId)) {
-      updateRawValue(rawId, rawValue);
-      continue;
-    }
-
-    const definition = registeredDefinitions.get(rawId);
-    if (!definition) {
-      const updated = updateRawValue(rawId, rawValue);
-      if (updated) {
-        notifySubscribers(rawId);
-      }
-      continue;
-    }
-
-    const parsed = definition.zod.safeParse(rawValue);
-    if (!parsed.success) {
-      logger.warn(
-        { id: rawId },
-        "Skip remote patch value because it does not match setting schema",
-      );
-      continue;
-    }
-
-    applyParsedValue(rawId, definition, parsed.data, {
-      notify: true,
-      runOnSet: true,
-    });
-  }
-
-  updateVersion(version);
-}
-
 export function settings(
   value: SettingClassCtor,
   _context: ClassDecoratorContext,
 ): void {
   settingsClasses.add(value);
-  registerClass(value);
 }
 
 export function setting(definition: SettingDefinition) {
@@ -522,129 +203,424 @@ export function setting(definition: SettingDefinition) {
   };
 }
 
-function registerClass(ctor: SettingClassCtor): void {
-  if (!settingsClasses.has(ctor)) {
-    reportRegistrationError(
-      AppError.SettingsRegistration(
-        `Class "${settingClassName(ctor)}" must use @settings before registerClass.`,
-      ),
+class SettingsStore {
+  private readonly store = createStore<SettingsState>()(() => ({
+    values: {},
+    version: 0,
+  }));
+
+  private readonly registeredClasses = new WeakSet<SettingClassCtor>();
+  private readonly registeredDefinitions = new Map<
+    SettingId,
+    RegisteredSetting
+  >();
+  private readonly fieldSubscribers = new Map<SettingId, Set<() => void>>();
+  private declarationSequence = 0;
+  private remotePatchSender: SettingsPatchSender | null = null;
+  private readonly logger = createLogger("settings-store");
+
+  private reportRegistrationError(error: AppThatError): void {
+    if (import.meta.env.DEV) {
+      throw error;
+    }
+    this.logger.error({ error }, error.message);
+  }
+
+  private getFieldSubscribers(id: SettingId): Set<() => void> {
+    const existing = this.fieldSubscribers.get(id);
+    if (existing) {
+      return existing;
+    }
+    const created = new Set<() => void>();
+    this.fieldSubscribers.set(id, created);
+    return created;
+  }
+
+  private notifySubscribers(id: SettingId): void {
+    const subscribers = this.fieldSubscribers.get(id);
+    if (!subscribers) {
+      return;
+    }
+    for (const callback of subscribers) {
+      callback();
+    }
+  }
+
+  private updateVersion(version: number): void {
+    this.store.setState((state) => ({
+      ...state,
+      version,
+    }));
+  }
+
+  private updateRawValue(id: string, value: unknown): boolean {
+    const current = this.store.getState().values[id];
+    if (Object.is(current, value)) {
+      return false;
+    }
+
+    this.store.setState((state) => ({
+      ...state,
+      values: {
+        ...state.values,
+        [id]: value,
+      },
+    }));
+    return true;
+  }
+
+  private applyParsedValue(
+    id: SettingId,
+    definition: RegisteredSetting,
+    parsedValue: unknown,
+    options: Required<HydrateOptions>,
+  ): boolean {
+    const previous = this.get(id);
+    const updated = this.updateRawValue(id, parsedValue);
+    if (!updated) {
+      return false;
+    }
+
+    if (options.runOnSet) {
+      definition.onSet(parsedValue, previous);
+    }
+    if (options.notify) {
+      this.notifySubscribers(id);
+    }
+
+    return true;
+  }
+
+  private normalizeDefinition(
+    definition: SettingDefinition,
+  ): RegisteredSetting {
+    return {
+      ...definition,
+      order: definition.order ?? 99,
+      visible: definition.visible ?? true,
+      declarationOrder: this.declarationSequence++,
+    };
+  }
+
+  private registerDefinition(definition: SettingDefinition): void {
+    const parsedDefinition = settingDefinitionSchema.safeParse(definition);
+    if (!parsedDefinition.success) {
+      const issue = parsedDefinition.error.issues[0];
+      this.reportRegistrationError(
+        AppError.SettingsRegistration(
+          `Invalid setting definition: ${issue?.message ?? "unknown error"}.`,
+        ),
+      );
+      return;
+    }
+
+    const validatedDefinition = parsedDefinition.data as SettingDefinition;
+
+    const defaultValueParsed = validatedDefinition.zod.safeParse(
+      validatedDefinition.defaultValue,
     );
-    return;
-  }
-
-  if (registeredClasses.has(ctor)) {
-    return;
-  }
-
-  void new ctor();
-  const definitions = classFieldDefinitions.get(ctor) ?? [];
-
-  for (const definition of definitions) {
-    registerDefinition(definition);
-  }
-
-  registeredClasses.add(ctor);
-}
-
-function listDefinitions(): RegisteredSetting[] {
-  return [...registeredDefinitions.values()].sort((a, b) => {
-    if (a.order !== b.order) {
-      return a.order - b.order;
+    if (!defaultValueParsed.success) {
+      this.reportRegistrationError(
+        AppError.SettingsRegistration(
+          `Default value for "${validatedDefinition.id}" does not match its zod schema.`,
+        ),
+      );
+      return;
     }
-    return a.declarationOrder - b.declarationOrder;
-  });
-}
 
-function get<T = unknown>(id: SettingId): T {
-  const stateValue = settingsStateStore.getState().values[id];
-  if (stateValue !== undefined) {
-    return stateValue as T;
-  }
-
-  const definition = registeredDefinitions.get(id);
-  if (definition) {
-    return definition.defaultValue as T;
-  }
-
-  return undefined as T;
-}
-
-function set<T = unknown>(id: SettingId, value: T): boolean {
-  const definition = registeredDefinitions.get(id);
-  if (!definition) {
-    return false;
-  }
-
-  const parsed = definition.zod.safeParse(value);
-  if (!parsed.success) {
-    return false;
-  }
-
-  const updated = applyParsedValue(id, definition, parsed.data, {
-    notify: true,
-    runOnSet: true,
-  });
-  if (updated) {
-    remotePatchSender?.({ [id]: parsed.data });
-  }
-  return true;
-}
-
-function getVersion(): number {
-  return settingsStateStore.getState().version;
-}
-
-function setVersion(version: number): void {
-  updateVersion(version);
-}
-
-function subscribe(id: SettingId, callback: () => void): () => void {
-  const subscribers = getFieldSubscribers(id);
-  subscribers.add(callback);
-
-  return () => {
-    subscribers.delete(callback);
-    if (subscribers.size === 0) {
-      fieldSubscribers.delete(id);
+    const existing = this.registeredDefinitions.get(validatedDefinition.id);
+    if (existing) {
+      const compatible =
+        definitionSignature(existing) ===
+        definitionSignature(validatedDefinition);
+      if (!compatible) {
+        this.reportRegistrationError(
+          AppError.SettingsRegistration(
+            `Duplicate setting id "${validatedDefinition.id}" was registered.`,
+          ),
+        );
+      }
+      return;
     }
-  };
+
+    const normalized = this.normalizeDefinition(validatedDefinition);
+    this.registeredDefinitions.set(validatedDefinition.id, normalized);
+
+    const existingValue = this.store.getState().values[validatedDefinition.id];
+    if (existingValue === undefined) {
+      this.updateRawValue(validatedDefinition.id, normalized.defaultValue);
+    }
+  }
+
+  private buildRemoteOnSet(id: string): (next: unknown, prev: unknown) => void {
+    if (id === SHARED_LOG_LEVEL_SETTING_ID) {
+      return (next) => {
+        setWebLogLevel(next);
+      };
+    }
+
+    return () => {};
+  }
+
+  private registerRemoteDefinition(definition: SettingDefinitionDto): void {
+    if (!isSettingId(definition.id)) {
+      this.logger.warn(
+        { id: definition.id },
+        "Skip remote setting with invalid id",
+      );
+      return;
+    }
+
+    const remoteOptions = (definition.options ?? []).map((option) => ({
+      value: option.value,
+      labelKey: option.labelKey,
+    }));
+
+    let mapped: SettingDefinition;
+    switch (definition.control.kind) {
+      case "select":
+        mapped = {
+          id: definition.id,
+          labelKey: definition.labelKey,
+          scope: definition.scope,
+          control: { kind: "select" },
+          zod: buildRemoteZod(definition.control, remoteOptions),
+          defaultValue: definition.defaultValue,
+          options: remoteOptions,
+          order: definition.order ?? undefined,
+          visible: definition.visible ?? undefined,
+          onSet: this.buildRemoteOnSet(definition.id),
+        };
+        break;
+      case "toggle":
+        mapped = {
+          id: definition.id,
+          labelKey: definition.labelKey,
+          scope: definition.scope,
+          control: { kind: "toggle" },
+          zod: buildRemoteZod(definition.control, remoteOptions),
+          defaultValue: definition.defaultValue,
+          order: definition.order ?? undefined,
+          visible: definition.visible ?? undefined,
+          onSet: this.buildRemoteOnSet(definition.id),
+        };
+        break;
+      case "text":
+        mapped = {
+          id: definition.id,
+          labelKey: definition.labelKey,
+          scope: definition.scope,
+          control: {
+            kind: "text",
+            placeholderKey: definition.control.placeholder_key ?? undefined,
+          },
+          zod: buildRemoteZod(definition.control, remoteOptions),
+          defaultValue: definition.defaultValue,
+          order: definition.order ?? undefined,
+          visible: definition.visible ?? undefined,
+          onSet: this.buildRemoteOnSet(definition.id),
+        };
+        break;
+      case "number":
+        mapped = {
+          id: definition.id,
+          labelKey: definition.labelKey,
+          scope: definition.scope,
+          control: {
+            kind: "number",
+            placeholderKey: definition.control.placeholder_key ?? undefined,
+            min: definition.control.min ?? undefined,
+            max: definition.control.max ?? undefined,
+            step: definition.control.step ?? undefined,
+          },
+          zod: buildRemoteZod(definition.control, remoteOptions),
+          defaultValue: definition.defaultValue,
+          order: definition.order ?? undefined,
+          visible: definition.visible ?? undefined,
+          onSet: this.buildRemoteOnSet(definition.id),
+        };
+        break;
+      default:
+        return;
+    }
+
+    this.registerDefinition(mapped);
+  }
+
+  public registerSetting(definition: SettingDefinition): void {
+    this.registerDefinition(definition);
+  }
+
+  public registerClass(ctor: SettingClassCtor): void {
+    if (!settingsClasses.has(ctor)) {
+      this.reportRegistrationError(
+        AppError.SettingsRegistration(
+          `Class "${settingClassName(ctor)}" must use @settings before registerClass.`,
+        ),
+      );
+      return;
+    }
+
+    if (this.registeredClasses.has(ctor)) {
+      return;
+    }
+
+    void new ctor();
+    const definitions = classFieldDefinitions.get(ctor) ?? [];
+
+    for (const definition of definitions) {
+      this.registerDefinition(definition);
+    }
+
+    this.registeredClasses.add(ctor);
+  }
+
+  public get<T = unknown>(id: SettingId): T {
+    const stateValue = this.store.getState().values[id];
+    if (stateValue !== undefined) {
+      return stateValue as T;
+    }
+
+    const definition = this.registeredDefinitions.get(id);
+    if (definition) {
+      return definition.defaultValue as T;
+    }
+
+    return undefined as T;
+  }
+
+  public set<T = unknown>(id: SettingId, value: T): boolean {
+    const definition = this.registeredDefinitions.get(id);
+    if (!definition) {
+      return false;
+    }
+
+    const parsed = definition.zod.safeParse(value);
+    if (!parsed.success) {
+      return false;
+    }
+
+    const updated = this.applyParsedValue(id, definition, parsed.data, {
+      notify: true,
+      runOnSet: true,
+    });
+    if (updated) {
+      this.remotePatchSender?.({ [id]: parsed.data });
+    }
+    return true;
+  }
+
+  public subscribe(id: SettingId, callback: () => void): () => void {
+    const subscribers = this.getFieldSubscribers(id);
+    subscribers.add(callback);
+
+    return () => {
+      subscribers.delete(callback);
+      if (subscribers.size === 0) {
+        this.fieldSubscribers.delete(id);
+      }
+    };
+  }
+
+  public listDefinitions(): RegisteredSetting[] {
+    return [...this.registeredDefinitions.values()].sort((a, b) => {
+      if (a.order !== b.order) {
+        return a.order - b.order;
+      }
+      return a.declarationOrder - b.declarationOrder;
+    });
+  }
+
+  public mergeRemoteDefinitions(definitions: SettingDefinitionDto[]): void {
+    for (const definition of definitions) {
+      this.registerRemoteDefinition(definition);
+    }
+  }
+
+  public hydrateFromSnapshot(
+    snapshot: SettingsSnapshotDto,
+    options?: HydrateOptions,
+  ): void {
+    const effective: Required<HydrateOptions> = {
+      notify: options?.notify ?? false,
+      runOnSet: options?.runOnSet ?? false,
+    };
+
+    for (const [rawId, rawValue] of Object.entries(snapshot.values)) {
+      if (!isSettingId(rawId)) {
+        this.updateRawValue(rawId, rawValue);
+        continue;
+      }
+
+      const definition = this.registeredDefinitions.get(rawId);
+      if (!definition) {
+        this.updateRawValue(rawId, rawValue);
+        continue;
+      }
+
+      const parsed = definition.zod.safeParse(rawValue);
+      if (!parsed.success) {
+        this.logger.warn(
+          { id: rawId },
+          "Skip snapshot value because it does not match setting schema",
+        );
+        continue;
+      }
+
+      this.applyParsedValue(rawId, definition, parsed.data, effective);
+    }
+
+    this.updateVersion(snapshot.version);
+  }
+
+  public applyRemotePatch(
+    changes: Record<string, unknown>,
+    version: number,
+  ): void {
+    for (const [rawId, rawValue] of Object.entries(changes)) {
+      if (!isSettingId(rawId)) {
+        this.updateRawValue(rawId, rawValue);
+        continue;
+      }
+
+      const definition = this.registeredDefinitions.get(rawId);
+      if (!definition) {
+        const updated = this.updateRawValue(rawId, rawValue);
+        if (updated) {
+          this.notifySubscribers(rawId);
+        }
+        continue;
+      }
+
+      const parsed = definition.zod.safeParse(rawValue);
+      if (!parsed.success) {
+        this.logger.warn(
+          { id: rawId },
+          "Skip remote patch value because it does not match setting schema",
+        );
+        continue;
+      }
+
+      this.applyParsedValue(rawId, definition, parsed.data, {
+        notify: true,
+        runOnSet: true,
+      });
+    }
+
+    this.updateVersion(version);
+  }
+
+  public configureRemotePatchSender(sender: SettingsPatchSender | null): void {
+    this.remotePatchSender = sender;
+  }
+
+  public getVersion(): number {
+    return this.store.getState().version;
+  }
+
+  public setVersion(version: number): void {
+    this.updateVersion(version);
+  }
 }
 
-export const settingsApi: SettingsShardApi = {
-  registerSetting(definition) {
-    registerDefinition(definition);
-  },
-  registerClass(ctor) {
-    registerClass(ctor);
-  },
-  mergeRemoteDefinitions(definitions) {
-    mergeRemoteDefinitions(definitions);
-  },
-  hydrateFromSnapshot(snapshot, options) {
-    hydrateFromSnapshot(snapshot, options);
-  },
-  applyRemotePatch(changes, version) {
-    applyRemotePatch(changes, version);
-  },
-  configureRemotePatchSender(sender) {
-    remotePatchSender = sender;
-  },
-  getVersion() {
-    return getVersion();
-  },
-  setVersion(version) {
-    setVersion(version);
-  },
-  get(id) {
-    return get(id);
-  },
-  set(id, value) {
-    return set(id, value);
-  },
-  subscribe(id, callback) {
-    return subscribe(id, callback);
-  },
-  listDefinitions() {
-    return listDefinitions();
-  },
-};
+export { SettingsStore };

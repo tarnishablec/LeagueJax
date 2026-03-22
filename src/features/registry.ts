@@ -59,7 +59,7 @@ const slotToRendered = <
   }));
 };
 
-const getJaxRuntime = (): Jax => {
+export const getJaxRuntime = (): Jax => {
   if (!jaxRuntime) {
     throw AppError.RegistryRuntimeNotInitialized();
   }

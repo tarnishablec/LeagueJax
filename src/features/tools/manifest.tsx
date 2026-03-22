@@ -1,6 +1,7 @@
 import { Wrench } from "lucide-react";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
+import { toolsI18n } from "./i18n";
 import { ToolsRoute } from "./routes/ToolsRoute";
 
 export class ToolsShard implements WebShard {
@@ -35,17 +36,6 @@ export class ToolsShard implements WebShard {
   }
 
   public i18nResources() {
-    return {
-      en: {
-        nav: {
-          tools: "Tools",
-        },
-      },
-      "zh-CN": {
-        nav: {
-          tools: "\u5de5\u5177",
-        },
-      },
-    };
+    return toolsI18n;
   }
 }

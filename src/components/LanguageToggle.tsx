@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { settingsApi } from "@/features/settings/store";
+import { useSettings } from "@/features/settings/context";
 import {
   type Language,
   SYSTEM_LANGUAGE_SETTING_ID,
@@ -33,17 +33,19 @@ const LANGUAGE_OPTIONS: Array<{
 ];
 
 function useLanguageValue(): Language {
+  const settings = useSettings();
   const value = useSyncExternalStore(
     (onStoreChange) =>
-      settingsApi.subscribe(SYSTEM_LANGUAGE_SETTING_ID, onStoreChange),
-    () => settingsApi.get<Language>(SYSTEM_LANGUAGE_SETTING_ID),
-    () => settingsApi.get<Language>(SYSTEM_LANGUAGE_SETTING_ID),
+      settings.subscribe(SYSTEM_LANGUAGE_SETTING_ID, onStoreChange),
+    () => settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID),
+    () => settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID),
   );
 
   return value ?? "zh-CN";
 }
 
 export function LanguageToggle() {
+  const settings = useSettings();
   const language = useLanguageValue();
   const current =
     LANGUAGE_OPTIONS.find((option) => option.value === language) ??
@@ -69,7 +71,7 @@ export function LanguageToggle() {
               aria-pressed={language === value}
               className={s.dropdownItem({ active: language === value })}
               onClick={() => {
-                settingsApi.set(SYSTEM_LANGUAGE_SETTING_ID, value);
+                settings.set(SYSTEM_LANGUAGE_SETTING_ID, value);
               }}
             >
               <span>{displayLabel}</span>

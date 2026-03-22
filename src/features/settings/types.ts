@@ -1,8 +1,4 @@
 import type { ZodType } from "zod";
-import type {
-  SettingDefinitionDto,
-  SettingsSnapshotDto,
-} from "@/bindings/settings.ts";
 
 export type SettingControlKind = "select" | "toggle" | "text" | "number";
 export type SettingId = `${string}.${string}.${string}`;
@@ -92,20 +88,14 @@ export type RegisteredSetting = SettingDefinition & {
 
 export type SettingClassCtor = new () => object;
 
-export interface SettingsShardApi {
-  registerSetting(definition: SettingDefinition): void;
-  registerClass(ctor: SettingClassCtor): void;
-  mergeRemoteDefinitions(definitions: SettingDefinitionDto[]): void;
-  hydrateFromSnapshot(
-    snapshot: SettingsSnapshotDto,
-    options?: HydrateOptions,
-  ): void;
-  applyRemotePatch(changes: Record<string, unknown>, version: number): void;
-  configureRemotePatchSender(sender: SettingsPatchSender | null): void;
-  getVersion(): number;
-  setVersion(version: number): void;
+export interface SettingsReader {
   get<T = unknown>(id: SettingId): T;
   set<T = unknown>(id: SettingId, value: T): boolean;
   subscribe(id: SettingId, callback: () => void): () => void;
   listDefinitions(): RegisteredSetting[];
+}
+
+export interface SettingsShardApi extends SettingsReader {
+  registerSetting(definition: SettingDefinition): void;
+  registerClass(ctor: SettingClassCtor): void;
 }

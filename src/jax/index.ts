@@ -225,6 +225,19 @@ export class Jax {
     return shard;
   }
 
+  public getShard<T extends Shard>(clazz: new () => T): T {
+    this.requireRegistry();
+
+    const shard = this.shardInstancesById
+      .values()
+      .find((instance) => instance instanceof clazz);
+    if (!shard) {
+      throw AppError.JaxShardUnavailable(clazz.name);
+    }
+
+    return shard as T;
+  }
+
   public listShards(): Shard[] {
     this.requireRegistry();
     return [...this.shardInstancesById.values()];

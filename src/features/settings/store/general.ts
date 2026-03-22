@@ -12,7 +12,7 @@ export const SYSTEM_THEME_SETTING_ID = "system.preferences.theme";
 export const SYSTEM_ASSET_SOURCE_SETTING_ID = "system.preferences.assetSource";
 
 @settings
-export class GeneralSettings {
+class GeneralSettings {
   @setting({
     id: SYSTEM_LANGUAGE_SETTING_ID,
     labelKey: "settings.language.label",
@@ -48,6 +48,8 @@ export class GeneralSettings {
 }
 
 export function registerGeneralSettings(api: SettingsShardApi): void {
+  api.registerClass(GeneralSettings);
+
   api.registerSetting({
     id: SYSTEM_THEME_SETTING_ID,
     labelKey: "settings.theme.label",

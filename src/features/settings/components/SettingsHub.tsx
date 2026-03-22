@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Outlet } from "react-router";
-import { settingsApi } from "../store";
+import { useSettings } from "@/features/settings/context";
 import * as s from "./SettingsHub.css";
 import { buildSettingsPages } from "./SettingsHub.utils";
 import { SettingsPageTabs } from "./SettingsPageTabs";
@@ -11,9 +11,10 @@ export interface SettingsOutletContext {
 }
 
 export function SettingsHub() {
+  const settings = useSettings();
   const pages = useMemo(() => {
-    return buildSettingsPages(settingsApi.listDefinitions());
-  }, []);
+    return buildSettingsPages(settings.listDefinitions());
+  }, [settings]);
   const outletContext: SettingsOutletContext = { pages };
 
   return (

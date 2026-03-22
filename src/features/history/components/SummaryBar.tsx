@@ -25,14 +25,16 @@ function formatTier(entry: RankEntry | null, unrankedLabel: string): string {
 function formatMeta(
   entry: RankEntry | null,
   winsShort: string,
-  lossesShort: string,
+  _lossesShort: string,
   lpShort: string,
 ): string {
   if (!entry) {
-    return `-- ${winsShort} / -- ${lossesShort} / -- ${lpShort}`;
+    // return `-- ${winsShort} / -- ${_lossesShort} / -- ${lpShort}`;
+    return `-- ${winsShort} / -- ${lpShort}`;
   }
 
-  return `${entry.wins}${winsShort} / ${entry.losses}${lossesShort} / ${entry.leaguePoints} ${lpShort}`;
+  // return `${entry.wins}${winsShort} / ${entry.losses}${_lossesShort} / ${entry.leaguePoints} ${lpShort}`;
+  return `${entry.wins}${winsShort} / ${entry.leaguePoints} ${lpShort}`;
 }
 
 export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {

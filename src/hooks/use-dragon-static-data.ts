@@ -5,7 +5,7 @@ import {
   CDRAGON_PERK_STYLE_ICON_BY_ID,
   DDRAGON_PERK_STYLE_ICON_BY_ID,
 } from "@/features/history/components/match-card-display";
-import { settingsApi } from "@/features/settings/store";
+import { useSettings } from "@/features/settings/context";
 import type { AssetSource } from "@/features/settings/store/general";
 import { SYSTEM_ASSET_SOURCE_SETTING_ID } from "@/features/settings/store/general";
 import { toDdragonVersion } from "@/hooks/to-ddragon-version";
@@ -123,13 +123,14 @@ const EMPTY_DDRAGON_CATALOG: DdragonStaticCatalog = {
 };
 
 function useSelectedAssetSource(): AssetSource {
+  const settings = useSettings();
   return useSyncExternalStore(
     (onStoreChange) =>
-      settingsApi.subscribe(SYSTEM_ASSET_SOURCE_SETTING_ID, onStoreChange),
+      settings.subscribe(SYSTEM_ASSET_SOURCE_SETTING_ID, onStoreChange),
     () =>
-      settingsApi.get<AssetSource>(SYSTEM_ASSET_SOURCE_SETTING_ID) ?? "cdragon",
+      settings.get<AssetSource>(SYSTEM_ASSET_SOURCE_SETTING_ID) ?? "cdragon",
     () =>
-      settingsApi.get<AssetSource>(SYSTEM_ASSET_SOURCE_SETTING_ID) ?? "cdragon",
+      settings.get<AssetSource>(SYSTEM_ASSET_SOURCE_SETTING_ID) ?? "cdragon",
   );
 }
 
