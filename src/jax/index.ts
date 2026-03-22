@@ -178,7 +178,7 @@ export class Jax {
     return report;
   }
 
-  public async shutdown(): Promise<void> {
+  public async stop(): Promise<void> {
     const registry = this.requireRegistry();
     logger.info(
       { shardCount: registry.startupOrder.length },
@@ -214,10 +214,7 @@ export class Jax {
     logger.info("Shard shutdown finished");
   }
 
-  public async stop(): Promise<void> {
-    await this.shutdown();
-  }
-
+  // noinspection JSUnusedGlobalSymbols
   public getShardById(id: ShardId): Shard {
     this.requireRegistry();
 

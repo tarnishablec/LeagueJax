@@ -4,7 +4,7 @@ import { useTabStore } from "@/stores/tabs";
 import { ConnectionGuard } from "../components/ConnectionGuard";
 import { MatchList } from "../components/MatchList";
 import { SummaryBar } from "../components/SummaryBar";
-import { useFocusSync } from "../hooks/use-focus-sync";
+import { useFocusSync } from "../hooks/use-focus-sync.ts";
 import { useSummonerHydration } from "../hooks/use-summoner-hydration";
 import * as s from "./HistoryRoute.css";
 

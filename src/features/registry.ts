@@ -131,7 +131,7 @@ export const shutdownWebShards = async (): Promise<void> => {
   }
 
   logger.info("Shutting down web shards");
-  await jaxRuntime.shutdown();
+  await jaxRuntime.stop();
   jaxRuntime = null;
   logger.info("Web shard shutdown completed");
 };

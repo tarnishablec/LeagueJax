@@ -151,21 +151,33 @@ export const metaPill = style({
 
 export const metricRow = style({
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, max-content))",
-  gap: 12,
+  gridTemplateColumns: "repeat(3, minmax(0, max-content))",
+  gap: 16,
+  alignItems: "start",
+});
+
+export const metricGroup = style({
+  display: "grid",
+  gridAutoFlow: "column",
   alignItems: "center",
+  gap: 10,
 });
 
-export const kda = style({
+export const metricPrimary = style({
   fontSize: "0.875rem",
-  fontWeight: 600,
-  color: vars.color.foreground,
+  fontWeight: 500,
+  color: "#fff",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  textAlign: "center",
 });
 
-export const meta = style({
+export const metricSecondary = style({
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
+  lineHeight: 1,
   whiteSpace: "nowrap",
+  textAlign: "center",
 });
 
 export const loadoutRow = style({

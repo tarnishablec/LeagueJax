@@ -1,6 +1,6 @@
 ﻿# AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to Ai agents (Codex/claude code etc.) when working with code in this repository.
 
 ## Git Policy
 
@@ -81,15 +81,15 @@ This is a **Tauri v2** desktop app with a **React + TypeScript** frontend and a 
 
 ### Key files
 
-| File | Purpose |
-|------|---------|
-| `src/App.tsx` | Root React component |
-| `src/main.tsx` | React entry point |
-| `src-tauri/src/lib.rs` | All Tauri commands (Rust backend logic) |
-| `src-tauri/src/main.rs` | Rust entry point, calls `lib::run()` |
-| `src-tauri/tauri.conf.json` | App config: window size, bundle targets, dev/build commands |
-| `src-tauri/capabilities/default.json` | Tauri permission grants for the main window |
-| `vite.config.ts` | Vite config; dev server fixed at port 1420 |
+| File                                  | Purpose                                                     |
+|---------------------------------------|-------------------------------------------------------------|
+| `src/App.tsx`                         | Root React component                                        |
+| `src/main.tsx`                        | React entry point                                           |
+| `src-tauri/src/lib.rs`                | All Tauri commands (Rust backend logic)                     |
+| `src-tauri/src/main.rs`               | Rust entry point, calls `lib::run()`                        |
+| `src-tauri/tauri.conf.json`           | App config: window size, bundle targets, dev/build commands |
+| `src-tauri/capabilities/default.json` | Tauri permission grants for the main window                 |
+| `vite.config.ts`                      | Vite config; dev server fixed at port 1420                  |
 
 ### Adding a new Tauri command
 
@@ -104,8 +104,8 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 
 ## Frontend Layout
 
-- All page-level layout should use **CSS Grid** (`grid`, `grid-cols-*`, `grid-rows-*`).
-- Do not use Flexbox (`flex`) for page-level layout. Flex is only allowed for small one-dimensional alignment (for example icon alignment inside a button).
+- All page-level layouts should use **CSS Grid** (`grid`, `grid-cols-*`, `grid-rows-*`).
+- Do not use Flexbox (`flex`) for page-level layout. Flex is only allowed for small one-dimensional alignment (for example, icon alignment inside a button).
 
 ## Accessibility
 
@@ -128,7 +128,7 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 - Define all colors with **`oklch()`** syntax — no hex codes, no `rgba()`.
 - **No Tailwind, no utility classes.** All styling must go through Vanilla Extract `.css.ts` files.
 
-## Type Sharing (Rust -> TypeScript)
+## Type Sharing (Rust → TypeScript)
 
 - **All domain models and shared types must be defined in Rust** and exported to TypeScript via [ts-rs](https://github.com/Aleph-Alpha/ts-rs). Do not hand-write mirrored types in TS.
 - **Shared/common types** (used across shards) should be defined in `src-tauri/src/concepts/` and exported to `src/bindings/`.
@@ -150,4 +150,4 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 
 - Avoid high-complexity code paths in a single file/component.
 - If a function/component grows beyond reasonable cognitive complexity, split it into focused hooks/components/modules before adding more logic.
-- Do not mix UI rendering, orchestration state, server-region resolution, and request workflows in one component when they can be separated.
+- Do not mix UI rendering, orchestration state, server-region resolution, and request workflows in one part when they can be separated.
