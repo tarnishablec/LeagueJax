@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { RankEntry } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { CopyButton } from "@/components/CopyButton";
+import { LazyImage } from "@/components/LazyImage.tsx";
 import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { useRankedSummary } from "../hooks/use-ranked-summary";
@@ -68,7 +69,11 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
       <div className={s.avatarSlot}>
         <div className={s.iconFallback}>
           {avatarUrl ? (
-            <img src={avatarUrl} alt="Profile icon" className={s.profileIcon} />
+            <LazyImage
+              src={avatarUrl}
+              alt="Profile icon"
+              className={s.profileIcon}
+            />
           ) : null}
         </div>
       </div>

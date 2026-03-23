@@ -36,6 +36,10 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   private readonly logger = createLogger("settings-shard");
   private readonly store = new SettingsStore();
 
+  public label() {
+    return "SettingsShard";
+  }
+
   public id() {
     return SHARD_IDS.SETTINGS;
   }

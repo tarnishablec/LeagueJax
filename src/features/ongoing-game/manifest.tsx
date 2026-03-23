@@ -5,6 +5,10 @@ import { ongoingGameI18n } from "./i18n";
 import { OngoingGameRoute } from "./routes/OngoingGameRoute";
 
 export class OngoingGameShard implements WebShard {
+  public label() {
+    return "OngoingGameShard";
+  }
+
   public id() {
     return SHARD_IDS.ONGOING_GAME;
   }

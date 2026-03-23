@@ -25,6 +25,12 @@ export const status = recipe({
 
 export const idCell = style({
   cursor: "pointer",
+  width: "100%",
+  overflow: "hidden",
+  textWrap: "nowrap",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  textAlign: "start",
   selectors: {
     "&:hover": {
       color: vars.color.primary,

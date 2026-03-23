@@ -35,7 +35,7 @@ function buildFrontendShards(): ShardInfoDto[] {
 
     return {
       id: String(id),
-      label: shard.constructor.name,
+      label: shard.label(),
       status,
       dependencies: deps.map(String),
       setupDurationMs: durationMs,

@@ -185,6 +185,8 @@ export const errorText = style({
 });
 
 export const resultPanel = style({
+  display: "grid",
+  placeItems: "center",
   borderRadius: 10,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.background,
@@ -195,6 +197,9 @@ export const resultPanel = style({
 
 export const resultList = style({
   display: "grid",
+  width: "100%",
+  height: "100%",
+  alignContent: "start",
   gap: 6,
 });
 

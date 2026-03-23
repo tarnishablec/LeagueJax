@@ -14,6 +14,7 @@ type LifecycleResult = void | Promise<void>;
 
 export interface Shard {
   id(): ShardId;
+  label(): string;
   dependsOn?(): readonly ShardId[];
   setup?(jax: Jax): LifecycleResult;
   teardown?(jax: Jax): LifecycleResult;

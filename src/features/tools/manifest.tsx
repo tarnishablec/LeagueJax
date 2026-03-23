@@ -5,6 +5,10 @@ import { toolsI18n } from "./i18n";
 import { ToolsRoute } from "./routes/ToolsRoute";
 
 export class ToolsShard implements WebShard {
+  public label() {
+    return "ToolsShard";
+  }
+
   public id() {
     return SHARD_IDS.TOOLS;
   }

@@ -9,8 +9,7 @@ import * as s from "./DataTable.css";
 
 interface DataTableProps<T> {
   data: T[];
-  // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column; `any` is the idiomatic type here
-  columns: ColumnDef<T, any>[];
+  columns: ColumnDef<T>[];
   emptyText?: string;
   getRowClassName?: (row: Row<T>) => string | undefined;
 }
