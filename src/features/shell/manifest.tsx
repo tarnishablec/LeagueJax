@@ -6,6 +6,10 @@ import type { SidebarSlot, WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 
 export class ShellShard implements WebShard {
+  public label() {
+    return "ShellShard";
+  }
+
   public id() {
     return SHARD_IDS.SHELL;
   }

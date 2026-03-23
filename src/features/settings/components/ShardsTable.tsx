@@ -25,12 +25,10 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
   const columns: ColumnDef<ShardInfoDto, any>[] = [
     col.accessor("label", {
       header: () => t("settings.shards.columns.name"),
-      enableResizing: true,
       cell: (info) => info.getValue(),
     }),
     col.accessor("id", {
       header: () => t("settings.shards.columns.id"),
-      size: 120,
       cell: (info) => {
         const id = info.getValue() as string;
         return (
@@ -41,14 +39,14 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
             title={id}
             aria-label="Copy shard ID"
           >
-            {id.slice(0, 8)}...
+            {id}
           </button>
         );
       },
     }),
     col.accessor("status", {
       header: () => t("settings.shards.columns.status"),
-      size: 100,
+      size: 80,
       cell: (info) => {
         const status = info.getValue() as ShardInfoDto["status"];
         return (
@@ -59,7 +57,6 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
       },
     }),
     col.accessor("dependencies", {
-      enableResizing: true,
       header: () => t("settings.shards.columns.dependencies"),
       cell: (info) => {
         const deps = info.getValue() as string[];
@@ -89,7 +86,7 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
     }),
     col.accessor("setupDurationMs", {
       header: () => t("settings.shards.columns.duration"),
-      size: 110,
+      size: 90,
       cell: (info) => {
         const ms = info.getValue() as number | null;
         return ms != null ? (

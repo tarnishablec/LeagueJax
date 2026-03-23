@@ -14,6 +14,10 @@ export const HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING =
   "history.behavior.autoRefreshOnTabSwitch";
 
 export class HistoryShard implements WebShard {
+  public label() {
+    return "HistoryShard";
+  }
+
   public id() {
     return SHARD_IDS.HISTORY;
   }

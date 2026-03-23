@@ -62,7 +62,8 @@
       "Bash(bun tauri:*)",
       "Bash(ls -la /d/Desktop/Web/LeagueJax/jax/src/*.rs)",
       "Bash(2)",
-      "Bash(echo \"Exit: $?\")"
+      "Bash(echo \"Exit: $?\")",
+      "Bash(bun tsc:*)"
     ]
   }
 }

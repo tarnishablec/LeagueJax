@@ -5,6 +5,10 @@ import { automationI18n } from "./i18n";
 import { AutomationRoute } from "./routes/AutomationRoute";
 
 export class AutomationShard implements WebShard {
+  public label() {
+    return "AutomationShard";
+  }
+
   public id() {
     return SHARD_IDS.AUTOMATION;
   }
