@@ -1,6 +1,9 @@
+import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { LeagueClientCmdArgs } from "@/bindings/lcu.ts";
+import { DataTable } from "@/components/DataTable";
+import * as dt from "@/components/DataTable/DataTable.css";
 import { useLcuStore } from "@/stores/lcu";
 import * as s from "./SettingsClientArgsView.css";
 
@@ -55,6 +58,8 @@ const toCmdLine = (
   return `"${executable}" ${segments.join(" ")}`.trim();
 };
 
+const col = createColumnHelper<CmdArgRow>();
+
 export function SettingsClientArgsView() {
   const { t } = useTranslation();
   const focused = useLcuStore((state) =>
@@ -72,6 +77,26 @@ export function SettingsClientArgsView() {
     return toCmdLine(focused?.cmdArgs, focused?.installDir);
   }, [focused?.cmdArgs, focused?.installDir]);
 
+  // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column
+  const columns: ColumnDef<CmdArgRow, any>[] = useMemo(
+    () => [
+      col.accessor("key", {
+        header: () =>
+          t("settings.clientArgs.columns.key", { defaultValue: "Key" }),
+        size: 280,
+        meta: { className: dt.monospace },
+        cell: (info) => info.getValue(),
+      }),
+      col.accessor("value", {
+        header: () =>
+          t("settings.clientArgs.columns.value", { defaultValue: "Value" }),
+        meta: { className: dt.monospace },
+        cell: (info) => info.getValue(),
+      }),
+    ],
+    [t],
+  );
+
   return (
     <div className={s.page}>
       <div className={s.card}>
@@ -84,46 +109,17 @@ export function SettingsClientArgsView() {
           aria-label="Client command line"
           readOnly
           value={commandLine}
-          className={`${s.commandBox} ${s.monospace}`}
+          className={s.commandBox}
         />
       </div>
 
-      <div className={s.tableWrap}>
-        <table className={s.table}>
-          <thead>
-            <tr>
-              <th className={s.headCell}>
-                {t("settings.clientArgs.columns.key", { defaultValue: "Key" })}
-              </th>
-              <th className={s.headCell}>
-                {t("settings.clientArgs.columns.value", {
-                  defaultValue: "Value",
-                })}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={2} className={s.empty}>
-                  {t("settings.clientArgs.empty", {
-                    defaultValue: "No focused client.",
-                  })}
-                </td>
-              </tr>
-            ) : (
-              rows.map((row) => (
-                <tr key={row.key}>
-                  <td className={`${s.keyCell} ${s.monospace}`}>{row.key}</td>
-                  <td className={`${s.valueCell} ${s.monospace}`}>
-                    {row.value}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        data={rows}
+        columns={columns}
+        emptyText={t("settings.clientArgs.empty", {
+          defaultValue: "No focused client.",
+        })}
+      />
     </div>
   );
 }

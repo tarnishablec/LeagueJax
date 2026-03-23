@@ -1,6 +1,8 @@
+import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { CopyButton } from "@/components/CopyButton";
+import { DataTable, monospace, mutedCell } from "@/components/DataTable";
 import type { RegisteredSetting } from "@/features/settings/types";
 import * as s from "./SettingsRegistryList.css";
 
@@ -17,18 +19,9 @@ const localeLabel: Record<RegistryLocale, string> = {
 };
 
 const normalizeLocale = (value?: string): RegistryLocale => {
-  if (!value) {
-    return "en";
-  }
-
-  if (value.startsWith("zh")) {
-    return "zh-CN";
-  }
-
-  if (value.startsWith("ja")) {
-    return "ja-JP";
-  }
-
+  if (!value) return "en";
+  if (value.startsWith("zh")) return "zh-CN";
+  if (value.startsWith("ja")) return "ja-JP";
   return "en";
 };
 
@@ -43,13 +36,14 @@ const toScope = (scope?: RegisteredSetting["scope"]): string => {
   }
 };
 
+const columnHelper = createColumnHelper<RegisteredSetting>();
+
 export function SettingsRegistryList({
   definitions,
 }: SettingsRegistryListProps) {
   const { t, i18n } = useTranslation();
   const currentLocale = normalizeLocale(i18n.resolvedLanguage ?? i18n.language);
   const showCurrentLanguageColumn = currentLocale !== "en";
-  const currentLanguageColumnTitle = localeLabel[currentLocale];
 
   const rows = useMemo(() => {
     return [...definitions].sort((left, right) =>
@@ -57,56 +51,65 @@ export function SettingsRegistryList({
     );
   }, [definitions]);
 
-  return (
-    <div className={s.card}>
-      <div
-        className={`${s.header} ${
-          showCurrentLanguageColumn
-            ? s.headerWithCurrentLanguage
-            : s.headerWithoutCurrentLanguage
-        }`}
-      >
-        <span>
-          {t("settings.registry.columns.key", { defaultValue: "Key" })}
-        </span>
-        {showCurrentLanguageColumn ? (
-          <span>{currentLanguageColumnTitle}</span>
-        ) : null}
-        <span>
-          {t("settings.registry.columns.en", { defaultValue: "English" })}
-        </span>
-        <span>
-          {t("settings.registry.columns.scope", { defaultValue: "Scope" })}
-        </span>
-      </div>
-
-      {rows.map((setting) => (
-        <div
-          key={setting.id}
-          className={`${s.row} ${
-            showCurrentLanguageColumn
-              ? s.rowWithCurrentLanguage
-              : s.rowWithoutCurrentLanguage
-          }`}
-        >
-          <span className={s.keyCell}>
-            <span className={s.key}>{setting.id}</span>
-            <CopyButton text={setting.id} className={s.copyButton} />
-          </span>
-          {showCurrentLanguageColumn ? (
-            <span className={s.text}>
-              {t(setting.labelKey, {
-                lng: currentLocale,
-                defaultValue: setting.labelKey,
-              })}
+  // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column
+  const columns = useMemo<ColumnDef<RegisteredSetting, any>[]>(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column
+    const cols: ColumnDef<RegisteredSetting, any>[] = [
+      columnHelper.accessor("id", {
+        header: () =>
+          t("settings.registry.columns.key", { defaultValue: "Key" }),
+        meta: { className: monospace },
+        cell: ({ getValue }) => {
+          const id = getValue();
+          return (
+            <span className={s.keyCell}>
+              <span>{id}</span>
+              <CopyButton text={id} className={s.copyButton} />
             </span>
-          ) : null}
-          <span className={s.text}>
-            {t(setting.labelKey, { lng: "en", defaultValue: setting.labelKey })}
-          </span>
-          <span className={s.scope}>{toScope(setting.scope)}</span>
-        </div>
-      ))}
-    </div>
-  );
+          );
+        },
+      }),
+    ];
+
+    if (showCurrentLanguageColumn) {
+      cols.push(
+        columnHelper.accessor("labelKey", {
+          id: "currentLang",
+          header: () => localeLabel[currentLocale],
+          meta: { className: mutedCell },
+          cell: ({ row }) =>
+            t(row.original.labelKey, {
+              lng: currentLocale,
+              defaultValue: row.original.labelKey,
+            }),
+        }),
+      );
+    }
+
+    cols.push(
+      columnHelper.accessor("labelKey", {
+        id: "en",
+        header: () =>
+          t("settings.registry.columns.en", { defaultValue: "English" }),
+        meta: { className: mutedCell },
+        cell: ({ row }) =>
+          t(row.original.labelKey, {
+            lng: "en",
+            defaultValue: row.original.labelKey,
+          }),
+      }),
+      columnHelper.display({
+        id: "scope",
+        header: () =>
+          t("settings.registry.columns.scope", { defaultValue: "Scope" }),
+        cell: ({ row }) => (
+          <span className={s.scope}>{toScope(row.original.scope)}</span>
+        ),
+      }),
+    );
+
+    return cols;
+  }, [t, currentLocale, showCurrentLanguageColumn]);
+
+  return <DataTable data={rows} columns={columns} />;
 }

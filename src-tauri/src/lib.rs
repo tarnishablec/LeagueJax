@@ -6,12 +6,13 @@ mod storage;
 mod utils;
 
 use std::sync::Arc;
-use tauri::{Manager, RunEvent};
+use tauri::{Emitter, Manager, RunEvent};
 
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
 use crate::commands::settings::*;
+use crate::commands::shards::*;
 
 #[cfg(target_os = "windows")]
 use window_vibrancy::{apply_acrylic, apply_mica};
@@ -55,6 +56,7 @@ pub fn run() {
             get_game_version,
             get_settings_bootstrap,
             apply_settings_patch,
+            get_shards_status,
         ])
         .setup(move |app| {
             let app_handle = app.handle().clone();
@@ -106,26 +108,33 @@ pub fn run() {
             let jax = Arc::new(jax);
             app.manage(jax.clone());
 
+            let app_handle_for_emit = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 match jax.start().await {
                     Ok(report) => {
                         if report.is_success() {
                             tracing::info!("🚀 Jax started successfully with all shards.");
                         } else {
-                            for f in report.failed {
+                            for f in &report.failed {
                                 tracing::error!(
                                     shard_id = %f.id,
                                     error = %f.error,
                                     "❌ Shard failed to setup"
                                 );
                             }
-                            for s in report.skipped {
+                            for s in &report.skipped {
                                 tracing::warn!(
                                     shard_id = %s,
                                     "skip" = true,
                                     "⚠️ Shard skipped due to dependency failure"
                                 );
                             }
+                        }
+
+                        // Emit shard status event for frontend
+                        let snapshot = crate::commands::shards::build_shards_snapshot(&jax);
+                        if let Err(e) = app_handle_for_emit.emit("shards_status_changed", &snapshot) {
+                            tracing::error!(error = %e, "Failed to emit shards_status_changed");
                         }
                     }
                     Err(e) => {

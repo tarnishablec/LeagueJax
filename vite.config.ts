@@ -10,7 +10,7 @@ const host = process.env.TAURI_DEV_HOST;
 const dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const port = 31420;
-export default defineConfig(async () => ({
+export default defineConfig(async ({ command }) => ({
   plugins: [
     withFilter(
       swc({
@@ -40,25 +40,38 @@ export default defineConfig(async () => ({
   build: {
     rolldownOptions: {
       output: {
-        codeSplitting: {
-          groups: [
-            {
-              name: "vendor-react",
-              test: /node_modules[\\/](react|react-dom|react-router|scheduler)/,
-              priority: 20,
-            },
-            {
-              name: "vendor-ui",
-              test: /node_modules[\\/](@ark-ui|@floating-ui|lucide-react)/,
-              priority: 15,
-            },
-            {
-              name: "vendor-misc",
-              test: /node_modules[\\/](i18next|react-i18next|swr|remeda|zod|zustand|pino|graphology|uuid)/,
-              priority: 10,
-            },
-          ],
-        },
+        codeSplitting:
+          command === "serve"
+            ? false
+            : {
+                groups: [
+                  {
+                    name: "vendor-react",
+                    test: /node_modules[\\/](react|react-dom|react-router|scheduler)/,
+                    priority: 20,
+                  },
+                  {
+                    name: "vendor-ui",
+                    test: /node_modules[\\/](@ark-ui|@floating-ui|lucide-react)/,
+                    priority: 15,
+                  },
+                  {
+                    name: "vendor-graph",
+                    test: /node_modules[\\/](@xyflow|@dagrejs)/,
+                    priority: 12,
+                  },
+                  {
+                    name: "vendor-table",
+                    test: /node_modules[\\/]@tanstack/,
+                    priority: 11,
+                  },
+                  {
+                    name: "vendor-misc",
+                    test: /node_modules[\\/](i18next|react-i18next|swr|remeda|zod|zustand|pino|graphology|uuid)/,
+                    priority: 10,
+                  },
+                ],
+              },
       },
     },
   },

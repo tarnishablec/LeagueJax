@@ -27,6 +27,7 @@ export interface StartupShardError {
 export interface StartupReport {
   failed: StartupShardError[];
   skipped: ShardId[];
+  durations: Map<ShardId, number>;
 }
 
 interface ShardRegistry {
@@ -42,6 +43,7 @@ export class Jax {
   private registry: ShardRegistry | null = null;
   private readonly shardInstancesById = new Map<ShardId, Shard>();
   private started = false;
+  private startupReport: StartupReport | null = null;
 
   public constructor() {
     logger.debug("Jax runtime created");
@@ -130,7 +132,7 @@ export class Jax {
     const registry = this.requireRegistry();
     if (this.started) {
       logger.debug("Jax start skipped because runtime is already started");
-      return { failed: [], skipped: [] };
+      return { failed: [], skipped: [], durations: new Map() };
     }
 
     logger.info(
@@ -138,7 +140,11 @@ export class Jax {
       "Starting shards",
     );
 
-    const report: StartupReport = { failed: [], skipped: [] };
+    const report: StartupReport = {
+      failed: [],
+      skipped: [],
+      durations: new Map(),
+    };
     const blocked = new Set<ShardId>();
 
     for (const id of registry.startupOrder) {
@@ -155,7 +161,10 @@ export class Jax {
 
       try {
         logger.debug({ shardId: String(id) }, "Running shard setup");
+        const startTime = performance.now();
         await shard.setup?.(this);
+        const elapsed = performance.now() - startTime;
+        report.durations.set(id, elapsed);
         logger.info({ shardId: String(id) }, "Shard setup completed");
       } catch (error) {
         report.failed.push({ id, error });
@@ -168,6 +177,7 @@ export class Jax {
     }
 
     this.started = true;
+    this.startupReport = report;
     logger.info(
       {
         failedCount: report.failed.length,
@@ -241,6 +251,10 @@ export class Jax {
   public listShards(): Shard[] {
     this.requireRegistry();
     return [...this.shardInstancesById.values()];
+  }
+
+  public getStartupReport(): StartupReport | null {
+    return this.startupReport;
   }
 
   private requireRegistry(): ShardRegistry {

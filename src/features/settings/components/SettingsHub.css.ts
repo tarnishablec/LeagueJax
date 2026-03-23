@@ -3,7 +3,7 @@ import { vars } from "@/styles/theme.css";
 
 export const page = style({
   display: "grid",
-  gridTemplateRows: "auto minmax(0, 1fr)",
+  gridTemplateRows: "auto 1fr",
   gap: 16,
   height: "100%",
   minHeight: 0,
@@ -15,6 +15,7 @@ export const outlet = style({
   overflowX: "hidden",
   overflowY: "auto",
   alignContent: "start",
+  height: "100%",
 });
 
 export const title = style({

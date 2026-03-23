@@ -7,6 +7,7 @@ export const vars = createGlobalThemeContract({
   color: {
     primary: "primary",
     success: "success",
+    error: "error",
     background: "background",
     backgroundRaw: "backgroundRaw",
     foreground: "foreground",
@@ -40,6 +41,7 @@ createGlobalTheme(":root", vars, {
   color: {
     primary: "oklch(0.72 0.19 62)",
     success: "oklch(0.73 0.18 142)",
+    error: "oklch(0.65 0.25 27)",
     background: vars.color.backgroundRaw,
     backgroundRaw: "oklch(1 0 0)",
     foreground: "oklch(0.3 0 0)",
@@ -73,6 +75,7 @@ createGlobalTheme(":root.dark", vars, {
   color: {
     primary: "oklch(0.72 0.19 62)",
     success: "oklch(0.73 0.18 142)",
+    error: "oklch(0.65 0.25 27)",
     background: "oklch(0.16 0.015 270 / 0.22)",
     backgroundRaw: "oklch(0.16 0.015 270)",
     foreground: "oklch(0.985 0 0)",

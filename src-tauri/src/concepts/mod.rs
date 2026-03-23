@@ -5,4 +5,5 @@ pub mod matches;
 pub mod queues;
 pub mod rank;
 pub mod settings;
+pub mod shards;
 pub mod summoner;
