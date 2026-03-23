@@ -23,7 +23,7 @@ export interface RenderedSlot {
   order: number;
 }
 
-let jaxRuntime: Jax | null = null;
+let jaxRuntime: Jax | null = import.meta.hot?.data?.jaxRuntime ?? null;
 let jaxInitialization: Promise<void> | null = null;
 const logger = createLogger("registry");
 
@@ -113,6 +113,7 @@ export const initializeWebShards = async (): Promise<void> => {
       "Web shard startup completed",
     );
     jaxRuntime = runtime;
+    if (import.meta.hot) import.meta.hot.data.jaxRuntime = runtime;
   })();
 
   try {
@@ -133,6 +134,7 @@ export const shutdownWebShards = async (): Promise<void> => {
   logger.info("Shutting down web shards");
   await jaxRuntime.stop();
   jaxRuntime = null;
+  if (import.meta.hot) import.meta.hot.data.jaxRuntime = null;
   logger.info("Web shard shutdown completed");
 };
 

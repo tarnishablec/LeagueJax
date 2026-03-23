@@ -7,6 +7,7 @@ import * as s from "../components/SettingsHub.css";
 import { resolveActivePage } from "../components/SettingsHub.utils";
 import { SettingsRegistryList } from "../components/SettingsRegistryList";
 import { SettingsSections } from "../components/SettingsSections";
+import { ShardsPage } from "./ShardsPage";
 
 export function SettingsPageRoute() {
   const settings = useSettings();
@@ -20,6 +21,10 @@ export function SettingsPageRoute() {
 
   if (pageId === "registry") {
     return <SettingsRegistryList definitions={settings.listDefinitions()} />;
+  }
+
+  if (pageId === "shards") {
+    return <ShardsPage />;
   }
 
   const activePage = resolveActivePage(pages, pageId);

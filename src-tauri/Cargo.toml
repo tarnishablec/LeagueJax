@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-jax = { path = "../jax" }
+jax = { path = "../jax", features = ["setup-timing"] }
 
 tauri = { version = "2", features = ["tray-icon", "devtools"] }
 window-vibrancy = "0.7.1"

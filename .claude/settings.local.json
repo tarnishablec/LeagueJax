@@ -59,7 +59,10 @@
       "Bash(cargo rm:*)",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in d[''''servers''''].items\\(\\) if ''''TENCENT'''' in k or ''''HN1'''' in k.upper\\(\\)]\")",
       "Bash(git log:*)",
-      "Bash(bun tauri:*)"
+      "Bash(bun tauri:*)",
+      "Bash(ls -la /d/Desktop/Web/LeagueJax/jax/src/*.rs)",
+      "Bash(2)",
+      "Bash(echo \"Exit: $?\")"
     ]
   }
 }
