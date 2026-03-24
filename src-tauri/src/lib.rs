@@ -11,6 +11,7 @@ use tauri::{Emitter, Manager, RunEvent};
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
+use crate::commands::platform::*;
 use crate::commands::settings::*;
 use crate::commands::shards::*;
 
@@ -51,12 +52,14 @@ pub fn run() {
             get_match_summaries,
             get_match_summary,
             get_cherry_augments,
-            get_lcu_maps,
-            get_lcu_queues,
-            get_game_version,
+            lcu_get_maps,
+            lcu_get_queues,
+            lcu_get_game_version,
             get_settings_bootstrap,
             apply_settings_patch,
             get_shards_status,
+            lcu_get_platform_config_namespaces,
+            lcu_get_help
         ])
         .setup(move |app| {
             let app_handle = app.handle().clone();
@@ -132,8 +135,9 @@ pub fn run() {
                         }
 
                         // Emit shard status event for frontend
-                        let snapshot = crate::commands::shards::build_shards_snapshot(&jax);
-                        if let Err(e) = app_handle_for_emit.emit("shards_status_changed", &snapshot) {
+                        let snapshot = build_shards_snapshot(&jax);
+                        if let Err(e) = app_handle_for_emit.emit("shards_status_changed", &snapshot)
+                        {
                             tracing::error!(error = %e, "Failed to emit shards_status_changed");
                         }
                     }

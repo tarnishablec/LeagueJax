@@ -4,9 +4,17 @@ import { vars } from "@/styles/theme.css";
 export const keyCell = style({
   display: "grid",
   alignItems: "center",
-  gridAutoFlow: "column",
-  justifyContent: "space-between",
+  gridTemplateColumns: "1fr 20px",
   paddingRight: "1rem",
+  gap: 8,
+});
+
+export const keyText = style({
+  color: vars.color.foreground,
+  textWrap: "nowrap",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  overflow: "hidden",
 });
 
 export const copyButton = style({

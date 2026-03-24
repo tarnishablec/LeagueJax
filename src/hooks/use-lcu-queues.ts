@@ -7,7 +7,7 @@ export function useLcuQueues() {
   const connected = useLcuStore(selectIsFocused);
 
   return useSWR(
-    connected ? ["get_lcu_queues"] : null,
+    connected ? ["lcu_get_queues"] : null,
     ([cmd]) => invoke<LcuQueue[]>(cmd),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
