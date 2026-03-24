@@ -36,27 +36,8 @@ pub struct PremadeGroup {
 #[ts(export, export_to = "ongoing_game.ts")]
 pub struct OngoingGamePhaseChanged {
     pub phase: OngoingGamePhase,
+    pub loading: bool,
     pub our_side: Option<Side>,
     pub blue_players: Vec<PlayerSlot>,
     pub red_players: Vec<PlayerSlot>,
-}
-
-#[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "ongoing_game.ts")]
-pub struct OngoingGamePlayerUpdated {
-    pub puuid: String,
-    #[ts(type = "unknown")]
-    pub summoner: Option<serde_json::Value>,
-    #[ts(type = "unknown")]
-    pub ranked: Option<serde_json::Value>,
-    #[ts(type = "unknown")]
-    pub match_history: Option<serde_json::Value>,
-    #[ts(type = "unknown")]
-    pub champion_mastery: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone, Serialize, TS)]
-#[ts(export, export_to = "ongoing_game.ts")]
-pub struct OngoingGamePremadeUpdated {
-    pub groups: Vec<PremadeGroup>,
 }
