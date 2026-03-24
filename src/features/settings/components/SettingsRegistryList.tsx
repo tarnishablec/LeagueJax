@@ -63,7 +63,7 @@ export function SettingsRegistryList({
           const id = getValue();
           return (
             <span className={s.keyCell}>
-              <span>{id}</span>
+              <span className={s.keyText}>{id}</span>
               <CopyButton text={id} className={s.copyButton} />
             </span>
           );

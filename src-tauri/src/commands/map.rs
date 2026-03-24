@@ -10,7 +10,7 @@ use tauri::State;
 const LCU_CACHE: &str = "lcu-cache.json";
 
 #[tauri::command]
-pub async fn get_lcu_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppError> {
+pub async fn lcu_get_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppError> {
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
     let version = lcu
@@ -25,7 +25,7 @@ pub async fn get_lcu_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppEr
 }
 
 #[tauri::command]
-pub async fn get_lcu_queues(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuQueue>, AppError> {
+pub async fn lcu_get_queues(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuQueue>, AppError> {
     let lcu = jax.get_shard::<LcuShard>().focused().await?;
     let api = lcu.api();
     let version = lcu

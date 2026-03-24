@@ -6,7 +6,7 @@ import { selectIsFocused, useLcuStore } from "@/stores/lcu.ts";
 export function useLcuMaps() {
   const connected = useLcuStore(selectIsFocused);
 
-  return useSWR(connected ? ["get_lcu_maps"] : null, invoke<LcuMap[]>, {
+  return useSWR(connected ? ["lcu_get_maps"] : null, invoke<LcuMap[]>, {
     dedupingInterval: Number.POSITIVE_INFINITY,
   });
 }

@@ -6,7 +6,7 @@ export function useGameVersion() {
   const connected = useLcuStore(selectIsFocused);
 
   return useSWR(
-    connected ? "get_game_version" : null,
+    connected ? "lcu_get_game_version" : null,
     (cmd) => invoke<string>(cmd),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,

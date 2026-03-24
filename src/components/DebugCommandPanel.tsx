@@ -140,9 +140,19 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
       run: () => invoke<unknown>("get_cherry_augments"),
     },
     {
-      id: "get-lcu-maps",
-      label: "get_lcu_maps",
-      run: () => invoke<unknown>("get_lcu_maps"),
+      id: "lcu-get-maps",
+      label: "lcu_get_maps",
+      run: () => invoke<unknown>("lcu_get_maps"),
+    },
+    {
+      id: "lcu-get-platform-config-namespaces",
+      label: "lcu_get_platform_config_namespaces",
+      run: () => invoke<unknown>("lcu_get_platform_config_namespaces"),
+    },
+    {
+      id: "lcu-get-help",
+      label: "lcu_get_help",
+      run: () => invoke<unknown>("lcu_get_help"),
     },
   ];
 }

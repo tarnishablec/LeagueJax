@@ -78,6 +78,7 @@ export const debugButton = style({
   background: vars.color.background,
   color: vars.color.foreground,
   font: "inherit",
+  wordBreak: "break-word",
   fontSize: "0.75rem",
   padding: "6px 10px",
   cursor: "pointer",
