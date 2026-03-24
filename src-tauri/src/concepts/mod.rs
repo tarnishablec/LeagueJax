@@ -2,6 +2,7 @@
 pub mod cherry;
 pub mod maps;
 pub mod matches;
+pub mod ongoing_game;
 pub mod queues;
 pub mod rank;
 pub mod settings;
