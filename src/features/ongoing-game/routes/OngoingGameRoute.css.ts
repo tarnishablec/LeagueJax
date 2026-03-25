@@ -60,12 +60,37 @@ export const emptyState = style({
 
 export const playerCard = style({
   display: "grid",
+  gridTemplateRows: "auto auto auto minmax(0, 1fr)",
   gap: 6,
   border: `1px solid ${vars.color.border}`,
   borderRadius: 10,
   padding: 10,
   background: vars.color.accent,
   minWidth: 0,
+  minHeight: 0,
+});
+
+export const playerHeader = style({
+  display: "grid",
+  gridTemplateColumns: "24px minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 8,
+  minWidth: 0,
+});
+
+export const championAvatar = style({
+  width: 24,
+  height: 24,
+  borderRadius: 6,
+  objectFit: "cover",
+  border: `1px solid ${vars.color.border}`,
+});
+
+export const championAvatarFallback = style({
+  width: 24,
+  height: 24,
+  borderRadius: 6,
+  background: vars.color.border,
 });
 
 export const playerName = style({
@@ -91,4 +116,81 @@ export const playerStats = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+});
+
+export const historyList = style({
+  display: "grid",
+  gap: 4,
+  minHeight: 0,
+  maxHeight: 176,
+  overflowY: "auto",
+  alignContent: "start",
+  paddingRight: 2,
+});
+
+export const historyRow = style({
+  display: "grid",
+  gridTemplateColumns: "20px auto minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 6,
+  fontSize: "0.74rem",
+  minWidth: 0,
+});
+
+export const historyEmpty = style({
+  color: vars.color.mutedForeground,
+  fontSize: "0.72rem",
+});
+
+export const winText = style({
+  color: "oklch(0.78 0.17 150)",
+  fontWeight: 700,
+});
+
+export const loseText = style({
+  color: "oklch(0.67 0.2 28)",
+  fontWeight: 700,
+});
+
+export const neutralText = style({
+  color: vars.color.mutedForeground,
+  fontWeight: 700,
+});
+
+export const remakeText = style({
+  color: "oklch(0.83 0.1 96)",
+  fontWeight: 700,
+});
+
+export const terminatedText = style({
+  color: "oklch(0.7 0.03 255)",
+  fontWeight: 700,
+});
+
+export const kdaText = style({
+  color: vars.color.foreground,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+export const historyMeta = style({
+  color: vars.color.mutedForeground,
+  fontSize: "0.7rem",
+  whiteSpace: "nowrap",
+});
+
+export const historyChampionAvatar = style({
+  width: 18,
+  height: 18,
+  borderRadius: 4,
+  objectFit: "cover",
+  border: `1px solid ${vars.color.border}`,
+});
+
+export const historyChampionFallback = style({
+  width: 18,
+  height: 18,
+  borderRadius: 4,
+  background: vars.color.border,
 });

@@ -108,6 +108,11 @@ impl LeagueBridgeShard {
     fn setup_emit_bridge(&self, jax: Arc<Jax>) -> Result<(), AppError> {
         let app = jax.get_shard::<TauriHost>().app.clone();
         let cancel_token = jax.get_shard::<TauriHost>().cancellation_token();
+        #[cfg(debug_assertions)]
+        let ongoing_logger = jax
+            .get_shard::<crate::shards::file_logger::FileLoggerShard>()
+            .logger()
+            .cloned();
 
         let lcu_manager = jax
             .get_shard::<LcuShard>()
@@ -152,9 +157,63 @@ impl LeagueBridgeShard {
 
                     match event {
                         OngoingGameManagerEvent::PhaseChanged(payload) => {
+                            #[cfg(debug_assertions)]
+                            if let Some(logger) = &ongoing_logger {
+                                let summary = serde_json::json!({
+                                    "event": "phase_changed",
+                                    "phase": payload.phase,
+                                    "loading": payload.loading,
+                                    "queue_id": payload.context.queue_id,
+                                    "match_history_filter": payload.context.match_history_filter,
+                                    "match_history_tag": payload.context.match_history_tag,
+                                    "blue_slots": payload.blue_players.len(),
+                                    "red_slots": payload.red_players.len(),
+                                });
+                                logger.write("ongoing_snapshot_diag", &summary);
+                            }
                             let _ = ongoing_app.emit("ongoing-game-phase-changed", &payload);
                         }
                         OngoingGameManagerEvent::SnapshotUpdated(payload) => {
+                            #[cfg(debug_assertions)]
+                            if let Some(logger) = &ongoing_logger {
+                                let blue = payload
+                                    .blue_players
+                                    .iter()
+                                    .map(|player| {
+                                        serde_json::json!({
+                                            "puuid": player.puuid,
+                                            "champion_id": player.champion_id,
+                                            "history_games": player.match_history.as_ref().map(|history| history.games.len()).unwrap_or(0),
+                                            "has_history": player.match_history.is_some(),
+                                            "has_ranked": player.ranked.is_some(),
+                                        })
+                                    })
+                                    .collect::<Vec<_>>();
+                                let red = payload
+                                    .red_players
+                                    .iter()
+                                    .map(|player| {
+                                        serde_json::json!({
+                                            "puuid": player.puuid,
+                                            "champion_id": player.champion_id,
+                                            "history_games": player.match_history.as_ref().map(|history| history.games.len()).unwrap_or(0),
+                                            "has_history": player.match_history.is_some(),
+                                            "has_ranked": player.ranked.is_some(),
+                                        })
+                                    })
+                                    .collect::<Vec<_>>();
+                                let summary = serde_json::json!({
+                                    "event": "snapshot_updated",
+                                    "phase": payload.phase,
+                                    "loading": payload.loading,
+                                    "queue_id": payload.context.queue_id,
+                                    "match_history_filter": payload.context.match_history_filter,
+                                    "match_history_tag": payload.context.match_history_tag,
+                                    "blue": blue,
+                                    "red": red,
+                                });
+                                logger.write("ongoing_snapshot_diag", &summary);
+                            }
                             let _ = ongoing_app.emit("ongoing-game-snapshot-updated", &payload);
                         }
                     }

@@ -9,6 +9,31 @@ import type {
   Side,
 } from "@/bindings/ongoing_game";
 
+function mergeChampionIdsFromSlots(
+  players: OngoingGamePlayerSnapshot[],
+  slots: PlayerSlot[],
+): OngoingGamePlayerSnapshot[] {
+  if (players.length === 0 || slots.length === 0) {
+    return players;
+  }
+
+  const championByPuuid = new Map(
+    slots.map((slot) => [slot.puuid, slot.champion_id]),
+  );
+
+  return players.map((player) => {
+    const nextChampionId = championByPuuid.get(player.puuid);
+    if (nextChampionId === undefined || nextChampionId === player.champion_id) {
+      return player;
+    }
+
+    return {
+      ...player,
+      champion_id: nextChampionId,
+    };
+  });
+}
+
 export type OngoingGameUiState = {
   phase: OngoingGamePhase;
   loading: boolean;
@@ -61,26 +86,37 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
     set(initialState);
   },
   applyPhaseChanged: (payload) => {
-    set((state) => ({
-      ...state,
-      phase: payload.phase,
-      loading: payload.loading,
-      ourSide: payload.our_side,
-      blueSlots: payload.blue_players,
-      redSlots: payload.red_players,
-      bluePlayers: payload.phase === "Idle" ? [] : state.bluePlayers,
-      redPlayers: payload.phase === "Idle" ? [] : state.redPlayers,
-      queueId: payload.context.queue_id,
-      queueName: payload.context.queue_name,
-      queueShortName: payload.context.queue_short_name,
-      mapId: payload.context.map_id,
-      mapName: payload.context.map_name,
-      gameMode: payload.context.game_mode,
-      gameModeName: payload.context.game_mode_name,
-      gameModeShortName: payload.context.game_mode_short_name,
-      matchHistoryFilter: payload.context.match_history_filter,
-      matchHistoryTag: payload.context.match_history_tag,
-    }));
+    set((state) => {
+      const mergedBluePlayers =
+        payload.phase === "Idle"
+          ? []
+          : mergeChampionIdsFromSlots(state.bluePlayers, payload.blue_players);
+      const mergedRedPlayers =
+        payload.phase === "Idle"
+          ? []
+          : mergeChampionIdsFromSlots(state.redPlayers, payload.red_players);
+
+      return {
+        ...state,
+        phase: payload.phase,
+        loading: payload.loading,
+        ourSide: payload.our_side,
+        blueSlots: payload.blue_players,
+        redSlots: payload.red_players,
+        bluePlayers: mergedBluePlayers,
+        redPlayers: mergedRedPlayers,
+        queueId: payload.context.queue_id,
+        queueName: payload.context.queue_name,
+        queueShortName: payload.context.queue_short_name,
+        mapId: payload.context.map_id,
+        mapName: payload.context.map_name,
+        gameMode: payload.context.game_mode,
+        gameModeName: payload.context.game_mode_name,
+        gameModeShortName: payload.context.game_mode_short_name,
+        matchHistoryFilter: payload.context.match_history_filter,
+        matchHistoryTag: payload.context.match_history_tag,
+      };
+    });
   },
   applySnapshotUpdated: (payload) => {
     set((state) => ({
