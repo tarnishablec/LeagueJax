@@ -18,6 +18,7 @@ import { useOngoingGameStore } from "./store";
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
   "ongoing.behavior.matchHistoryCount";
 const ONGOING_AUTO_SWITCH_TO_GAME_SETTING = "ongoing.behavior.autoSwitchToGame";
+const ONGOING_SHOW_BOTS_SETTING = "ongoing.behavior.showBots";
 const MATCH_HISTORY_COUNT_MIN = 1;
 const MATCH_HISTORY_COUNT_MAX = 200;
 const MATCH_HISTORY_COUNT_DEFAULT = 50;
@@ -91,6 +92,16 @@ export class OngoingGameShard implements WebShard {
       zod: z.boolean(),
       defaultValue: false,
       order: 20,
+      onSet: () => {},
+    });
+    settings.registerSetting({
+      id: ONGOING_SHOW_BOTS_SETTING,
+      labelKey: "settings.ongoing.showBots.label",
+      scope: "frontend",
+      control: { kind: "toggle" },
+      zod: z.boolean(),
+      defaultValue: true,
+      order: 30,
       onSet: () => {},
     });
 

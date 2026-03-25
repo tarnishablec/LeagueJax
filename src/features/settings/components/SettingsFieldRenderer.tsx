@@ -5,7 +5,7 @@ import {
   SettingsFieldRow,
   SettingsInput,
   SettingsSelect,
-  SettingsSwitch,
+  SettingsToggle,
 } from "@/components/settings-ui";
 import { useSettings } from "@/features/settings/context";
 import type {
@@ -81,7 +81,7 @@ const ToggleField = ({
   const value = useSettingValue(field.id);
 
   return (
-    <SettingsSwitch
+    <SettingsToggle
       ariaLabel={ariaLabel}
       checked={Boolean(value)}
       onCheckedChange={(checked) => {

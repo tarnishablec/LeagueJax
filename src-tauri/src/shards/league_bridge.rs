@@ -167,7 +167,9 @@ impl LeagueBridgeShard {
                                     "match_history_filter": payload.context.match_history_filter,
                                     "match_history_tag": payload.context.match_history_tag,
                                     "blue_slots": payload.blue_players.len(),
+                                    "blue_bot_slots": payload.blue_players.iter().filter(|slot| slot.puuid.to_ascii_uppercase().starts_with("BOT_")).count(),
                                     "red_slots": payload.red_players.len(),
+                                    "red_bot_slots": payload.red_players.iter().filter(|slot| slot.puuid.to_ascii_uppercase().starts_with("BOT_")).count(),
                                 });
                                 logger.write("ongoing_snapshot_diag", &summary);
                             }
