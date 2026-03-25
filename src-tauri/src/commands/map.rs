@@ -11,7 +11,11 @@ const LCU_CACHE: &str = "lcu-cache.json";
 
 #[tauri::command]
 pub async fn lcu_get_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppError> {
-    let lcu = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let api = lcu.api();
     let version = lcu
         .cache()
@@ -26,7 +30,11 @@ pub async fn lcu_get_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppEr
 
 #[tauri::command]
 pub async fn lcu_get_queues(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuQueue>, AppError> {
-    let lcu = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let api = lcu.api();
     let version = lcu
         .cache()

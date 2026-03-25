@@ -196,9 +196,14 @@ async fn search_aliases_with_target_server(
 
 #[tauri::command]
 pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerInfo, AppError> {
-    jax.get_shard::<LcuShard>()
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    manager
         .focused()
-        .await?
+        .await
+        .ok_or(AppError::LcuNotConnected)?
         .api()
         .get_current_summoner()
         .await
@@ -206,7 +211,11 @@ pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerIn
 
 #[tauri::command]
 pub async fn get_current_sgp_server_id(jax: State<'_, Arc<Jax>>) -> Result<String, AppError> {
-    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
     Ok(sgp_session.api().sgp_server_id().to_string())
 }
@@ -222,7 +231,11 @@ pub async fn search_summoner(
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerSearchResult, AppError> {
-    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     session.api().search_summoner(&game_name, &tag_line).await
 }
 
@@ -233,7 +246,11 @@ pub async fn search_summoners(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<SummonerSearchResult>, AppError> {
     let parsed_query = parse_summoner_search_query(&query)?;
-    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let lcu_api = session.api();
     let sgp_session = jax
         .get_shard::<SgpShard>()
@@ -291,9 +308,14 @@ pub async fn get_summoner_by_puuid(
     puuid: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerInfo, AppError> {
-    jax.get_shard::<LcuShard>()
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    manager
         .focused()
-        .await?
+        .await
+        .ok_or(AppError::LcuNotConnected)?
         .api()
         .get_summoner_by_puuid(&puuid)
         .await
@@ -304,7 +326,11 @@ pub async fn get_ranked_summary(
     puuid: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<RankStats, AppError> {
-    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let response = session.api().get_ranked_stats(&puuid).await?;
     Ok(response)
 }
@@ -318,7 +344,11 @@ pub async fn get_match_summaries(
     sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<RawMatchSummariesResponse, AppError> {
-    let session = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
 
     let count = end_index.saturating_sub(begin_index);
@@ -352,7 +382,11 @@ pub async fn get_cherry_augments(
     _force_refresh: Option<bool>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<CherryAugment>, AppError> {
-    let lcu = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let api = lcu.api();
     let version = lcu
         .cache()
@@ -376,9 +410,14 @@ pub async fn get_match_summary(
     sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<RawMatchSummaryGame, AppError> {
-    let lcu_shard = jax.get_shard::<LcuShard>();
-    let focused_pid = lcu_shard.focused_pid().await?;
-    let session = lcu_shard.client(focused_pid)?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let focused_pid = manager.focused_pid().await.ok_or(AppError::LcuNotConnected)?;
+    let session = manager
+        .session_for_pid(focused_pid)
+        .ok_or(AppError::LcuNotConnected)?;
     let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
 
     sgp_session

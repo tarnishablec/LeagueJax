@@ -92,9 +92,7 @@ pub fn run() {
                 .register(Arc::new(shards::log::LogShard::new()))
                 .register(Arc::new(shards::file_logger::FileLoggerShard::new()))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
-                .register(Arc::new(
-                    shards::lcu_event_bridge::LcuEventBridgeShard::new(),
-                ))
+                .register(Arc::new(shards::league_bridge::LeagueBridgeShard::new()))
                 .register(Arc::new(shards::static_cache::StaticCacheShard::new()))
                 .register(Arc::new(shards::sgp::SgpShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
