@@ -3,12 +3,28 @@ import type { RawMatchSummariesResponse } from "./matches";
 import type { RankStats } from "./rank";
 import type { SummonerInfo } from "./summoner";
 
+export type OngoingGameContextInfo = {
+  queue_id: number | null;
+  queue_name: string | null;
+  queue_short_name: string | null;
+  map_id: number | null;
+  map_name: string | null;
+  game_mode: string | null;
+  game_mode_name: string | null;
+  game_mode_short_name: string | null;
+  match_history_filter: OngoingGameMatchHistoryFilter;
+  match_history_tag: string | null;
+};
+
+export type OngoingGameMatchHistoryFilter = "CurrentMode" | "All";
+
 export type OngoingGamePhase = "Idle" | "ChampSelect" | "InGame";
 
 export type OngoingGamePhaseChanged = {
   phase: OngoingGamePhase;
   loading: boolean;
   our_side: Side | null;
+  context: OngoingGameContextInfo;
   blue_players: Array<PlayerSlot>;
   red_players: Array<PlayerSlot>;
 };
@@ -27,6 +43,7 @@ export type OngoingGameSnapshotUpdated = {
   phase: OngoingGamePhase;
   loading: boolean;
   our_side: Side | null;
+  context: OngoingGameContextInfo;
   blue_players: Array<OngoingGamePlayerSnapshot>;
   red_players: Array<OngoingGamePlayerSnapshot>;
 };

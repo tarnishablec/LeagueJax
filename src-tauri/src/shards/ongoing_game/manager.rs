@@ -14,8 +14,9 @@ use crate::shards::lcu::ws_event_types::{
     LcuGameflowTeamPlayer,
 };
 use crate::shards::ongoing_game::types::{
-    OngoingGamePhase, OngoingGamePhaseChanged, OngoingGamePlayerSnapshot,
-    OngoingGameSnapshotUpdated, PlayerSlot, Side,
+    OngoingGameContextInfo, OngoingGameMatchHistoryFilter, OngoingGamePhase,
+    OngoingGamePhaseChanged, OngoingGamePlayerSnapshot, OngoingGameSnapshotUpdated, PlayerSlot,
+    Side,
 };
 use crate::shards::sgp::session::SgpSession;
 
@@ -49,6 +50,8 @@ struct ManagerState {
     sgp_session: Option<Arc<SgpSession>>,
     focused_puuid: Option<String>,
     active_phase_task: Option<CancellationToken>,
+    context: OngoingGameContextInfo,
+    match_history_filter: OngoingGameMatchHistoryFilter,
 }
 
 impl OngoingGameManager {
@@ -62,6 +65,8 @@ impl OngoingGameManager {
                 sgp_session: None,
                 focused_puuid: None,
                 active_phase_task: None,
+                context: OngoingGameContextInfo::default(),
+                match_history_filter: OngoingGameMatchHistoryFilter::CurrentMode,
             }),
             cancel_token,
         }
@@ -71,12 +76,51 @@ impl OngoingGameManager {
         self.event_tx.subscribe()
     }
 
+    pub async fn set_match_history_filter(&self, filter: OngoingGameMatchHistoryFilter) {
+        {
+            let mut state = self.state.lock().await;
+            state.match_history_filter = filter;
+            state.context.match_history_filter = filter;
+            state.context.match_history_tag =
+                resolve_match_history_tag(filter, state.context.queue_id.unwrap_or(0));
+        }
+
+        self.refresh_current().await;
+    }
+
+    pub async fn refresh_current(&self) {
+        let next = {
+            let state = self.state.lock().await;
+            let Some(driver) = &state.driver else {
+                return;
+            };
+            let Some(lcu_session) = state.lcu_session.clone() else {
+                return;
+            };
+
+            Some((
+                driver.current_phase(),
+                lcu_session,
+                state.sgp_session.clone(),
+                state.focused_puuid.clone(),
+                state.match_history_filter,
+            ))
+        };
+
+        let Some((phase, lcu_session, sgp_session, focused_puuid, filter)) = next else {
+            return;
+        };
+
+        self.on_phase_changed(phase, lcu_session, sgp_session, focused_puuid, filter)
+            .await;
+    }
+
     pub async fn handle_focus_changed(
         &self,
         lcu_session: Option<Arc<LcuSession>>,
         sgp_session: Option<Arc<SgpSession>>,
     ) {
-        {
+        let context = {
             let mut state = self.state.lock().await;
             if let Some(token) = state.active_phase_task.take() {
                 token.cancel();
@@ -85,10 +129,33 @@ impl OngoingGameManager {
             state.lcu_session = None;
             state.sgp_session = None;
             state.focused_puuid = None;
-        }
+            state.context = OngoingGameContextInfo {
+                match_history_filter: state.match_history_filter,
+                ..OngoingGameContextInfo::default()
+            };
+            state.context.clone()
+        };
 
         let Some(lcu) = lcu_session else {
             tracing::debug!("OngoingGame: no focused client, manager cleared");
+            emit_phase_changed(
+                &self.event_tx,
+                OngoingGamePhase::Idle,
+                false,
+                None,
+                context.clone(),
+                Vec::new(),
+                Vec::new(),
+            );
+            emit_snapshot_updated(
+                &self.event_tx,
+                OngoingGamePhase::Idle,
+                false,
+                None,
+                context,
+                Vec::new(),
+                Vec::new(),
+            );
             return;
         };
 
@@ -102,6 +169,11 @@ impl OngoingGameManager {
             }
         };
 
+        let match_history_filter = {
+            let state = self.state.lock().await;
+            state.match_history_filter
+        };
+
         match lcu.api().get_gameflow_phase().await {
             Ok(phase_str) => {
                 let phase = map_gameflow_phase(phase_str.as_str());
@@ -111,6 +183,7 @@ impl OngoingGameManager {
                         lcu.clone(),
                         sgp_session.clone(),
                         focused_puuid.clone(),
+                        match_history_filter,
                     )
                     .await;
                 }
@@ -137,11 +210,22 @@ impl OngoingGameManager {
             Arc<LcuSession>,
             Option<Arc<SgpSession>>,
             Option<String>,
+            OngoingGameMatchHistoryFilter,
         )> = None;
         let mut ws_phase_update: Option<OngoingGamePhaseChanged> = None;
 
         {
             let mut state = self.state.lock().await;
+            if let Some(gameflow) = parse_gameflow_session_event(&event) {
+                state.context =
+                    build_context_from_gameflow_session(&gameflow, state.match_history_filter);
+            } else if let Some(LcuChampSelectSessionEvent::Snapshot(session)) =
+                parse_champ_select_session_event(&event)
+            {
+                state.context =
+                    build_context_from_champ_select_session(&session, state.match_history_filter);
+            }
+
             let Some(driver) = &mut state.driver else {
                 return;
             };
@@ -153,6 +237,7 @@ impl OngoingGameManager {
                         lcu,
                         state.sgp_session.clone(),
                         state.focused_puuid.clone(),
+                        state.match_history_filter,
                     ));
                 }
             } else {
@@ -160,12 +245,13 @@ impl OngoingGameManager {
                     driver.current_phase(),
                     &event,
                     state.focused_puuid.as_deref(),
+                    state.context.clone(),
                 );
             }
         }
 
-        if let Some((new_phase, lcu, sgp, focused_puuid)) = transition {
-            self.on_phase_changed(new_phase, lcu, sgp, focused_puuid)
+        if let Some((new_phase, lcu, sgp, focused_puuid, filter)) = transition {
+            self.on_phase_changed(new_phase, lcu, sgp, focused_puuid, filter)
                 .await;
             return;
         }
@@ -187,30 +273,41 @@ impl OngoingGameManager {
         lcu_session: Arc<LcuSession>,
         sgp_session: Option<Arc<SgpSession>>,
         focused_puuid: Option<String>,
+        match_history_filter: OngoingGameMatchHistoryFilter,
     ) {
-        emit_phase_changed(
-            &self.event_tx,
-            phase,
-            phase != OngoingGamePhase::Idle,
-            None,
-            Vec::new(),
-            Vec::new(),
-        );
-
-        let task_token = {
+        let (task_token, context) = {
             let mut state = self.state.lock().await;
+            state.match_history_filter = match_history_filter;
+            state.context.match_history_filter = match_history_filter;
+            state.context.match_history_tag =
+                resolve_match_history_tag(match_history_filter, state.context.queue_id.unwrap_or(0));
+
             if let Some(token) = state.active_phase_task.take() {
                 token.cancel();
             }
 
             if phase == OngoingGamePhase::Idle {
-                None
+                state.context = OngoingGameContextInfo {
+                    match_history_filter: state.match_history_filter,
+                    ..OngoingGameContextInfo::default()
+                };
+                (None, state.context.clone())
             } else {
                 let token = self.cancel_token.child_token();
                 state.active_phase_task = Some(token.clone());
-                Some(token)
+                (Some(token), state.context.clone())
             }
         };
+
+        emit_phase_changed(
+            &self.event_tx,
+            phase,
+            phase != OngoingGamePhase::Idle,
+            None,
+            context,
+            Vec::new(),
+            Vec::new(),
+        );
 
         let Some(task_token) = task_token else {
             return;
@@ -221,7 +318,7 @@ impl OngoingGameManager {
         tokio::spawn(async move {
             tokio::select! {
                 _ = task_token.cancelled() => {}
-                _ = fetch_phase_data(phase, lcu_session, sgp_session, focused_puuid, event_tx) => {}
+                _ = fetch_phase_data(phase, lcu_session, sgp_session, focused_puuid, match_history_filter, event_tx) => {}
             }
         });
     }
@@ -236,14 +333,29 @@ async fn fetch_phase_data(
     lcu_session: Arc<LcuSession>,
     sgp_session: Option<Arc<SgpSession>>,
     focused_puuid: Option<String>,
+    match_history_filter: OngoingGameMatchHistoryFilter,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
     match phase {
         OngoingGamePhase::ChampSelect => {
-            fetch_champ_select_phase_data(lcu_session, sgp_session, focused_puuid, event_tx).await;
+            fetch_champ_select_phase_data(
+                lcu_session,
+                sgp_session,
+                focused_puuid,
+                match_history_filter,
+                event_tx,
+            )
+            .await;
         }
         OngoingGamePhase::InGame => {
-            fetch_in_game_phase_data(lcu_session, sgp_session, focused_puuid, event_tx).await;
+            fetch_in_game_phase_data(
+                lcu_session,
+                sgp_session,
+                focused_puuid,
+                match_history_filter,
+                event_tx,
+            )
+            .await;
         }
         OngoingGamePhase::Idle => {}
     }
@@ -253,22 +365,31 @@ async fn fetch_champ_select_phase_data(
     lcu_session: Arc<LcuSession>,
     sgp_session: Option<Arc<SgpSession>>,
     focused_puuid: Option<String>,
+    match_history_filter: OngoingGameMatchHistoryFilter,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
     match lcu_session.api().get_champ_select_session().await {
         Ok(session_value) => {
             let Some(session) = parse_champ_select_session_value(&session_value) else {
                 tracing::warn!("Failed to parse champ select session payload");
+                let context = OngoingGameContextInfo {
+                    match_history_filter,
+                    ..OngoingGameContextInfo::default()
+                };
                 emit_phase_changed(
                     &event_tx,
                     OngoingGamePhase::ChampSelect,
                     false,
                     None,
+                    context,
                     Vec::new(),
                     Vec::new(),
                 );
                 return;
             };
+            let context =
+                fetch_champ_select_context(&lcu_session, &session, match_history_filter).await;
+            let queue_tag = context.match_history_tag.clone();
 
             let (our_side_from_payload, blue_slots, red_slots) =
                 build_champ_select_phase_data(&session);
@@ -284,12 +405,14 @@ async fn fetch_champ_select_phase_data(
                 OngoingGamePhase::ChampSelect,
                 true,
                 our_side,
+                context.clone(),
                 blue_slots.clone(),
                 red_slots.clone(),
             );
 
             let (own_slots, _) = split_team_slots(our_side, blue_slots, red_slots);
-            let own_players = fetch_team_players(lcu_session, sgp_session, own_slots).await;
+            let own_players =
+                fetch_team_players(lcu_session, sgp_session, own_slots, queue_tag.as_deref()).await;
             let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
 
             emit_snapshot_updated(
@@ -297,6 +420,7 @@ async fn fetch_champ_select_phase_data(
                 OngoingGamePhase::ChampSelect,
                 false,
                 our_side,
+                context.clone(),
                 blue_players,
                 red_players,
             );
@@ -306,6 +430,7 @@ async fn fetch_champ_select_phase_data(
                 OngoingGamePhase::ChampSelect,
                 false,
                 our_side,
+                context,
                 phase_blue_slots,
                 phase_red_slots,
             );
@@ -320,22 +445,30 @@ async fn fetch_in_game_phase_data(
     lcu_session: Arc<LcuSession>,
     sgp_session: Option<Arc<SgpSession>>,
     focused_puuid: Option<String>,
+    match_history_filter: OngoingGameMatchHistoryFilter,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
     match lcu_session.api().get_gameflow_session().await {
         Ok(session_value) => {
             let Some(session) = parse_gameflow_session_value(&session_value) else {
                 tracing::warn!("Failed to parse gameflow session payload");
+                let context = OngoingGameContextInfo {
+                    match_history_filter,
+                    ..OngoingGameContextInfo::default()
+                };
                 emit_phase_changed(
                     &event_tx,
                     OngoingGamePhase::InGame,
                     false,
                     None,
+                    context,
                     Vec::new(),
                     Vec::new(),
                 );
                 return;
             };
+            let context = build_context_from_gameflow_session(&session, match_history_filter);
+            let queue_tag = context.match_history_tag.clone();
 
             let (blue_slots, red_slots) = build_in_game_phase_data(&session);
             let our_side = focused_puuid
@@ -349,6 +482,7 @@ async fn fetch_in_game_phase_data(
                 OngoingGamePhase::InGame,
                 true,
                 our_side,
+                context.clone(),
                 blue_slots.clone(),
                 red_slots.clone(),
             );
@@ -356,18 +490,27 @@ async fn fetch_in_game_phase_data(
             let (own_slots, enemy_slots) = split_team_slots(our_side, blue_slots, red_slots);
 
             let own_players =
-                fetch_team_players(lcu_session.clone(), sgp_session.clone(), own_slots).await;
+                fetch_team_players(
+                    lcu_session.clone(),
+                    sgp_session.clone(),
+                    own_slots,
+                    queue_tag.as_deref(),
+                )
+                .await;
             let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
             emit_snapshot_updated(
                 &event_tx,
                 OngoingGamePhase::InGame,
                 true,
                 our_side,
+                context.clone(),
                 blue_players.clone(),
                 red_players.clone(),
             );
 
-            let enemy_players = fetch_team_players(lcu_session, sgp_session, enemy_slots).await;
+            let enemy_players =
+                fetch_team_players(lcu_session, sgp_session, enemy_slots, queue_tag.as_deref())
+                    .await;
             let (blue_players, red_players) = merge_players_by_side(
                 collect_players_from_sides(blue_players, red_players),
                 enemy_players,
@@ -378,6 +521,7 @@ async fn fetch_in_game_phase_data(
                 OngoingGamePhase::InGame,
                 false,
                 our_side,
+                context.clone(),
                 blue_players,
                 red_players,
             );
@@ -387,6 +531,7 @@ async fn fetch_in_game_phase_data(
                 OngoingGamePhase::InGame,
                 false,
                 our_side,
+                context,
                 phase_blue_slots,
                 phase_red_slots,
             );
@@ -401,6 +546,7 @@ async fn fetch_team_players(
     lcu_session: Arc<LcuSession>,
     sgp_session: Option<Arc<SgpSession>>,
     slots: Vec<PlayerSlot>,
+    queue_tag: Option<&str>,
 ) -> Vec<OngoingGamePlayerSnapshot> {
     let candidates: Vec<PlayerFetchCandidate> = slots
         .into_iter()
@@ -419,8 +565,9 @@ async fn fetch_team_players(
     for (idx, candidate) in candidates.into_iter().enumerate() {
         let lcu = lcu_session.clone();
         let sgp = sgp_session.clone();
+        let queue_tag = queue_tag.map(ToOwned::to_owned);
         joins.spawn(async move {
-            let player = fetch_player_snapshot(lcu, sgp, candidate).await;
+            let player = fetch_player_snapshot(lcu, sgp, candidate, queue_tag.as_deref()).await;
             (idx, player)
         });
     }
@@ -444,6 +591,7 @@ async fn fetch_player_snapshot(
     lcu_session: Arc<LcuSession>,
     sgp_session: Option<Arc<SgpSession>>,
     candidate: PlayerFetchCandidate,
+    queue_tag: Option<&str>,
 ) -> Option<OngoingGamePlayerSnapshot> {
     let summoner = match lcu_session
         .api()
@@ -477,7 +625,13 @@ async fn fetch_player_snapshot(
     let match_history_fut = async {
         if let Some(sgp) = &sgp_session {
             sgp.api()
-                .get_match_summaries(&candidate.puuid, 0, DEFAULT_MATCH_HISTORY_COUNT, None, None)
+                .get_match_summaries(
+                    &candidate.puuid,
+                    0,
+                    DEFAULT_MATCH_HISTORY_COUNT,
+                    queue_tag,
+                    None,
+                )
                 .await
                 .ok()
         } else {
@@ -497,6 +651,104 @@ async fn fetch_player_snapshot(
         match_history,
         champion_mastery,
     })
+}
+
+fn queue_tag_from_queue_id(queue_id: i64) -> Option<String> {
+    if queue_id > 0 {
+        Some(format!("q_{queue_id}"))
+    } else {
+        None
+    }
+}
+
+fn option_non_empty(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+fn option_positive(value: i64) -> Option<i64> {
+    if value > 0 {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+fn resolve_match_history_tag(
+    filter: OngoingGameMatchHistoryFilter,
+    queue_id: i64,
+) -> Option<String> {
+    match filter {
+        OngoingGameMatchHistoryFilter::CurrentMode => queue_tag_from_queue_id(queue_id),
+        OngoingGameMatchHistoryFilter::All => None,
+    }
+}
+
+fn build_context_from_gameflow_session(
+    session: &LcuGameflowSessionPayload,
+    filter: OngoingGameMatchHistoryFilter,
+) -> OngoingGameContextInfo {
+    let queue_id = option_positive(session.game_data.queue.id);
+    let map_id = option_positive(session.map.id).or_else(|| option_positive(session.game_data.queue.map_id));
+    let match_history_tag = resolve_match_history_tag(filter, queue_id.unwrap_or(0));
+
+    OngoingGameContextInfo {
+        queue_id,
+        queue_name: option_non_empty(&session.game_data.queue.name),
+        queue_short_name: option_non_empty(&session.game_data.queue.short_name),
+        map_id,
+        map_name: option_non_empty(&session.map.name),
+        game_mode: option_non_empty(&session.map.game_mode)
+            .or_else(|| option_non_empty(&session.game_data.queue.game_mode)),
+        game_mode_name: option_non_empty(&session.map.game_mode_name),
+        game_mode_short_name: option_non_empty(&session.map.game_mode_short_name),
+        match_history_filter: filter,
+        match_history_tag,
+    }
+}
+
+fn build_context_from_champ_select_session(
+    session: &LcuChampSelectSessionPayload,
+    filter: OngoingGameMatchHistoryFilter,
+) -> OngoingGameContextInfo {
+    let queue_id = option_positive(session.queue_id);
+    OngoingGameContextInfo {
+        queue_id,
+        queue_name: None,
+        queue_short_name: None,
+        map_id: None,
+        map_name: None,
+        game_mode: None,
+        game_mode_name: None,
+        game_mode_short_name: None,
+        match_history_filter: filter,
+        match_history_tag: resolve_match_history_tag(filter, queue_id.unwrap_or(0)),
+    }
+}
+
+async fn fetch_champ_select_context(
+    lcu_session: &Arc<LcuSession>,
+    session: &LcuChampSelectSessionPayload,
+    filter: OngoingGameMatchHistoryFilter,
+) -> OngoingGameContextInfo {
+    let fallback = build_context_from_champ_select_session(session, filter);
+    let Ok(gameflow_value) = lcu_session.api().get_gameflow_session().await else {
+        return fallback;
+    };
+    let Some(gameflow_session) = parse_gameflow_session_value(&gameflow_value) else {
+        return fallback;
+    };
+    let context = build_context_from_gameflow_session(&gameflow_session, filter);
+
+    if context.queue_id.is_some() || context.map_id.is_some() {
+        context
+    } else {
+        fallback
+    }
 }
 
 #[derive(Debug)]
@@ -569,6 +821,7 @@ fn build_phase_update_from_ws(
     current_phase: OngoingGamePhase,
     event: &LcuWsEvent,
     focused_puuid: Option<&str>,
+    context: OngoingGameContextInfo,
 ) -> Option<OngoingGamePhaseChanged> {
     match current_phase {
         OngoingGamePhase::ChampSelect => {
@@ -584,6 +837,7 @@ fn build_phase_update_from_ws(
                         phase: OngoingGamePhase::ChampSelect,
                         loading: false,
                         our_side,
+                        context,
                         blue_players,
                         red_players,
                     })
@@ -600,6 +854,7 @@ fn build_phase_update_from_ws(
                 phase: OngoingGamePhase::InGame,
                 loading: false,
                 our_side,
+                context,
                 blue_players,
                 red_players,
             })
@@ -613,6 +868,7 @@ fn emit_phase_changed(
     phase: OngoingGamePhase,
     loading: bool,
     our_side: Option<Side>,
+    context: OngoingGameContextInfo,
     blue_players: Vec<PlayerSlot>,
     red_players: Vec<PlayerSlot>,
 ) {
@@ -621,6 +877,7 @@ fn emit_phase_changed(
             phase,
             loading,
             our_side,
+            context,
             blue_players,
             red_players,
         },
@@ -632,6 +889,7 @@ fn emit_snapshot_updated(
     phase: OngoingGamePhase,
     loading: bool,
     our_side: Option<Side>,
+    context: OngoingGameContextInfo,
     blue_players: Vec<OngoingGamePlayerSnapshot>,
     red_players: Vec<OngoingGamePlayerSnapshot>,
 ) {
@@ -640,6 +898,7 @@ fn emit_snapshot_updated(
             phase,
             loading,
             our_side,
+            context,
             blue_players,
             red_players,
         },

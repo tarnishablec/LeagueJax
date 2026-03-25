@@ -10,6 +10,7 @@ use tauri::{Emitter, Manager, RunEvent};
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
+use crate::commands::ongoing_game::*;
 use crate::commands::platform::*;
 use crate::commands::settings::*;
 use crate::commands::shards::*;
@@ -54,6 +55,8 @@ pub fn run() {
             lcu_get_maps,
             lcu_get_queues,
             lcu_get_game_version,
+            ongoing_game_refresh,
+            ongoing_game_set_match_history_filter,
             get_settings_bootstrap,
             apply_settings_patch,
             get_shards_status,

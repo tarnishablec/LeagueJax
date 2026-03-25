@@ -158,5 +158,5 @@ export const navLabel = recipe({
 
 export const main = style({
   overflow: "auto",
-  padding: 16,
+  // padding: 16,
 });
