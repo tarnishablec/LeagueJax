@@ -56,7 +56,7 @@ export const indicator = style({
 });
 
 export const positioner = style({
-  zIndex: 50,
+  zIndex: 120,
 });
 
 export const content = style({

@@ -1,7 +1,5 @@
-import { useTranslation } from "react-i18next";
-import { pageTitle } from "@/styles/shared.css";
+import { WipPlaceholder } from "@/components/WipPlaceholder";
 
 export function ToolsRoute() {
-  const { t } = useTranslation();
-  return <div className={pageTitle}>{t("nav.tools")}</div>;
+  return <WipPlaceholder />;
 }

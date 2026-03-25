@@ -14,6 +14,32 @@ export const page = style({
   paddingTop: 4,
 });
 
+export const idlePage = style({
+  display: "grid",
+  placeItems: "center",
+  alignContent: "center",
+  justifyItems: "center",
+  gap: 12,
+  minHeight: 0,
+  height: "100%",
+  padding: "12px",
+  paddingTop: 4,
+});
+
+export const idleIcon = style({
+  width: 88,
+  height: 88,
+  color: vars.color.mutedForeground,
+  opacity: 0.82,
+});
+
+export const idleText = style({
+  fontSize: "1rem",
+  color: vars.color.mutedForeground,
+  textAlign: "center",
+  fontWeight: 600,
+});
+
 export const teamSection = style({
   display: "block",
   height: "100%",
@@ -61,7 +87,7 @@ export const emptyState = style({
 
 export const playerCard = style({
   display: "grid",
-  gridTemplateRows: "auto auto auto 1fr",
+  gridTemplateRows: "auto auto auto auto 1fr",
   gap: 6,
   border: `1px solid ${vars.color.border}`,
   borderRadius: 10,

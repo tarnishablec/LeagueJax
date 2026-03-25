@@ -1,4 +1,4 @@
-import type { Resource } from "i18next";
+﻿import type { Resource } from "i18next";
 
 export const ongoingGameI18n: Resource = {
   en: {
@@ -53,6 +53,7 @@ export const ongoingGameI18n: Resource = {
       recentGames: "Recent games",
       noHistory: "No match history",
       botNoHistory: "Bot (history disabled)",
+      idleEmpty: "No ongoing game",
       historyResultWin: "Win",
       historyResultLose: "Lose",
       historyResultRemake: "Remake",
@@ -114,12 +115,74 @@ export const ongoingGameI18n: Resource = {
       recentGames: "\u6700\u8fd1\u5bf9\u5c40",
       noHistory: "\u6682\u65e0\u6218\u7ee9",
       botNoHistory: "\u673a\u5668\u4eba\uff08\u4e0d\u67e5\u6218\u7ee9\uff09",
+      idleEmpty: "\u6ca1\u6709\u8fdb\u884c\u4e2d\u7684\u5bf9\u5c40",
       historyResultWin: "\u80dc\u5229",
       historyResultLose: "\u5931\u8d25",
       historyResultRemake: "\u91cd\u5f00",
       historyResultTerminated: "\u7ec8\u6b62",
       cs: "\u8865\u5200",
       level: "\u7b49\u7ea7",
+    },
+  },
+  "ja-JP": {
+    nav: {
+      game: "対局",
+    },
+    settings: {
+      pages: {
+        ongoing: {
+          title: "対局",
+        },
+      },
+      sections: {
+        ongoing: {
+          behavior: {
+            title: "動作",
+          },
+        },
+      },
+      ongoing: {
+        matchHistoryCount: {
+          label: "戦績分析の試合数",
+        },
+        autoSwitchToGame: {
+          label: "対局開始時に自動で対局ページへ切り替える",
+        },
+        showBots: {
+          label: "BOTカードを表示する",
+        },
+      },
+    },
+    ongoingGame: {
+      status: "状態",
+      loading: "読み込み中",
+      phase: "フェーズ",
+      ourSide: "自チーム",
+      titlebar: {
+        idle: "進行中の対局はありません",
+        sideBlue: "青チーム",
+        sideRed: "赤チーム",
+        sideUnknown: "不明なチーム",
+        modeUnknown: "不明なモード",
+        mapUnknown: "不明なマップ",
+        filterCurrentMode: "現在のモード",
+        filterAllModes: "すべてのモード",
+        refreshAria: "進行中の対局を更新",
+      },
+      blueTeam: "青チーム",
+      redTeam: "赤チーム",
+      noData: "プレイヤーデータがまだありません",
+      noRanked: "ランクデータなし",
+      recentGames: "最近の試合",
+      noHistory: "戦績なし",
+      botNoHistory: "BOT（戦績取得なし）",
+      idleEmpty: "進行中の対局はありません",
+      historyResultWin: "勝利",
+      historyResultLose: "敗北",
+      historyResultRemake: "リメイク",
+      historyResultTerminated: "中断",
+      cs: "CS",
+      level: "Lv",
     },
   },
 };

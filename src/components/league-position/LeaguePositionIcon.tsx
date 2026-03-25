@@ -10,9 +10,13 @@ export type LeaguePosition =
   | "middle"
   | "bottom"
   | "utility"
-  | "fill";
+  | "fill"
+  | "none";
 
 function iconUrl(position: LeaguePosition): string {
+  if (position === "none") {
+    return `${CDRAGON_POSITION_ICON_BASE}/icon-position-none-disabled.png`;
+  }
   return `${CDRAGON_POSITION_ICON_BASE}/icon-position-${position}.png`;
 }
 
@@ -39,8 +43,11 @@ export function normalizeLeaguePosition(
   if (value === "UTILITY" || value === "SUPPORT" || value === "SUP") {
     return "utility";
   }
-  if (value === "FILL" || value === "NONE") {
+  if (value === "FILL") {
     return "fill";
+  }
+  if (value === "NONE") {
+    return "none";
   }
 
   return null;

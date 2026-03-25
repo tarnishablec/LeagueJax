@@ -1,3 +1,4 @@
+import { Portal } from "@ark-ui/react/portal";
 import { createListCollection, Select } from "@ark-ui/react/select";
 import { Check, ChevronsUpDown } from "lucide-react";
 import * as s from "./SettingsSelect.css";
@@ -72,22 +73,24 @@ export function SettingsSelect({
           </Select.Indicator>
         </Select.Trigger>
       </Select.Control>
-      <Select.Positioner className={s.positioner}>
-        <Select.Content className={s.content}>
-          <Select.List className={s.list}>
-            {collection.items.map((item) => (
-              <Select.Item key={item.value} item={item} className={s.item}>
-                <Select.ItemText className={s.itemText}>
-                  {item.label}
-                </Select.ItemText>
-                <Select.ItemIndicator className={s.itemIndicator}>
-                  <Check size={13} />
-                </Select.ItemIndicator>
-              </Select.Item>
-            ))}
-          </Select.List>
-        </Select.Content>
-      </Select.Positioner>
+      <Portal>
+        <Select.Positioner className={s.positioner}>
+          <Select.Content className={s.content}>
+            <Select.List className={s.list}>
+              {collection.items.map((item) => (
+                <Select.Item key={item.value} item={item} className={s.item}>
+                  <Select.ItemText className={s.itemText}>
+                    {item.label}
+                  </Select.ItemText>
+                  <Select.ItemIndicator className={s.itemIndicator}>
+                    <Check size={13} />
+                  </Select.ItemIndicator>
+                </Select.Item>
+              ))}
+            </Select.List>
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
     </Select.Root>
   );
 }

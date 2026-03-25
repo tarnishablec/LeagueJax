@@ -1,3 +1,4 @@
+import { NumberInput } from "@ark-ui/react/number-input";
 import * as s from "./SettingsInput.css";
 
 interface SettingsInputProps {
@@ -21,15 +22,46 @@ export function SettingsInput({
   placeholder,
   onValueChange,
 }: SettingsInputProps) {
+  if (type === "number") {
+    return (
+      <NumberInput.Root
+        className={s.numberRoot}
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        inputMode="numeric"
+        onValueChange={(details) => onValueChange(details.value)}
+      >
+        <NumberInput.Input
+          aria-label={ariaLabel}
+          className={s.numberInput}
+          placeholder={placeholder}
+        />
+        <NumberInput.Control className={s.numberControl}>
+          <NumberInput.DecrementTrigger
+            className={`${s.numberTrigger} ${s.numberTriggerDecrement}`}
+            aria-label={`${ariaLabel} decrease`}
+          >
+            -
+          </NumberInput.DecrementTrigger>
+          <NumberInput.IncrementTrigger
+            className={`${s.numberTrigger} ${s.numberTriggerIncrement}`}
+            aria-label={`${ariaLabel} increase`}
+          >
+            +
+          </NumberInput.IncrementTrigger>
+        </NumberInput.Control>
+      </NumberInput.Root>
+    );
+  }
+
   return (
     <input
       aria-label={ariaLabel}
       className={s.input}
-      type={type}
+      type="text"
       value={value}
-      min={min}
-      max={max}
-      step={step}
       placeholder={placeholder}
       onChange={(event) => onValueChange(event.target.value)}
     />
