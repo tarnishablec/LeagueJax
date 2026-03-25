@@ -5,6 +5,7 @@ import type {
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
 import { LazyImage } from "@/components/LazyImage";
+import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
 import { useParticipantBrief } from "@/features/history/hooks/use-participant-brief.ts";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { useLcuMapQuery } from "@/hooks/use-lcu-maps.ts";
@@ -82,6 +83,28 @@ function computeDamageShare(
   return me.totalDamageDealtToChampions / teamTotal;
 }
 
+function normalizeHistoryPosition(
+  value: string | null | undefined,
+): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (!normalized || normalized === "NONE" || normalized === "INVALID") {
+    return null;
+  }
+  return normalized;
+}
+
+function participantRowKey(
+  participant: RawMatchSummaryParticipant,
+  teamId: number,
+  index: number,
+): string {
+  if (participant.participantId !== null) {
+    return `team-${teamId}-pid-${participant.participantId}`;
+  }
+
+  return `team-${teamId}-puuid-${participant.puuid ?? "unknown"}-champ-${participant.championId}-idx-${index}`;
+}
+
 export function MatchCard({
   match,
   sgpServerId,
@@ -129,6 +152,10 @@ export function MatchCard({
   const { primaryRuneId, subStyleId } = getPerkIds(me);
 
   const damageShare = computeDamageShare(me, participants);
+  const position =
+    normalizeHistoryPosition(me.teamPosition) ??
+    normalizeHistoryPosition(me.individualPosition) ??
+    normalizeHistoryPosition(me.lane);
 
   return (
     <div className={s.wrapper}>
@@ -209,6 +236,15 @@ export function MatchCard({
             </div>
 
             <div className={s.loadoutRow}>
+              {position ? (
+                <div className={s.positionSlot}>
+                  <LeaguePositionIcon
+                    position={position}
+                    width={23}
+                    height={23}
+                  />
+                </div>
+              ) : null}
               <MatchCardSpells
                 spell1Id={me.spell1Id ?? 0}
                 spell2Id={me.spell2Id ?? 0}
@@ -248,8 +284,11 @@ export function MatchCard({
                     ? t("history.blueTeam")
                     : t("history.redTeam")}
                 </div>
-                {team.map((participant) => (
-                  <div key={participant.puuid} className={s.participantRow}>
+                {team.map((participant, index) => (
+                  <div
+                    key={participantRowKey(participant, teamId, index)}
+                    className={s.participantRow}
+                  >
                     <ChampionIcon
                       championId={participant.championId}
                       className={s.participantIcon}

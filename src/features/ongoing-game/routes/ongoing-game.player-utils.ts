@@ -10,6 +10,10 @@ export function isBotPuuid(rawPuuid: string): boolean {
 }
 
 export function isBotPlayer(player: OngoingGamePlayerSnapshot): boolean {
+  if (player.is_bot) {
+    return true;
+  }
+
   if (isBotPuuid(player.puuid)) {
     return true;
   }
@@ -22,6 +26,14 @@ export function isBotPlayer(player: OngoingGamePlayerSnapshot): boolean {
   }
 
   return summonerName === "BOT" || summonerName.startsWith("BOT_");
+}
+
+export function isBotSlot(slot: PlayerSlot): boolean {
+  if (slot.is_bot) {
+    return true;
+  }
+
+  return isBotPuuid(slot.puuid);
 }
 
 export function formatName(player: OngoingGamePlayerSnapshot): string {
@@ -85,7 +97,7 @@ export function toTeamCardEntries(
       kind: "slot",
       key: `slot:${slot.puuid}:${index}`,
       slot,
-      isBot: isBotPuuid(slot.puuid),
+      isBot: isBotSlot(slot),
     });
   }
 

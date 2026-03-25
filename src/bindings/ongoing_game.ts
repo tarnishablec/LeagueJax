@@ -33,6 +33,10 @@ export type OngoingGamePlayerSnapshot = {
   puuid: string;
   side: Side;
   champion_id: number | null;
+  is_bot: boolean;
+  position_assigned: string | null;
+  position_primary: string | null;
+  position_secondary: string | null;
   summoner: SummonerInfo;
   ranked: RankStats | null;
   match_history: RawMatchSummariesResponse | null;
@@ -51,6 +55,10 @@ export type OngoingGameSnapshotUpdated = {
 export type PlayerSlot = {
   puuid: string;
   champion_id: number | null;
+  is_bot: boolean;
+  position_assigned: string | null;
+  position_primary: string | null;
+  position_secondary: string | null;
   side: Side;
 };
 

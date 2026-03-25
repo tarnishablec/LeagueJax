@@ -8,10 +8,10 @@ use tokio_util::sync::CancellationToken;
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::watcher::LcuWsEvent;
 use crate::shards::lcu::ws_event_types::{
-    parse_champ_select_session_event, parse_champ_select_session_value,
-    parse_gameflow_session_event, parse_gameflow_session_value, parse_parties_notification_event,
-    LcuChampSelectPlayer, LcuChampSelectSessionEvent, LcuChampSelectSessionPayload,
-    LcuGameflowSessionPayload, LcuGameflowTeamPlayer, LcuPartiesBotParticipant,
+    parse_champ_select_session_value, parse_gameflow_session_value, parse_ongoing_ws_event,
+    LcuChampSelectPlayer, LcuChampSelectSessionPayload, LcuGameflowSessionPayload,
+    LcuGameflowTeamPlayer, LcuLobbyMember, LcuLobbyV2Payload, LcuOngoingWsEvent,
+    LcuPartiesBotParticipant, LcuWsEventType,
 };
 use crate::shards::ongoing_game::types::{
     OngoingGameContextInfo, OngoingGameMatchHistoryFilter, OngoingGamePhase,
@@ -42,7 +42,7 @@ pub enum OngoingGameManagerEvent {
 
 pub struct OngoingGameManager {
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
-    state: tokio::sync::Mutex<ManagerState>,
+    state: Arc<tokio::sync::Mutex<ManagerState>>,
     cancel_token: CancellationToken,
 }
 
@@ -57,6 +57,47 @@ struct ManagerState {
     match_history_count: u32,
     cached_bot_slots: Vec<PlayerSlot>,
     cached_bot_ids: Vec<String>,
+    cached_positions_by_puuid: HashMap<String, CachedPositionInfo>,
+    next_task_id: u64,
+    active_task_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct CachedPositionInfo {
+    assigned: Option<String>,
+    primary: Option<String>,
+    secondary: Option<String>,
+}
+
+#[derive(Clone)]
+struct PhaseChangeRequest {
+    phase: OngoingGamePhase,
+    lcu_session: Arc<LcuSession>,
+    sgp_session: Option<Arc<SgpSession>>,
+    focused_puuid: Option<String>,
+    match_history_filter: OngoingGameMatchHistoryFilter,
+    match_history_count: u32,
+}
+
+#[derive(Clone)]
+struct PhaseTaskRuntime {
+    task_id: u64,
+    phase: OngoingGamePhase,
+    lcu_session: Arc<LcuSession>,
+    sgp_session: Option<Arc<SgpSession>>,
+    focused_puuid: Option<String>,
+    match_history_filter: OngoingGameMatchHistoryFilter,
+    match_history_count: u32,
+    cached_bot_slots: Vec<PlayerSlot>,
+    cached_bot_ids: Vec<String>,
+    cached_positions_by_puuid: HashMap<String, CachedPositionInfo>,
+}
+
+#[derive(Clone)]
+struct PlayerFetchRuntime {
+    lcu_session: Arc<LcuSession>,
+    sgp_session: Option<Arc<SgpSession>>,
+    match_history_count: u32,
 }
 
 impl OngoingGameManager {
@@ -64,7 +105,7 @@ impl OngoingGameManager {
         let (event_tx, _) = broadcast::channel(64);
         Self {
             event_tx,
-            state: tokio::sync::Mutex::new(ManagerState {
+            state: Arc::new(tokio::sync::Mutex::new(ManagerState {
                 driver: None,
                 lcu_session: None,
                 sgp_session: None,
@@ -75,7 +116,10 @@ impl OngoingGameManager {
                 match_history_count: DEFAULT_MATCH_HISTORY_COUNT,
                 cached_bot_slots: Vec::new(),
                 cached_bot_ids: Vec::new(),
-            }),
+                cached_positions_by_puuid: HashMap::new(),
+                next_task_id: 1,
+                active_task_id: None,
+            })),
             cancel_token,
         }
     }
@@ -107,7 +151,7 @@ impl OngoingGameManager {
     }
 
     pub async fn refresh_current(&self) {
-        let next = {
+        let request = {
             let state = self.state.lock().await;
             let Some(driver) = &state.driver else {
                 return;
@@ -116,29 +160,21 @@ impl OngoingGameManager {
                 return;
             };
 
-            Some((
-                driver.current_phase(),
+            Some(PhaseChangeRequest {
+                phase: driver.current_phase(),
                 lcu_session,
-                state.sgp_session.clone(),
-                state.focused_puuid.clone(),
-                state.match_history_filter,
-                state.match_history_count,
-            ))
+                sgp_session: state.sgp_session.clone(),
+                focused_puuid: state.focused_puuid.clone(),
+                match_history_filter: state.match_history_filter,
+                match_history_count: state.match_history_count,
+            })
         };
 
-        let Some((phase, lcu_session, sgp_session, focused_puuid, filter, count)) = next else {
+        let Some(request) = request else {
             return;
         };
 
-        self.on_phase_changed(
-            phase,
-            lcu_session,
-            sgp_session,
-            focused_puuid,
-            filter,
-            count,
-        )
-        .await;
+        self.on_phase_changed(request).await;
     }
 
     pub async fn handle_focus_changed(
@@ -151,12 +187,14 @@ impl OngoingGameManager {
             if let Some(token) = state.active_phase_task.take() {
                 token.cancel();
             }
+            state.active_task_id = None;
             state.driver = None;
             state.lcu_session = None;
             state.sgp_session = None;
             state.focused_puuid = None;
             state.cached_bot_slots.clear();
             state.cached_bot_ids.clear();
+            state.cached_positions_by_puuid.clear();
             state.context = OngoingGameContextInfo {
                 match_history_filter: state.match_history_filter,
                 ..OngoingGameContextInfo::default()
@@ -206,14 +244,14 @@ impl OngoingGameManager {
             Ok(phase_str) => {
                 let phase = map_gameflow_phase(phase_str.as_str());
                 if let Some(new_phase) = driver.force_phase(phase) {
-                    self.on_phase_changed(
-                        new_phase,
-                        lcu.clone(),
-                        sgp_session.clone(),
-                        focused_puuid.clone(),
+                    self.on_phase_changed(PhaseChangeRequest {
+                        phase: new_phase,
+                        lcu_session: lcu.clone(),
+                        sgp_session: sgp_session.clone(),
+                        focused_puuid: focused_puuid.clone(),
                         match_history_filter,
                         match_history_count,
-                    )
+                    })
                     .await;
                 }
             }
@@ -232,36 +270,56 @@ impl OngoingGameManager {
     }
 
     /// Called by the event receiver for each ws event from the focused client.
-    pub async fn handle_ws_event(&self, event: LcuWsEvent) {
-        #[allow(clippy::type_complexity)]
-        let mut transition: Option<(
-            OngoingGamePhase,
-            Arc<LcuSession>,
-            Option<Arc<SgpSession>>,
-            Option<String>,
-            OngoingGameMatchHistoryFilter,
-            u32,
-        )> = None;
+    pub async fn handle_ws_event(&self, raw_event: LcuWsEvent) {
+        let Some(event) = parse_ongoing_ws_event(&raw_event) else {
+            return;
+        };
+
+        let mut transition: Option<PhaseChangeRequest> = None;
         let mut ws_phase_update: Option<OngoingGamePhaseChanged> = None;
 
         {
             let mut state = self.state.lock().await;
-            if let Some(participants) = parse_parties_notification_event(&event) {
-                state.cached_bot_ids = participants
-                    .iter()
-                    .map(|participant| participant.bot_id.trim().to_string())
-                    .filter(|id| !id.is_empty())
-                    .collect();
-                state.cached_bot_slots = build_bot_slots_from_parties(&participants);
-            }
-            if let Some(gameflow) = parse_gameflow_session_event(&event) {
-                state.context =
-                    build_context_from_gameflow_session(&gameflow, state.match_history_filter);
-            } else if let Some(LcuChampSelectSessionEvent::Snapshot(session)) =
-                parse_champ_select_session_event(&event)
-            {
-                state.context =
-                    build_context_from_champ_select_session(&session, state.match_history_filter);
+            match &event {
+                LcuOngoingWsEvent::PartiesNotification { data } => {
+                    let participants = &data.payload.player.current_party.bot_participants;
+                    state.cached_bot_ids = participants
+                        .iter()
+                        .map(|participant| participant.bot_id.trim().to_string())
+                        .filter(|id| !id.is_empty())
+                        .collect();
+                    let bot_slots = build_bot_slots_from_parties(participants);
+                    merge_position_cache_from_slots(
+                        &mut state.cached_positions_by_puuid,
+                        &bot_slots,
+                        &[],
+                    );
+                    state.cached_bot_slots = bot_slots;
+                }
+                LcuOngoingWsEvent::LobbyV2 { data } => {
+                    merge_position_cache_from_lobby(
+                        &mut state.cached_positions_by_puuid,
+                        data,
+                    );
+                }
+                LcuOngoingWsEvent::GameflowSession { data } => {
+                    state.context =
+                        build_context_from_gameflow_session(data, state.match_history_filter);
+                }
+                LcuOngoingWsEvent::ChampSelectSession {
+                    data: Some(session),
+                    ..
+                }
+                | LcuOngoingWsEvent::LobbyTeamBuilderChampSelectSession {
+                    data: Some(session),
+                    ..
+                } => {
+                    state.context = build_context_from_champ_select_session(
+                        session,
+                        state.match_history_filter,
+                    );
+                }
+                _ => {}
             }
 
             let Some(driver) = &mut state.driver else {
@@ -270,14 +328,14 @@ impl OngoingGameManager {
 
             if let Some(new_phase) = driver.process(&event) {
                 if let Some(lcu) = state.lcu_session.clone() {
-                    transition = Some((
-                        new_phase,
-                        lcu,
-                        state.sgp_session.clone(),
-                        state.focused_puuid.clone(),
-                        state.match_history_filter,
-                        state.match_history_count,
-                    ));
+                    transition = Some(PhaseChangeRequest {
+                        phase: new_phase,
+                        lcu_session: lcu,
+                        sgp_session: state.sgp_session.clone(),
+                        focused_puuid: state.focused_puuid.clone(),
+                        match_history_filter: state.match_history_filter,
+                        match_history_count: state.match_history_count,
+                    });
                 }
             } else {
                 ws_phase_update = build_phase_update_from_ws(
@@ -287,13 +345,20 @@ impl OngoingGameManager {
                     state.context.clone(),
                     &state.cached_bot_slots,
                     &state.cached_bot_ids,
+                    &state.cached_positions_by_puuid,
                 );
+                if let Some(payload) = &ws_phase_update {
+                    merge_position_cache_from_slots(
+                        &mut state.cached_positions_by_puuid,
+                        &payload.blue_players,
+                        &payload.red_players,
+                    );
+                }
             }
         }
 
-        if let Some((new_phase, lcu, sgp, focused_puuid, filter, count)) = transition {
-            self.on_phase_changed(new_phase, lcu, sgp, focused_puuid, filter, count)
-                .await;
+        if let Some(request) = transition {
+            self.on_phase_changed(request).await;
             return;
         }
 
@@ -308,52 +373,63 @@ impl OngoingGameManager {
     // Phase change reaction
     // -----------------------------------------------------------------------
 
-    async fn on_phase_changed(
-        &self,
-        phase: OngoingGamePhase,
-        lcu_session: Arc<LcuSession>,
-        sgp_session: Option<Arc<SgpSession>>,
-        focused_puuid: Option<String>,
-        match_history_filter: OngoingGameMatchHistoryFilter,
-        match_history_count: u32,
-    ) {
-        let normalized_count = match_history_count.clamp(MIN_MATCH_HISTORY_COUNT, MAX_MATCH_HISTORY_COUNT);
-        let (task_token, context, cached_bot_slots, cached_bot_ids) = {
+    async fn on_phase_changed(&self, request: PhaseChangeRequest) {
+        let normalized_count = request
+            .match_history_count
+            .clamp(MIN_MATCH_HISTORY_COUNT, MAX_MATCH_HISTORY_COUNT);
+        let (task_token, context, runtime) = {
             let mut state = self.state.lock().await;
-            state.match_history_filter = match_history_filter;
+            state.match_history_filter = request.match_history_filter;
             state.match_history_count = normalized_count;
-            state.context.match_history_filter = match_history_filter;
-            state.context.match_history_tag =
-                resolve_match_history_tag(match_history_filter, state.context.queue_id.unwrap_or(0));
+            state.context.match_history_filter = request.match_history_filter;
+            state.context.match_history_tag = resolve_match_history_tag(
+                request.match_history_filter,
+                state.context.queue_id.unwrap_or(0),
+            );
 
             if let Some(token) = state.active_phase_task.take() {
                 token.cancel();
             }
 
-            if phase == OngoingGamePhase::Idle {
+            if request.phase == OngoingGamePhase::Idle {
                 state.cached_bot_slots.clear();
                 state.cached_bot_ids.clear();
+                state.cached_positions_by_puuid.clear();
+                state.active_task_id = None;
                 state.context = OngoingGameContextInfo {
                     match_history_filter: state.match_history_filter,
                     ..OngoingGameContextInfo::default()
                 };
-                (None, state.context.clone(), Vec::new(), Vec::new())
+                (None, state.context.clone(), None)
             } else {
+                let task_id = state.next_task_id;
+                state.next_task_id = state.next_task_id.saturating_add(1);
                 let token = self.cancel_token.child_token();
                 state.active_phase_task = Some(token.clone());
+                state.active_task_id = Some(task_id);
                 (
                     Some(token),
                     state.context.clone(),
-                    state.cached_bot_slots.clone(),
-                    state.cached_bot_ids.clone(),
+                    Some(PhaseTaskRuntime {
+                        task_id,
+                        phase: request.phase,
+                        lcu_session: request.lcu_session,
+                        sgp_session: request.sgp_session,
+                        focused_puuid: request.focused_puuid,
+                        match_history_filter: request.match_history_filter,
+                        match_history_count: normalized_count,
+                        cached_bot_slots: state.cached_bot_slots.clone(),
+                        cached_bot_ids: state.cached_bot_ids.clone(),
+                        cached_positions_by_puuid: state.cached_positions_by_puuid.clone(),
+                    }),
                 )
             }
         };
 
         emit_phase_changed(
             &self.event_tx,
-            phase,
-            phase != OngoingGamePhase::Idle,
+            request.phase,
+            request.phase != OngoingGamePhase::Idle,
             None,
             context,
             Vec::new(),
@@ -363,13 +439,17 @@ impl OngoingGameManager {
         let Some(task_token) = task_token else {
             return;
         };
+        let Some(runtime) = runtime else {
+            return;
+        };
 
         let event_tx = self.event_tx.clone();
+        let state = self.state.clone();
 
         tokio::spawn(async move {
             tokio::select! {
                 _ = task_token.cancelled() => {}
-                _ = fetch_phase_data(phase, lcu_session, sgp_session, focused_puuid, match_history_filter, normalized_count, cached_bot_slots, cached_bot_ids, event_tx) => {}
+                _ = Self::fetch_phase_data(runtime, event_tx, state) => {}
             }
         });
     }
@@ -379,458 +459,540 @@ impl OngoingGameManager {
 // Data fetching
 // ---------------------------------------------------------------------------
 
-async fn fetch_phase_data(
-    phase: OngoingGamePhase,
-    lcu_session: Arc<LcuSession>,
-    sgp_session: Option<Arc<SgpSession>>,
-    focused_puuid: Option<String>,
-    match_history_filter: OngoingGameMatchHistoryFilter,
-    match_history_count: u32,
-    cached_bot_slots: Vec<PlayerSlot>,
-    cached_bot_ids: Vec<String>,
-    event_tx: broadcast::Sender<OngoingGameManagerEvent>,
-) {
-    match phase {
-        OngoingGamePhase::ChampSelect => {
-            fetch_champ_select_phase_data(
-                lcu_session,
-                sgp_session,
-                focused_puuid,
-                match_history_filter,
-                match_history_count,
-                cached_bot_ids,
-                event_tx,
-            )
-            .await;
-        }
-        OngoingGamePhase::InGame => {
-            fetch_in_game_phase_data(
-                lcu_session,
-                sgp_session,
-                focused_puuid,
-                match_history_filter,
-                match_history_count,
-                cached_bot_slots,
-                cached_bot_ids,
-                event_tx,
-            )
-            .await;
-        }
-        OngoingGamePhase::Idle => {}
+impl OngoingGameManager {
+    async fn is_task_active(state: &Arc<tokio::sync::Mutex<ManagerState>>, task_id: u64) -> bool {
+        let state = state.lock().await;
+        state.active_task_id == Some(task_id)
     }
-}
 
-async fn fetch_champ_select_phase_data(
-    lcu_session: Arc<LcuSession>,
-    sgp_session: Option<Arc<SgpSession>>,
-    focused_puuid: Option<String>,
-    match_history_filter: OngoingGameMatchHistoryFilter,
-    match_history_count: u32,
-    cached_bot_ids: Vec<String>,
-    event_tx: broadcast::Sender<OngoingGameManagerEvent>,
-) {
-    let sgp_session = ensure_sgp_session(&lcu_session, sgp_session).await;
-
-    match lcu_session.api().get_champ_select_session().await {
-        Ok(session_value) => {
-            let Some(session) = parse_champ_select_session_value(&session_value) else {
-                tracing::warn!("Failed to parse champ select session payload");
-                let context = OngoingGameContextInfo {
-                    match_history_filter,
-                    ..OngoingGameContextInfo::default()
-                };
-                emit_phase_changed(
-                    &event_tx,
-                    OngoingGamePhase::ChampSelect,
-                    false,
-                    None,
-                    context,
-                    Vec::new(),
-                    Vec::new(),
-                );
-                return;
-            };
-            let context =
-                fetch_champ_select_context(&lcu_session, &session, match_history_filter).await;
-            let queue_tag = context.match_history_tag.clone();
-
-            let (our_side_from_payload, mut blue_slots, mut red_slots) =
-                build_champ_select_phase_data(&session);
-            normalize_bot_slots(&mut blue_slots, &cached_bot_ids);
-            normalize_bot_slots(&mut red_slots, &cached_bot_ids);
-            let our_side = focused_puuid
-                .as_deref()
-                .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots))
-                .or(our_side_from_payload);
-            let phase_blue_slots = blue_slots.clone();
-            let phase_red_slots = red_slots.clone();
-
-            emit_phase_changed(
-                &event_tx,
-                OngoingGamePhase::ChampSelect,
-                true,
-                our_side,
-                context.clone(),
-                blue_slots.clone(),
-                red_slots.clone(),
-            );
-
-            let (own_slots, _) = split_team_slots(our_side, blue_slots, red_slots);
-            let own_players = fetch_team_players(
-                lcu_session,
-                sgp_session,
-                own_slots,
-                queue_tag.as_deref(),
-                match_history_count,
-            )
-            .await;
-            let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
-
-            emit_snapshot_updated(
-                &event_tx,
-                OngoingGamePhase::ChampSelect,
-                false,
-                our_side,
-                context.clone(),
-                blue_players,
-                red_players,
-            );
-
-            emit_phase_changed(
-                &event_tx,
-                OngoingGamePhase::ChampSelect,
-                false,
-                our_side,
-                context,
-                phase_blue_slots,
-                phase_red_slots,
-            );
+    async fn emit_phase_changed_if_active(
+        state: &Arc<tokio::sync::Mutex<ManagerState>>,
+        task_id: u64,
+        event_tx: &broadcast::Sender<OngoingGameManagerEvent>,
+        phase: OngoingGamePhase,
+        loading: bool,
+        our_side: Option<Side>,
+        context: OngoingGameContextInfo,
+        blue_players: Vec<PlayerSlot>,
+        red_players: Vec<PlayerSlot>,
+    ) -> bool {
+        if !Self::is_task_active(state, task_id).await {
+            return false;
         }
-        Err(e) => {
-            tracing::warn!("Failed to fetch champ select session: {e}");
+
+        emit_phase_changed(
+            event_tx,
+            phase,
+            loading,
+            our_side,
+            context,
+            blue_players,
+            red_players,
+        );
+        true
+    }
+
+    async fn emit_snapshot_updated_if_active(
+        state: &Arc<tokio::sync::Mutex<ManagerState>>,
+        task_id: u64,
+        event_tx: &broadcast::Sender<OngoingGameManagerEvent>,
+        phase: OngoingGamePhase,
+        loading: bool,
+        our_side: Option<Side>,
+        context: OngoingGameContextInfo,
+        blue_players: Vec<OngoingGamePlayerSnapshot>,
+        red_players: Vec<OngoingGamePlayerSnapshot>,
+    ) -> bool {
+        if !Self::is_task_active(state, task_id).await {
+            return false;
+        }
+
+        emit_snapshot_updated(
+            event_tx,
+            phase,
+            loading,
+            our_side,
+            context,
+            blue_players,
+            red_players,
+        );
+        true
+    }
+
+    async fn fetch_phase_data(
+        runtime: PhaseTaskRuntime,
+        event_tx: broadcast::Sender<OngoingGameManagerEvent>,
+        state: Arc<tokio::sync::Mutex<ManagerState>>,
+    ) {
+        match runtime.phase {
+            OngoingGamePhase::ChampSelect => {
+                Self::fetch_champ_select_phase_data(runtime, event_tx, state).await;
+            }
+            OngoingGamePhase::InGame => {
+                Self::fetch_in_game_phase_data(runtime, event_tx, state).await;
+            }
+            OngoingGamePhase::Idle => {}
         }
     }
-}
 
-async fn fetch_in_game_phase_data(
-    lcu_session: Arc<LcuSession>,
-    sgp_session: Option<Arc<SgpSession>>,
-    focused_puuid: Option<String>,
-    match_history_filter: OngoingGameMatchHistoryFilter,
-    match_history_count: u32,
-    cached_bot_slots: Vec<PlayerSlot>,
-    cached_bot_ids: Vec<String>,
-    event_tx: broadcast::Sender<OngoingGameManagerEvent>,
-) {
-    let sgp_session = ensure_sgp_session(&lcu_session, sgp_session).await;
+    async fn fetch_champ_select_phase_data(
+        runtime: PhaseTaskRuntime,
+        event_tx: broadcast::Sender<OngoingGameManagerEvent>,
+        state: Arc<tokio::sync::Mutex<ManagerState>>,
+    ) {
+        let fetch_runtime = Self::ensure_sgp_session(PlayerFetchRuntime {
+            lcu_session: runtime.lcu_session.clone(),
+            sgp_session: runtime.sgp_session.clone(),
+            match_history_count: runtime.match_history_count,
+        })
+        .await;
 
-    match lcu_session.api().get_gameflow_session().await {
-        Ok(session_value) => {
-            let Some(session) = parse_gameflow_session_value(&session_value) else {
-                tracing::warn!("Failed to parse gameflow session payload");
-                let context = OngoingGameContextInfo {
-                    match_history_filter,
-                    ..OngoingGameContextInfo::default()
+        match runtime.lcu_session.api().get_champ_select_session().await {
+            Ok(session_value) => {
+                let Some(session) = parse_champ_select_session_value(&session_value) else {
+                    tracing::warn!("Failed to parse champ select session payload");
+                    let context = OngoingGameContextInfo {
+                        match_history_filter: runtime.match_history_filter,
+                        ..OngoingGameContextInfo::default()
+                    };
+                    let _ = Self::emit_phase_changed_if_active(
+                            &state,
+                            runtime.task_id,
+                            &event_tx,
+                            OngoingGamePhase::ChampSelect,
+                            false,
+                            None,
+                            context,
+                            Vec::new(),
+                            Vec::new(),
+                        )
+                        .await;
+                    return;
                 };
-                emit_phase_changed(
-                    &event_tx,
-                    OngoingGamePhase::InGame,
-                    false,
-                    None,
-                    context,
-                    Vec::new(),
-                    Vec::new(),
-                );
-                return;
-            };
-            let context = build_context_from_gameflow_session(&session, match_history_filter);
-            let queue_tag = context.match_history_tag.clone();
-
-            let (mut blue_slots, mut red_slots) = merge_slots_with_cached_bots(
-                build_in_game_phase_data(&session),
-                &cached_bot_slots,
-            );
-            normalize_bot_slots(&mut blue_slots, &cached_bot_ids);
-            normalize_bot_slots(&mut red_slots, &cached_bot_ids);
-            let our_side = focused_puuid
-                .as_deref()
-                .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots));
-            let phase_blue_slots = blue_slots.clone();
-            let phase_red_slots = red_slots.clone();
-
-            emit_phase_changed(
-                &event_tx,
-                OngoingGamePhase::InGame,
-                true,
-                our_side,
-                context.clone(),
-                blue_slots.clone(),
-                red_slots.clone(),
-            );
-
-            let (own_slots, enemy_slots) = split_team_slots(our_side, blue_slots, red_slots);
-
-            let own_players =
-                fetch_team_players(
-                    lcu_session.clone(),
-                    sgp_session.clone(),
-                    own_slots,
-                    queue_tag.as_deref(),
-                    match_history_count,
+                let context = fetch_champ_select_context(
+                    &runtime.lcu_session,
+                    &session,
+                    runtime.match_history_filter,
                 )
                 .await;
-            let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
-            emit_snapshot_updated(
-                &event_tx,
-                OngoingGamePhase::InGame,
-                true,
-                our_side,
-                context.clone(),
-                blue_players.clone(),
-                red_players.clone(),
-            );
+                let queue_tag = context.match_history_tag.clone();
 
-            let enemy_players = fetch_team_players(
-                lcu_session,
-                sgp_session,
-                enemy_slots,
-                queue_tag.as_deref(),
-                match_history_count,
-            )
-            .await;
-            let (blue_players, red_players) = merge_players_by_side(
-                collect_players_from_sides(blue_players, red_players),
-                enemy_players,
-            );
-
-            emit_snapshot_updated(
-                &event_tx,
-                OngoingGamePhase::InGame,
-                false,
-                our_side,
-                context.clone(),
-                blue_players,
-                red_players,
-            );
-
-            emit_phase_changed(
-                &event_tx,
-                OngoingGamePhase::InGame,
-                false,
-                our_side,
-                context,
-                phase_blue_slots,
-                phase_red_slots,
-            );
-        }
-        Err(e) => {
-            tracing::warn!("Failed to fetch gameflow session: {e}");
-        }
-    }
-}
-
-async fn fetch_team_players(
-    lcu_session: Arc<LcuSession>,
-    sgp_session: Option<Arc<SgpSession>>,
-    slots: Vec<PlayerSlot>,
-    queue_tag: Option<&str>,
-    match_history_count: u32,
-) -> Vec<OngoingGamePlayerSnapshot> {
-    let candidates: Vec<PlayerFetchCandidate> = slots
-        .into_iter()
-        .filter(|slot| !is_bot_slot(slot))
-        .map(PlayerFetchCandidate::from)
-        .collect();
-
-    if candidates.is_empty() {
-        return Vec::new();
-    }
-
-    let mut ordered: Vec<Option<OngoingGamePlayerSnapshot>> =
-        (0..candidates.len()).map(|_| None).collect();
-    let mut joins = JoinSet::new();
-
-    for (idx, candidate) in candidates.into_iter().enumerate() {
-        let lcu = lcu_session.clone();
-        let sgp = sgp_session.clone();
-        let queue_tag = queue_tag.map(ToOwned::to_owned);
-        joins.spawn(async move {
-            let player = fetch_player_snapshot(
-                lcu,
-                sgp,
-                candidate,
-                queue_tag.as_deref(),
-                match_history_count,
-            )
-            .await;
-            (idx, player)
-        });
-    }
-
-    while let Some(result) = joins.join_next().await {
-        match result {
-            Ok((idx, Some(player))) => {
-                ordered[idx] = Some(player);
-            }
-            Ok((_idx, None)) => {}
-            Err(e) => {
-                tracing::debug!("Team player fetch task failed: {e}");
-            }
-        }
-    }
-
-    ordered.into_iter().flatten().collect()
-}
-
-async fn ensure_sgp_session(
-    lcu_session: &Arc<LcuSession>,
-    sgp_session: Option<Arc<SgpSession>>,
-) -> Option<Arc<SgpSession>> {
-    if sgp_session.is_some() {
-        return sgp_session;
-    }
-
-    match SgpSession::new(lcu_session).await {
-        Ok(session) => {
-            tracing::debug!("OngoingGame: lazily initialized SGP session");
-            Some(Arc::new(session))
-        }
-        Err(error) => {
-            tracing::warn!("OngoingGame: failed to initialize SGP session lazily: {error}");
-            None
-        }
-    }
-}
-
-async fn fetch_player_snapshot(
-    lcu_session: Arc<LcuSession>,
-    sgp_session: Option<Arc<SgpSession>>,
-    candidate: PlayerFetchCandidate,
-    queue_tag: Option<&str>,
-    match_history_count: u32,
-) -> Option<OngoingGamePlayerSnapshot> {
-    let summoner = match lcu_session
-        .api()
-        .get_summoner_by_puuid(&candidate.puuid)
-        .await
-    {
-        Ok(value) => value,
-        Err(e) => {
-            tracing::debug!(
-                "Skip player {} while fetching summoner info, likely bot or unavailable: {e}",
-                candidate.puuid
-            );
-            return None;
-        }
-    };
-
-    let ranked_fut = async {
-        lcu_session
-            .api()
-            .get_ranked_stats(&candidate.puuid)
-            .await
-            .ok()
-    };
-    let mastery_fut = async {
-        lcu_session
-            .api()
-            .get_champion_mastery_by_puuid(&candidate.puuid)
-            .await
-            .ok()
-    };
-    let match_history_fut = async {
-        if let Some(sgp) = &sgp_session {
-            let first_result = sgp
-                .api()
-                .get_match_summaries(
-                    &candidate.puuid,
-                    0,
-                    match_history_count,
-                    queue_tag,
-                    None,
-                )
-                .await;
-
-            match first_result {
-                Ok(response) => {
-                    if queue_tag.is_some() && response.games.is_empty() {
-                        match sgp
-                            .api()
-                            .get_match_summaries(
-                                &candidate.puuid,
-                                0,
-                                match_history_count,
-                                None,
-                                None,
-                            )
-                            .await
-                        {
-                            Ok(fallback) => Some(fallback),
-                            Err(error) => {
-                                tracing::debug!(
-                                    "OngoingGame: fallback match history fetch failed for {}: {error}",
-                                    candidate.puuid
-                                );
-                                Some(response)
-                            }
-                        }
-                    } else {
-                        Some(response)
-                    }
-                }
-                Err(error) => {
-                    tracing::debug!(
-                        "OngoingGame: match history fetch failed for {} tag={:?}: {error}",
-                        candidate.puuid,
-                        queue_tag
+                let (our_side_from_payload, mut blue_slots, mut red_slots) =
+                    build_champ_select_phase_data(&session);
+                normalize_bot_slots(&mut blue_slots, &runtime.cached_bot_ids);
+                normalize_bot_slots(&mut red_slots, &runtime.cached_bot_ids);
+                apply_position_cache(&mut blue_slots, &runtime.cached_positions_by_puuid);
+                apply_position_cache(&mut red_slots, &runtime.cached_positions_by_puuid);
+                {
+                    let mut guard = state.lock().await;
+                    merge_position_cache_from_slots(
+                        &mut guard.cached_positions_by_puuid,
+                        &blue_slots,
+                        &red_slots,
                     );
-                    if queue_tag.is_some() {
-                        match sgp
-                            .api()
-                            .get_match_summaries(
-                                &candidate.puuid,
-                                0,
-                                match_history_count,
-                                None,
-                                None,
-                            )
-                            .await
-                        {
-                            Ok(fallback) => Some(fallback),
-                            Err(fallback_error) => {
-                                tracing::debug!(
-                                    "OngoingGame: fallback match history fetch failed for {}: {fallback_error}",
-                                    candidate.puuid
-                                );
-                                None
-                            }
-                        }
-                    } else {
-                        None
-                    }
+                }
+                let our_side = runtime
+                    .focused_puuid
+                    .as_deref()
+                    .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots))
+                    .or(our_side_from_payload);
+                let phase_blue_slots = blue_slots.clone();
+                let phase_red_slots = red_slots.clone();
+
+                if !Self::emit_phase_changed_if_active(
+                        &state,
+                        runtime.task_id,
+                        &event_tx,
+                        OngoingGamePhase::ChampSelect,
+                        true,
+                        our_side,
+                        context.clone(),
+                        blue_slots.clone(),
+                        red_slots.clone(),
+                    )
+                    .await
+                {
+                    return;
+                }
+
+                let (own_slots, _) = split_team_slots(our_side, blue_slots, red_slots);
+                let own_players =
+                    Self::fetch_team_players(&fetch_runtime, own_slots, queue_tag.as_deref()).await;
+                let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
+
+                if !Self::emit_snapshot_updated_if_active(
+                        &state,
+                        runtime.task_id,
+                        &event_tx,
+                        OngoingGamePhase::ChampSelect,
+                        false,
+                        our_side,
+                        context.clone(),
+                        blue_players,
+                        red_players,
+                    )
+                    .await
+                {
+                    return;
+                }
+
+                let _ = Self::emit_phase_changed_if_active(
+                        &state,
+                        runtime.task_id,
+                        &event_tx,
+                        OngoingGamePhase::ChampSelect,
+                        false,
+                        our_side,
+                        context,
+                        phase_blue_slots,
+                        phase_red_slots,
+                    )
+                    .await;
+            }
+            Err(e) => {
+                tracing::warn!("Failed to fetch champ select session: {e}");
+            }
+        }
+    }
+
+    async fn fetch_in_game_phase_data(
+        runtime: PhaseTaskRuntime,
+        event_tx: broadcast::Sender<OngoingGameManagerEvent>,
+        state: Arc<tokio::sync::Mutex<ManagerState>>,
+    ) {
+        let fetch_runtime = Self::ensure_sgp_session(PlayerFetchRuntime {
+            lcu_session: runtime.lcu_session.clone(),
+            sgp_session: runtime.sgp_session.clone(),
+            match_history_count: runtime.match_history_count,
+        })
+        .await;
+
+        match runtime.lcu_session.api().get_gameflow_session().await {
+            Ok(session_value) => {
+                let Some(session) = parse_gameflow_session_value(&session_value) else {
+                    tracing::warn!("Failed to parse gameflow session payload");
+                    let context = OngoingGameContextInfo {
+                        match_history_filter: runtime.match_history_filter,
+                        ..OngoingGameContextInfo::default()
+                    };
+                    let _ = Self::emit_phase_changed_if_active(
+                            &state,
+                            runtime.task_id,
+                            &event_tx,
+                            OngoingGamePhase::InGame,
+                            false,
+                            None,
+                            context,
+                            Vec::new(),
+                            Vec::new(),
+                        )
+                        .await;
+                    return;
+                };
+                let context =
+                    build_context_from_gameflow_session(&session, runtime.match_history_filter);
+                let queue_tag = context.match_history_tag.clone();
+
+                let (mut blue_slots, mut red_slots) = merge_slots_with_cached_bots(
+                    build_in_game_phase_data(&session),
+                    &runtime.cached_bot_slots,
+                );
+                normalize_bot_slots(&mut blue_slots, &runtime.cached_bot_ids);
+                normalize_bot_slots(&mut red_slots, &runtime.cached_bot_ids);
+                apply_position_cache(&mut blue_slots, &runtime.cached_positions_by_puuid);
+                apply_position_cache(&mut red_slots, &runtime.cached_positions_by_puuid);
+                {
+                    let mut guard = state.lock().await;
+                    merge_position_cache_from_slots(
+                        &mut guard.cached_positions_by_puuid,
+                        &blue_slots,
+                        &red_slots,
+                    );
+                }
+                let our_side = runtime
+                    .focused_puuid
+                    .as_deref()
+                    .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots));
+                let phase_blue_slots = blue_slots.clone();
+                let phase_red_slots = red_slots.clone();
+
+                if !Self::emit_phase_changed_if_active(
+                        &state,
+                        runtime.task_id,
+                        &event_tx,
+                        OngoingGamePhase::InGame,
+                        true,
+                        our_side,
+                        context.clone(),
+                        blue_slots.clone(),
+                        red_slots.clone(),
+                    )
+                    .await
+                {
+                    return;
+                }
+
+                let (own_slots, enemy_slots) = split_team_slots(our_side, blue_slots, red_slots);
+
+                let own_players =
+                    Self::fetch_team_players(&fetch_runtime, own_slots, queue_tag.as_deref()).await;
+                let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
+                if !Self::emit_snapshot_updated_if_active(
+                        &state,
+                        runtime.task_id,
+                        &event_tx,
+                        OngoingGamePhase::InGame,
+                        true,
+                        our_side,
+                        context.clone(),
+                        blue_players.clone(),
+                        red_players.clone(),
+                    )
+                    .await
+                {
+                    return;
+                }
+
+                let enemy_players =
+                    Self::fetch_team_players(&fetch_runtime, enemy_slots, queue_tag.as_deref())
+                        .await;
+                let (blue_players, red_players) = merge_players_by_side(
+                    collect_players_from_sides(blue_players, red_players),
+                    enemy_players,
+                );
+
+                if !Self::emit_snapshot_updated_if_active(
+                        &state,
+                        runtime.task_id,
+                        &event_tx,
+                        OngoingGamePhase::InGame,
+                        false,
+                        our_side,
+                        context.clone(),
+                        blue_players,
+                        red_players,
+                    )
+                    .await
+                {
+                    return;
+                }
+
+                let _ = Self::emit_phase_changed_if_active(
+                        &state,
+                        runtime.task_id,
+                        &event_tx,
+                        OngoingGamePhase::InGame,
+                        false,
+                        our_side,
+                        context,
+                        phase_blue_slots,
+                        phase_red_slots,
+                    )
+                    .await;
+            }
+            Err(e) => {
+                tracing::warn!("Failed to fetch gameflow session: {e}");
+            }
+        }
+    }
+
+    async fn fetch_team_players(
+        runtime: &PlayerFetchRuntime,
+        slots: Vec<PlayerSlot>,
+        queue_tag: Option<&str>,
+    ) -> Vec<OngoingGamePlayerSnapshot> {
+        let candidates: Vec<PlayerFetchCandidate> = slots
+            .into_iter()
+            .filter(|slot| !is_bot_slot(slot))
+            .map(PlayerFetchCandidate::from)
+            .collect();
+
+        if candidates.is_empty() {
+            return Vec::new();
+        }
+
+        let mut ordered: Vec<Option<OngoingGamePlayerSnapshot>> =
+            (0..candidates.len()).map(|_| None).collect();
+        let mut joins = JoinSet::new();
+
+        for (idx, candidate) in candidates.into_iter().enumerate() {
+            let fetch_runtime = runtime.clone();
+            let queue_tag = queue_tag.map(ToOwned::to_owned);
+            joins.spawn(async move {
+                let player = Self::fetch_player_snapshot(fetch_runtime, candidate, queue_tag).await;
+                (idx, player)
+            });
+        }
+
+        while let Some(result) = joins.join_next().await {
+            match result {
+                Ok((idx, Some(player))) => {
+                    ordered[idx] = Some(player);
+                }
+                Ok((_idx, None)) => {}
+                Err(e) => {
+                    tracing::debug!("Team player fetch task failed: {e}");
                 }
             }
-        } else {
-            tracing::debug!(
-                "OngoingGame: skip match history fetch for {} because SGP session is unavailable",
-                candidate.puuid
-            );
-            None
         }
-    };
 
-    let (ranked, champion_mastery, match_history) =
-        tokio::join!(ranked_fut, mastery_fut, match_history_fut);
+        ordered.into_iter().flatten().collect()
+    }
 
-    Some(OngoingGamePlayerSnapshot {
-        puuid: candidate.puuid,
-        side: candidate.side,
-        champion_id: candidate.champion_id,
-        summoner,
-        ranked,
-        match_history,
-        champion_mastery,
-    })
+    async fn ensure_sgp_session(mut runtime: PlayerFetchRuntime) -> PlayerFetchRuntime {
+        if runtime.sgp_session.is_some() {
+            return runtime;
+        }
+
+        match SgpSession::new(&runtime.lcu_session).await {
+            Ok(session) => {
+                tracing::debug!("OngoingGame: lazily initialized SGP session");
+                runtime.sgp_session = Some(Arc::new(session));
+            }
+            Err(error) => {
+                tracing::warn!("OngoingGame: failed to initialize SGP session lazily: {error}");
+            }
+        }
+
+        runtime
+    }
+
+    async fn fetch_player_snapshot(
+        runtime: PlayerFetchRuntime,
+        candidate: PlayerFetchCandidate,
+        queue_tag: Option<String>,
+    ) -> Option<OngoingGamePlayerSnapshot> {
+        let summoner = match runtime
+            .lcu_session
+            .api()
+            .get_summoner_by_puuid(&candidate.puuid)
+            .await
+        {
+            Ok(value) => value,
+            Err(e) => {
+                tracing::debug!(
+                    "Skip player {} while fetching summoner info, likely bot or unavailable: {e}",
+                    candidate.puuid
+                );
+                return None;
+            }
+        };
+
+        let ranked_fut = async {
+            runtime
+                .lcu_session
+                .api()
+                .get_ranked_stats(&candidate.puuid)
+                .await
+                .ok()
+        };
+        let mastery_fut = async {
+            runtime
+                .lcu_session
+                .api()
+                .get_champion_mastery_by_puuid(&candidate.puuid)
+                .await
+                .ok()
+        };
+        let match_history_fut = async {
+            let queue_tag_ref = queue_tag.as_deref();
+            if let Some(sgp) = &runtime.sgp_session {
+                let first_result = sgp
+                    .api()
+                    .get_match_summaries(
+                        &candidate.puuid,
+                        0,
+                        runtime.match_history_count,
+                        queue_tag_ref,
+                        None,
+                    )
+                    .await;
+
+                match first_result {
+                    Ok(response) => {
+                        if queue_tag_ref.is_some() && response.games.is_empty() {
+                            match sgp
+                                .api()
+                                .get_match_summaries(
+                                    &candidate.puuid,
+                                    0,
+                                    runtime.match_history_count,
+                                    None,
+                                    None,
+                                )
+                                .await
+                            {
+                                Ok(fallback) => Some(fallback),
+                                Err(error) => {
+                                    tracing::debug!(
+                                        "OngoingGame: fallback match history fetch failed for {}: {error}",
+                                        candidate.puuid
+                                    );
+                                    Some(response)
+                                }
+                            }
+                        } else {
+                            Some(response)
+                        }
+                    }
+                    Err(error) => {
+                        tracing::debug!(
+                            "OngoingGame: match history fetch failed for {} tag={:?}: {error}",
+                            candidate.puuid,
+                            queue_tag_ref
+                        );
+                        if queue_tag_ref.is_some() {
+                            match sgp
+                                .api()
+                                .get_match_summaries(
+                                    &candidate.puuid,
+                                    0,
+                                    runtime.match_history_count,
+                                    None,
+                                    None,
+                                )
+                                .await
+                            {
+                                Ok(fallback) => Some(fallback),
+                                Err(fallback_error) => {
+                                    tracing::debug!(
+                                        "OngoingGame: fallback match history fetch failed for {}: {fallback_error}",
+                                        candidate.puuid
+                                    );
+                                    None
+                                }
+                            }
+                        } else {
+                            None
+                        }
+                    }
+                }
+            } else {
+                tracing::debug!(
+                    "OngoingGame: skip match history fetch for {} because SGP session is unavailable",
+                    candidate.puuid
+                );
+                None
+            }
+        };
+
+        let (ranked, champion_mastery, match_history) =
+            tokio::join!(ranked_fut, mastery_fut, match_history_fut);
+
+        Some(OngoingGamePlayerSnapshot {
+            puuid: candidate.puuid,
+            side: candidate.side,
+            champion_id: candidate.champion_id,
+            is_bot: candidate.is_bot,
+            position_assigned: candidate.position_assigned,
+            position_primary: candidate.position_primary,
+            position_secondary: candidate.position_secondary,
+            summoner,
+            ranked,
+            match_history,
+            champion_mastery,
+        })
+    }
 }
 
 fn queue_tag_from_queue_id(queue_id: i64) -> Option<String> {
@@ -880,7 +1042,8 @@ fn build_context_from_gameflow_session(
     filter: OngoingGameMatchHistoryFilter,
 ) -> OngoingGameContextInfo {
     let queue_id = option_positive(session.game_data.queue.id);
-    let map_id = option_positive(session.map.id).or_else(|| option_positive(session.game_data.queue.map_id));
+    let map_id =
+        option_positive(session.map.id).or_else(|| option_positive(session.game_data.queue.map_id));
     let match_history_tag = resolve_match_history_tag(filter, queue_id.unwrap_or(0));
 
     OngoingGameContextInfo {
@@ -942,6 +1105,10 @@ async fn fetch_champ_select_context(
 struct PlayerFetchCandidate {
     puuid: String,
     champion_id: Option<i64>,
+    is_bot: bool,
+    position_assigned: Option<String>,
+    position_primary: Option<String>,
+    position_secondary: Option<String>,
     side: Side,
 }
 
@@ -950,12 +1117,20 @@ impl From<PlayerSlot> for PlayerFetchCandidate {
         Self {
             puuid: value.puuid,
             champion_id: value.champion_id,
+            is_bot: value.is_bot,
+            position_assigned: value.position_assigned,
+            position_primary: value.position_primary,
+            position_secondary: value.position_secondary,
             side: value.side,
         }
     }
 }
 
 fn is_bot_slot(slot: &PlayerSlot) -> bool {
+    if slot.is_bot {
+        return true;
+    }
+
     let puuid = slot.puuid.trim();
     if puuid.is_empty() {
         return true;
@@ -1006,44 +1181,57 @@ fn collect_players_from_sides(
 
 fn build_phase_update_from_ws(
     current_phase: OngoingGamePhase,
-    event: &LcuWsEvent,
+    event: &LcuOngoingWsEvent,
     focused_puuid: Option<&str>,
     context: OngoingGameContextInfo,
     cached_bot_slots: &[PlayerSlot],
     cached_bot_ids: &[String],
+    cached_positions_by_puuid: &HashMap<String, CachedPositionInfo>,
 ) -> Option<OngoingGamePhaseChanged> {
     match current_phase {
         OngoingGamePhase::ChampSelect => {
-            let parsed = parse_champ_select_session_event(event)?;
-            match parsed {
-                LcuChampSelectSessionEvent::Snapshot(session) => {
-                    let (our_side_from_payload, mut blue_players, mut red_players) =
-                        build_champ_select_phase_data(&session);
-                    normalize_bot_slots(&mut blue_players, cached_bot_ids);
-                    normalize_bot_slots(&mut red_players, cached_bot_ids);
-                    let our_side = focused_puuid
-                        .and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players))
-                        .or(our_side_from_payload);
-                    Some(OngoingGamePhaseChanged {
-                        phase: OngoingGamePhase::ChampSelect,
-                        loading: false,
-                        our_side,
-                        context,
-                        blue_players,
-                        red_players,
-                    })
+            let (event_type, session) = match event {
+                LcuOngoingWsEvent::ChampSelectSession { event_type, data }
+                | LcuOngoingWsEvent::LobbyTeamBuilderChampSelectSession { event_type, data } => {
+                    (event_type, data.as_ref())
                 }
-                LcuChampSelectSessionEvent::Cleared => None,
+                _ => return None,
+            };
+
+            if *event_type == LcuWsEventType::Delete {
+                return None;
             }
-        }
-        OngoingGamePhase::InGame => {
-            let session = parse_gameflow_session_event(event)?;
-            let (mut blue_players, mut red_players) = merge_slots_with_cached_bots(
-                build_in_game_phase_data(&session),
-                cached_bot_slots,
-            );
+
+            let session = session?;
+            let (our_side_from_payload, mut blue_players, mut red_players) =
+                build_champ_select_phase_data(session);
             normalize_bot_slots(&mut blue_players, cached_bot_ids);
             normalize_bot_slots(&mut red_players, cached_bot_ids);
+            apply_position_cache(&mut blue_players, cached_positions_by_puuid);
+            apply_position_cache(&mut red_players, cached_positions_by_puuid);
+            let our_side = focused_puuid
+                .and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players))
+                .or(our_side_from_payload);
+            Some(OngoingGamePhaseChanged {
+                phase: OngoingGamePhase::ChampSelect,
+                loading: false,
+                our_side,
+                context,
+                blue_players,
+                red_players,
+            })
+        }
+        OngoingGamePhase::InGame => {
+            let session = match event {
+                LcuOngoingWsEvent::GameflowSession { data } => data,
+                _ => return None,
+            };
+            let (mut blue_players, mut red_players) =
+                merge_slots_with_cached_bots(build_in_game_phase_data(session), cached_bot_slots);
+            normalize_bot_slots(&mut blue_players, cached_bot_ids);
+            normalize_bot_slots(&mut red_players, cached_bot_ids);
+            apply_position_cache(&mut blue_players, cached_positions_by_puuid);
+            apply_position_cache(&mut red_players, cached_positions_by_puuid);
             let our_side =
                 focused_puuid.and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players));
             Some(OngoingGamePhaseChanged {
@@ -1146,11 +1334,110 @@ fn champion_id_option(champion_id: i64) -> Option<i64> {
     }
 }
 
+fn normalize_position_value(raw: &str) -> Option<String> {
+    let upper = raw.trim().to_ascii_uppercase();
+    let normalized = match upper.as_str() {
+        "TOP" => Some("TOP"),
+        "JUNGLE" | "JG" => Some("JUNGLE"),
+        "MIDDLE" | "MID" => Some("MIDDLE"),
+        "BOTTOM" | "BOT" | "ADC" => Some("BOTTOM"),
+        "UTILITY" | "SUPPORT" | "SUP" => Some("UTILITY"),
+        _ => None,
+    }?;
+
+    Some(normalized.to_string())
+}
+
+fn apply_position_cache(
+    slots: &mut [PlayerSlot],
+    positions_by_puuid: &HashMap<String, CachedPositionInfo>,
+) {
+    for slot in slots {
+        let Some(position) = positions_by_puuid.get(&slot.puuid) else {
+            continue;
+        };
+
+        if slot.position_assigned.is_none() {
+            slot.position_assigned = position.assigned.clone();
+        }
+        if slot.position_primary.is_none() {
+            slot.position_primary = position.primary.clone();
+        }
+        if slot.position_secondary.is_none() {
+            slot.position_secondary = position.secondary.clone();
+        }
+    }
+}
+
+fn merge_position_cache_from_slots(
+    positions_by_puuid: &mut HashMap<String, CachedPositionInfo>,
+    blue_slots: &[PlayerSlot],
+    red_slots: &[PlayerSlot],
+) {
+    for slot in blue_slots.iter().chain(red_slots.iter()) {
+        let entry = positions_by_puuid.entry(slot.puuid.clone()).or_default();
+
+        if slot.position_assigned.is_some() {
+            entry.assigned = slot.position_assigned.clone();
+        }
+        if slot.position_primary.is_some() {
+            entry.primary = slot.position_primary.clone();
+        }
+        if slot.position_secondary.is_some() {
+            entry.secondary = slot.position_secondary.clone();
+        }
+    }
+}
+
+fn merge_position_cache_from_lobby(
+    positions_by_puuid: &mut HashMap<String, CachedPositionInfo>,
+    payload: &LcuLobbyV2Payload,
+) {
+    for member in &payload.members {
+        for key in lobby_member_position_keys(member) {
+            let entry = positions_by_puuid.entry(key).or_default();
+
+            if let Some(primary) = normalize_position_value(&member.first_position_preference) {
+                entry.primary = Some(primary);
+            }
+            if let Some(secondary) = normalize_position_value(&member.second_position_preference) {
+                entry.secondary = Some(secondary);
+            }
+            if let Some(assigned) = normalize_position_value(&member.bot_position) {
+                entry.assigned = Some(assigned);
+            }
+        }
+    }
+}
+
+fn lobby_member_position_keys(member: &LcuLobbyMember) -> Vec<String> {
+    let mut keys: Vec<String> = Vec::new();
+    let puuid = member.puuid.trim();
+    if !puuid.is_empty() {
+        keys.push(puuid.to_string());
+        if member.is_bot {
+            keys.push(format!("BOT_{}", puuid.to_ascii_uppercase()));
+        }
+    }
+
+    let bot_id = member.bot_id.trim();
+    if !bot_id.is_empty() {
+        keys.push(format!("BOT_{}", bot_id.to_ascii_uppercase()));
+        keys.push(bot_id.to_string());
+    }
+
+    keys
+}
+
 fn push_player_slot(
     blue_players: &mut Vec<PlayerSlot>,
     red_players: &mut Vec<PlayerSlot>,
     puuid: String,
     champion_id: Option<i64>,
+    is_bot: bool,
+    position_assigned: Option<String>,
+    position_primary: Option<String>,
+    position_secondary: Option<String>,
     side: Side,
 ) {
     if puuid.is_empty() {
@@ -1160,6 +1447,10 @@ fn push_player_slot(
     let slot = PlayerSlot {
         puuid,
         champion_id,
+        is_bot,
+        position_assigned,
+        position_primary,
+        position_secondary,
         side,
     };
 
@@ -1217,12 +1508,24 @@ fn push_champ_select_player_slot(
     fallback_side: Side,
 ) {
     let side = side_from_team_id(player.team).unwrap_or(fallback_side);
+    let has_puuid = !player.puuid.trim().is_empty();
+    let is_bot = player.summoner_id <= 0 && has_puuid;
+    let normalized_puuid = if is_bot {
+        format!("BOT_{}", player.puuid.trim().to_ascii_uppercase())
+    } else {
+        player.puuid.clone()
+    };
+
     push_player_slot(
         blue_players,
         red_players,
-        player.puuid.clone(),
+        normalized_puuid,
         champion_id_option(player.champion_id)
             .or_else(|| champion_id_option(player.champion_pick_intent)),
+        is_bot,
+        normalize_position_value(&player.assigned_position),
+        None,
+        None,
         side,
     );
 }
@@ -1279,6 +1582,10 @@ fn build_bot_slots_from_parties(participants: &[LcuPartiesBotParticipant]) -> Ve
         slots.push(PlayerSlot {
             puuid: format!("BOT_{bot_id}"),
             champion_id: champion_id_option(participant.champion_id),
+            is_bot: true,
+            position_assigned: normalize_position_value(&participant.position),
+            position_primary: None,
+            position_secondary: None,
             side,
         });
     }
@@ -1328,6 +1635,7 @@ fn normalize_bot_slots(slots: &mut [PlayerSlot], cached_bot_ids: &[String]) {
             continue;
         }
         if trimmed.to_ascii_uppercase().starts_with("BOT_") {
+            slot.is_bot = true;
             continue;
         }
 
@@ -1336,6 +1644,7 @@ fn normalize_bot_slots(slots: &mut [PlayerSlot], cached_bot_ids: &[String]) {
             .find(|id| id.eq_ignore_ascii_case(trimmed))
         {
             slot.puuid = format!("BOT_{}", bot_id.to_ascii_uppercase());
+            slot.is_bot = true;
         }
     }
 }
@@ -1359,6 +1668,10 @@ fn push_gameflow_player_slot(
         red_players,
         player.puuid.clone(),
         champion_id,
+        false,
+        normalize_position_value(&player.assigned_position),
+        None,
+        None,
         side,
     );
 }
