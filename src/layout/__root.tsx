@@ -37,10 +37,7 @@ export function RootLayout() {
   );
 
   const titlebarSlots = useMemo(
-    () =>
-      getTitlebarSlots(pathname).map((slot) => (
-        <div key={slot.id}>{slot.node}</div>
-      )),
+    () => getTitlebarSlots(pathname).map((slot) => slot.node),
     [pathname],
   );
 

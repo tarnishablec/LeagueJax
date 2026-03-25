@@ -1,0 +1,75 @@
+import { style } from "@vanilla-extract/css";
+import { vars } from "@/styles/theme.css";
+
+export const root = style({
+  display: "grid",
+  gridTemplateColumns: "auto 1fr auto",
+  alignItems: "center",
+  gap: 8,
+  minWidth: 0,
+  height: "100%",
+});
+
+export const labels = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  gridAutoColumns: "max-content",
+  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  paddingLeft: "1rem",
+});
+
+export const text = style({
+  fontSize: "0.76rem",
+  color: vars.color.foreground,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+});
+
+export const idleText = style({
+  fontSize: "0.76rem",
+  color: vars.color.mutedForeground,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+});
+
+export const separator = style({
+  fontSize: "0.72rem",
+  color: vars.color.mutedForeground,
+});
+
+export const controls = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  alignItems: "center",
+  gap: 8,
+});
+
+export const filterSelect = style({
+  width: 140,
+  minWidth: 140,
+});
+
+export const refreshButton = style({
+  width: 28,
+  height: 28,
+  borderRadius: 8,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.accent,
+  color: vars.color.foreground,
+  display: "grid",
+  placeItems: "center",
+  cursor: "pointer",
+  selectors: {
+    "&:hover": {
+      borderColor: vars.color.primary,
+    },
+    "&:disabled": {
+      opacity: 0.6,
+      cursor: "not-allowed",
+    },
+  },
+});

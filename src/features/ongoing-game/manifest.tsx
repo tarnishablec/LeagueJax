@@ -7,6 +7,7 @@ import type {
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
+import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
 import { ongoingGameI18n } from "./i18n";
 import { OngoingGameRoute } from "./routes/OngoingGameRoute";
 import { useOngoingGameStore } from "./store";
@@ -78,6 +79,17 @@ export class OngoingGameShard implements WebShard {
         icon: Gamepad2,
         section: "main" as const,
         order: 20,
+      },
+    ];
+  }
+
+  public titlebarSlots() {
+    return [
+      {
+        id: "ongoing-game-titlebar",
+        node: <OngoingGameTitlebar />,
+        order: 20,
+        routes: ["/game"],
       },
     ];
   }

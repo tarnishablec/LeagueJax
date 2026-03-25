@@ -6,6 +6,8 @@ export const page = style({
   gridTemplateRows: "auto 1fr",
   gap: 16,
   height: "100%",
+  padding: "12px",
+  paddingTop: 4,
 });
 
 export const emptyState = style({
