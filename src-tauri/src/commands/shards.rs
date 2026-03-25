@@ -1,4 +1,4 @@
-use crate::concepts::shards::{ShardInfoDto, ShardStatusDto, ShardsSnapshotDto};
+﻿use crate::shards::shard_status_types::{ShardInfoDto, ShardStatusDto, ShardsSnapshotDto};
 use crate::error::AppError;
 use jax::Jax;
 use std::sync::Arc;
@@ -51,3 +51,4 @@ pub fn build_shards_snapshot(jax: &Jax) -> ShardsSnapshotDto {
 
     ShardsSnapshotDto { shards }
 }
+

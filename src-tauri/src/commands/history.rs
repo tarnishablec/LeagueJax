@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+﻿use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::concepts::cherry::CherryAugment;
-use crate::concepts::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
-use crate::concepts::rank::RankStats;
-use crate::concepts::summoner::{SummonerInfo, SummonerSearchResult};
+use crate::shards::lcu::cherry::CherryAugment;
+use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
+use crate::shards::lcu::rank::RankStats;
+use crate::shards::lcu::summoner::{SummonerInfo, SummonerSearchResult};
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
@@ -152,7 +152,7 @@ async fn search_aliases_with_target_server(
     }
 
     // The aliases response already contains gameName, tagLine, profileIconId,
-    // summonerLevel — use them directly for same-server searches.
+    // summonerLevel 鈥?use them directly for same-server searches.
     if same_server {
         return Ok(aliases
             .into_iter()
@@ -192,7 +192,7 @@ async fn search_aliases_with_target_server(
     Ok(results)
 }
 
-// ─── Commands ────────────────────────────────────────────────────────────────
+// 鈹€鈹€鈹€ Commands 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 #[tauri::command]
 pub async fn get_current_summoner(jax: State<'_, Arc<Jax>>) -> Result<SummonerInfo, AppError> {
@@ -425,3 +425,4 @@ pub async fn get_match_summary(
         .get_match_summary(game_id, sgp_server_id.as_deref())
         .await
 }
+

@@ -1,5 +1,5 @@
-use crate::concepts::maps::LcuMap;
-use crate::concepts::queues::LcuQueue;
+﻿use crate::shards::lcu::maps::LcuMap;
+use crate::shards::lcu::queues::LcuQueue;
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::static_cache::StaticCacheShard;
@@ -46,3 +46,4 @@ pub async fn lcu_get_queues(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuQueue>, A
         .get_or_init(LCU_CACHE, "lcu_queues", &cache_version, || api.get_queues())
         .await
 }
+

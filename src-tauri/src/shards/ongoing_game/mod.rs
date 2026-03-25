@@ -1,5 +1,6 @@
 pub mod driver;
 pub mod manager;
+pub mod types;
 
 use std::error::Error;
 use std::sync::{Arc, OnceLock};

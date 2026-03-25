@@ -1,4 +1,6 @@
-use crate::concepts::settings::{
+pub mod types;
+
+use self::types::{
     SettingControlDto, SettingDefinitionDto, SettingsBootstrapDto, SettingsPatchDto,
     SettingsSnapshotDto,
 };
