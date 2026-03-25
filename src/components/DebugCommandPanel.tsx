@@ -176,6 +176,11 @@ const EVENT_LISTENERS: EventListener[] = [
     eventName: "ongoing-game-phase-changed",
   },
   {
+    id: "ongoing-game-snapshot-updated",
+    label: "ongoing-game-snapshot-updated",
+    eventName: "ongoing-game-snapshot-updated",
+  },
+  {
     id: "lcu-focus-changed",
     label: "lcu-focus-changed",
     eventName: "lcu-focus-changed",

@@ -31,6 +31,7 @@ pub struct PlayerSlot {
 
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export, export_to = "ongoing_game.ts")]
+#[allow(dead_code)]
 pub struct PremadeGroup {
     pub group_id: String,
     pub members: Vec<String>,
