@@ -1,12 +1,13 @@
-use std::sync::LazyLock;
+﻿use std::sync::LazyLock;
 
 use maokai_runner::{Behavior, Behaviors, EventReply, Runner};
 use maokai_tree::{DataView, State, StateTree, TreeView};
 
-use crate::concepts::ongoing_game::OngoingGamePhase;
+use crate::shards::ongoing_game::types::OngoingGamePhase;
 use crate::shards::lcu::watcher::LcuWsEvent;
+use crate::shards::lcu::ws_event_types::parse_gameflow_phase_event;
 
-type DriverInput = LcuWsEvent;
+type DriverInput = String;
 
 // ---------------------------------------------------------------------------
 // State tree
@@ -24,7 +25,7 @@ static ONGOING_GAME_TREE: LazyLock<(StateTree<OngoingGamePhase>, State, State, S
     });
 
 // ---------------------------------------------------------------------------
-// Driver — pure synchronous state machine
+// Driver - pure synchronous state machine
 // ---------------------------------------------------------------------------
 
 pub struct OngoingGameDriver {
@@ -49,20 +50,22 @@ impl OngoingGameDriver {
         }
     }
 
-    /// Feed a WsEvent into the state machine. Returns `Some(new_phase)` on
+    /// Feed a WS event into the state machine. Returns `Some(new_phase)` on
     /// transition, `None` if the phase did not change.
     pub fn process(&mut self, event: &LcuWsEvent) -> Option<OngoingGamePhase> {
-        if event.uri != "/lol-gameflow/v1/gameflow-phase" {
+        let Some(payload) = parse_gameflow_phase_event(event) else {
             return None;
-        }
+        };
 
         let previous = self.current.clone();
-        self.current = self.runner.dispatch(&self.behaviors, &self.current, event);
+        self.current = self
+            .runner
+            .dispatch(&self.behaviors, &self.current, &payload.phase);
 
         if self.current != previous {
             let prev = Self::phase(&previous);
             let next = Self::phase(&self.current);
-            tracing::info!("OngoingGame phase: {prev:?} → {next:?}");
+            tracing::info!("OngoingGame phase: {prev:?} -> {next:?}");
             Some(next)
         } else {
             None
@@ -75,6 +78,10 @@ impl OngoingGameDriver {
             .get_data(state)
             .copied()
             .unwrap_or(OngoingGamePhase::Idle)
+    }
+
+    pub fn current_phase(&self) -> OngoingGamePhase {
+        Self::phase(&self.current)
     }
 
     /// Force-set the phase (e.g., after querying get_gameflow_phase on startup).
@@ -106,8 +113,8 @@ fn transition_to(target: OngoingGamePhase) -> EventReply {
     EventReply::Transition(handle_for_phase(target))
 }
 
-fn phase_from_event_data(data: &serde_json::Value) -> Option<&str> {
-    data.as_str()
+fn phase_from_input(input: &DriverInput) -> &str {
+    input.as_str()
 }
 
 // ---------------------------------------------------------------------------
@@ -118,8 +125,8 @@ struct IdleBehavior;
 
 impl Behavior<DriverInput> for IdleBehavior {
     fn on_event(&self, event: &DriverInput, _current: &State, _tree: &dyn TreeView) -> EventReply {
-        match phase_from_event_data(&event.data) {
-            Some("ChampSelect") => transition_to(OngoingGamePhase::ChampSelect),
+        match phase_from_input(event) {
+            "ChampSelect" => transition_to(OngoingGamePhase::ChampSelect),
             _ => EventReply::Ignored,
         }
     }
@@ -129,9 +136,11 @@ struct ChampSelectBehavior;
 
 impl Behavior<DriverInput> for ChampSelectBehavior {
     fn on_event(&self, event: &DriverInput, _current: &State, _tree: &dyn TreeView) -> EventReply {
-        match phase_from_event_data(&event.data) {
-            Some("InProgress") => transition_to(OngoingGamePhase::InGame),
-            Some("None") | Some("Lobby") => transition_to(OngoingGamePhase::Idle),
+        match phase_from_input(event) {
+            "InProgress" | "GameStart" => transition_to(OngoingGamePhase::InGame),
+            "None" | "Lobby" | "WaitingForStats" | "TerminatedInError" => {
+                transition_to(OngoingGamePhase::Idle)
+            }
             _ => EventReply::Handled,
         }
     }
@@ -141,9 +150,13 @@ struct InGameBehavior;
 
 impl Behavior<DriverInput> for InGameBehavior {
     fn on_event(&self, event: &DriverInput, _current: &State, _tree: &dyn TreeView) -> EventReply {
-        match phase_from_event_data(&event.data) {
-            Some("EndOfGame") | Some("None") => transition_to(OngoingGamePhase::Idle),
+        match phase_from_input(event) {
+            "EndOfGame" | "None" | "Lobby" | "WaitingForStats" | "TerminatedInError" => {
+                transition_to(OngoingGamePhase::Idle)
+            }
             _ => EventReply::Handled,
         }
     }
 }
+
+

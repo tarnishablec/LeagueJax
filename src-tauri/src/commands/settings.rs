@@ -1,4 +1,4 @@
-use crate::concepts::settings::{
+use crate::shards::settings::types::{
     SettingsBootstrapDto, SettingsChangedEventDto, SettingsPatchDto, SettingsPatchResultDto,
 };
 use crate::error::AppError;

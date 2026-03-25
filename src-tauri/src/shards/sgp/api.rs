@@ -1,7 +1,7 @@
-use super::config::{sgp_servers_config, SgpServerEndpoints};
+﻿use super::config::{sgp_servers_config, SgpServerEndpoints};
 use super::http_client::{SgpHttpClient, SgpTokenKind};
-use crate::concepts::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
-use crate::concepts::summoner::SummonerInfo;
+use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
+use crate::shards::lcu::summoner::SummonerInfo;
 use crate::error::AppError;
 
 pub struct SgpApi {
@@ -196,3 +196,4 @@ impl SgpApi {
         }))
     }
 }
+

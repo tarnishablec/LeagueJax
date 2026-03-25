@@ -2,6 +2,7 @@ pub mod api;
 pub mod config;
 pub mod http_client;
 pub mod manager;
+pub mod matches;
 pub mod session;
 
 use core::error::Error;

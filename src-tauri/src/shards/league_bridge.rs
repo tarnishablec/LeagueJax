@@ -1,4 +1,4 @@
-use core::error::Error;
+﻿use core::error::Error;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -7,6 +7,7 @@ use tauri::Emitter;
 
 use crate::error::AppError;
 use crate::shards::lcu::manager::LcuManagerStateEvent;
+use crate::shards::lcu::ws_event_types::is_ongoing_related_uri;
 use crate::shards::lcu::LcuShard;
 use crate::shards::ongoing_game::manager::OngoingGameManagerEvent;
 use crate::shards::ongoing_game::OngoingGameShard;
@@ -43,41 +44,65 @@ impl LeagueBridgeShard {
             async move {
                 match event {
                     LcuManagerStateEvent::FocusChanged(change) => {
-                        // Spawn to avoid blocking the recv loop with network I/O.
-                        tokio::spawn(async move {
-                            let (lcu_session, sgp_session) = match change.current {
-                                Some(pid) => {
-                                    let lcu_shard = jax.get_shard::<LcuShard>();
-                                    let lcu_session =
-                                        lcu_shard.manager().and_then(|m| m.session_for_pid(pid));
+                        let (lcu_session, sgp_session) = match change.current {
+                            Some(pid) => {
+                                let lcu_shard = jax.get_shard::<LcuShard>();
+                                let lcu_session =
+                                    lcu_shard.manager().and_then(|m| m.session_for_pid(pid));
 
-                                    let sgp_session = if let Some(lcu) = &lcu_session {
-                                        let sgp_shard = jax.get_shard::<SgpShard>();
-                                        sgp_shard.spg_from_lcu(lcu.clone()).await.ok()
-                                    } else {
-                                        None
-                                    };
+                                let sgp_session = if let Some(lcu) = &lcu_session {
+                                    let sgp_shard = jax.get_shard::<SgpShard>();
+                                    sgp_shard.spg_from_lcu(lcu.clone()).await.ok()
+                                } else {
+                                    None
+                                };
 
-                                    (lcu_session, sgp_session)
-                                }
-                                None => (None, None),
-                            };
+                                (lcu_session, sgp_session)
+                            }
+                            None => (None, None),
+                        };
 
-                            manager.handle_focus_changed(lcu_session, sgp_session).await;
-                        });
+                        manager.handle_focus_changed(lcu_session, sgp_session).await;
                     }
                     LcuManagerStateEvent::InstancesChanged(_) => {}
                 }
             }
         });
 
-        let manager_for_ws = ongoing_manager;
-        lcu_manager.subscribe_ws_fn(move |ws_event| {
-            let manager = manager_for_ws.clone();
-            async move {
-                manager.handle_ws_event(ws_event).await;
-            }
-        });
+        #[cfg(debug_assertions)]
+        {
+            let ws_logger = jax
+                .get_shard::<crate::shards::file_logger::FileLoggerShard>()
+                .logger()
+                .cloned();
+
+            lcu_manager.subscribe_ws_fn(move |ws_event| {
+                let ongoing_manager = ongoing_manager.clone();
+                let ws_logger = ws_logger.clone();
+                async move {
+                    if let Some(logger) = &ws_logger {
+                        logger.write("lcu_ws_event_raw", &ws_event);
+                    }
+                    if !is_ongoing_related_uri(&ws_event.uri) {
+                        return;
+                    }
+                    ongoing_manager.handle_ws_event(ws_event).await;
+                }
+            });
+        }
+
+        #[cfg(not(debug_assertions))]
+        {
+            lcu_manager.subscribe_ws_fn(move |ws_event| {
+                let ongoing_manager = ongoing_manager.clone();
+                async move {
+                    if !is_ongoing_related_uri(&ws_event.uri) {
+                        return;
+                    }
+                    ongoing_manager.handle_ws_event(ws_event).await;
+                }
+            });
+        }
     }
 
     fn setup_emit_bridge(&self, jax: Arc<Jax>) -> Result<(), AppError> {
@@ -129,6 +154,9 @@ impl LeagueBridgeShard {
                         OngoingGameManagerEvent::PhaseChanged(payload) => {
                             let _ = ongoing_app.emit("ongoing-game-phase-changed", &payload);
                         }
+                        OngoingGameManagerEvent::SnapshotUpdated(payload) => {
+                            let _ = ongoing_app.emit("ongoing-game-snapshot-updated", &payload);
+                        }
                     }
                 }
             });
@@ -149,6 +177,13 @@ impl Shard for LeagueBridgeShard {
     }
 
     fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![TauriHost, LcuShard, OngoingGameShard, SgpShard]
+        depends![
+            TauriHost,
+            LcuShard,
+            OngoingGameShard,
+            SgpShard,
+            crate::shards::file_logger::FileLoggerShard
+        ]
     }
 }
+

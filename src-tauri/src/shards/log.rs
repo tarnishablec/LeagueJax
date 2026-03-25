@@ -1,4 +1,4 @@
-use crate::concepts::settings::{
+use crate::shards::settings::types::{
     SettingControlDto, SettingDefinitionDto, SettingOptionDto, SettingScopeDto,
 };
 use crate::shards::settings::SettingsShard;

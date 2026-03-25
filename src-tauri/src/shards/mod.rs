@@ -9,6 +9,7 @@ pub mod log;
 pub mod ongoing_game;
 pub mod persistence_sled;
 pub mod saved_player;
+pub mod shard_status_types;
 pub mod settings;
 pub mod sgp;
 pub mod static_cache;
