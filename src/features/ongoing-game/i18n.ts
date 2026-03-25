@@ -25,6 +25,9 @@ export const ongoingGameI18n: Resource = {
         autoSwitchToGame: {
           label: "Auto switch to game page",
         },
+        showBots: {
+          label: "Show bot players",
+        },
       },
     },
     ongoingGame: {
@@ -49,6 +52,7 @@ export const ongoingGameI18n: Resource = {
       noRanked: "No ranked data",
       recentGames: "Recent games",
       noHistory: "No match history",
+      botNoHistory: "Bot (history disabled)",
       historyResultWin: "Win",
       historyResultLose: "Lose",
       historyResultRemake: "Remake",
@@ -82,6 +86,9 @@ export const ongoingGameI18n: Resource = {
           label:
             "\u8fdb\u5165\u5bf9\u5c40\u65f6\u81ea\u52a8\u5207\u6362\u5230\u5bf9\u5c40\u9875",
         },
+        showBots: {
+          label: "\u663e\u793a\u673a\u5668\u4eba\u5361\u7247",
+        },
       },
     },
     ongoingGame: {
@@ -106,6 +113,7 @@ export const ongoingGameI18n: Resource = {
       noRanked: "\u65e0\u6392\u4f4d\u6570\u636e",
       recentGames: "\u6700\u8fd1\u5bf9\u5c40",
       noHistory: "\u6682\u65e0\u6218\u7ee9",
+      botNoHistory: "\u673a\u5668\u4eba\uff08\u4e0d\u67e5\u6218\u7ee9\uff09",
       historyResultWin: "\u80dc\u5229",
       historyResultLose: "\u5931\u8d25",
       historyResultRemake: "\u91cd\u5f00",

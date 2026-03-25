@@ -6,7 +6,7 @@ interface SettingsSwitchProps {
   onCheckedChange: (checked: boolean) => void;
 }
 
-export function SettingsSwitch({
+export function SettingsToggle({
   ariaLabel,
   checked,
   onCheckedChange,
@@ -20,10 +20,10 @@ export function SettingsSwitch({
       className={s.button({ checked })}
       onClick={() => onCheckedChange(!checked)}
     >
+      <span className={s.text}>{checked ? "On" : "Off"}</span>
       <span className={s.track({ checked })}>
         <span className={s.thumb} />
       </span>
-      <span className={s.text}>{checked ? "On" : "Off"}</span>
     </button>
   );
 }
