@@ -15,10 +15,9 @@ export const page = style({
 });
 
 export const teamSection = style({
-  display: "grid",
-  gridTemplateRows: "1fr",
-  gap: 8,
-  minHeight: 0,
+  display: "block",
+  height: "100%",
+  overflow: "hidden",
 });
 
 export const blueTitle = style({
@@ -32,19 +31,20 @@ export const redTitle = style({
 
 export const teamRow = style({
   display: "grid",
-  gridTemplateColumns: `repeat(${teamColsVar}, minmax(0, 1fr))`,
+  gridTemplateColumns: `repeat(${teamColsVar}, minmax(225px, 300px))`,
   gap: 10,
   height: "100%",
-  alignItems: "start",
-  minWidth: 0,
-  "@media": {
-    "(max-width: 980px)": {
-      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    },
-    "(max-width: 560px)": {
-      gridTemplateColumns: "1fr",
-    },
-  },
+  placeItems: "center",
+  justifyContent: "space-between",
+  overflowX: "auto",
+  // "@media": {
+  //   "(max-width: 980px)": {
+  //     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  //   },
+  //   "(max-width: 560px)": {
+  //     gridTemplateColumns: "1fr",
+  //   },
+  // },
 });
 
 export const emptyState = style({
@@ -56,18 +56,20 @@ export const emptyState = style({
   border: `1px dashed ${vars.color.border}`,
   borderRadius: 8,
   gridColumn: "1 / -1",
+  width: "100%",
 });
 
 export const playerCard = style({
   display: "grid",
-  gridTemplateRows: "auto auto auto minmax(0, 1fr)",
+  gridTemplateRows: "auto auto auto 1fr",
   gap: 6,
   border: `1px solid ${vars.color.border}`,
   borderRadius: 10,
-  padding: 10,
+  padding: `10px 6px`,
   background: vars.color.accent,
-  minWidth: 0,
-  minHeight: 0,
+  height: "100%",
+  overflow: "hidden",
+  width: "100%",
 });
 
 export const playerHeader = style({
@@ -121,11 +123,10 @@ export const playerStats = style({
 export const historyList = style({
   display: "grid",
   gap: 4,
-  minHeight: 0,
-  maxHeight: 176,
   overflowY: "auto",
   alignContent: "start",
   paddingRight: 2,
+  height: "100%",
 });
 
 export const historyRow = style({
@@ -134,7 +135,17 @@ export const historyRow = style({
   alignItems: "center",
   gap: 6,
   fontSize: "0.74rem",
-  minWidth: 0,
+  height: "35px",
+  border: `1px solid ${vars.color.border}`,
+  borderRadius: 6,
+  padding: "0 6px",
+  background: vars.color.accent,
+  selectors: {
+    "&:hover": {
+      borderColor: vars.color.primary,
+      background: vars.color.background,
+    },
+  },
 });
 
 export const historyEmpty = style({
@@ -149,11 +160,6 @@ export const winText = style({
 
 export const loseText = style({
   color: "oklch(0.67 0.2 28)",
-  fontWeight: 700,
-});
-
-export const neutralText = style({
-  color: vars.color.mutedForeground,
   fontWeight: 700,
 });
 

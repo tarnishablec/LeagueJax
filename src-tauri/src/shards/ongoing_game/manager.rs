@@ -22,7 +22,9 @@ use crate::shards::sgp::session::SgpSession;
 
 use super::driver::OngoingGameDriver;
 
-const DEFAULT_MATCH_HISTORY_COUNT: u32 = 20;
+const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
+const MIN_MATCH_HISTORY_COUNT: u32 = 1;
+const MAX_MATCH_HISTORY_COUNT: u32 = 200;
 
 // ---------------------------------------------------------------------------
 // Event
@@ -52,6 +54,7 @@ struct ManagerState {
     active_phase_task: Option<CancellationToken>,
     context: OngoingGameContextInfo,
     match_history_filter: OngoingGameMatchHistoryFilter,
+    match_history_count: u32,
 }
 
 impl OngoingGameManager {
@@ -67,6 +70,7 @@ impl OngoingGameManager {
                 active_phase_task: None,
                 context: OngoingGameContextInfo::default(),
                 match_history_filter: OngoingGameMatchHistoryFilter::CurrentMode,
+                match_history_count: DEFAULT_MATCH_HISTORY_COUNT,
             }),
             cancel_token,
         }
@@ -88,6 +92,16 @@ impl OngoingGameManager {
         self.refresh_current().await;
     }
 
+    pub async fn set_match_history_count(&self, count: u32) {
+        let normalized = count.clamp(MIN_MATCH_HISTORY_COUNT, MAX_MATCH_HISTORY_COUNT);
+        {
+            let mut state = self.state.lock().await;
+            state.match_history_count = normalized;
+        }
+
+        self.refresh_current().await;
+    }
+
     pub async fn refresh_current(&self) {
         let next = {
             let state = self.state.lock().await;
@@ -104,15 +118,23 @@ impl OngoingGameManager {
                 state.sgp_session.clone(),
                 state.focused_puuid.clone(),
                 state.match_history_filter,
+                state.match_history_count,
             ))
         };
 
-        let Some((phase, lcu_session, sgp_session, focused_puuid, filter)) = next else {
+        let Some((phase, lcu_session, sgp_session, focused_puuid, filter, count)) = next else {
             return;
         };
 
-        self.on_phase_changed(phase, lcu_session, sgp_session, focused_puuid, filter)
-            .await;
+        self.on_phase_changed(
+            phase,
+            lcu_session,
+            sgp_session,
+            focused_puuid,
+            filter,
+            count,
+        )
+        .await;
     }
 
     pub async fn handle_focus_changed(
@@ -169,9 +191,9 @@ impl OngoingGameManager {
             }
         };
 
-        let match_history_filter = {
+        let (match_history_filter, match_history_count) = {
             let state = self.state.lock().await;
-            state.match_history_filter
+            (state.match_history_filter, state.match_history_count)
         };
 
         match lcu.api().get_gameflow_phase().await {
@@ -184,6 +206,7 @@ impl OngoingGameManager {
                         sgp_session.clone(),
                         focused_puuid.clone(),
                         match_history_filter,
+                        match_history_count,
                     )
                     .await;
                 }
@@ -211,6 +234,7 @@ impl OngoingGameManager {
             Option<Arc<SgpSession>>,
             Option<String>,
             OngoingGameMatchHistoryFilter,
+            u32,
         )> = None;
         let mut ws_phase_update: Option<OngoingGamePhaseChanged> = None;
 
@@ -238,6 +262,7 @@ impl OngoingGameManager {
                         state.sgp_session.clone(),
                         state.focused_puuid.clone(),
                         state.match_history_filter,
+                        state.match_history_count,
                     ));
                 }
             } else {
@@ -250,8 +275,8 @@ impl OngoingGameManager {
             }
         }
 
-        if let Some((new_phase, lcu, sgp, focused_puuid, filter)) = transition {
-            self.on_phase_changed(new_phase, lcu, sgp, focused_puuid, filter)
+        if let Some((new_phase, lcu, sgp, focused_puuid, filter, count)) = transition {
+            self.on_phase_changed(new_phase, lcu, sgp, focused_puuid, filter, count)
                 .await;
             return;
         }
@@ -274,10 +299,13 @@ impl OngoingGameManager {
         sgp_session: Option<Arc<SgpSession>>,
         focused_puuid: Option<String>,
         match_history_filter: OngoingGameMatchHistoryFilter,
+        match_history_count: u32,
     ) {
+        let normalized_count = match_history_count.clamp(MIN_MATCH_HISTORY_COUNT, MAX_MATCH_HISTORY_COUNT);
         let (task_token, context) = {
             let mut state = self.state.lock().await;
             state.match_history_filter = match_history_filter;
+            state.match_history_count = normalized_count;
             state.context.match_history_filter = match_history_filter;
             state.context.match_history_tag =
                 resolve_match_history_tag(match_history_filter, state.context.queue_id.unwrap_or(0));
@@ -318,7 +346,7 @@ impl OngoingGameManager {
         tokio::spawn(async move {
             tokio::select! {
                 _ = task_token.cancelled() => {}
-                _ = fetch_phase_data(phase, lcu_session, sgp_session, focused_puuid, match_history_filter, event_tx) => {}
+                _ = fetch_phase_data(phase, lcu_session, sgp_session, focused_puuid, match_history_filter, normalized_count, event_tx) => {}
             }
         });
     }
@@ -334,6 +362,7 @@ async fn fetch_phase_data(
     sgp_session: Option<Arc<SgpSession>>,
     focused_puuid: Option<String>,
     match_history_filter: OngoingGameMatchHistoryFilter,
+    match_history_count: u32,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
     match phase {
@@ -343,6 +372,7 @@ async fn fetch_phase_data(
                 sgp_session,
                 focused_puuid,
                 match_history_filter,
+                match_history_count,
                 event_tx,
             )
             .await;
@@ -353,6 +383,7 @@ async fn fetch_phase_data(
                 sgp_session,
                 focused_puuid,
                 match_history_filter,
+                match_history_count,
                 event_tx,
             )
             .await;
@@ -366,6 +397,7 @@ async fn fetch_champ_select_phase_data(
     sgp_session: Option<Arc<SgpSession>>,
     focused_puuid: Option<String>,
     match_history_filter: OngoingGameMatchHistoryFilter,
+    match_history_count: u32,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
     let sgp_session = ensure_sgp_session(&lcu_session, sgp_session).await;
@@ -413,8 +445,14 @@ async fn fetch_champ_select_phase_data(
             );
 
             let (own_slots, _) = split_team_slots(our_side, blue_slots, red_slots);
-            let own_players =
-                fetch_team_players(lcu_session, sgp_session, own_slots, queue_tag.as_deref()).await;
+            let own_players = fetch_team_players(
+                lcu_session,
+                sgp_session,
+                own_slots,
+                queue_tag.as_deref(),
+                match_history_count,
+            )
+            .await;
             let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
 
             emit_snapshot_updated(
@@ -448,6 +486,7 @@ async fn fetch_in_game_phase_data(
     sgp_session: Option<Arc<SgpSession>>,
     focused_puuid: Option<String>,
     match_history_filter: OngoingGameMatchHistoryFilter,
+    match_history_count: u32,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
     let sgp_session = ensure_sgp_session(&lcu_session, sgp_session).await;
@@ -499,6 +538,7 @@ async fn fetch_in_game_phase_data(
                     sgp_session.clone(),
                     own_slots,
                     queue_tag.as_deref(),
+                    match_history_count,
                 )
                 .await;
             let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
@@ -512,9 +552,14 @@ async fn fetch_in_game_phase_data(
                 red_players.clone(),
             );
 
-            let enemy_players =
-                fetch_team_players(lcu_session, sgp_session, enemy_slots, queue_tag.as_deref())
-                    .await;
+            let enemy_players = fetch_team_players(
+                lcu_session,
+                sgp_session,
+                enemy_slots,
+                queue_tag.as_deref(),
+                match_history_count,
+            )
+            .await;
             let (blue_players, red_players) = merge_players_by_side(
                 collect_players_from_sides(blue_players, red_players),
                 enemy_players,
@@ -551,6 +596,7 @@ async fn fetch_team_players(
     sgp_session: Option<Arc<SgpSession>>,
     slots: Vec<PlayerSlot>,
     queue_tag: Option<&str>,
+    match_history_count: u32,
 ) -> Vec<OngoingGamePlayerSnapshot> {
     let candidates: Vec<PlayerFetchCandidate> = slots
         .into_iter()
@@ -571,7 +617,14 @@ async fn fetch_team_players(
         let sgp = sgp_session.clone();
         let queue_tag = queue_tag.map(ToOwned::to_owned);
         joins.spawn(async move {
-            let player = fetch_player_snapshot(lcu, sgp, candidate, queue_tag.as_deref()).await;
+            let player = fetch_player_snapshot(
+                lcu,
+                sgp,
+                candidate,
+                queue_tag.as_deref(),
+                match_history_count,
+            )
+            .await;
             (idx, player)
         });
     }
@@ -616,6 +669,7 @@ async fn fetch_player_snapshot(
     sgp_session: Option<Arc<SgpSession>>,
     candidate: PlayerFetchCandidate,
     queue_tag: Option<&str>,
+    match_history_count: u32,
 ) -> Option<OngoingGamePlayerSnapshot> {
     let summoner = match lcu_session
         .api()
@@ -653,7 +707,7 @@ async fn fetch_player_snapshot(
                 .get_match_summaries(
                     &candidate.puuid,
                     0,
-                    DEFAULT_MATCH_HISTORY_COUNT,
+                    match_history_count,
                     queue_tag,
                     None,
                 )
@@ -667,7 +721,7 @@ async fn fetch_player_snapshot(
                             .get_match_summaries(
                                 &candidate.puuid,
                                 0,
-                                DEFAULT_MATCH_HISTORY_COUNT,
+                                match_history_count,
                                 None,
                                 None,
                             )
@@ -698,7 +752,7 @@ async fn fetch_player_snapshot(
                             .get_match_summaries(
                                 &candidate.puuid,
                                 0,
-                                DEFAULT_MATCH_HISTORY_COUNT,
+                                match_history_count,
                                 None,
                                 None,
                             )

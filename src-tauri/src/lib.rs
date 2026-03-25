@@ -57,6 +57,7 @@ pub fn run() {
             lcu_get_game_version,
             ongoing_game_refresh,
             ongoing_game_set_match_history_filter,
+            ongoing_game_set_match_history_count,
             get_settings_bootstrap,
             apply_settings_patch,
             get_shards_status,
