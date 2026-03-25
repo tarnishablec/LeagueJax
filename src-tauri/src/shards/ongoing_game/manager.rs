@@ -5,16 +5,17 @@ use tokio::sync::broadcast;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
-use crate::shards::ongoing_game::types::{
-    OngoingGamePhase, OngoingGamePhaseChanged, OngoingGamePlayerSnapshot, OngoingGameSnapshotUpdated,
-    PlayerSlot, Side,
-};
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::watcher::LcuWsEvent;
 use crate::shards::lcu::ws_event_types::{
-    parse_champ_select_session_event, parse_champ_select_session_value, parse_gameflow_session_event,
-    parse_gameflow_session_value, LcuChampSelectPlayer, LcuChampSelectSessionEvent,
-    LcuChampSelectSessionPayload, LcuGameflowSessionPayload, LcuGameflowTeamPlayer,
+    parse_champ_select_session_event, parse_champ_select_session_value,
+    parse_gameflow_session_event, parse_gameflow_session_value, LcuChampSelectPlayer,
+    LcuChampSelectSessionEvent, LcuChampSelectSessionPayload, LcuGameflowSessionPayload,
+    LcuGameflowTeamPlayer,
+};
+use crate::shards::ongoing_game::types::{
+    OngoingGamePhase, OngoingGamePhaseChanged, OngoingGamePlayerSnapshot,
+    OngoingGameSnapshotUpdated, PlayerSlot, Side,
 };
 use crate::shards::sgp::session::SgpSession;
 
@@ -130,6 +131,7 @@ impl OngoingGameManager {
 
     /// Called by the event receiver for each ws event from the focused client.
     pub async fn handle_ws_event(&self, event: LcuWsEvent) {
+        #[allow(clippy::type_complexity)]
         let mut transition: Option<(
             OngoingGamePhase,
             Arc<LcuSession>,
@@ -163,12 +165,15 @@ impl OngoingGameManager {
         }
 
         if let Some((new_phase, lcu, sgp, focused_puuid)) = transition {
-            self.on_phase_changed(new_phase, lcu, sgp, focused_puuid).await;
+            self.on_phase_changed(new_phase, lcu, sgp, focused_puuid)
+                .await;
             return;
         }
 
         if let Some(payload) = ws_phase_update {
-            let _ = self.event_tx.send(OngoingGameManagerEvent::PhaseChanged(payload));
+            let _ = self
+                .event_tx
+                .send(OngoingGameManagerEvent::PhaseChanged(payload));
         }
     }
 
@@ -265,7 +270,8 @@ async fn fetch_champ_select_phase_data(
                 return;
             };
 
-            let (our_side_from_payload, blue_slots, red_slots) = build_champ_select_phase_data(&session);
+            let (our_side_from_payload, blue_slots, red_slots) =
+                build_champ_select_phase_data(&session);
             let our_side = focused_puuid
                 .as_deref()
                 .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots))
@@ -439,7 +445,11 @@ async fn fetch_player_snapshot(
     sgp_session: Option<Arc<SgpSession>>,
     candidate: PlayerFetchCandidate,
 ) -> Option<OngoingGamePlayerSnapshot> {
-    let summoner = match lcu_session.api().get_summoner_by_puuid(&candidate.puuid).await {
+    let summoner = match lcu_session
+        .api()
+        .get_summoner_by_puuid(&candidate.puuid)
+        .await
+    {
         Ok(value) => value,
         Err(e) => {
             tracing::debug!(
@@ -450,7 +460,13 @@ async fn fetch_player_snapshot(
         }
     };
 
-    let ranked_fut = async { lcu_session.api().get_ranked_stats(&candidate.puuid).await.ok() };
+    let ranked_fut = async {
+        lcu_session
+            .api()
+            .get_ranked_stats(&candidate.puuid)
+            .await
+            .ok()
+    };
     let mastery_fut = async {
         lcu_session
             .api()
@@ -461,13 +477,7 @@ async fn fetch_player_snapshot(
     let match_history_fut = async {
         if let Some(sgp) = &sgp_session {
             sgp.api()
-                .get_match_summaries(
-                    &candidate.puuid,
-                    0,
-                    DEFAULT_MATCH_HISTORY_COUNT,
-                    None,
-                    None,
-                )
+                .get_match_summaries(&candidate.puuid, 0, DEFAULT_MATCH_HISTORY_COUNT, None, None)
                 .await
                 .ok()
         } else {
@@ -606,13 +616,15 @@ fn emit_phase_changed(
     blue_players: Vec<PlayerSlot>,
     red_players: Vec<PlayerSlot>,
 ) {
-    let _ = event_tx.send(OngoingGameManagerEvent::PhaseChanged(OngoingGamePhaseChanged {
-        phase,
-        loading,
-        our_side,
-        blue_players,
-        red_players,
-    }));
+    let _ = event_tx.send(OngoingGameManagerEvent::PhaseChanged(
+        OngoingGamePhaseChanged {
+            phase,
+            loading,
+            our_side,
+            blue_players,
+            red_players,
+        },
+    ));
 }
 
 fn emit_snapshot_updated(
@@ -657,7 +669,11 @@ fn opposite_side(side: Side) -> Side {
     }
 }
 
-fn side_for_puuid(puuid: &str, blue_players: &[PlayerSlot], red_players: &[PlayerSlot]) -> Option<Side> {
+fn side_for_puuid(
+    puuid: &str,
+    blue_players: &[PlayerSlot],
+    red_players: &[PlayerSlot],
+) -> Option<Side> {
     if blue_players.iter().any(|player| player.puuid == puuid) {
         Some(Side::Blue)
     } else if red_players.iter().any(|player| player.puuid == puuid) {
@@ -724,12 +740,7 @@ fn build_champ_select_phase_data(
     let mut red_players = Vec::new();
 
     for player in &session.my_team {
-        push_champ_select_player_slot(
-            &mut blue_players,
-            &mut red_players,
-            player,
-            my_default_side,
-        );
+        push_champ_select_player_slot(&mut blue_players, &mut red_players, player, my_default_side);
     }
 
     for player in &session.their_team {
@@ -760,7 +771,9 @@ fn push_champ_select_player_slot(
     );
 }
 
-fn build_in_game_phase_data(session: &LcuGameflowSessionPayload) -> (Vec<PlayerSlot>, Vec<PlayerSlot>) {
+fn build_in_game_phase_data(
+    session: &LcuGameflowSessionPayload,
+) -> (Vec<PlayerSlot>, Vec<PlayerSlot>) {
     let mut champion_by_puuid: HashMap<String, i64> = HashMap::new();
     for selection in &session.game_data.player_champion_selections {
         if selection.puuid.is_empty() || selection.champion_id <= 0 {
@@ -817,5 +830,3 @@ fn push_gameflow_player_slot(
         side,
     );
 }
-
-

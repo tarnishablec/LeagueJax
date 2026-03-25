@@ -53,9 +53,7 @@ impl OngoingGameDriver {
     /// Feed a WS event into the state machine. Returns `Some(new_phase)` on
     /// transition, `None` if the phase did not change.
     pub fn process(&mut self, event: &LcuWsEvent) -> Option<OngoingGamePhase> {
-        let Some(payload) = parse_gameflow_phase_event(event) else {
-            return None;
-        };
+        let payload = parse_gameflow_phase_event(event)?;
 
         let previous = self.current.clone();
         self.current = self
