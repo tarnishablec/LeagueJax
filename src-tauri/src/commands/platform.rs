@@ -7,13 +7,21 @@ use tauri::State;
 
 #[tauri::command]
 pub async fn lcu_get_platform_config_namespaces(jax: State<'_, Arc<Jax>>) -> Result<Value, AppError> {
-    let lcu = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     lcu.api().get_platform_config_namespaces().await
 }
 
 
 #[tauri::command]
 pub async fn lcu_get_help(jax: State<'_, Arc<Jax>>) -> Result<Value, AppError> {
-    let lcu = jax.get_shard::<LcuShard>().focused().await?;
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     lcu.api().get_help().await
 }
