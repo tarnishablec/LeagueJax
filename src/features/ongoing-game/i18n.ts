@@ -5,6 +5,28 @@ export const ongoingGameI18n: Resource = {
     nav: {
       game: "Game",
     },
+    settings: {
+      pages: {
+        ongoing: {
+          title: "Ongoing",
+        },
+      },
+      sections: {
+        ongoing: {
+          behavior: {
+            title: "Behavior",
+          },
+        },
+      },
+      ongoing: {
+        matchHistoryCount: {
+          label: "Match history count",
+        },
+        autoSwitchToGame: {
+          label: "Auto switch to game page",
+        },
+      },
+    },
     ongoingGame: {
       status: "Status",
       loading: "Loading",
@@ -38,6 +60,29 @@ export const ongoingGameI18n: Resource = {
   "zh-CN": {
     nav: {
       game: "\u5bf9\u5c40",
+    },
+    settings: {
+      pages: {
+        ongoing: {
+          title: "\u5bf9\u5c40",
+        },
+      },
+      sections: {
+        ongoing: {
+          behavior: {
+            title: "\u884c\u4e3a",
+          },
+        },
+      },
+      ongoing: {
+        matchHistoryCount: {
+          label: "\u6218\u7ee9\u5206\u6790\u5bf9\u5c40\u6570",
+        },
+        autoSwitchToGame: {
+          label:
+            "\u8fdb\u5165\u5bf9\u5c40\u65f6\u81ea\u52a8\u5207\u6362\u5230\u5bf9\u5c40\u9875",
+        },
+      },
     },
     ongoingGame: {
       status: "\u72b6\u6001",

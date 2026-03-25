@@ -27,3 +27,15 @@ pub async fn ongoing_game_set_match_history_filter(
     manager.set_match_history_filter(filter).await;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn ongoing_game_set_match_history_count(
+    count: u32,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<(), AppError> {
+    let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
+        return Ok(());
+    };
+    manager.set_match_history_count(count).await;
+    Ok(())
+}
