@@ -1,6 +1,7 @@
 pub mod auto_gameflow;
 pub mod auto_reply;
 pub mod auto_select;
+pub mod file_logger;
 pub mod keyboard;
 pub mod lcu;
 pub mod lcu_event_bridge;

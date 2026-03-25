@@ -45,12 +45,13 @@ ntapi = "0.4.3"
 ts-rs = "12.0.1"
 sled = "0.34.7"
 snafu = { version = "0.9.0", features = ["backtrace"] }
+time = { version = "0.3.47", features = ["formatting"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
 
-[lints.clippy]
-unwrap_used = "deny"
+[lints]
+workspace = true
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"

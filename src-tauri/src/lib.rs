@@ -90,6 +90,7 @@ pub fn run() {
                 )))
                 .register(Arc::new(shards::settings::SettingsShard::new()))
                 .register(Arc::new(shards::log::LogShard::new()))
+                .register(Arc::new(shards::file_logger::FileLoggerShard::new()))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
                 .register(Arc::new(
                     shards::lcu_event_bridge::LcuEventBridgeShard::new(),

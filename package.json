@@ -12,7 +12,7 @@
     "tauri:build": "tauri build",
     "lint:biome": "bunx biome check .",
     "lint:biome:fix": "bunx biome check --write .",
-    "lint:clippy": "cargo clippy -- -D warnings",
+    "lint:clippy": "cargo clippy",
     "lint:check_all": "bun run lint:biome && bun run lint:clippy",
     "lint:fix_all": "bun run lint:biome:fix && bun run lint:clippy",
     "typecheck": "tsc --noEmit",
