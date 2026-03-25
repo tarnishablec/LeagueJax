@@ -7,6 +7,7 @@ import type {
   OngoingGamePlayerSnapshot,
   PlayerSlot,
 } from "@/bindings/ongoing_game";
+import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon";
 import { vars } from "@/styles/theme.css";
 import * as s from "../OngoingGameRoute.css";
 import {
@@ -76,13 +77,20 @@ function PlayerHistory(props: {
 
 function SlotCard(props: {
   card: Extract<TeamCardEntry, { kind: "slot" }>;
+  showPosition: boolean;
   levelText: string;
   recentGamesText: string;
   noRankedText: string;
   botNoHistoryText: string;
 }) {
-  const { card, levelText, recentGamesText, noRankedText, botNoHistoryText } =
-    props;
+  const {
+    card,
+    showPosition,
+    levelText,
+    recentGamesText,
+    noRankedText,
+    botNoHistoryText,
+  } = props;
 
   if (!card.isBot) {
     return (
@@ -122,6 +130,17 @@ function SlotCard(props: {
         <span>{levelText}: -</span>
         <span>{recentGamesText}: -</span>
       </div>
+      {showPosition ? (
+        <LeaguePositionPair
+          assigned={card.slot.position_assigned}
+          primary={card.slot.position_primary}
+          secondary={card.slot.position_secondary}
+          assignedWidth={16}
+          assignedHeight={16}
+          preferenceWidth={12}
+          preferenceHeight={12}
+        />
+      ) : null}
       <div className={s.playerStats}>{noRankedText}</div>
       <div className={s.historyList}>
         <div className={s.historyEmpty}>{botNoHistoryText}</div>
@@ -133,6 +152,7 @@ function SlotCard(props: {
 function SnapshotPlayerCard(props: {
   card: Extract<TeamCardEntry, { kind: "player" }>;
   modeContext: MatchHistoryModeContext;
+  showPosition: boolean;
   levelText: string;
   recentGamesText: string;
   noRankedText: string;
@@ -143,6 +163,7 @@ function SnapshotPlayerCard(props: {
   const {
     card,
     modeContext,
+    showPosition,
     levelText,
     recentGamesText,
     noRankedText,
@@ -174,6 +195,17 @@ function SnapshotPlayerCard(props: {
           {recentGamesText}: {recentGames}
         </span>
       </div>
+      {showPosition ? (
+        <LeaguePositionPair
+          assigned={player.position_assigned}
+          primary={player.position_primary}
+          secondary={player.position_secondary}
+          assignedWidth={16}
+          assignedHeight={16}
+          preferenceWidth={12}
+          preferenceHeight={12}
+        />
+      ) : null}
       <div className={s.playerStats}>{rank || noRankedText}</div>
       <div className={s.historyList}>
         {card.isBot ? (
@@ -225,6 +257,9 @@ export function TeamRow(props: {
     ? cardEntries
     : cardEntries.filter((card) => !card.isBot);
   const teamCols = Math.max(5, visibleCards.length);
+  const showPosition =
+    modeContext.mapId === 11 ||
+    (modeContext.gameMode ?? "").toUpperCase() === "CLASSIC";
 
   return (
     <section className={s.teamSection}>
@@ -243,6 +278,7 @@ export function TeamRow(props: {
                 <SlotCard
                   key={card.key}
                   card={card}
+                  showPosition={showPosition}
                   levelText={levelText}
                   recentGamesText={recentGamesText}
                   noRankedText={noRankedText}
@@ -256,6 +292,7 @@ export function TeamRow(props: {
                 key={card.key}
                 card={card}
                 modeContext={modeContext}
+                showPosition={showPosition}
                 levelText={levelText}
                 recentGamesText={recentGamesText}
                 noRankedText={noRankedText}

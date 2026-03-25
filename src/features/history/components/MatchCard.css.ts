@@ -60,7 +60,7 @@ export const cardMainButton = style({
   background: "transparent",
   textAlign: "left",
   display: "grid",
-  gridTemplateColumns: "48px minmax(0, 1fr)",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
   alignItems: "start",
   gap: 12,
   cursor: "pointer",
@@ -182,10 +182,20 @@ export const metricSecondary = style({
 
 export const loadoutRow = style({
   display: "grid",
-  gridTemplateColumns: "max-content max-content 1fr",
+  gridAutoFlow: "column",
+  justifyContent: "start",
+  // gridTemplateColumns: "max-content max-content max-content 1fr",
   gap: 10,
   alignItems: "center",
   minWidth: 0,
+});
+
+export const positionSlot = style({
+  // width: 23,
+  // height: 23,
+  display: "grid",
+  placeItems: "center",
+  pointerEvents: "none",
 });
 
 export const loadoutGroup = style({

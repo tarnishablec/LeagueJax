@@ -4,8 +4,7 @@ use maokai_runner::{Behavior, Behaviors, EventReply, Runner};
 use maokai_tree::{DataView, State, StateTree, TreeView};
 
 use crate::shards::ongoing_game::types::OngoingGamePhase;
-use crate::shards::lcu::watcher::LcuWsEvent;
-use crate::shards::lcu::ws_event_types::parse_gameflow_phase_event;
+use crate::shards::lcu::ws_event_types::LcuOngoingWsEvent;
 
 type DriverInput = String;
 
@@ -52,8 +51,10 @@ impl OngoingGameDriver {
 
     /// Feed a WS event into the state machine. Returns `Some(new_phase)` on
     /// transition, `None` if the phase did not change.
-    pub fn process(&mut self, event: &LcuWsEvent) -> Option<OngoingGamePhase> {
-        let payload = parse_gameflow_phase_event(event)?;
+    pub fn process(&mut self, event: &LcuOngoingWsEvent) -> Option<OngoingGamePhase> {
+        let LcuOngoingWsEvent::GameflowPhase { data: payload } = event else {
+            return None;
+        };
 
         let previous = self.current.clone();
         self.current = self
@@ -156,5 +157,4 @@ impl Behavior<DriverInput> for InGameBehavior {
         }
     }
 }
-
 

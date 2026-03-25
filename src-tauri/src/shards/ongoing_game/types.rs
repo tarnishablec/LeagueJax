@@ -66,6 +66,10 @@ impl Default for OngoingGameContextInfo {
 pub struct PlayerSlot {
     pub puuid: String,
     pub champion_id: Option<i64>,
+    pub is_bot: bool,
+    pub position_assigned: Option<String>,
+    pub position_primary: Option<String>,
+    pub position_secondary: Option<String>,
     pub side: Side,
 }
 
@@ -95,6 +99,10 @@ pub struct OngoingGamePlayerSnapshot {
     pub puuid: String,
     pub side: Side,
     pub champion_id: Option<i64>,
+    pub is_bot: bool,
+    pub position_assigned: Option<String>,
+    pub position_primary: Option<String>,
+    pub position_secondary: Option<String>,
     pub summoner: SummonerInfo,
     pub ranked: Option<RankStats>,
     pub match_history: Option<RawMatchSummariesResponse>,
