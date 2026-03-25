@@ -368,6 +368,8 @@ async fn fetch_champ_select_phase_data(
     match_history_filter: OngoingGameMatchHistoryFilter,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
+    let sgp_session = ensure_sgp_session(&lcu_session, sgp_session).await;
+
     match lcu_session.api().get_champ_select_session().await {
         Ok(session_value) => {
             let Some(session) = parse_champ_select_session_value(&session_value) else {
@@ -448,6 +450,8 @@ async fn fetch_in_game_phase_data(
     match_history_filter: OngoingGameMatchHistoryFilter,
     event_tx: broadcast::Sender<OngoingGameManagerEvent>,
 ) {
+    let sgp_session = ensure_sgp_session(&lcu_session, sgp_session).await;
+
     match lcu_session.api().get_gameflow_session().await {
         Ok(session_value) => {
             let Some(session) = parse_gameflow_session_value(&session_value) else {
@@ -587,6 +591,26 @@ async fn fetch_team_players(
     ordered.into_iter().flatten().collect()
 }
 
+async fn ensure_sgp_session(
+    lcu_session: &Arc<LcuSession>,
+    sgp_session: Option<Arc<SgpSession>>,
+) -> Option<Arc<SgpSession>> {
+    if sgp_session.is_some() {
+        return sgp_session;
+    }
+
+    match SgpSession::new(lcu_session).await {
+        Ok(session) => {
+            tracing::debug!("OngoingGame: lazily initialized SGP session");
+            Some(Arc::new(session))
+        }
+        Err(error) => {
+            tracing::warn!("OngoingGame: failed to initialize SGP session lazily: {error}");
+            None
+        }
+    }
+}
+
 async fn fetch_player_snapshot(
     lcu_session: Arc<LcuSession>,
     sgp_session: Option<Arc<SgpSession>>,
@@ -624,7 +648,8 @@ async fn fetch_player_snapshot(
     };
     let match_history_fut = async {
         if let Some(sgp) = &sgp_session {
-            sgp.api()
+            let first_result = sgp
+                .api()
                 .get_match_summaries(
                     &candidate.puuid,
                     0,
@@ -632,9 +657,72 @@ async fn fetch_player_snapshot(
                     queue_tag,
                     None,
                 )
-                .await
-                .ok()
+                .await;
+
+            match first_result {
+                Ok(response) => {
+                    if queue_tag.is_some() && response.games.is_empty() {
+                        match sgp
+                            .api()
+                            .get_match_summaries(
+                                &candidate.puuid,
+                                0,
+                                DEFAULT_MATCH_HISTORY_COUNT,
+                                None,
+                                None,
+                            )
+                            .await
+                        {
+                            Ok(fallback) => Some(fallback),
+                            Err(error) => {
+                                tracing::debug!(
+                                    "OngoingGame: fallback match history fetch failed for {}: {error}",
+                                    candidate.puuid
+                                );
+                                Some(response)
+                            }
+                        }
+                    } else {
+                        Some(response)
+                    }
+                }
+                Err(error) => {
+                    tracing::debug!(
+                        "OngoingGame: match history fetch failed for {} tag={:?}: {error}",
+                        candidate.puuid,
+                        queue_tag
+                    );
+                    if queue_tag.is_some() {
+                        match sgp
+                            .api()
+                            .get_match_summaries(
+                                &candidate.puuid,
+                                0,
+                                DEFAULT_MATCH_HISTORY_COUNT,
+                                None,
+                                None,
+                            )
+                            .await
+                        {
+                            Ok(fallback) => Some(fallback),
+                            Err(fallback_error) => {
+                                tracing::debug!(
+                                    "OngoingGame: fallback match history fetch failed for {}: {fallback_error}",
+                                    candidate.puuid
+                                );
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    }
+                }
+            }
         } else {
+            tracing::debug!(
+                "OngoingGame: skip match history fetch for {} because SGP session is unavailable",
+                candidate.puuid
+            );
             None
         }
     };
@@ -654,11 +742,18 @@ async fn fetch_player_snapshot(
 }
 
 fn queue_tag_from_queue_id(queue_id: i64) -> Option<String> {
-    if queue_id > 0 {
+    if queue_id > 0 && is_safe_match_history_queue(queue_id) {
         Some(format!("q_{queue_id}"))
     } else {
         None
     }
+}
+
+fn is_safe_match_history_queue(queue_id: i64) -> bool {
+    matches!(
+        queue_id,
+        420 | 430 | 440 | 450 | 480 | 490 | 900 | 1400 | 1700 | 1900 | 2300
+    )
 }
 
 fn option_non_empty(value: &str) -> Option<String> {
@@ -1025,7 +1120,8 @@ fn push_champ_select_player_slot(
         blue_players,
         red_players,
         player.puuid.clone(),
-        champion_id_option(player.champion_id),
+        champion_id_option(player.champion_id)
+            .or_else(|| champion_id_option(player.champion_pick_intent)),
         side,
     );
 }
