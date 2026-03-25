@@ -75,26 +75,30 @@ impl LcuEventReceiver for OngoingGameEventReceiver {
 
         match event {
             LcuManagerEvent::FocusChanged(change) => {
-                let (lcu_session, sgp_session) = match change.current {
-                    Some(pid) => {
-                        let lcu_shard = self.jax.get_shard::<LcuShard>();
-                        let lcu_session = lcu_shard
-                            .manager()
-                            .and_then(|m| m.session_for_pid(pid));
+                // Spawn to avoid blocking the recv loop with network I/O
+                let jax = self.jax.clone();
+                tokio::spawn(async move {
+                    let (lcu_session, sgp_session) = match change.current {
+                        Some(pid) => {
+                            let lcu_shard = jax.get_shard::<LcuShard>();
+                            let lcu_session = lcu_shard
+                                .manager()
+                                .and_then(|m| m.session_for_pid(pid));
 
-                        let sgp_session = if let Some(lcu) = &lcu_session {
-                            let sgp_shard = self.jax.get_shard::<SgpShard>();
-                            sgp_shard.spg_from_lcu(lcu.clone()).await.ok()
-                        } else {
-                            None
-                        };
+                            let sgp_session = if let Some(lcu) = &lcu_session {
+                                let sgp_shard = jax.get_shard::<SgpShard>();
+                                sgp_shard.spg_from_lcu(lcu.clone()).await.ok()
+                            } else {
+                                None
+                            };
 
-                        (lcu_session, sgp_session)
-                    }
-                    None => (None, None),
-                };
+                            (lcu_session, sgp_session)
+                        }
+                        None => (None, None),
+                    };
 
-                manager.handle_focus_changed(lcu_session, sgp_session).await;
+                    manager.handle_focus_changed(lcu_session, sgp_session).await;
+                });
             }
             LcuManagerEvent::WsEvent(ws_event) => {
                 manager.handle_ws_event(ws_event).await;

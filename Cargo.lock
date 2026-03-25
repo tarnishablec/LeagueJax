@@ -2099,6 +2099,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
+ "time",
  "tokio",
  "tokio-tungstenite",
  "tokio-util",

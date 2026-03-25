@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo, useState } from "react";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { RawMatchSummariesResponse } from "@/bindings/matches.ts";
 import type { HistoryTab } from "@/stores/tabs";
 import { useTabStore } from "@/stores/tabs";
@@ -157,6 +158,30 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
   ];
 }
 
+type EventListener = {
+  id: string;
+  label: string;
+  eventName: string;
+};
+
+const EVENT_LISTENERS: EventListener[] = [
+  {
+    id: "lcu-ws-event",
+    label: "lcu-ws-event",
+    eventName: "lcu-ws-event",
+  },
+  {
+    id: "ongoing-game-phase-changed",
+    label: "ongoing-game-phase-changed",
+    eventName: "ongoing-game-phase-changed",
+  },
+  {
+    id: "lcu-focus-changed",
+    label: "lcu-focus-changed",
+    eventName: "lcu-focus-changed",
+  },
+];
+
 export function DebugCommandPanel() {
   const { tabs, activeTabId } = useTabStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
@@ -170,6 +195,10 @@ export function DebugCommandPanel() {
     "No debug command executed yet.",
   );
   const [copyLabel, setCopyLabel] = useState("Copy");
+  const [activeListeners, setActiveListeners] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const unlistenRefs = useRef<Map<string, UnlistenFn>>(new Map());
 
   const runCommand = async (command: DebugCommand) => {
     setOpen(true);
@@ -200,6 +229,34 @@ export function DebugCommandPanel() {
       }, 1200);
     }
   };
+
+  const toggleListener = useCallback((listener: EventListener) => {
+    const existing = unlistenRefs.current.get(listener.id);
+    if (existing) {
+      existing();
+      unlistenRefs.current.delete(listener.id);
+      setActiveListeners((prev) => {
+        const next = new Set(prev);
+        next.delete(listener.id);
+        return next;
+      });
+      return;
+    }
+
+    listen<unknown>(listener.eventName, (e) => {
+      const line = `[${new Date().toLocaleTimeString()}] ${listener.eventName}\n${formatDebugPayload(e.payload)}`;
+      setOutput(line);
+      console.info(`[event:${listener.eventName}]`, e.payload);
+    }).then((unlisten) => {
+      unlistenRefs.current.set(listener.id, unlisten);
+    });
+
+    setActiveListeners((prev) => {
+      const next = new Set(prev);
+      next.add(listener.id);
+      return next;
+    });
+  }, []);
 
   return (
     <div className={s.debugDock}>
@@ -236,6 +293,24 @@ export function DebugCommandPanel() {
           ) : (
             <div className={s.debugEmpty}>No debug command configured.</div>
           )}
+          <div className={s.debugButtons}>
+            {EVENT_LISTENERS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={s.debugButton}
+                aria-label={`Toggle ${item.label} listener`}
+                style={
+                  activeListeners.has(item.id)
+                    ? { borderColor: "oklch(0.7 0.15 150)" }
+                    : undefined
+                }
+                onClick={() => toggleListener(item)}
+              >
+                {activeListeners.has(item.id) ? `● ${item.label}` : item.label}
+              </button>
+            ))}
+          </div>
           <div className={s.debugOutputCard}>
             <div className={s.debugOutputHeader}>
               <span className={s.debugOutputTitle}>Result</span>
