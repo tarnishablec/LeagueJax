@@ -100,6 +100,114 @@ struct PlayerFetchRuntime {
     match_history_count: u32,
 }
 
+struct WsPhaseUpdateContext<'a> {
+    focused_puuid: Option<&'a str>,
+    context: OngoingGameContextInfo,
+    cached_bot_slots: &'a [PlayerSlot],
+    cached_bot_ids: &'a [String],
+    cached_positions_by_puuid: &'a HashMap<String, CachedPositionInfo>,
+}
+
+#[derive(Clone)]
+struct ActiveTaskEmitter {
+    state: Arc<tokio::sync::Mutex<ManagerState>>,
+    task_id: u64,
+    event_tx: broadcast::Sender<OngoingGameManagerEvent>,
+}
+
+impl ActiveTaskEmitter {
+    fn new(
+        state: Arc<tokio::sync::Mutex<ManagerState>>,
+        task_id: u64,
+        event_tx: broadcast::Sender<OngoingGameManagerEvent>,
+    ) -> Self {
+        Self {
+            state,
+            task_id,
+            event_tx,
+        }
+    }
+
+    async fn is_active(&self) -> bool {
+        let state = self.state.lock().await;
+        state.active_task_id == Some(self.task_id)
+    }
+
+    async fn emit_phase(&self, payload: OngoingGamePhaseChanged) -> bool {
+        if !self.is_active().await {
+            return false;
+        }
+
+        emit_phase_changed(&self.event_tx, payload);
+        true
+    }
+
+    async fn emit_phase_slots(
+        &self,
+        phase: OngoingGamePhase,
+        loading: bool,
+        our_side: Option<Side>,
+        context: &OngoingGameContextInfo,
+        blue_players: &[PlayerSlot],
+        red_players: &[PlayerSlot],
+    ) -> bool {
+        self.emit_phase(OngoingGamePhaseChanged {
+            phase,
+            loading,
+            our_side,
+            context: context.clone(),
+            blue_players: blue_players.to_vec(),
+            red_players: red_players.to_vec(),
+        })
+        .await
+    }
+
+    async fn emit_snapshot(&self, payload: OngoingGameSnapshotUpdated) -> bool {
+        if !self.is_active().await {
+            return false;
+        }
+
+        emit_snapshot_updated(&self.event_tx, payload);
+        true
+    }
+
+    async fn emit_snapshot_players(
+        &self,
+        phase: OngoingGamePhase,
+        loading: bool,
+        our_side: Option<Side>,
+        context: &OngoingGameContextInfo,
+        blue_players: &[OngoingGamePlayerSnapshot],
+        red_players: &[OngoingGamePlayerSnapshot],
+    ) -> bool {
+        self.emit_snapshot(OngoingGameSnapshotUpdated {
+            phase,
+            loading,
+            our_side,
+            context: context.clone(),
+            blue_players: blue_players.to_vec(),
+            red_players: red_players.to_vec(),
+        })
+        .await
+    }
+
+    async fn emit_empty_phase(
+        &self,
+        phase: OngoingGamePhase,
+        context: OngoingGameContextInfo,
+    ) -> bool {
+        self.emit_phase(OngoingGamePhaseChanged {
+            phase,
+            loading: false,
+            our_side: None,
+            context,
+            blue_players: Vec::new(),
+            red_players: Vec::new(),
+        })
+        .await
+    }
+}
+
 impl OngoingGameManager {
     pub fn new(cancel_token: CancellationToken) -> Self {
         let (event_tx, _) = broadcast::channel(64);
@@ -206,21 +314,25 @@ impl OngoingGameManager {
             tracing::debug!("OngoingGame: no focused client, manager cleared");
             emit_phase_changed(
                 &self.event_tx,
-                OngoingGamePhase::Idle,
-                false,
-                None,
-                context.clone(),
-                Vec::new(),
-                Vec::new(),
+                OngoingGamePhaseChanged {
+                    phase: OngoingGamePhase::Idle,
+                    loading: false,
+                    our_side: None,
+                    context: context.clone(),
+                    blue_players: Vec::new(),
+                    red_players: Vec::new(),
+                },
             );
             emit_snapshot_updated(
                 &self.event_tx,
-                OngoingGamePhase::Idle,
-                false,
-                None,
-                context,
-                Vec::new(),
-                Vec::new(),
+                OngoingGameSnapshotUpdated {
+                    phase: OngoingGamePhase::Idle,
+                    loading: false,
+                    our_side: None,
+                    context,
+                    blue_players: Vec::new(),
+                    red_players: Vec::new(),
+                },
             );
             return;
         };
@@ -297,10 +409,7 @@ impl OngoingGameManager {
                     state.cached_bot_slots = bot_slots;
                 }
                 LcuOngoingWsEvent::LobbyV2 { data } => {
-                    merge_position_cache_from_lobby(
-                        &mut state.cached_positions_by_puuid,
-                        data,
-                    );
+                    merge_position_cache_from_lobby(&mut state.cached_positions_by_puuid, data);
                 }
                 LcuOngoingWsEvent::GameflowSession { data } => {
                     state.context =
@@ -341,11 +450,13 @@ impl OngoingGameManager {
                 ws_phase_update = build_phase_update_from_ws(
                     driver.current_phase(),
                     &event,
-                    state.focused_puuid.as_deref(),
-                    state.context.clone(),
-                    &state.cached_bot_slots,
-                    &state.cached_bot_ids,
-                    &state.cached_positions_by_puuid,
+                    WsPhaseUpdateContext {
+                        focused_puuid: state.focused_puuid.as_deref(),
+                        context: state.context.clone(),
+                        cached_bot_slots: &state.cached_bot_slots,
+                        cached_bot_ids: &state.cached_bot_ids,
+                        cached_positions_by_puuid: &state.cached_positions_by_puuid,
+                    },
                 );
                 if let Some(payload) = &ws_phase_update {
                     merge_position_cache_from_slots(
@@ -428,12 +539,14 @@ impl OngoingGameManager {
 
         emit_phase_changed(
             &self.event_tx,
-            request.phase,
-            request.phase != OngoingGamePhase::Idle,
-            None,
-            context,
-            Vec::new(),
-            Vec::new(),
+            OngoingGamePhaseChanged {
+                phase: request.phase,
+                loading: request.phase != OngoingGamePhase::Idle,
+                our_side: None,
+                context,
+                blue_players: Vec::new(),
+                red_players: Vec::new(),
+            },
         );
 
         let Some(task_token) = task_token else {
@@ -460,65 +573,6 @@ impl OngoingGameManager {
 // ---------------------------------------------------------------------------
 
 impl OngoingGameManager {
-    async fn is_task_active(state: &Arc<tokio::sync::Mutex<ManagerState>>, task_id: u64) -> bool {
-        let state = state.lock().await;
-        state.active_task_id == Some(task_id)
-    }
-
-    async fn emit_phase_changed_if_active(
-        state: &Arc<tokio::sync::Mutex<ManagerState>>,
-        task_id: u64,
-        event_tx: &broadcast::Sender<OngoingGameManagerEvent>,
-        phase: OngoingGamePhase,
-        loading: bool,
-        our_side: Option<Side>,
-        context: OngoingGameContextInfo,
-        blue_players: Vec<PlayerSlot>,
-        red_players: Vec<PlayerSlot>,
-    ) -> bool {
-        if !Self::is_task_active(state, task_id).await {
-            return false;
-        }
-
-        emit_phase_changed(
-            event_tx,
-            phase,
-            loading,
-            our_side,
-            context,
-            blue_players,
-            red_players,
-        );
-        true
-    }
-
-    async fn emit_snapshot_updated_if_active(
-        state: &Arc<tokio::sync::Mutex<ManagerState>>,
-        task_id: u64,
-        event_tx: &broadcast::Sender<OngoingGameManagerEvent>,
-        phase: OngoingGamePhase,
-        loading: bool,
-        our_side: Option<Side>,
-        context: OngoingGameContextInfo,
-        blue_players: Vec<OngoingGamePlayerSnapshot>,
-        red_players: Vec<OngoingGamePlayerSnapshot>,
-    ) -> bool {
-        if !Self::is_task_active(state, task_id).await {
-            return false;
-        }
-
-        emit_snapshot_updated(
-            event_tx,
-            phase,
-            loading,
-            our_side,
-            context,
-            blue_players,
-            red_players,
-        );
-        true
-    }
-
     async fn fetch_phase_data(
         runtime: PhaseTaskRuntime,
         event_tx: broadcast::Sender<OngoingGameManagerEvent>,
@@ -540,6 +594,7 @@ impl OngoingGameManager {
         event_tx: broadcast::Sender<OngoingGameManagerEvent>,
         state: Arc<tokio::sync::Mutex<ManagerState>>,
     ) {
+        let emitter = ActiveTaskEmitter::new(state.clone(), runtime.task_id, event_tx.clone());
         let fetch_runtime = Self::ensure_sgp_session(PlayerFetchRuntime {
             lcu_session: runtime.lcu_session.clone(),
             sgp_session: runtime.sgp_session.clone(),
@@ -555,17 +610,8 @@ impl OngoingGameManager {
                         match_history_filter: runtime.match_history_filter,
                         ..OngoingGameContextInfo::default()
                     };
-                    let _ = Self::emit_phase_changed_if_active(
-                            &state,
-                            runtime.task_id,
-                            &event_tx,
-                            OngoingGamePhase::ChampSelect,
-                            false,
-                            None,
-                            context,
-                            Vec::new(),
-                            Vec::new(),
-                        )
+                    let _ = emitter
+                        .emit_empty_phase(OngoingGamePhase::ChampSelect, context)
                         .await;
                     return;
                 };
@@ -599,16 +645,14 @@ impl OngoingGameManager {
                 let phase_blue_slots = blue_slots.clone();
                 let phase_red_slots = red_slots.clone();
 
-                if !Self::emit_phase_changed_if_active(
-                        &state,
-                        runtime.task_id,
-                        &event_tx,
+                if !emitter
+                    .emit_phase_slots(
                         OngoingGamePhase::ChampSelect,
                         true,
                         our_side,
-                        context.clone(),
-                        blue_slots.clone(),
-                        red_slots.clone(),
+                        &context,
+                        &blue_slots,
+                        &red_slots,
                     )
                     .await
                 {
@@ -620,32 +664,28 @@ impl OngoingGameManager {
                     Self::fetch_team_players(&fetch_runtime, own_slots, queue_tag.as_deref()).await;
                 let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
 
-                if !Self::emit_snapshot_updated_if_active(
-                        &state,
-                        runtime.task_id,
-                        &event_tx,
+                if !emitter
+                    .emit_snapshot_players(
                         OngoingGamePhase::ChampSelect,
                         false,
                         our_side,
-                        context.clone(),
-                        blue_players,
-                        red_players,
+                        &context,
+                        &blue_players,
+                        &red_players,
                     )
                     .await
                 {
                     return;
                 }
 
-                let _ = Self::emit_phase_changed_if_active(
-                        &state,
-                        runtime.task_id,
-                        &event_tx,
+                let _ = emitter
+                    .emit_phase_slots(
                         OngoingGamePhase::ChampSelect,
                         false,
                         our_side,
-                        context,
-                        phase_blue_slots,
-                        phase_red_slots,
+                        &context,
+                        &phase_blue_slots,
+                        &phase_red_slots,
                     )
                     .await;
             }
@@ -660,6 +700,7 @@ impl OngoingGameManager {
         event_tx: broadcast::Sender<OngoingGameManagerEvent>,
         state: Arc<tokio::sync::Mutex<ManagerState>>,
     ) {
+        let emitter = ActiveTaskEmitter::new(state.clone(), runtime.task_id, event_tx.clone());
         let fetch_runtime = Self::ensure_sgp_session(PlayerFetchRuntime {
             lcu_session: runtime.lcu_session.clone(),
             sgp_session: runtime.sgp_session.clone(),
@@ -675,17 +716,8 @@ impl OngoingGameManager {
                         match_history_filter: runtime.match_history_filter,
                         ..OngoingGameContextInfo::default()
                     };
-                    let _ = Self::emit_phase_changed_if_active(
-                            &state,
-                            runtime.task_id,
-                            &event_tx,
-                            OngoingGamePhase::InGame,
-                            false,
-                            None,
-                            context,
-                            Vec::new(),
-                            Vec::new(),
-                        )
+                    let _ = emitter
+                        .emit_empty_phase(OngoingGamePhase::InGame, context)
                         .await;
                     return;
                 };
@@ -716,16 +748,14 @@ impl OngoingGameManager {
                 let phase_blue_slots = blue_slots.clone();
                 let phase_red_slots = red_slots.clone();
 
-                if !Self::emit_phase_changed_if_active(
-                        &state,
-                        runtime.task_id,
-                        &event_tx,
+                if !emitter
+                    .emit_phase_slots(
                         OngoingGamePhase::InGame,
                         true,
                         our_side,
-                        context.clone(),
-                        blue_slots.clone(),
-                        red_slots.clone(),
+                        &context,
+                        &blue_slots,
+                        &red_slots,
                     )
                     .await
                 {
@@ -737,16 +767,14 @@ impl OngoingGameManager {
                 let own_players =
                     Self::fetch_team_players(&fetch_runtime, own_slots, queue_tag.as_deref()).await;
                 let (blue_players, red_players) = merge_players_by_side(own_players, Vec::new());
-                if !Self::emit_snapshot_updated_if_active(
-                        &state,
-                        runtime.task_id,
-                        &event_tx,
+                if !emitter
+                    .emit_snapshot_players(
                         OngoingGamePhase::InGame,
                         true,
                         our_side,
-                        context.clone(),
-                        blue_players.clone(),
-                        red_players.clone(),
+                        &context,
+                        &blue_players,
+                        &red_players,
                     )
                     .await
                 {
@@ -761,32 +789,28 @@ impl OngoingGameManager {
                     enemy_players,
                 );
 
-                if !Self::emit_snapshot_updated_if_active(
-                        &state,
-                        runtime.task_id,
-                        &event_tx,
+                if !emitter
+                    .emit_snapshot_players(
                         OngoingGamePhase::InGame,
                         false,
                         our_side,
-                        context.clone(),
-                        blue_players,
-                        red_players,
+                        &context,
+                        &blue_players,
+                        &red_players,
                     )
                     .await
                 {
                     return;
                 }
 
-                let _ = Self::emit_phase_changed_if_active(
-                        &state,
-                        runtime.task_id,
-                        &event_tx,
+                let _ = emitter
+                    .emit_phase_slots(
                         OngoingGamePhase::InGame,
                         false,
                         our_side,
-                        context,
-                        phase_blue_slots,
-                        phase_red_slots,
+                        &context,
+                        &phase_blue_slots,
+                        &phase_red_slots,
                     )
                     .await;
             }
@@ -1182,11 +1206,7 @@ fn collect_players_from_sides(
 fn build_phase_update_from_ws(
     current_phase: OngoingGamePhase,
     event: &LcuOngoingWsEvent,
-    focused_puuid: Option<&str>,
-    context: OngoingGameContextInfo,
-    cached_bot_slots: &[PlayerSlot],
-    cached_bot_ids: &[String],
-    cached_positions_by_puuid: &HashMap<String, CachedPositionInfo>,
+    ctx: WsPhaseUpdateContext<'_>,
 ) -> Option<OngoingGamePhaseChanged> {
     match current_phase {
         OngoingGamePhase::ChampSelect => {
@@ -1205,18 +1225,19 @@ fn build_phase_update_from_ws(
             let session = session?;
             let (our_side_from_payload, mut blue_players, mut red_players) =
                 build_champ_select_phase_data(session);
-            normalize_bot_slots(&mut blue_players, cached_bot_ids);
-            normalize_bot_slots(&mut red_players, cached_bot_ids);
-            apply_position_cache(&mut blue_players, cached_positions_by_puuid);
-            apply_position_cache(&mut red_players, cached_positions_by_puuid);
-            let our_side = focused_puuid
+            normalize_bot_slots(&mut blue_players, ctx.cached_bot_ids);
+            normalize_bot_slots(&mut red_players, ctx.cached_bot_ids);
+            apply_position_cache(&mut blue_players, ctx.cached_positions_by_puuid);
+            apply_position_cache(&mut red_players, ctx.cached_positions_by_puuid);
+            let our_side = ctx
+                .focused_puuid
                 .and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players))
                 .or(our_side_from_payload);
             Some(OngoingGamePhaseChanged {
                 phase: OngoingGamePhase::ChampSelect,
                 loading: false,
                 our_side,
-                context,
+                context: ctx.context,
                 blue_players,
                 red_players,
             })
@@ -1226,19 +1247,22 @@ fn build_phase_update_from_ws(
                 LcuOngoingWsEvent::GameflowSession { data } => data,
                 _ => return None,
             };
-            let (mut blue_players, mut red_players) =
-                merge_slots_with_cached_bots(build_in_game_phase_data(session), cached_bot_slots);
-            normalize_bot_slots(&mut blue_players, cached_bot_ids);
-            normalize_bot_slots(&mut red_players, cached_bot_ids);
-            apply_position_cache(&mut blue_players, cached_positions_by_puuid);
-            apply_position_cache(&mut red_players, cached_positions_by_puuid);
-            let our_side =
-                focused_puuid.and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players));
+            let (mut blue_players, mut red_players) = merge_slots_with_cached_bots(
+                build_in_game_phase_data(session),
+                ctx.cached_bot_slots,
+            );
+            normalize_bot_slots(&mut blue_players, ctx.cached_bot_ids);
+            normalize_bot_slots(&mut red_players, ctx.cached_bot_ids);
+            apply_position_cache(&mut blue_players, ctx.cached_positions_by_puuid);
+            apply_position_cache(&mut red_players, ctx.cached_positions_by_puuid);
+            let our_side = ctx
+                .focused_puuid
+                .and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players));
             Some(OngoingGamePhaseChanged {
                 phase: OngoingGamePhase::InGame,
                 loading: false,
                 our_side,
-                context,
+                context: ctx.context,
                 blue_players,
                 red_players,
             })
@@ -1249,44 +1273,16 @@ fn build_phase_update_from_ws(
 
 fn emit_phase_changed(
     event_tx: &broadcast::Sender<OngoingGameManagerEvent>,
-    phase: OngoingGamePhase,
-    loading: bool,
-    our_side: Option<Side>,
-    context: OngoingGameContextInfo,
-    blue_players: Vec<PlayerSlot>,
-    red_players: Vec<PlayerSlot>,
+    payload: OngoingGamePhaseChanged,
 ) {
-    let _ = event_tx.send(OngoingGameManagerEvent::PhaseChanged(
-        OngoingGamePhaseChanged {
-            phase,
-            loading,
-            our_side,
-            context,
-            blue_players,
-            red_players,
-        },
-    ));
+    let _ = event_tx.send(OngoingGameManagerEvent::PhaseChanged(payload));
 }
 
 fn emit_snapshot_updated(
     event_tx: &broadcast::Sender<OngoingGameManagerEvent>,
-    phase: OngoingGamePhase,
-    loading: bool,
-    our_side: Option<Side>,
-    context: OngoingGameContextInfo,
-    blue_players: Vec<OngoingGamePlayerSnapshot>,
-    red_players: Vec<OngoingGamePlayerSnapshot>,
+    payload: OngoingGameSnapshotUpdated,
 ) {
-    let _ = event_tx.send(OngoingGameManagerEvent::SnapshotUpdated(
-        OngoingGameSnapshotUpdated {
-            phase,
-            loading,
-            our_side,
-            context,
-            blue_players,
-            red_players,
-        },
-    ));
+    let _ = event_tx.send(OngoingGameManagerEvent::SnapshotUpdated(payload));
 }
 
 fn map_gameflow_phase(value: &str) -> OngoingGamePhase {
@@ -1432,29 +1428,13 @@ fn lobby_member_position_keys(member: &LcuLobbyMember) -> Vec<String> {
 fn push_player_slot(
     blue_players: &mut Vec<PlayerSlot>,
     red_players: &mut Vec<PlayerSlot>,
-    puuid: String,
-    champion_id: Option<i64>,
-    is_bot: bool,
-    position_assigned: Option<String>,
-    position_primary: Option<String>,
-    position_secondary: Option<String>,
-    side: Side,
+    slot: PlayerSlot,
 ) {
-    if puuid.is_empty() {
+    if slot.puuid.is_empty() {
         return;
     }
 
-    let slot = PlayerSlot {
-        puuid,
-        champion_id,
-        is_bot,
-        position_assigned,
-        position_primary,
-        position_secondary,
-        side,
-    };
-
-    match side {
+    match slot.side {
         Side::Blue => blue_players.push(slot),
         Side::Red => red_players.push(slot),
     }
@@ -1519,14 +1499,16 @@ fn push_champ_select_player_slot(
     push_player_slot(
         blue_players,
         red_players,
-        normalized_puuid,
-        champion_id_option(player.champion_id)
-            .or_else(|| champion_id_option(player.champion_pick_intent)),
-        is_bot,
-        normalize_position_value(&player.assigned_position),
-        None,
-        None,
-        side,
+        PlayerSlot {
+            puuid: normalized_puuid,
+            champion_id: champion_id_option(player.champion_id)
+                .or_else(|| champion_id_option(player.champion_pick_intent)),
+            is_bot,
+            position_assigned: normalize_position_value(&player.assigned_position),
+            position_primary: None,
+            position_secondary: None,
+            side,
+        },
     );
 }
 
@@ -1666,12 +1648,14 @@ fn push_gameflow_player_slot(
     push_player_slot(
         blue_players,
         red_players,
-        player.puuid.clone(),
-        champion_id,
-        false,
-        normalize_position_value(&player.assigned_position),
-        None,
-        None,
-        side,
+        PlayerSlot {
+            puuid: player.puuid.clone(),
+            champion_id,
+            is_bot: false,
+            position_assigned: normalize_position_value(&player.assigned_position),
+            position_primary: None,
+            position_secondary: None,
+            side,
+        },
     );
 }

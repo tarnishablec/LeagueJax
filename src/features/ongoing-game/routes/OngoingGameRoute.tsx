@@ -1,3 +1,4 @@
+import { Swords } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "@/features/settings/context";
@@ -22,6 +23,7 @@ export function OngoingGameRoute() {
     redSlots,
     bluePlayers,
     redPlayers,
+    phase,
     matchHistoryFilter,
     queueId,
     mapId,
@@ -34,6 +36,19 @@ export function OngoingGameRoute() {
     mapId,
     gameMode,
   };
+
+  if (phase === "Idle") {
+    return (
+      <div className={s.idlePage}>
+        <Swords className={s.idleIcon} aria-hidden="true" />
+        <div className={s.idleText}>
+          {t("ongoingGame.idleEmpty", {
+            defaultValue: "No ongoing game",
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={s.page}>

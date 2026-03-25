@@ -14,6 +14,7 @@ export const label = style({
   lineHeight: 1,
   display: "grid",
   gridTemplateColumns: "1fr auto",
+  gap: 4,
 });
 
 export const scopeBadge = style({

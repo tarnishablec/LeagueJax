@@ -1,9 +1,15 @@
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  lazy,
+  Suspense,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation } from "react-router";
-import { DebugCommandPanel } from "@/components/DebugCommandPanel";
 import { JaxLogo } from "@/components/JaxLogo";
 import { TitleBar } from "@/components/TitleBar";
 import {
@@ -15,6 +21,14 @@ import {
 import { useLcuEvents } from "@/hooks/use-lcu-events";
 import { useTheme } from "@/hooks/use-theme";
 import * as s from "./__root.css";
+
+const DebugCommandPanel = import.meta.env.DEV
+  ? lazy(() =>
+      import("@/components/DebugCommandPanel").then((module) => ({
+        default: module.DebugCommandPanel,
+      })),
+    )
+  : null;
 
 export function RootLayout() {
   const { t } = useTranslation();
@@ -37,7 +51,14 @@ export function RootLayout() {
   );
 
   const titlebarSlots = useMemo(
-    () => getTitlebarSlots(pathname).map((slot) => slot.node),
+    () =>
+      getTitlebarSlots(pathname).map((slot) => {
+        if (!isValidElement(slot.node)) {
+          return slot.node;
+        }
+
+        return cloneElement(slot.node, { key: slot.id });
+      }),
     [pathname],
   );
 
@@ -126,7 +147,11 @@ export function RootLayout() {
       <main className={s.main}>
         <Outlet />
       </main>
-      <DebugCommandPanel />
+      {DebugCommandPanel ? (
+        <Suspense fallback={null}>
+          <DebugCommandPanel />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

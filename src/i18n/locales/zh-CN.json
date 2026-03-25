@@ -7,7 +7,9 @@
     "save": "保存",
     "cancel": "取消",
     "loading": "加载中...",
-    "noClients": "无可用客户端"
+    "noClients": "无可用客户端",
+    "wipTitle": "WIP",
+    "wipSubtitle": "开发中"
   },
   "nav": {
     "history": "战绩",

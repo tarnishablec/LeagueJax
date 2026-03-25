@@ -8,6 +8,8 @@ export const page = style({
   height: "100%",
   minHeight: 0,
   overflow: "hidden",
+  padding: "12px",
+  paddingTop: 4,
 });
 
 export const outlet = style({

@@ -7,7 +7,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "loading": "Loading...",
-    "noClients": "No clients available"
+    "noClients": "No clients available",
+    "wipTitle": "WIP",
+    "wipSubtitle": "Under Construction"
   },
   "nav": {
     "history": "History",

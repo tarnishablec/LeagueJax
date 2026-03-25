@@ -257,9 +257,25 @@ export function TeamRow(props: {
     ? cardEntries
     : cardEntries.filter((card) => !card.isBot);
   const teamCols = Math.max(5, visibleCards.length);
-  const showPosition =
+  const showPositionByMode =
     modeContext.mapId === 11 ||
     (modeContext.gameMode ?? "").toUpperCase() === "CLASSIC";
+  const showPositionByData = visibleCards.some((card) => {
+    if (card.kind === "slot") {
+      return Boolean(
+        card.slot.position_assigned ||
+          card.slot.position_primary ||
+          card.slot.position_secondary,
+      );
+    }
+
+    return Boolean(
+      card.player.position_assigned ||
+        card.player.position_primary ||
+        card.player.position_secondary,
+    );
+  });
+  const showPosition = showPositionByMode || showPositionByData;
 
   return (
     <section className={s.teamSection}>
