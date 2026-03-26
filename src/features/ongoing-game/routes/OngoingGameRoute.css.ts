@@ -14,32 +14,6 @@ export const page = style({
   paddingTop: 4,
 });
 
-export const idlePage = style({
-  display: "grid",
-  placeItems: "center",
-  alignContent: "center",
-  justifyItems: "center",
-  gap: 12,
-  minHeight: 0,
-  height: "100%",
-  padding: "12px",
-  paddingTop: 4,
-});
-
-export const idleIcon = style({
-  width: 88,
-  height: 88,
-  color: vars.color.mutedForeground,
-  opacity: 0.82,
-});
-
-export const idleText = style({
-  fontSize: "1rem",
-  color: vars.color.mutedForeground,
-  textAlign: "center",
-  fontWeight: 600,
-});
-
 export const teamSection = style({
   display: "block",
   height: "100%",
@@ -57,7 +31,7 @@ export const redTitle = style({
 
 export const teamRow = style({
   display: "grid",
-  gridTemplateColumns: `repeat(${teamColsVar}, minmax(225px, 300px))`,
+  gridTemplateColumns: `repeat(${teamColsVar}, minmax(230px, 300px))`,
   gap: 10,
   height: "100%",
   placeItems: "center",
@@ -106,6 +80,12 @@ export const playerHeader = style({
   minWidth: 0,
 });
 
+export const playerAvatarWrap = style({
+  position: "relative",
+  width: 24,
+  height: 24,
+});
+
 export const championAvatar = style({
   width: 24,
   height: 24,
@@ -138,12 +118,41 @@ export const playerMeta = style({
   color: vars.color.mutedForeground,
 });
 
+export const playerMetaSingle = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr)",
+  gap: 4,
+  fontSize: "0.75rem",
+  color: vars.color.mutedForeground,
+});
+
+export const levelBadge = style({
+  position: "absolute",
+  right: -6,
+  bottom: -6,
+  minWidth: 16,
+  height: 16,
+  padding: "0 3px",
+  borderRadius: 999,
+  background: "oklch(0.7 0.15 88)",
+  color: "oklch(0.22 0.03 252)",
+  border: `1px solid ${vars.color.background}`,
+  display: "grid",
+  placeItems: "center",
+  fontSize: "0.6rem",
+  fontWeight: 800,
+  lineHeight: 1,
+});
+
 export const playerStats = style({
   fontSize: "0.78rem",
   color: vars.color.foreground,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+  display: "grid",
+  gridTemplateColumns: "repeat(2, auto)",
+  justifyContent: "space-between",
 });
 
 export const historyList = style({
@@ -207,9 +216,26 @@ export const kdaText = style({
 });
 
 export const historyMeta = style({
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  alignItems: "center",
+  gap: 6,
   color: vars.color.mutedForeground,
   fontSize: "0.7rem",
   whiteSpace: "nowrap",
+});
+
+export const historyMetaCs = style({
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  alignItems: "center",
+  gap: 3,
+});
+
+export const historyMetaIcon = style({
+  width: 11,
+  height: 11,
+  color: vars.color.mutedForeground,
 });
 
 export const historyChampionAvatar = style({

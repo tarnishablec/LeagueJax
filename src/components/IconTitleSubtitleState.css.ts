@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { createVar, style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 export const root = style({
@@ -20,12 +20,14 @@ export const icon = style({
   opacity: 0.82,
 });
 
+export const titleWeightVar = createVar();
+
 export const title = style({
   fontSize: "1rem",
   color: vars.color.mutedForeground,
   textAlign: "center",
-  fontWeight: 700,
   letterSpacing: "0.02em",
+  fontWeight: titleWeightVar,
 });
 
 export const subtitle = style({

@@ -3,7 +3,7 @@ import { vars } from "@/styles/theme.css";
 
 export const row = style({
   display: "grid",
-  gridTemplateColumns: "12rem minmax(0, 1fr)",
+  gridTemplateColumns: "14rem minmax(0, 1fr)",
   alignItems: "center",
   gap: 12,
 });

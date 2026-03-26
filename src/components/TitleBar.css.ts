@@ -7,7 +7,7 @@ export const header = style({
   gridTemplateColumns: "1fr auto auto auto auto",
   height: 40,
   userSelect: "none",
-  borderBottom: `1px solid ${vars.color.border}`,
+  // borderBottom: `1px solid ${vars.color.border}`,
   background: "transparent",
   flexShrink: 0,
 });

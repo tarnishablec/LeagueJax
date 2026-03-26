@@ -24,8 +24,8 @@ export const shell = style({
 export const logoButton = style({
   display: "inline-grid",
   placeItems: "center",
-  borderRight: `1px solid ${vars.color.border}`,
-  borderBottom: `1px solid ${vars.color.border}`,
+  // borderRight: `1px solid ${vars.color.border}`,
+  // borderBottom: `1px solid ${vars.color.border}`,
   background: "transparent",
   userSelect: "none",
   overflow: "hidden",
@@ -59,7 +59,7 @@ export const collapseIcon = style({
 export const sidebar = style({
   display: "grid",
   gridTemplateRows: "1fr auto",
-  borderRight: `1px solid ${vars.color.border}`,
+  // borderRight: `1px solid ${vars.color.border}`,
   overflow: "hidden",
 });
 

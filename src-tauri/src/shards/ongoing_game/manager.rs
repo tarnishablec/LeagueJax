@@ -58,6 +58,7 @@ struct ManagerState {
     cached_bot_slots: Vec<PlayerSlot>,
     cached_bot_ids: Vec<String>,
     cached_positions_by_puuid: HashMap<String, CachedPositionInfo>,
+    last_known_our_side: Option<Side>,
     next_task_id: u64,
     active_task_id: Option<u64>,
 }
@@ -91,6 +92,7 @@ struct PhaseTaskRuntime {
     cached_bot_slots: Vec<PlayerSlot>,
     cached_bot_ids: Vec<String>,
     cached_positions_by_puuid: HashMap<String, CachedPositionInfo>,
+    last_known_our_side: Option<Side>,
 }
 
 #[derive(Clone)]
@@ -106,6 +108,7 @@ struct WsPhaseUpdateContext<'a> {
     cached_bot_slots: &'a [PlayerSlot],
     cached_bot_ids: &'a [String],
     cached_positions_by_puuid: &'a HashMap<String, CachedPositionInfo>,
+    last_known_our_side: Option<Side>,
 }
 
 #[derive(Clone)]
@@ -225,6 +228,7 @@ impl OngoingGameManager {
                 cached_bot_slots: Vec::new(),
                 cached_bot_ids: Vec::new(),
                 cached_positions_by_puuid: HashMap::new(),
+                last_known_our_side: None,
                 next_task_id: 1,
                 active_task_id: None,
             })),
@@ -303,6 +307,7 @@ impl OngoingGameManager {
             state.cached_bot_slots.clear();
             state.cached_bot_ids.clear();
             state.cached_positions_by_puuid.clear();
+            state.last_known_our_side = None;
             state.context = OngoingGameContextInfo {
                 match_history_filter: state.match_history_filter,
                 ..OngoingGameContextInfo::default()
@@ -456,6 +461,7 @@ impl OngoingGameManager {
                         cached_bot_slots: &state.cached_bot_slots,
                         cached_bot_ids: &state.cached_bot_ids,
                         cached_positions_by_puuid: &state.cached_positions_by_puuid,
+                        last_known_our_side: state.last_known_our_side,
                     },
                 );
                 if let Some(payload) = &ws_phase_update {
@@ -464,6 +470,9 @@ impl OngoingGameManager {
                         &payload.blue_players,
                         &payload.red_players,
                     );
+                    if let Some(side) = payload.our_side {
+                        state.last_known_our_side = Some(side);
+                    }
                 }
             }
         }
@@ -506,6 +515,7 @@ impl OngoingGameManager {
                 state.cached_bot_slots.clear();
                 state.cached_bot_ids.clear();
                 state.cached_positions_by_puuid.clear();
+                state.last_known_our_side = None;
                 state.active_task_id = None;
                 state.context = OngoingGameContextInfo {
                     match_history_filter: state.match_history_filter,
@@ -532,6 +542,7 @@ impl OngoingGameManager {
                         cached_bot_slots: state.cached_bot_slots.clone(),
                         cached_bot_ids: state.cached_bot_ids.clone(),
                         cached_positions_by_puuid: state.cached_positions_by_puuid.clone(),
+                        last_known_our_side: state.last_known_our_side,
                     }),
                 )
             }
@@ -624,11 +635,17 @@ impl OngoingGameManager {
                 let queue_tag = context.match_history_tag.clone();
 
                 let (our_side_from_payload, mut blue_slots, mut red_slots) =
-                    build_champ_select_phase_data(&session);
+                    build_champ_select_phase_data(&session, runtime.last_known_our_side);
                 normalize_bot_slots(&mut blue_slots, &runtime.cached_bot_ids);
                 normalize_bot_slots(&mut red_slots, &runtime.cached_bot_ids);
                 apply_position_cache(&mut blue_slots, &runtime.cached_positions_by_puuid);
                 apply_position_cache(&mut red_slots, &runtime.cached_positions_by_puuid);
+                let our_side = runtime
+                    .focused_puuid
+                    .as_deref()
+                    .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots))
+                    .or(our_side_from_payload)
+                    .or(runtime.last_known_our_side);
                 {
                     let mut guard = state.lock().await;
                     merge_position_cache_from_slots(
@@ -636,12 +653,10 @@ impl OngoingGameManager {
                         &blue_slots,
                         &red_slots,
                     );
+                    if let Some(side) = our_side {
+                        guard.last_known_our_side = Some(side);
+                    }
                 }
-                let our_side = runtime
-                    .focused_puuid
-                    .as_deref()
-                    .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots))
-                    .or(our_side_from_payload);
                 let phase_blue_slots = blue_slots.clone();
                 let phase_red_slots = red_slots.clone();
 
@@ -744,7 +759,8 @@ impl OngoingGameManager {
                 let our_side = runtime
                     .focused_puuid
                     .as_deref()
-                    .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots));
+                    .and_then(|puuid| side_for_puuid(puuid, &blue_slots, &red_slots))
+                    .or(runtime.last_known_our_side);
                 let phase_blue_slots = blue_slots.clone();
                 let phase_red_slots = red_slots.clone();
 
@@ -760,6 +776,10 @@ impl OngoingGameManager {
                     .await
                 {
                     return;
+                }
+                if let Some(side) = our_side {
+                    let mut guard = state.lock().await;
+                    guard.last_known_our_side = Some(side);
                 }
 
                 let (own_slots, enemy_slots) = split_team_slots(our_side, blue_slots, red_slots);
@@ -1224,7 +1244,7 @@ fn build_phase_update_from_ws(
 
             let session = session?;
             let (our_side_from_payload, mut blue_players, mut red_players) =
-                build_champ_select_phase_data(session);
+                build_champ_select_phase_data(session, ctx.last_known_our_side);
             normalize_bot_slots(&mut blue_players, ctx.cached_bot_ids);
             normalize_bot_slots(&mut red_players, ctx.cached_bot_ids);
             apply_position_cache(&mut blue_players, ctx.cached_positions_by_puuid);
@@ -1232,7 +1252,8 @@ fn build_phase_update_from_ws(
             let our_side = ctx
                 .focused_puuid
                 .and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players))
-                .or(our_side_from_payload);
+                .or(our_side_from_payload)
+                .or(ctx.last_known_our_side);
             Some(OngoingGamePhaseChanged {
                 phase: OngoingGamePhase::ChampSelect,
                 loading: false,
@@ -1257,7 +1278,8 @@ fn build_phase_update_from_ws(
             apply_position_cache(&mut red_players, ctx.cached_positions_by_puuid);
             let our_side = ctx
                 .focused_puuid
-                .and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players));
+                .and_then(|puuid| side_for_puuid(puuid, &blue_players, &red_players))
+                .or(ctx.last_known_our_side);
             Some(OngoingGamePhaseChanged {
                 phase: OngoingGamePhase::InGame,
                 loading: false,
@@ -1442,8 +1464,9 @@ fn push_player_slot(
 
 fn build_champ_select_phase_data(
     session: &LcuChampSelectSessionPayload,
+    fallback_our_side: Option<Side>,
 ) -> (Option<Side>, Vec<PlayerSlot>, Vec<PlayerSlot>) {
-    let our_side = if session.is_spectating {
+    let parsed_our_side = if session.is_spectating {
         None
     } else {
         session
@@ -1458,6 +1481,7 @@ fn build_champ_select_phase_data(
                     .and_then(|player| side_from_team_id(player.team))
             })
     };
+    let our_side = parsed_our_side.or(fallback_our_side);
 
     let my_default_side = our_side.unwrap_or(Side::Blue);
     let their_default_side = opposite_side(my_default_side);

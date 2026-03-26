@@ -40,6 +40,7 @@ impl SgpHttpClient {
         initial_tokens: SgpTokenContext,
     ) -> Result<Self, AppError> {
         let req_client = Client::builder()
+            .no_proxy()
             .timeout(Self::REQUEST_TIMEOUT)
             .user_agent(Self::USER_AGENT)
             .build()
@@ -164,9 +165,7 @@ impl SgpHttpClient {
         let resp = match req.send().await {
             Ok(resp) => resp,
             Err(error) => {
-                return SgpResponse::Err(AppError::other(format!(
-                    "SGP request failed: {error}"
-                )));
+                return SgpResponse::Err(AppError::other(format!("SGP request failed: {error}")));
             }
         };
 
