@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
+import { Unplug } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
+import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import * as s from "../routes/HistoryRoute.css";
 
 export function ConnectionGuard({
@@ -14,7 +16,9 @@ export function ConnectionGuard({
   );
 
   if (readyInstances.length === 0) {
-    return <div className={s.emptyState}>{t("common.disconnected")}</div>;
+    return (
+      <IconTitleSubtitleState icon={Unplug} title={t("common.disconnected")} />
+    );
   }
 
   return (

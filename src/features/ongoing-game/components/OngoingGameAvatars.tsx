@@ -1,5 +1,5 @@
-import { useChampionIcon } from "@/hooks/use-champion-icon";
-import * as s from "../OngoingGameRoute.css";
+import { useChampionIcon } from "@/hooks/use-champion-icon.ts";
+import * as s from "../routes/OngoingGameRoute.css.ts";
 
 export function ChampionAvatar({ championId }: { championId: number | null }) {
   const iconUrl = useChampionIcon(championId);

@@ -78,7 +78,7 @@ export function OngoingGameTitlebar() {
       <div className={s.labels}>
         {phase === "Idle" && !loading ? (
           <span className={s.idleText}>
-            {t("ongoingGame.titlebar.idle", { defaultValue: "No active game" })}
+            {/*{t("ongoingGame.titlebar.idle", { defaultValue: "No active game" })}*/}
           </span>
         ) : (
           <>

@@ -148,13 +148,16 @@ export function MatchCardPlayers({
     <div className={s.playersPanel}>
       {teams.map(([teamId, members]) => (
         <div key={teamId} className={s.playerTeamColumn}>
-          {members.map((participant) => {
+          {members.map((participant, index) => {
             const { gameName, tagLine } = resolvePlayerName(participant);
             const fullName = tagLine ? `${gameName}#${tagLine}` : gameName;
 
             return (
               <div
-                key={`${participant.puuid}-${participant.championId}`}
+                key={`${participant.puuid}-${participant.championId}-${
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the same champion can be on the same team multiple times
+                  index
+                }`}
                 className={s.playerRow}
               >
                 <PlayerIcon championId={participant.championId} />
