@@ -89,5 +89,20 @@
       "focused": "Current Server",
       "noClient": "No League client connected"
     }
+  },
+  "rank": {
+    "tier": {
+      "iron": "Iron",
+      "bronze": "Bronze",
+      "silver": "Silver",
+      "gold": "Gold",
+      "platinum": "Platinum",
+      "emerald": "Emerald",
+      "diamond": "Diamond",
+      "master": "Master",
+      "grandmaster": "Grandmaster",
+      "challenger": "Challenger",
+      "unranked": "Unranked"
+    }
   }
 }

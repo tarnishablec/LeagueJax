@@ -89,5 +89,20 @@
       "focused": "当前区服",
       "noClient": "未连接到客户端"
     }
+  },
+  "rank": {
+    "tier": {
+      "iron": "坚韧黑铁",
+      "bronze": "英勇黄铜",
+      "silver": "不屈白银",
+      "gold": "荣耀黄金",
+      "platinum": "华贵铂金",
+      "emerald": "流光翡翠",
+      "diamond": "璀璨钻石",
+      "master": "超凡大师",
+      "grandmaster": "傲世宗师",
+      "challenger": "最强王者",
+      "unranked": "未定级"
+    }
   }
 }

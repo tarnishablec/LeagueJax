@@ -6,21 +6,25 @@ import { CopyButton } from "@/components/CopyButton";
 import { LazyImage } from "@/components/LazyImage.tsx";
 import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
+import { formatRankTierLabel } from "@/utils/rank-display";
 import { useRankedSummary } from "../hooks/use-ranked-summary";
 import * as s from "./SummaryBar.css";
 
-function formatTier(entry: RankEntry | null, unrankedLabel: string): string {
+function formatTier(
+  entry: RankEntry | null,
+  t: (key: string, options?: { defaultValue?: string }) => string,
+): string {
   if (!entry) {
-    return unrankedLabel;
+    return formatRankTierLabel(t, "NONE");
   }
 
-  const tier = entry.tier.trim();
-  if (tier.length === 0 || tier.toUpperCase() === "UNRANKED") {
-    return unrankedLabel;
+  const tierLabel = formatRankTierLabel(t, entry.tier);
+  if (tierLabel.length === 0) {
+    return formatRankTierLabel(t, "NONE");
   }
 
   const division = entry.division.trim();
-  return division.length > 0 ? `${tier} ${division}` : tier;
+  return division.length > 0 ? `${tierLabel} ${division}` : tierLabel;
 }
 
 function formatMeta(
@@ -49,9 +53,6 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
   );
   const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
 
-  const unrankedLabel = t("history.summary.unranked", {
-    defaultValue: "Unranked",
-  });
   const winsShort = t("history.summary.winsShort", { defaultValue: "W" });
   const lossesShort = t("history.summary.lossesShort", { defaultValue: "L" });
   const lpShort = t("history.summary.lpShort", { defaultValue: "LP" });
@@ -105,7 +106,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
                 <span className={s.rankTier}>
                   {formatTier(
                     rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null,
-                    unrankedLabel,
+                    t,
                   )}
                 </span>
                 <span className={s.rankMeta}>
@@ -141,7 +142,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
                 <span className={s.rankTier}>
                   {formatTier(
                     rankedSummary?.queueMap.RANKED_FLEX_SR ?? null,
-                    unrankedLabel,
+                    t,
                   )}
                 </span>
                 <span className={s.rankMeta}>

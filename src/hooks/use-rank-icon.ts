@@ -6,7 +6,7 @@ const CDRAGON_STATIC_MINI_BASE =
 export function useRankIcon(tier: string | null | undefined, mini = false) {
   const normalized = (tier?.trim() || "UNRANKED").toLowerCase();
   if (mini) {
-    return `${CDRAGON_STATIC_MINI_BASE}/${normalized}.png`;
+    return `${CDRAGON_STATIC_MINI_BASE}/${normalized}.svg`;
   }
   return `${CDRAGON_SHARED_COMPONENTS_BASE}/${normalized}.png`;
 }

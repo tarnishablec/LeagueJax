@@ -4,12 +4,12 @@ import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
+import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import {
   OUTCOME_LABEL_KEYS,
   useMatchCardViewModel,
 } from "../hooks/use-match-card-view-model";
 import * as s from "./MatchCard.css";
-import { MatchCardChampionIcon } from "./MatchCardChampionIcon";
 import { MatchCardExpandedTeams } from "./MatchCardExpandedTeams";
 import { MatchCardHeader } from "./MatchCardHeader";
 import { MatchCardLoadout } from "./MatchCardLoadout";
@@ -42,9 +42,9 @@ export function MatchCard({
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
         >
-          <MatchCardChampionIcon
+          <ChampionAvatar
             championId={vm.me.championId}
-            className={s.championIcon}
+            imageClassName={s.championIcon}
             fallbackClassName={s.championIconFallback}
           />
 
@@ -64,21 +64,7 @@ export function MatchCard({
               })}
             />
 
-            <MatchCardMetrics
-              me={vm.me}
-              gameDuration={vm.gameDuration}
-              damageShare={vm.damageShare}
-              csShort={csShort}
-              csPerMinLabel={t("history.match.csPerMin", {
-                defaultValue: "CS/min",
-              })}
-              damageLabel={t("history.match.damage", {
-                defaultValue: "Damage",
-              })}
-              damageShareLabel={t("history.match.damageShare", {
-                defaultValue: "Damage Share",
-              })}
-            />
+            <MatchCardMetrics me={vm.me} gameDuration={vm.gameDuration} />
 
             <MatchCardLoadout
               position={vm.position}

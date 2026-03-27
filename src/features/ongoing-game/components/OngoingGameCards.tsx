@@ -7,35 +7,35 @@ import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import useSWR from "swr";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
+import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon.tsx";
+import { SummonerID } from "@/components/SummonerID.tsx";
 import {
   type MatchModeTag,
   useMatchHistory,
 } from "@/features/history/hooks/use-match-history.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
+import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { vars } from "@/styles/theme.css.ts";
-import * as s from "../routes/OngoingGameRoute.css.ts";
+import {
+  formatRankEntryLabel,
+  getBestRankEntry,
+  resolveRankTierForIcon,
+} from "@/utils/rank-display";
 import {
   formatDuration,
   historyResultClassName,
   historyResultLabel,
   toRecentGames,
 } from "../routes/ongoing-game.history-utils.ts";
-import {
-  formatRank,
-  formatSlotName,
-  isBotSlot,
-} from "../routes/ongoing-game.player-utils.ts";
+import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type {
   MatchHistoryModeContext,
   PlayerSlot,
   RecentGameSummary,
 } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
-import {
-  ChampionAvatar,
-  HistoryChampionAvatar,
-} from "./OngoingGameAvatars.tsx";
+import * as s from "./OngoingGameCards.css.ts";
 
 type TranslateFn = (key: string, options?: { defaultValue?: string }) => string;
 
@@ -141,7 +141,11 @@ function HistoryRow(props: { game: RecentGameSummary; t: TranslateFn }) {
 
   return (
     <div className={s.historyRow}>
-      <HistoryChampionAvatar championId={game.championId} />
+      <ChampionAvatar
+        championId={game.championId}
+        imageClassName={s.historyChampionAvatar}
+        fallbackClassName={s.historyChampionFallback}
+      />
       <span
         className={historyResultClassName(game.result, {
           winText: s.winText,
@@ -187,7 +191,7 @@ function HistoryLoadingState() {
       highlightColor={`color-mix(in oklch, ${vars.color.foreground} 16%, transparent)`}
       duration={1.2}
     >
-      <div className={s.historyList}>
+      <div className={s.historyList} style={{ alignContent: "start" }}>
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
@@ -243,17 +247,16 @@ function SnapshotPlayerCard(props: {
   );
 
   const championId = normalizeChampionId(slot);
-  const displayName = formatSlotName(slot, summonerQuery.data);
   const level = summonerQuery.data?.summonerLevel || 0;
-  const rankText = formatRank(rankedQuery.data);
+  const rankEntry = getBestRankEntry(rankedQuery.data);
+  const rankText = formatRankEntryLabel(t, rankEntry);
+  const rankIcon = useRankIcon(resolveRankTierForIcon(rankEntry), true);
+  const showRankRow = !isBot;
   const showPositionByMode =
     mapId === 11 || (gameMode ?? "").toUpperCase() === "CLASSIC";
   const showPositionByData = Boolean(slot.assignedPosition);
   const recentGamesLabel = t("ongoingGame.recentGames", {
     defaultValue: "Recent games",
-  });
-  const noRankedText = t("ongoingGame.noRanked", {
-    defaultValue: "No ranked data",
   });
   const noHistoryText = t("ongoingGame.noHistory", {
     defaultValue: "No match history",
@@ -268,11 +271,37 @@ function SnapshotPlayerCard(props: {
   return (
     <article className={s.playerCard}>
       <div className={s.playerHeader}>
-        <div className={s.playerAvatarWrap}>
-          <ChampionAvatar championId={championId} />
-          <span className={s.levelBadge}>{level > 0 ? level : "-"}</span>
+        <ChampionAvatar
+          championId={championId}
+          imageClassName={s.championAvatar}
+          fallbackClassName={s.championAvatarFallback}
+          wrapperClassName={s.playerAvatarWrap}
+          level={level > 0 ? level : undefined}
+          levelClassName={s.levelBadge}
+        />
+
+        <div className={s.playerIdentity}>
+          {summonerQuery.data ? (
+            <SummonerID
+              summoner={summonerQuery.data}
+              styles={{
+                gameName: {
+                  fontSize: "0.75rem",
+                  marginRight: "0.5rem",
+                },
+                tagLine: {
+                  fontSize: "0.7rem",
+                },
+              }}
+            />
+          ) : null}
+          {showRankRow ? (
+            <div className={s.rankRow}>
+              <img src={rankIcon} alt="" className={s.rankMiniIcon} />
+              <span className={s.rankText}>{rankText}</span>
+            </div>
+          ) : null}
         </div>
-        <div className={s.playerName}>{displayName}</div>
       </div>
 
       <div className={s.playerMetaSingle}>
@@ -282,7 +311,6 @@ function SnapshotPlayerCard(props: {
       </div>
 
       <div className={s.playerStats}>
-        <div>{rankText || noRankedText}</div>
         {showPositionByMode || showPositionByData ? (
           <LeaguePositionPair
             assigned={slot.assignedPosition}
@@ -294,7 +322,7 @@ function SnapshotPlayerCard(props: {
             preferenceHeight={12}
           />
         ) : (
-          <div></div>
+          <div />
         )}
       </div>
 
