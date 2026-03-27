@@ -52,29 +52,82 @@ function useOngoingSummoner(puuid: string | undefined, enabled: boolean) {
   );
 }
 
-function normalizeMatchModeTag(
-  context: MatchHistoryModeContext,
-  explicitTag: string | null,
-): MatchModeTag {
+function normalizeMatchModeTag(context: MatchHistoryModeContext): MatchModeTag {
   if (context.filter === "All") {
     return "all";
   }
 
-  switch (explicitTag) {
-    case "q_420":
-    case "q_430":
-    case "q_440":
-    case "q_450":
-    case "q_480":
-    case "q_490":
-    case "q_900":
-    case "q_1700":
-    case "q_1900":
-    case "q_2300":
-      return explicitTag;
+  switch (context.queueId) {
+    case 420:
+      return "q_420";
+    case 430:
+      return "q_430";
+    case 440:
+      return "q_440";
+    case 450:
+      return "q_450";
+    case 480:
+      return "q_480";
+    case 490:
+      return "q_490";
+    case 900:
+      return "q_900";
+    case 1700:
+      return "q_1700";
+    case 1900:
+      return "q_1900";
+    case 2300:
+      return "q_2300";
     default:
       return "all";
   }
+}
+
+function resolveQueueIdFromSessions(
+  gameflowSession: ReturnType<
+    typeof useOngoingGameStore.getState
+  >["gameflowSession"],
+  champSelectSession: ReturnType<
+    typeof useOngoingGameStore.getState
+  >["champSelectSession"],
+): number | null {
+  const fromGameflow = gameflowSession?.gameData.queue.id;
+  if (typeof fromGameflow === "number" && fromGameflow > 0) {
+    return fromGameflow;
+  }
+
+  const fromChampSelect = champSelectSession?.queueId;
+  if (typeof fromChampSelect === "number" && fromChampSelect > 0) {
+    return fromChampSelect;
+  }
+
+  return null;
+}
+
+function resolveMapIdFromSessions(
+  gameflowSession: ReturnType<
+    typeof useOngoingGameStore.getState
+  >["gameflowSession"],
+): number | null {
+  const mapId =
+    gameflowSession?.map.id ?? gameflowSession?.gameData.queue.mapId;
+  if (typeof mapId === "number" && mapId > 0) {
+    return mapId;
+  }
+  return null;
+}
+
+function resolveGameModeFromSessions(
+  gameflowSession: ReturnType<
+    typeof useOngoingGameStore.getState
+  >["gameflowSession"],
+): string | null {
+  const gameMode =
+    gameflowSession?.map.gameMode ?? gameflowSession?.gameData.queue.gameMode;
+  if (typeof gameMode === "string" && gameMode.trim().length > 0) {
+    return gameMode;
+  }
+  return null;
 }
 
 function normalizeChampionId(slot: PlayerSlot): number | null {
@@ -153,10 +206,16 @@ function SnapshotPlayerCard(props: {
   const matchHistoryFilter = useOngoingGameStore(
     (state) => state.matchHistoryFilter,
   );
-  const matchHistoryTag = useOngoingGameStore((state) => state.matchHistoryTag);
-  const queueId = useOngoingGameStore((state) => state.queueId);
-  const mapId = useOngoingGameStore((state) => state.mapId);
-  const gameMode = useOngoingGameStore((state) => state.gameMode);
+  const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
+  const champSelectSession = useOngoingGameStore(
+    (state) => state.champSelectSession,
+  );
+  const queueId = resolveQueueIdFromSessions(
+    gameflowSession,
+    champSelectSession,
+  );
+  const mapId = resolveMapIdFromSessions(gameflowSession);
+  const gameMode = resolveGameModeFromSessions(gameflowSession);
 
   const modeContext = useMemo<MatchHistoryModeContext>(
     () => ({
@@ -165,7 +224,7 @@ function SnapshotPlayerCard(props: {
       mapId,
       gameMode,
     }),
-    [matchHistoryFilter, queueId, mapId, gameMode],
+    [gameMode, mapId, matchHistoryFilter, queueId],
   );
   const isBot = isBotSlot(slot);
   const puuid = !isBot && slot.puuid.trim().length > 0 ? slot.puuid : undefined;
@@ -176,7 +235,7 @@ function SnapshotPlayerCard(props: {
     null,
     1,
     matchHistoryCount,
-    normalizeMatchModeTag(modeContext, matchHistoryTag),
+    normalizeMatchModeTag(modeContext),
   );
   const recentGames = useMemo(
     () => toRecentGames(matchHistoryQuery.matches, modeContext),

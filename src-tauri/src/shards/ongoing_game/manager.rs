@@ -1,9 +1,12 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use tokio::sync::broadcast;
+use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 
+use crate::shards::lcu::api::OngoingSessionSeed;
 use crate::shards::lcu::events::champ_select_session::{
     ChampSelectSessionData, TeamMember as ChampSelectTeamMember,
 };
@@ -12,8 +15,7 @@ use crate::shards::lcu::events::lobby::{LobbyData, Member as LobbyMember};
 use crate::shards::lcu::events::{EventType, LanePosition, LcuWsEvent};
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::ongoing_game::types::{
-    OngoingGameContextInfo, OngoingGameMatchHistoryFilter, OngoingGamePhase, OngoingGameUpdated,
-    PlayerSlot, Side,
+    OngoingGameMatchHistoryFilter, OngoingGamePhase, OngoingGameUpdated, PlayerSlot, Side,
 };
 
 use super::driver::OngoingGameDriver;
@@ -21,11 +23,15 @@ use super::driver::OngoingGameDriver;
 const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
 const MIN_MATCH_HISTORY_COUNT: u32 = 1;
 const MAX_MATCH_HISTORY_COUNT: u32 = 200;
+const PHASE_RECONCILE_INTERVAL_MS: u64 = 1000;
+const IN_GAME_SESSION_READY_MAX_ATTEMPTS: u32 = 12;
+const IN_GAME_SESSION_READY_RETRY_DELAY_MS: u64 = 250;
 
 // ---------------------------------------------------------------------------
 // Manager
 // ---------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct OngoingGameManager {
     event_tx: broadcast::Sender<OngoingGameUpdated>,
     state: Arc<tokio::sync::Mutex<ManagerState>>,
@@ -36,7 +42,7 @@ struct ManagerState {
     driver: Option<OngoingGameDriver>,
     lcu_session: Option<Arc<LcuSession>>,
     active_phase_task: Option<CancellationToken>,
-    context: OngoingGameContextInfo,
+    phase_reconcile_task: Option<CancellationToken>,
     match_history_filter: OngoingGameMatchHistoryFilter,
     match_history_count: u32,
     cached_positions_by_puuid: HashMap<String, CachedPositionInfo>,
@@ -116,7 +122,7 @@ impl OngoingGameManager {
                 driver: None,
                 lcu_session: None,
                 active_phase_task: None,
-                context: OngoingGameContextInfo::default(),
+                phase_reconcile_task: None,
                 match_history_filter: OngoingGameMatchHistoryFilter::CurrentMode,
                 match_history_count: DEFAULT_MATCH_HISTORY_COUNT,
                 cached_positions_by_puuid: HashMap::new(),
@@ -139,9 +145,6 @@ impl OngoingGameManager {
         {
             let mut state = self.state.lock().await;
             state.match_history_filter = filter;
-            state.context.match_history_filter = filter;
-            state.context.match_history_tag =
-                resolve_match_history_tag(filter, state.context.queue_id.unwrap_or(0));
         }
 
         self.refresh_current().await;
@@ -186,9 +189,12 @@ impl OngoingGameManager {
         lcu_session: Option<Arc<LcuSession>>,
         _sgp_session: Option<Arc<crate::shards::sgp::session::SgpSession>>,
     ) {
-        let context = {
+        let match_history_filter = {
             let mut state = self.state.lock().await;
             if let Some(token) = state.active_phase_task.take() {
+                token.cancel();
+            }
+            if let Some(token) = state.phase_reconcile_task.take() {
                 token.cancel();
             }
             state.active_task_id = None;
@@ -199,11 +205,7 @@ impl OngoingGameManager {
             state.cached_champ_select_team_members.clear();
             state.cached_champ_select_gameflow_session = None;
             state.last_known_our_side = None;
-            state.context = OngoingGameContextInfo {
-                match_history_filter: state.match_history_filter,
-                ..OngoingGameContextInfo::default()
-            };
-            state.context.clone()
+            state.match_history_filter
         };
 
         let Some(lcu) = lcu_session else {
@@ -212,42 +214,33 @@ impl OngoingGameManager {
                 &self.event_tx,
                 OngoingGameUpdated {
                     phase: OngoingGamePhase::Idle,
-                    loading: false,
-                    context,
+                    match_history_filter,
                     gameflow_session: None,
+                    champ_select_session: None,
                     team_members: Vec::new(),
                 },
             );
             return;
         };
 
-        let mut driver = OngoingGameDriver::new();
-
-        let match_history_filter = {
-            let state = self.state.lock().await;
-            state.match_history_filter
-        };
-
-        match lcu.api().get_gameflow_phase().await {
-            Ok(phase_str) => {
-                let phase = map_gameflow_phase(phase_str.as_str());
-                if let Some(new_phase) = driver.force_phase(phase) {
-                    self.on_phase_changed(PhaseChangeRequest {
-                        phase: new_phase,
-                        lcu_session: lcu.clone(),
-                        match_history_filter,
-                    })
-                    .await;
-                }
-            }
-            Err(e) => {
-                tracing::debug!("Failed to seed gameflow phase: {e}");
-            }
+        {
+            let mut state = self.state.lock().await;
+            state.driver = Some(OngoingGameDriver::new());
+            state.lcu_session = Some(lcu.clone());
         }
 
-        let mut state = self.state.lock().await;
-        state.driver = Some(driver);
-        state.lcu_session = Some(lcu);
+        if let Some(request) = self.reconcile_phase_once(lcu.clone()).await {
+            self.on_phase_changed(request).await;
+        }
+
+        let reconcile_token = self.cancel_token.child_token();
+        {
+            let mut state = self.state.lock().await;
+            state.phase_reconcile_task = Some(reconcile_token.clone());
+            state.match_history_filter = match_history_filter;
+        }
+
+        self.spawn_phase_reconcile_loop(lcu, reconcile_token);
 
         tracing::info!("OngoingGame: manager initialized for focused client");
     }
@@ -269,17 +262,10 @@ impl OngoingGameManager {
                     &payload.data,
                 ),
                 LcuWsEvent::GameflowSession(payload) => {
-                    state.context = build_context_from_gameflow_session(
-                        &payload.data,
-                        state.match_history_filter,
-                    );
+                    state.cached_champ_select_gameflow_session = Some(payload.data.clone());
                     should_refresh = true;
                 }
                 LcuWsEvent::ChampSelectSession(payload) => {
-                    state.context = build_context_from_champ_select_session(
-                        &payload.data,
-                        state.match_history_filter,
-                    );
                     if payload.event_type != EventType::Delete {
                         let (our_side_from_payload, mut blue_slots, mut red_slots) =
                             build_champ_select_phase_data(&payload.data, state.last_known_our_side);
@@ -310,9 +296,11 @@ impl OngoingGameManager {
                         if is_champ_select_phase {
                             immediate_champ_select_payload = Some(OngoingGameUpdated {
                                 phase: OngoingGamePhase::ChampSelect,
-                                loading: false,
-                                context: state.context.clone(),
-                                gameflow_session: state.cached_champ_select_gameflow_session.clone(),
+                                match_history_filter: state.match_history_filter,
+                                gameflow_session: state
+                                    .cached_champ_select_gameflow_session
+                                    .clone(),
+                                champ_select_session: Some(payload.data.clone()),
                                 team_members,
                             });
                         }
@@ -321,8 +309,15 @@ impl OngoingGameManager {
                             && state.cached_champ_select_gameflow_session.is_none();
                     } else {
                         state.latest_champ_select_session = None;
-                        state.cached_champ_select_team_members.clear();
-                        state.cached_champ_select_gameflow_session = None;
+                        let current_phase = state
+                            .driver
+                            .as_ref()
+                            .map(OngoingGameDriver::current_phase)
+                            .unwrap_or(OngoingGamePhase::Idle);
+                        if current_phase == OngoingGamePhase::Idle {
+                            state.cached_champ_select_team_members.clear();
+                            state.cached_champ_select_gameflow_session = None;
+                        }
                     }
                 }
                 _ => {}
@@ -369,6 +364,56 @@ impl OngoingGameManager {
     // Phase change reaction
     // -----------------------------------------------------------------------
 
+    fn spawn_phase_reconcile_loop(&self, lcu_session: Arc<LcuSession>, token: CancellationToken) {
+        let manager = self.clone();
+        tokio::spawn(async move {
+            manager.phase_reconcile_loop(lcu_session, token).await;
+        });
+    }
+
+    async fn phase_reconcile_loop(self, lcu_session: Arc<LcuSession>, token: CancellationToken) {
+        loop {
+            tokio::select! {
+                _ = token.cancelled() => break,
+                _ = sleep(Duration::from_millis(PHASE_RECONCILE_INTERVAL_MS)) => {}
+            }
+
+            let request = self.reconcile_phase_once(lcu_session.clone()).await;
+            if let Some(request) = request {
+                self.on_phase_changed(request).await;
+            }
+        }
+    }
+
+    async fn reconcile_phase_once(&self, lcu_session: Arc<LcuSession>) -> Option<PhaseChangeRequest> {
+        let seed = fetch_ongoing_session_seed(&lcu_session).await?;
+        let detected_phase = map_gameflow_phase(seed.phase.as_str());
+        let mut state = self.state.lock().await;
+
+        let Some(current_lcu_session) = state.lcu_session.clone() else {
+            return None;
+        };
+        if !Arc::ptr_eq(&current_lcu_session, &lcu_session) {
+            return None;
+        }
+
+        if let Some(gameflow_session) = seed.gameflow_session {
+            state.cached_champ_select_gameflow_session = Some(gameflow_session);
+        }
+        let Some(driver) = &mut state.driver else {
+            return None;
+        };
+        let Some(new_phase) = driver.force_phase(detected_phase) else {
+            return None;
+        };
+
+        Some(PhaseChangeRequest {
+            phase: new_phase,
+            lcu_session: current_lcu_session,
+            match_history_filter: state.match_history_filter,
+        })
+    }
+
     async fn on_phase_changed(&self, request: PhaseChangeRequest) {
         let normalized_count = {
             let state = self.state.lock().await;
@@ -380,11 +425,6 @@ impl OngoingGameManager {
             let mut state = self.state.lock().await;
             state.match_history_filter = request.match_history_filter;
             state.match_history_count = normalized_count;
-            state.context.match_history_filter = request.match_history_filter;
-            state.context.match_history_tag = resolve_match_history_tag(
-                request.match_history_filter,
-                state.context.queue_id.unwrap_or(0),
-            );
 
             if let Some(token) = state.active_phase_task.take() {
                 token.cancel();
@@ -397,24 +437,19 @@ impl OngoingGameManager {
                 state.cached_champ_select_gameflow_session = None;
                 state.last_known_our_side = None;
                 state.active_task_id = None;
-                state.context = OngoingGameContextInfo {
-                    match_history_filter: state.match_history_filter,
-                    ..OngoingGameContextInfo::default()
-                };
                 (
                     None,
                     None,
                     Some(OngoingGameUpdated {
                         phase: OngoingGamePhase::Idle,
-                        loading: false,
-                        context: state.context.clone(),
+                        match_history_filter: state.match_history_filter,
                         gameflow_session: None,
+                        champ_select_session: None,
                         team_members: Vec::new(),
                     }),
                 )
             } else {
                 if request.phase != OngoingGamePhase::ChampSelect {
-                    state.cached_champ_select_team_members.clear();
                     state.cached_champ_select_gameflow_session = None;
                 }
                 let task_id = state.next_task_id;
@@ -502,21 +537,12 @@ impl OngoingGameManager {
         let session = if let Some(cached) = cached_session {
             cached
         } else {
-            match runtime.lcu_session.api().get_champ_select_session().await {
-                Ok(session_value) => match serde_json::from_value::<ChampSelectSessionData>(session_value) {
-                    Ok(session) => {
-                        let mut guard = state.lock().await;
-                        guard.latest_champ_select_session = Some(session.clone());
-                        session
-                    }
-                    Err(error) => {
-                        tracing::warn!("Failed to parse champ select session payload: {error}");
-                        tracing::warn!(
-                            "Skip champ select snapshot update because both live and cached sessions are unavailable"
-                        );
-                        return;
-                    }
-                },
+            match runtime.lcu_session.api().get_champ_select_session_typed().await {
+                Ok(session) => {
+                    let mut guard = state.lock().await;
+                    guard.latest_champ_select_session = Some(session.clone());
+                    session
+                }
                 Err(e) => {
                     tracing::warn!("Failed to fetch champ select session: {e}");
                     tracing::warn!(
@@ -544,12 +570,7 @@ impl OngoingGameManager {
         }
         let team_members =
             merge_team_members_with_slots(&session, &collect_slots(blue_slots, red_slots));
-        let (context, gameflow_session) = fetch_champ_select_context(
-            &runtime.lcu_session,
-            &session,
-            runtime.match_history_filter,
-        )
-        .await;
+        let gameflow_session = fetch_gameflow_session(&runtime.lcu_session).await;
         {
             let mut guard = state.lock().await;
             guard.cached_champ_select_team_members = team_members.clone();
@@ -559,9 +580,9 @@ impl OngoingGameManager {
         let _ = emitter
             .emit_updated(OngoingGameUpdated {
                 phase: OngoingGamePhase::ChampSelect,
-                loading: false,
-                context,
+                match_history_filter: runtime.match_history_filter,
                 gameflow_session,
+                champ_select_session: Some(session),
                 team_members,
             })
             .await;
@@ -573,151 +594,82 @@ impl OngoingGameManager {
         state: Arc<tokio::sync::Mutex<ManagerState>>,
     ) {
         let emitter = ActiveTaskEmitter::new(state.clone(), runtime.task_id, event_tx.clone());
-        match runtime.lcu_session.api().get_gameflow_session().await {
-            Ok(session_value) => {
-                let Some(session) = serde_json::from_value::<GameflowSessionData>(session_value).ok()
-                else {
-                    tracing::warn!("Failed to parse gameflow session payload");
-                    return;
-                };
-                let context =
-                    build_context_from_gameflow_session(&session, runtime.match_history_filter);
+        for attempt in 1..=IN_GAME_SESSION_READY_MAX_ATTEMPTS {
+            if !emitter.is_active().await {
+                return;
+            }
 
-                let (mut blue_slots, mut red_slots) = build_in_game_phase_data(&session);
-                apply_position_cache(&mut blue_slots, &runtime.cached_positions_by_puuid);
-                apply_position_cache(&mut red_slots, &runtime.cached_positions_by_puuid);
-                {
-                    let mut guard = state.lock().await;
-                    merge_position_cache_from_slots(
-                        &mut guard.cached_positions_by_puuid,
-                        &blue_slots,
-                        &red_slots,
-                    );
+            let session = match runtime.lcu_session.api().get_gameflow_session_typed().await {
+                Ok(value) => value,
+                Err(error) => {
+                    tracing::warn!("Failed to fetch gameflow session: {error}");
+                    return;
                 }
-                let all_slots = collect_slots(blue_slots, red_slots);
-                let team_members = build_team_members_from_slots(&all_slots);
-                let _ = emitter
-                    .emit_updated(OngoingGameUpdated {
-                        phase: OngoingGamePhase::InGame,
-                        loading: false,
-                        context,
-                        gameflow_session: Some(session),
-                        team_members,
-                    })
-                    .await;
+            };
+
+            let session_ready = is_in_game_session_ready(&session);
+            if !session_ready {
+                if attempt < IN_GAME_SESSION_READY_MAX_ATTEMPTS {
+                    tracing::debug!(
+                        "OngoingGame: in-game session is not ready (attempt {attempt}/{IN_GAME_SESSION_READY_MAX_ATTEMPTS}), retrying"
+                    );
+                    sleep(Duration::from_millis(IN_GAME_SESSION_READY_RETRY_DELAY_MS)).await;
+                    continue;
+                }
+
+                tracing::warn!(
+                    "OngoingGame: in-game session remained incomplete after {} attempts",
+                    IN_GAME_SESSION_READY_MAX_ATTEMPTS
+                );
             }
-            Err(e) => {
-                tracing::warn!("Failed to fetch gameflow session: {e}");
+
+            let (mut blue_slots, mut red_slots) = build_in_game_phase_data(&session);
+            apply_position_cache(&mut blue_slots, &runtime.cached_positions_by_puuid);
+            apply_position_cache(&mut red_slots, &runtime.cached_positions_by_puuid);
+            {
+                let mut guard = state.lock().await;
+                merge_position_cache_from_slots(
+                    &mut guard.cached_positions_by_puuid,
+                    &blue_slots,
+                    &red_slots,
+                );
             }
+            let all_slots = collect_slots(blue_slots, red_slots);
+            let built_team_members = build_team_members_from_slots(&all_slots);
+            let cached_team_members = {
+                let guard = state.lock().await;
+                guard.cached_champ_select_team_members.clone()
+            };
+            let use_cached_team_members = !cached_team_members.is_empty()
+                && (!session_ready
+                    || built_team_members.is_empty()
+                    || (is_classic_mode(&session)
+                        && built_team_members.len() < cached_team_members.len()));
+            let team_members = if use_cached_team_members {
+                cached_team_members
+            } else {
+                built_team_members
+            };
+            {
+                let mut guard = state.lock().await;
+                guard.cached_champ_select_team_members = team_members.clone();
+            }
+            let _ = emitter
+                .emit_updated(OngoingGameUpdated {
+                    phase: OngoingGamePhase::InGame,
+                    match_history_filter: runtime.match_history_filter,
+                    gameflow_session: Some(session),
+                    champ_select_session: None,
+                    team_members,
+                })
+                .await;
+            return;
         }
     }
 }
 
-fn queue_tag_from_queue_id(queue_id: i64) -> Option<String> {
-    if queue_id > 0 && is_safe_match_history_queue(queue_id) {
-        Some(format!("q_{queue_id}"))
-    } else {
-        None
-    }
-}
-
-fn is_safe_match_history_queue(queue_id: i64) -> bool {
-    matches!(
-        queue_id,
-        420 | 430 | 440 | 450 | 480 | 490 | 900 | 1400 | 1700 | 1900 | 2300
-    )
-}
-
-fn option_non_empty(value: &str) -> Option<String> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        None
-    } else {
-        Some(trimmed.to_string())
-    }
-}
-
-fn option_positive_u64(value: u64) -> Option<i64> {
-    if value == 0 {
-        None
-    } else {
-        i64::try_from(value).ok()
-    }
-}
-
-fn resolve_match_history_tag(
-    filter: OngoingGameMatchHistoryFilter,
-    queue_id: i64,
-) -> Option<String> {
-    match filter {
-        OngoingGameMatchHistoryFilter::CurrentMode => queue_tag_from_queue_id(queue_id),
-        OngoingGameMatchHistoryFilter::All => None,
-    }
-}
-
-fn build_context_from_gameflow_session(
-    session: &GameflowSessionData,
-    filter: OngoingGameMatchHistoryFilter,
-) -> OngoingGameContextInfo {
-    let queue_id = option_positive_u64(session.game_data.queue.id);
-    let map_id = option_positive_u64(session.map.id)
-        .or_else(|| option_positive_u64(session.game_data.queue.map_id));
-    let match_history_tag = resolve_match_history_tag(filter, queue_id.unwrap_or(0));
-
-    OngoingGameContextInfo {
-        queue_id,
-        queue_name: option_non_empty(&session.game_data.queue.name),
-        queue_short_name: option_non_empty(&session.game_data.queue.short_name),
-        map_id,
-        map_name: option_non_empty(&session.map.name),
-        game_mode: option_non_empty(&session.map.game_mode)
-            .or_else(|| option_non_empty(&session.game_data.queue.game_mode)),
-        game_mode_name: option_non_empty(&session.map.game_mode_name),
-        game_mode_short_name: option_non_empty(&session.map.game_mode_short_name),
-        match_history_filter: filter,
-        match_history_tag,
-    }
-}
-
-fn build_context_from_champ_select_session(
-    session: &ChampSelectSessionData,
-    filter: OngoingGameMatchHistoryFilter,
-) -> OngoingGameContextInfo {
-    let queue_id = option_positive_u64(session.queue_id);
-    OngoingGameContextInfo {
-        queue_id,
-        queue_name: None,
-        queue_short_name: None,
-        map_id: None,
-        map_name: None,
-        game_mode: None,
-        game_mode_name: None,
-        game_mode_short_name: None,
-        match_history_filter: filter,
-        match_history_tag: resolve_match_history_tag(filter, queue_id.unwrap_or(0)),
-    }
-}
-
-async fn fetch_champ_select_context(
-    lcu_session: &Arc<LcuSession>,
-    session: &ChampSelectSessionData,
-    filter: OngoingGameMatchHistoryFilter,
-) -> (OngoingGameContextInfo, Option<GameflowSessionData>) {
-    let fallback = build_context_from_champ_select_session(session, filter);
-    let Ok(gameflow_value) = lcu_session.api().get_gameflow_session().await else {
-        return (fallback, None);
-    };
-    let Some(gameflow_session) = serde_json::from_value::<GameflowSessionData>(gameflow_value).ok()
-    else {
-        return (fallback, None);
-    };
-    let context = build_context_from_gameflow_session(&gameflow_session, filter);
-
-    if context.queue_id.is_some() || context.map_id.is_some() {
-        (context, Some(gameflow_session))
-    } else {
-        (fallback, Some(gameflow_session))
-    }
+async fn fetch_gameflow_session(lcu_session: &Arc<LcuSession>) -> Option<GameflowSessionData> {
+    lcu_session.api().get_gameflow_session_typed().await.ok()
 }
 
 fn collect_slots(mut blue_slots: Vec<PlayerSlot>, red_slots: Vec<PlayerSlot>) -> Vec<PlayerSlot> {
@@ -741,9 +693,10 @@ fn merge_team_members_with_slots(
         .map(|slot| {
             let mut member = member_by_puuid
                 .remove(slot.puuid.as_str())
-                .unwrap_or_else(ChampSelectTeamMember::default);
+                .unwrap_or_default();
 
-            if let Some(champion_id) = slot.champion_id.and_then(|value| u64::try_from(value).ok()) {
+            if let Some(champion_id) = slot.champion_id.and_then(|value| u64::try_from(value).ok())
+            {
                 member.champion_id = champion_id;
                 member.champion_pick_intent = champion_id;
             }
@@ -780,11 +733,10 @@ fn build_team_members_from_slots(slots: &[PlayerSlot]) -> Vec<ChampSelectTeamMem
             let assigned_position = slot
                 .position_assigned
                 .as_deref()
-                .and_then(lane_position_from_raw)
-                .unwrap_or_default();
+                .and_then(lane_position_from_raw);
 
             ChampSelectTeamMember {
-                assigned_position: Some(assigned_position),
+                assigned_position,
                 champion_id,
                 champion_pick_intent: champion_id,
                 is_humanoid: !slot.is_bot,
@@ -812,14 +764,20 @@ fn map_gameflow_phase(value: &str) -> OngoingGamePhase {
     }
 }
 
+async fn fetch_ongoing_session_seed(lcu_session: &Arc<LcuSession>) -> Option<OngoingSessionSeed> {
+    match lcu_session.api().get_ongoing_session_seed().await {
+        Ok(seed) => Some(seed),
+        Err(error) => {
+            tracing::debug!("Failed to load ongoing HTTP seed: {error}");
+            None
+        }
+    }
+}
+
 fn phase_hint_from_ws_event(event: &LcuWsEvent) -> Option<OngoingGamePhase> {
     match event {
         LcuWsEvent::ChampSelectSession(payload) => {
-            if payload.event_type == EventType::Delete {
-                Some(OngoingGamePhase::Idle)
-            } else {
-                Some(OngoingGamePhase::ChampSelect)
-            }
+            (payload.event_type != EventType::Delete).then_some(OngoingGamePhase::ChampSelect)
         }
         LcuWsEvent::GameflowSession(payload) => {
             let hinted = map_gameflow_phase(payload.data.phase.as_str());
@@ -1062,6 +1020,31 @@ fn normalize_bot_puuid(member: &ChampSelectTeamMember) -> String {
     format!("BOT_{}", raw_puuid.to_ascii_uppercase())
 }
 
+fn is_in_game_session_ready(session: &GameflowSessionData) -> bool {
+    let team_one_count = session.game_data.team_one.len();
+    let team_two_count = session.game_data.team_two.len();
+    let total = team_one_count + team_two_count;
+
+    if total == 0 {
+        return false;
+    }
+
+    if total == 1 && !session.game_data.is_custom_game {
+        return false;
+    }
+
+    // Classic two-side modes should expose both sides before we render InGame.
+    if is_classic_mode(session) {
+        return team_one_count > 0 && team_two_count > 0;
+    }
+
+    true
+}
+
+fn is_classic_mode(session: &GameflowSessionData) -> bool {
+    session.map.game_mode.trim().eq_ignore_ascii_case("CLASSIC")
+}
+
 fn build_in_game_phase_data(session: &GameflowSessionData) -> (Vec<PlayerSlot>, Vec<PlayerSlot>) {
     let mut champion_by_puuid: HashMap<String, i64> = HashMap::new();
     for selection in &session.game_data.player_champion_selections {
@@ -1074,23 +1057,25 @@ fn build_in_game_phase_data(session: &GameflowSessionData) -> (Vec<PlayerSlot>, 
     let mut blue_players = Vec::new();
     let mut red_players = Vec::new();
 
-    for player in &session.game_data.team_one {
+    for (slot_index, player) in session.game_data.team_one.iter().enumerate() {
         push_gameflow_player_slot(
             &mut blue_players,
             &mut red_players,
             player,
             Side::Blue,
             &champion_by_puuid,
+            slot_index,
         );
     }
 
-    for player in &session.game_data.team_two {
+    for (slot_index, player) in session.game_data.team_two.iter().enumerate() {
         push_gameflow_player_slot(
             &mut blue_players,
             &mut red_players,
             player,
             Side::Red,
             &champion_by_puuid,
+            slot_index,
         );
     }
 
@@ -1103,6 +1088,7 @@ fn push_gameflow_player_slot(
     player: &GameflowTeam,
     side: Side,
     champion_by_puuid: &HashMap<String, i64>,
+    slot_index: usize,
 ) {
     let champion_id = champion_id_option(i64::try_from(player.champion_id).unwrap_or_default())
         .or_else(|| {
@@ -1111,18 +1097,37 @@ fn push_gameflow_player_slot(
                 .copied()
                 .and_then(champion_id_option)
         });
+    let normalized_puuid = if player.puuid.trim().is_empty() {
+        format!(
+            "BOT_INGAME_{}_{}_{}",
+            side_token(side),
+            player.team_participant_id,
+            slot_index
+        )
+    } else {
+        player.puuid.clone()
+    };
+    let is_bot =
+        player.summoner_id == 0 || normalized_puuid.to_ascii_uppercase().starts_with("BOT_");
 
     push_player_slot(
         blue_players,
         red_players,
         PlayerSlot {
-            puuid: player.puuid.clone(),
+            puuid: normalized_puuid,
             champion_id,
-            is_bot: player.summoner_id == 0 || player.puuid.to_ascii_uppercase().starts_with("BOT_"),
-            position_assigned: Some(normalize_lane_position(player.selected_position)),
+            is_bot,
+            position_assigned: normalize_position_value(&player.selected_position),
             position_primary: None,
             position_secondary: None,
             side,
         },
     );
+}
+
+fn side_token(side: Side) -> &'static str {
+    match side {
+        Side::Blue => "BLUE",
+        Side::Red => "RED",
+    }
 }

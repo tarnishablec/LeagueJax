@@ -11,6 +11,8 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use self::manager::OngoingGameManager;
+use crate::shards::lcu::session::LcuSession;
+use crate::shards::sgp::session::SgpSession;
 
 pub struct OngoingGameShard {
     manager: OnceLock<Arc<OngoingGameManager>>,
@@ -31,6 +33,19 @@ impl OngoingGameShard {
         self.manager
             .get_or_init(|| Arc::new(OngoingGameManager::new(cancel_token)))
             .clone()
+    }
+
+    /// Initialize manager and immediately apply current focused sessions.
+    /// Ongoing phase still flows through state machine, while startup state is seeded by HTTP.
+    pub async fn initialize_with_focus(
+        &self,
+        cancel_token: CancellationToken,
+        lcu_session: Option<Arc<LcuSession>>,
+        sgp_session: Option<Arc<SgpSession>>,
+    ) -> Arc<OngoingGameManager> {
+        let manager = self.initialize(cancel_token);
+        manager.handle_focus_changed(lcu_session, sgp_session).await;
+        manager
     }
 }
 
