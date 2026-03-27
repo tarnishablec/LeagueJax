@@ -149,37 +149,6 @@ export const metaPill = style({
   whiteSpace: "nowrap",
 });
 
-export const metricRow = style({
-  display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, max-content))",
-  gap: 16,
-  alignItems: "start",
-});
-
-export const metricGroup = style({
-  display: "grid",
-  gridAutoFlow: "column",
-  alignItems: "center",
-  gap: 10,
-});
-
-export const metricPrimary = style({
-  fontSize: "0.8rem",
-  fontWeight: 600,
-  color: vars.color.foreground,
-  lineHeight: 1,
-  whiteSpace: "nowrap",
-  textAlign: "center",
-});
-
-export const metricSecondary = style({
-  fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
-  lineHeight: 1,
-  whiteSpace: "nowrap",
-  textAlign: "center",
-});
-
 export const loadoutRow = style({
   display: "grid",
   gridAutoFlow: "column",

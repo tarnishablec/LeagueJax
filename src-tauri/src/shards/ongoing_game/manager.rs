@@ -23,7 +23,6 @@ use super::driver::OngoingGameDriver;
 const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
 const MIN_MATCH_HISTORY_COUNT: u32 = 1;
 const MAX_MATCH_HISTORY_COUNT: u32 = 200;
-const PHASE_RECONCILE_INTERVAL_MS: u64 = 1000;
 const IN_GAME_SESSION_READY_MAX_ATTEMPTS: u32 = 12;
 const IN_GAME_SESSION_READY_RETRY_DELAY_MS: u64 = 250;
 
@@ -42,7 +41,6 @@ struct ManagerState {
     driver: Option<OngoingGameDriver>,
     lcu_session: Option<Arc<LcuSession>>,
     active_phase_task: Option<CancellationToken>,
-    phase_reconcile_task: Option<CancellationToken>,
     match_history_filter: OngoingGameMatchHistoryFilter,
     match_history_count: u32,
     cached_positions_by_puuid: HashMap<String, CachedPositionInfo>,
@@ -122,7 +120,6 @@ impl OngoingGameManager {
                 driver: None,
                 lcu_session: None,
                 active_phase_task: None,
-                phase_reconcile_task: None,
                 match_history_filter: OngoingGameMatchHistoryFilter::CurrentMode,
                 match_history_count: DEFAULT_MATCH_HISTORY_COUNT,
                 cached_positions_by_puuid: HashMap::new(),
@@ -194,9 +191,6 @@ impl OngoingGameManager {
             if let Some(token) = state.active_phase_task.take() {
                 token.cancel();
             }
-            if let Some(token) = state.phase_reconcile_task.take() {
-                token.cancel();
-            }
             state.active_task_id = None;
             state.driver = None;
             state.lcu_session = None;
@@ -232,15 +226,6 @@ impl OngoingGameManager {
         if let Some(request) = self.reconcile_phase_once(lcu.clone()).await {
             self.on_phase_changed(request).await;
         }
-
-        let reconcile_token = self.cancel_token.child_token();
-        {
-            let mut state = self.state.lock().await;
-            state.phase_reconcile_task = Some(reconcile_token.clone());
-            state.match_history_filter = match_history_filter;
-        }
-
-        self.spawn_phase_reconcile_loop(lcu, reconcile_token);
 
         tracing::info!("OngoingGame: manager initialized for focused client");
     }
@@ -364,35 +349,15 @@ impl OngoingGameManager {
     // Phase change reaction
     // -----------------------------------------------------------------------
 
-    fn spawn_phase_reconcile_loop(&self, lcu_session: Arc<LcuSession>, token: CancellationToken) {
-        let manager = self.clone();
-        tokio::spawn(async move {
-            manager.phase_reconcile_loop(lcu_session, token).await;
-        });
-    }
-
-    async fn phase_reconcile_loop(self, lcu_session: Arc<LcuSession>, token: CancellationToken) {
-        loop {
-            tokio::select! {
-                _ = token.cancelled() => break,
-                _ = sleep(Duration::from_millis(PHASE_RECONCILE_INTERVAL_MS)) => {}
-            }
-
-            let request = self.reconcile_phase_once(lcu_session.clone()).await;
-            if let Some(request) = request {
-                self.on_phase_changed(request).await;
-            }
-        }
-    }
-
-    async fn reconcile_phase_once(&self, lcu_session: Arc<LcuSession>) -> Option<PhaseChangeRequest> {
+    async fn reconcile_phase_once(
+        &self,
+        lcu_session: Arc<LcuSession>,
+    ) -> Option<PhaseChangeRequest> {
         let seed = fetch_ongoing_session_seed(&lcu_session).await?;
         let detected_phase = map_gameflow_phase(seed.phase.as_str());
         let mut state = self.state.lock().await;
 
-        let Some(current_lcu_session) = state.lcu_session.clone() else {
-            return None;
-        };
+        let current_lcu_session = state.lcu_session.clone()?;
         if !Arc::ptr_eq(&current_lcu_session, &lcu_session) {
             return None;
         }
@@ -403,9 +368,7 @@ impl OngoingGameManager {
         let Some(driver) = &mut state.driver else {
             return None;
         };
-        let Some(new_phase) = driver.force_phase(detected_phase) else {
-            return None;
-        };
+        let new_phase = driver.force_phase(detected_phase)?;
 
         Some(PhaseChangeRequest {
             phase: new_phase,
@@ -537,7 +500,12 @@ impl OngoingGameManager {
         let session = if let Some(cached) = cached_session {
             cached
         } else {
-            match runtime.lcu_session.api().get_champ_select_session_typed().await {
+            match runtime
+                .lcu_session
+                .api()
+                .get_champ_select_session_typed()
+                .await
+            {
                 Ok(session) => {
                     let mut guard = state.lock().await;
                     guard.latest_champ_select_session = Some(session.clone());
@@ -705,11 +673,13 @@ fn merge_team_members_with_slots(
                 member.puuid = slot.puuid.clone();
             }
 
-            if member.assigned_position.is_none() {
-                member.assigned_position = slot
-                    .position_assigned
-                    .as_deref()
-                    .and_then(lane_position_from_raw);
+            if member
+                .assigned_position
+                .as_deref()
+                .and_then(lane_position_from_raw)
+                .is_none()
+            {
+                member.assigned_position = slot.position_assigned.clone();
             }
 
             member.team = match slot.side {
@@ -730,10 +700,7 @@ fn build_team_members_from_slots(slots: &[PlayerSlot]) -> Vec<ChampSelectTeamMem
                 .champion_id
                 .and_then(|value| u64::try_from(value).ok())
                 .unwrap_or_default();
-            let assigned_position = slot
-                .position_assigned
-                .as_deref()
-                .and_then(lane_position_from_raw);
+            let assigned_position = slot.position_assigned.clone();
 
             ChampSelectTeamMember {
                 assigned_position,
@@ -997,7 +964,10 @@ fn push_champ_select_player_slot(
                     )
                 }),
             is_bot,
-            position_assigned: player.assigned_position.map(normalize_lane_position),
+            position_assigned: player
+                .assigned_position
+                .as_deref()
+                .and_then(normalize_position_value),
             position_primary: None,
             position_secondary: None,
             side,

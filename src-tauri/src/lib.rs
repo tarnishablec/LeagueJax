@@ -63,6 +63,7 @@ pub fn run() {
             lcu_get_maps,
             lcu_get_queues,
             lcu_get_game_version,
+            lcu_get_ranked_tiers,
             ongoing_game_refresh,
             ongoing_game_set_match_history_filter,
             ongoing_game_set_match_history_count,

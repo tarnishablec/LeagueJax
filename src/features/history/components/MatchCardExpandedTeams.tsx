@@ -1,6 +1,6 @@
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
+import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import * as s from "./MatchCard.css";
-import { MatchCardChampionIcon } from "./MatchCardChampionIcon";
 
 function participantRowKey(
   participant: RawMatchSummaryParticipant,
@@ -49,9 +49,9 @@ export function MatchCardExpandedTeams({
                 key={participantRowKey(participant, teamId, index)}
                 className={s.participantRow}
               >
-                <MatchCardChampionIcon
+                <ChampionAvatar
                   championId={participant.championId}
-                  className={s.participantIcon}
+                  imageClassName={s.participantIcon}
                   fallbackClassName={s.participantIconFallback}
                 />
                 <span>

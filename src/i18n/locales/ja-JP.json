@@ -1,35 +1,35 @@
 {
   "common": {
-    "connected": "\u63a5\u7d9a\u6e08\u307f",
-    "disconnected": "\u672a\u63a5\u7d9a",
-    "enabled": "\u6709\u52b9",
-    "disabled": "\u7121\u52b9",
-    "save": "\u4fdd\u5b58",
-    "cancel": "\u30ad\u30e3\u30f3\u30bb\u30eb",
-    "loading": "\u8aad\u307f\u8fbc\u307f\u4e2d...",
-    "noClients": "\u5229\u7528\u53ef\u80fd\u306a\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u304c\u3042\u308a\u307e\u305b\u3093",
+    "connected": "接続済み",
+    "disconnected": "未接続",
+    "enabled": "有効",
+    "disabled": "無効",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "loading": "読み込み中...",
+    "noClients": "利用可能なクライアントがありません",
     "wipTitle": "WIP",
-    "wipSubtitle": "\u5de5\u4e8b\u4e2d"
+    "wipSubtitle": "工事中"
   },
   "nav": {
-    "history": "\u5c65\u6b74",
-    "game": "\u5bfe\u5c40",
-    "automation": "\u81ea\u52d5\u5316",
-    "tools": "\u30c4\u30fc\u30eb",
-    "settings": "\u8a2d\u5b9a"
+    "history": "履歴",
+    "game": "対局",
+    "automation": "自動化",
+    "tools": "ツール",
+    "settings": "設定"
   },
   "clientStatus": {
-    "otherClients": "\u4ed6\u306e\u30af\u30e9\u30a4\u30a2\u30f3\u30c8",
-    "noClients": "\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u304c\u691c\u51fa\u3055\u308c\u307e\u305b\u3093",
-    "authenticating": "\u63a5\u7d9a\u4e2d...",
-    "closing": "\u7d42\u4e86\u4e2d...",
-    "unfocus": "\u5207\u65ad"
+    "otherClients": "他のクライアント",
+    "noClients": "クライアントが検出されません",
+    "authenticating": "接続中...",
+    "closing": "終了中...",
+    "unfocus": "切断"
   },
   "history": {
-    "searchPlaceholder": "\u540d\u524d#TAG\u3092\u5165\u529b\u3057\u3066\u691c\u7d22",
-    "search": "\u691c\u7d22",
-    "victory": "\u52dd\u5229",
-    "defeat": "\u6557\u5317",
+    "searchPlaceholder": "名前#TAGを入力して検索",
+    "search": "検索",
+    "victory": "勝利",
+    "defeat": "敗北",
     "mode": {
       "all": "すべて",
       "q420": "ランク ソロ/デュオ",
@@ -70,12 +70,12 @@
         "terminated": "中断"
       }
     },
-    "blueTeam": "\u9752\u30c1\u30fc\u30e0",
-    "redTeam": "\u8d64\u30c1\u30fc\u30e0",
-    "noMatches": "\u5bfe\u6226\u5c65\u6b74\u304c\u3042\u308a\u307e\u305b\u3093",
+    "blueTeam": "青チーム",
+    "redTeam": "赤チーム",
+    "noMatches": "対戦履歴がありません",
     "itemsPerPage": "{{count}} 件",
-    "selectClient": "\u5c65\u6b74\u3092\u898b\u308b\u306b\u306f\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044",
-    "emptyState": "\u5c65\u6b74\u3092\u898b\u308b\u306b\u306f\u30b5\u30e2\u30ca\u30fc\u3092\u691c\u7d22\u3057\u3066\u304f\u3060\u3055\u3044",
+    "selectClient": "履歴を見るにはクライアントを選択してください",
+    "emptyState": "履歴を見るにはサモナーを検索してください",
     "closeTab": "タブを閉じる",
     "searchDialog": {
       "open": "検索",
@@ -88,6 +88,21 @@
       "hint": "検索結果がここに表示されます",
       "focused": "現在のサーバー",
       "noClient": "クライアントに接続されていません"
+    }
+  },
+  "rank": {
+    "tier": {
+      "iron": "アイアン",
+      "bronze": "ブロンズ",
+      "silver": "シルバー",
+      "gold": "ゴールド",
+      "platinum": "プラチナ",
+      "emerald": "エメラルド",
+      "diamond": "ダイヤモンド",
+      "master": "マスター",
+      "grandmaster": "グランドマスター",
+      "challenger": "チャレンジャー",
+      "unranked": "未ランク"
     }
   }
 }

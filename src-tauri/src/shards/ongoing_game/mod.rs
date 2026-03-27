@@ -36,7 +36,7 @@ impl OngoingGameShard {
     }
 
     /// Initialize manager and immediately apply current focused sessions.
-    /// Ongoing phase still flows through state machine, while startup state is seeded by HTTP.
+    /// An ongoing phase still flows through the state machine, while the startup state is seeded by HTTP.
     pub async fn initialize_with_focus(
         &self,
         cancel_token: CancellationToken,

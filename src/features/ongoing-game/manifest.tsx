@@ -72,7 +72,7 @@ export class OngoingGameShard implements WebShard {
       scope: "frontend",
       control: { kind: "toggle" },
       zod: z.boolean(),
-      defaultValue: false,
+      defaultValue: true,
       order: 20,
       onSet: () => {},
     });

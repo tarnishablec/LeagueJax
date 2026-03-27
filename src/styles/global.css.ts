@@ -31,6 +31,11 @@ globalStyle("*, *::before, *::after", {
   boxSizing: "border-box",
 });
 
+globalStyle("html, body, *", {
+  scrollbarWidth: "thin",
+  scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
+});
+
 globalStyle("button", {
   cursor: "pointer",
   border: "none",
@@ -42,6 +47,7 @@ globalStyle("button", {
 
 globalStyle("*", {
   userSelect: "none",
+  // scrollbarGutter: "stable",
 });
 
 globalStyle("html", {

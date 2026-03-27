@@ -2,7 +2,6 @@ import type {
   ChampSelectSessionData,
   GameflowSessionData,
 } from "@/bindings/lcu_events";
-import type { RankStats } from "@/bindings/rank";
 import type { SummonerInfo } from "@/bindings/summoner";
 import type { PlayerSlot } from "./ongoing-game.types";
 
@@ -53,20 +52,6 @@ export function formatSlotName(
   }
 
   return isBotSlot(slot) ? "BOT" : "Unknown Summoner";
-}
-
-export function formatRank(stats: RankStats | undefined): string {
-  const entry = stats?.highestRankedEntrySr ?? stats?.highestRankedEntry;
-
-  if (!entry || !entry.tier || entry.tier === "NONE") {
-    return "";
-  }
-
-  if (entry.division === "NA") {
-    return `${entry.tier} ${entry.leaguePoints}LP`;
-  }
-
-  return `${entry.tier} ${entry.division} ${entry.leaguePoints}LP`;
 }
 
 export function groupTeamMembers(teamMembers: PlayerSlot[]): Array<{

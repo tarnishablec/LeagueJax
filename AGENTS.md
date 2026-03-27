@@ -112,6 +112,12 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 
 - All `aria-label` values must be written in **English**.
 
+## I18n Text Encoding
+
+- For **all i18n configuration files in this repository**, do **not** use Unicode escape literals such as `\uXXXX` in user-facing text.
+- Always write the original language characters directly (for example, Chinese/Japanese native text) and keep files in UTF-8.
+- This rule applies to global locale files and all feature/shard i18n resources.
+
 ## Browser Compatibility
 
 - This app runs in a **Tauri WebView** (Chromium-based). Target only the **latest stable browser engine**.

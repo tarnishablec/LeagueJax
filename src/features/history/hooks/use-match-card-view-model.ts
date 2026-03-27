@@ -45,15 +45,19 @@ function computeDamageShare(
 
 function normalizeHistoryPosition(
   value: string | null | undefined,
-  supportsPosition: boolean,
 ): string | null {
-  const normalized = (value ?? "").trim().toUpperCase();
+  const normalized = value?.trim().toUpperCase();
   if (!normalized || normalized === "INVALID") {
     return null;
   }
-  if (normalized === "NONE" && !supportsPosition) {
+  if (normalized === "NONE") {
     return null;
   }
+
+  if (normalized === "AFK") {
+    return null;
+  }
+
   return normalized;
 }
 
@@ -92,9 +96,10 @@ export function useMatchCardViewModel({
   const { primaryRuneId, subStyleId } = getPerkIds(me);
   const damageShare = computeDamageShare(me, participants);
   const position = supportsPosition
-    ? (normalizeHistoryPosition(me.teamPosition, true) ??
-      normalizeHistoryPosition(me.individualPosition, true) ??
-      normalizeHistoryPosition(me.lane, true))
+    ? (normalizeHistoryPosition(me.lane) ??
+      normalizeHistoryPosition(me.individualPosition) ??
+      normalizeHistoryPosition(me.teamPosition) ??
+      "FILL")
     : null;
 
   return {
@@ -102,8 +107,8 @@ export function useMatchCardViewModel({
     gameId,
     gameDuration,
     participants,
-    queueName: queueName ?? "...",
-    mapName: map?.name ?? "...",
+    queueName: queueName ?? "",
+    mapName: map?.name ?? "",
     startedAt,
     items,
     augments,

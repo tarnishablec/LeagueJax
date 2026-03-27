@@ -55,6 +55,8 @@ function firstGameIdFromRawSummary(
 }
 
 function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
+  // const defaultRankedQueueTypes = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"];
+
   return [
     {
       id: "get-current-summoner",
