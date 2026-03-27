@@ -1,8 +1,9 @@
 import type {
   OngoingGameMatchHistoryFilter,
-  OngoingGamePlayerSnapshot,
-  PlayerSlot,
+  OngoingGameUpdated,
 } from "@/bindings/ongoing_game";
+
+export type PlayerSlot = OngoingGameUpdated["team_members"][number];
 
 export type RecentGameResult = "Win" | "Lose" | "Remake" | "Terminated";
 
@@ -23,18 +24,3 @@ export type MatchHistoryModeContext = {
   mapId: number | null;
   gameMode: string | null;
 };
-
-export type TeamCardEntry =
-  | {
-      kind: "player";
-      key: string;
-      player: OngoingGamePlayerSnapshot;
-      championId: number | null;
-      isBot: boolean;
-    }
-  | {
-      kind: "slot";
-      key: string;
-      slot: PlayerSlot;
-      isBot: boolean;
-    };

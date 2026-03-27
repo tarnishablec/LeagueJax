@@ -1,63 +1,52 @@
-import type {
-  OngoingGamePlayerSnapshot,
-  PlayerSlot,
-} from "@/bindings/ongoing_game";
-import type { TeamCardEntry } from "./ongoing-game.types";
+import type { RankStats } from "@/bindings/rank";
+import type { SummonerInfo } from "@/bindings/summoner";
+import type { PlayerSlot } from "./ongoing-game.types";
 
 export function isBotPuuid(rawPuuid: string): boolean {
   const puuid = rawPuuid.trim().toUpperCase();
   return !puuid || puuid === "BOT" || puuid.startsWith("BOT_");
 }
 
-export function isBotPlayer(player: OngoingGamePlayerSnapshot): boolean {
-  if (player.is_bot) {
-    return true;
-  }
-
-  if (isBotPuuid(player.puuid)) {
-    return true;
-  }
-
-  const gameName = (player.summoner.gameName ?? "").trim().toUpperCase();
-  const summonerName = (player.summoner.name ?? "").trim().toUpperCase();
-
-  if (gameName === "BOT" || gameName.startsWith("BOT_")) {
-    return true;
-  }
-
-  return summonerName === "BOT" || summonerName.startsWith("BOT_");
-}
-
 export function isBotSlot(slot: PlayerSlot): boolean {
-  if (slot.is_bot) {
-    return true;
+  const hasHumanIdentity =
+    slot.summonerId > 0 ||
+    (slot.gameName ?? "").trim().length > 0 ||
+    (slot.tagLine ?? "").trim().length > 0;
+
+  if (hasHumanIdentity) {
+    return false;
   }
 
   return isBotPuuid(slot.puuid);
 }
 
-export function formatName(player: OngoingGamePlayerSnapshot): string {
-  const gameName = player.summoner.gameName?.trim();
-  const tagLine = player.summoner.tagLine?.trim();
+export function formatSlotName(
+  slot: PlayerSlot,
+  summoner: SummonerInfo | undefined,
+): string {
+  const resolvedGameName =
+    summoner?.gameName?.trim() || slot.gameName?.trim() || "";
+  const resolvedTagLine =
+    summoner?.tagLine?.trim() || slot.tagLine?.trim() || "";
 
-  if (gameName && tagLine) {
-    return `${gameName}#${tagLine}`;
+  if (resolvedGameName && resolvedTagLine) {
+    return `${resolvedGameName}#${resolvedTagLine}`;
   }
 
-  if (gameName) {
-    return gameName;
+  if (resolvedGameName) {
+    return resolvedGameName;
   }
 
-  if (player.summoner.name?.trim()) {
-    return player.summoner.name;
+  const fallbackName = summoner?.name?.trim() || slot.playerAlias?.trim() || "";
+  if (fallbackName) {
+    return fallbackName;
   }
 
-  return player.puuid;
+  return isBotSlot(slot) ? "BOT" : "Unknown Summoner";
 }
 
-export function formatRank(player: OngoingGamePlayerSnapshot): string {
-  const entry =
-    player.ranked?.highestRankedEntrySr ?? player.ranked?.highestRankedEntry;
+export function formatRank(stats: RankStats | undefined): string {
+  const entry = stats?.highestRankedEntrySr ?? stats?.highestRankedEntry;
 
   if (!entry || !entry.tier || entry.tier === "NONE") {
     return "";
@@ -70,50 +59,74 @@ export function formatRank(player: OngoingGamePlayerSnapshot): string {
   return `${entry.tier} ${entry.division} ${entry.leaguePoints}LP`;
 }
 
-export function toTeamCardEntries(
-  players: OngoingGamePlayerSnapshot[],
-  slots: PlayerSlot[],
-): TeamCardEntry[] {
-  const entries: TeamCardEntry[] = [];
-  const playerByPuuid = new Map(
-    players.map((player) => [player.puuid, player]),
-  );
-  const slotPuuids = new Set(slots.map((slot) => slot.puuid));
+export function groupTeamMembers(teamMembers: PlayerSlot[]): Array<{
+  teamId: number;
+  members: PlayerSlot[];
+}> {
+  const groups = new Map<number, PlayerSlot[]>();
 
-  for (const [index, slot] of slots.entries()) {
-    const player = playerByPuuid.get(slot.puuid);
-    if (player) {
-      entries.push({
-        kind: "player",
-        key: `player:${player.puuid}:${index}`,
-        player,
-        championId: player.champion_id ?? slot.champion_id,
-        isBot: isBotPlayer(player),
-      });
+  for (const member of teamMembers) {
+    const teamId = member.team ?? -1;
+    const group = groups.get(teamId);
+    if (group) {
+      group.push(member);
       continue;
     }
 
-    entries.push({
-      kind: "slot",
-      key: `slot:${slot.puuid}:${index}`,
-      slot,
-      isBot: isBotSlot(slot),
+    groups.set(teamId, [member]);
+  }
+
+  return Array.from(groups.entries())
+    .map(([teamId, members]) => ({
+      teamId,
+      members,
+    }))
+    .sort((left, right) => compareTeamIds(left.teamId, right.teamId));
+}
+
+function compareTeamIds(left: number, right: number): number {
+  if (left === right) {
+    return 0;
+  }
+
+  if (left === 100) {
+    return -1;
+  }
+
+  if (right === 100) {
+    return 1;
+  }
+
+  if (left === 200) {
+    return right === 100 ? 1 : -1;
+  }
+
+  if (right === 200) {
+    return left === 100 ? -1 : 1;
+  }
+
+  return left - right;
+}
+
+export function resolveTeamLayoutLabel(
+  teamMembers: PlayerSlot[],
+  t: (key: string, options?: { defaultValue?: string }) => string,
+): string {
+  const teamIds = new Set(teamMembers.map((member) => member.team));
+
+  if (teamIds.has(100) && teamIds.has(200)) {
+    return t("ongoingGame.titlebar.layoutBlueRed", {
+      defaultValue: "Blue vs Red",
     });
   }
 
-  for (const player of players) {
-    if (slotPuuids.has(player.puuid)) {
-      continue;
-    }
-
-    entries.push({
-      kind: "player",
-      key: `player-extra:${player.puuid}`,
-      player,
-      championId: player.champion_id,
-      isBot: isBotPlayer(player),
+  if (teamIds.size > 2) {
+    return t("ongoingGame.titlebar.layoutMultiTeam", {
+      defaultValue: "Multi-Team",
     });
   }
 
-  return entries;
+  return t("ongoingGame.titlebar.layoutTeams", {
+    defaultValue: "Team Layout",
+  });
 }

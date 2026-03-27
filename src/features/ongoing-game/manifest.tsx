@@ -1,11 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Gamepad2 } from "lucide-react";
 import { z } from "zod";
-import type {
-  OngoingGamePhaseChanged,
-  OngoingGameSnapshotUpdated,
-} from "@/bindings/ongoing_game";
+import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SettingsShard } from "../settings/manifest";
@@ -23,18 +19,6 @@ const MATCH_HISTORY_COUNT_MIN = 1;
 const MATCH_HISTORY_COUNT_MAX = 200;
 const MATCH_HISTORY_COUNT_DEFAULT = 50;
 
-function normalizeMatchHistoryCount(value: unknown): number {
-  const numeric = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(numeric)) {
-    return MATCH_HISTORY_COUNT_DEFAULT;
-  }
-
-  return Math.max(
-    MATCH_HISTORY_COUNT_MIN,
-    Math.min(MATCH_HISTORY_COUNT_MAX, Math.trunc(numeric)),
-  );
-}
-
 function navigateTo(path: string): void {
   if (window.location.pathname === path) {
     return;
@@ -45,8 +29,7 @@ function navigateTo(path: string): void {
 }
 
 export class OngoingGameShard implements WebShard {
-  private phaseChangedUnlisten: UnlistenFn | null = null;
-  private snapshotUpdatedUnlisten: UnlistenFn | null = null;
+  private ongoingUpdatedUnlisten: UnlistenFn | null = null;
 
   public label() {
     return "OngoingGameShard";
@@ -79,10 +62,7 @@ export class OngoingGameShard implements WebShard {
         .max(MATCH_HISTORY_COUNT_MAX),
       defaultValue: MATCH_HISTORY_COUNT_DEFAULT,
       order: 10,
-      onSet: (next) => {
-        const count = normalizeMatchHistoryCount(next);
-        void invoke("ongoing_game_set_match_history_count", { count });
-      },
+      onSet: () => {},
     });
     settings.registerSetting({
       id: ONGOING_AUTO_SWITCH_TO_GAME_SETTING,
@@ -104,22 +84,14 @@ export class OngoingGameShard implements WebShard {
       order: 30,
       onSet: () => {},
     });
-
-    const initialCount = normalizeMatchHistoryCount(
-      settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING),
-    );
-    await invoke("ongoing_game_set_match_history_count", {
-      count: initialCount,
-    });
-
     const store = useOngoingGameStore.getState();
     store.reset();
 
-    this.phaseChangedUnlisten = await listen<OngoingGamePhaseChanged>(
-      "ongoing-game-phase-changed",
+    this.ongoingUpdatedUnlisten = await listen<OngoingGameUpdated>(
+      "ongoing-game-updated",
       (event) => {
         const previousPhase = useOngoingGameStore.getState().phase;
-        useOngoingGameStore.getState().applyPhaseChanged(event.payload);
+        useOngoingGameStore.getState().applyUpdated(event.payload);
 
         const autoSwitch = settings.get<boolean>(
           ONGOING_AUTO_SWITCH_TO_GAME_SETTING,
@@ -132,24 +104,12 @@ export class OngoingGameShard implements WebShard {
         }
       },
     );
-
-    this.snapshotUpdatedUnlisten = await listen<OngoingGameSnapshotUpdated>(
-      "ongoing-game-snapshot-updated",
-      (event) => {
-        useOngoingGameStore.getState().applySnapshotUpdated(event.payload);
-      },
-    );
   }
 
   public teardown(_jax: Jax): void {
-    if (this.phaseChangedUnlisten) {
-      this.phaseChangedUnlisten();
-      this.phaseChangedUnlisten = null;
-    }
-
-    if (this.snapshotUpdatedUnlisten) {
-      this.snapshotUpdatedUnlisten();
-      this.snapshotUpdatedUnlisten = null;
+    if (this.ongoingUpdatedUnlisten) {
+      this.ongoingUpdatedUnlisten();
+      this.ongoingUpdatedUnlisten = null;
     }
 
     useOngoingGameStore.getState().reset();

@@ -28,17 +28,9 @@ impl OngoingGameShard {
     }
 
     pub fn initialize(&self, cancel_token: CancellationToken) -> Arc<OngoingGameManager> {
-        if let Some(manager) = self.manager() {
-            return manager;
-        }
-
-        let manager = Arc::new(OngoingGameManager::new(cancel_token));
-        if self.manager.set(manager.clone()).is_err() {
-            if let Some(existing) = self.manager() {
-                return existing;
-            }
-        }
-        manager
+        self.manager
+            .get_or_init(|| Arc::new(OngoingGameManager::new(cancel_token)))
+            .clone()
     }
 }
 
