@@ -2,46 +2,15 @@ import { create } from "zustand";
 import type {
   OngoingGameMatchHistoryFilter,
   OngoingGamePhase,
-  OngoingGamePhaseChanged,
-  OngoingGamePlayerSnapshot,
-  OngoingGameSnapshotUpdated,
-  PlayerSlot,
-  Side,
+  OngoingGameUpdated,
 } from "@/bindings/ongoing_game";
 
-function mergeChampionIdsFromSlots(
-  players: OngoingGamePlayerSnapshot[],
-  slots: PlayerSlot[],
-): OngoingGamePlayerSnapshot[] {
-  if (players.length === 0 || slots.length === 0) {
-    return players;
-  }
-
-  const championByPuuid = new Map(
-    slots.map((slot) => [slot.puuid, slot.champion_id]),
-  );
-
-  return players.map((player) => {
-    const nextChampionId = championByPuuid.get(player.puuid);
-    if (nextChampionId === undefined || nextChampionId === player.champion_id) {
-      return player;
-    }
-
-    return {
-      ...player,
-      champion_id: nextChampionId,
-    };
-  });
-}
+type TeamMember = OngoingGameUpdated["team_members"][number];
 
 export type OngoingGameUiState = {
   phase: OngoingGamePhase;
   loading: boolean;
-  ourSide: Side | null;
-  blueSlots: PlayerSlot[];
-  redSlots: PlayerSlot[];
-  bluePlayers: OngoingGamePlayerSnapshot[];
-  redPlayers: OngoingGamePlayerSnapshot[];
+  teamMembers: TeamMember[];
   queueId: number | null;
   queueName: string | null;
   queueShortName: string | null;
@@ -52,16 +21,13 @@ export type OngoingGameUiState = {
   gameModeShortName: string | null;
   matchHistoryFilter: OngoingGameMatchHistoryFilter;
   matchHistoryTag: string | null;
+  gameflowSession: OngoingGameUpdated["gameflow_session"];
 };
 
 const initialState: OngoingGameUiState = {
   phase: "Idle",
   loading: false,
-  ourSide: null,
-  blueSlots: [],
-  redSlots: [],
-  bluePlayers: [],
-  redPlayers: [],
+  teamMembers: [],
   queueId: null,
   queueName: null,
   queueShortName: null,
@@ -72,12 +38,12 @@ const initialState: OngoingGameUiState = {
   gameModeShortName: null,
   matchHistoryFilter: "CurrentMode",
   matchHistoryTag: null,
+  gameflowSession: null,
 };
 
 type OngoingGameStore = OngoingGameUiState & {
   reset: () => void;
-  applyPhaseChanged: (payload: OngoingGamePhaseChanged) => void;
-  applySnapshotUpdated: (payload: OngoingGameSnapshotUpdated) => void;
+  applyUpdated: (payload: OngoingGameUpdated) => void;
 };
 
 export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
@@ -85,47 +51,12 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
   reset: () => {
     set(initialState);
   },
-  applyPhaseChanged: (payload) => {
-    set((state) => {
-      const mergedBluePlayers =
-        payload.phase === "Idle"
-          ? []
-          : mergeChampionIdsFromSlots(state.bluePlayers, payload.blue_players);
-      const mergedRedPlayers =
-        payload.phase === "Idle"
-          ? []
-          : mergeChampionIdsFromSlots(state.redPlayers, payload.red_players);
-
-      return {
-        ...state,
-        phase: payload.phase,
-        loading: payload.loading,
-        ourSide: payload.our_side,
-        blueSlots: payload.blue_players,
-        redSlots: payload.red_players,
-        bluePlayers: mergedBluePlayers,
-        redPlayers: mergedRedPlayers,
-        queueId: payload.context.queue_id,
-        queueName: payload.context.queue_name,
-        queueShortName: payload.context.queue_short_name,
-        mapId: payload.context.map_id,
-        mapName: payload.context.map_name,
-        gameMode: payload.context.game_mode,
-        gameModeName: payload.context.game_mode_name,
-        gameModeShortName: payload.context.game_mode_short_name,
-        matchHistoryFilter: payload.context.match_history_filter,
-        matchHistoryTag: payload.context.match_history_tag,
-      };
-    });
-  },
-  applySnapshotUpdated: (payload) => {
+  applyUpdated: (payload) => {
     set((state) => ({
       ...state,
       phase: payload.phase,
       loading: payload.loading,
-      ourSide: payload.our_side,
-      bluePlayers: payload.blue_players,
-      redPlayers: payload.red_players,
+      teamMembers: payload.team_members,
       queueId: payload.context.queue_id,
       queueName: payload.context.queue_name,
       queueShortName: payload.context.queue_short_name,
@@ -136,6 +67,7 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       gameModeShortName: payload.context.game_mode_short_name,
       matchHistoryFilter: payload.context.match_history_filter,
       matchHistoryTag: payload.context.match_history_tag,
+      gameflowSession: payload.gameflow_session,
     }));
   },
 }));

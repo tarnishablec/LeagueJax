@@ -4,30 +4,16 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OngoingGameMatchHistoryFilter } from "@/bindings/ongoing_game";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
+import { resolveTeamLayoutLabel } from "../routes/ongoing-game.player-utils.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
-
-function sideLabel(
-  side: "Blue" | "Red" | null,
-  t: (key: string, options?: { defaultValue?: string }) => string,
-): string {
-  if (side === "Blue") {
-    return t("ongoingGame.titlebar.sideBlue", { defaultValue: "Blue Side" });
-  }
-  if (side === "Red") {
-    return t("ongoingGame.titlebar.sideRed", { defaultValue: "Red Side" });
-  }
-  return t("ongoingGame.titlebar.sideUnknown", {
-    defaultValue: "Unknown Side",
-  });
-}
 
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
   const {
     phase,
     loading,
-    ourSide,
+    teamMembers,
     queueName,
     queueShortName,
     mapName,
@@ -47,7 +33,7 @@ export function OngoingGameTitlebar() {
   const mapText =
     mapName ??
     t("ongoingGame.titlebar.mapUnknown", { defaultValue: "Unknown Map" });
-  const teamText = sideLabel(ourSide, t);
+  const teamText = resolveTeamLayoutLabel(teamMembers, t);
 
   const filterOptions = useMemo(
     () => [

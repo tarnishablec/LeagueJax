@@ -1,15 +1,18 @@
+import { invoke } from "@tauri-apps/api/core";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { Pickaxe } from "lucide-react";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 import { useMemo } from "react";
+import "react-loading-skeleton/dist/skeleton.css";
 import { useTranslation } from "react-i18next";
-import { SkeletonTheme } from "react-loading-skeleton";
-import type {
-  OngoingGamePlayerSnapshot,
-  PlayerSlot,
-} from "@/bindings/ongoing_game.ts";
+import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
+import useSWR from "swr";
+import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon.tsx";
+import {
+  type MatchModeTag,
+  useMatchHistory,
+} from "@/features/history/hooks/use-match-history.ts";
+import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { vars } from "@/styles/theme.css.ts";
 import * as s from "../routes/OngoingGameRoute.css.ts";
 import {
@@ -19,14 +22,14 @@ import {
   toRecentGames,
 } from "../routes/ongoing-game.history-utils.ts";
 import {
-  formatName,
   formatRank,
-  toTeamCardEntries,
+  formatSlotName,
+  isBotSlot,
 } from "../routes/ongoing-game.player-utils.ts";
 import type {
   MatchHistoryModeContext,
+  PlayerSlot,
   RecentGameSummary,
-  TeamCardEntry,
 } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
 import {
@@ -36,35 +39,49 @@ import {
 
 type TranslateFn = (key: string, options?: { defaultValue?: string }) => string;
 
-type SnapshotCardModel =
-  | {
-      variant: "skeleton";
-      championId: number | null;
-    }
-  | {
-      variant: "content";
-      championId: number | null;
-      displayName: string;
-      level: number | "-";
-      recentGamesLabel: string;
-      recentGamesValue: string;
-      rankText: string;
-      noRankedText: string;
-      showPosition: boolean;
-      positionAssigned: string | null;
-      positionPrimary: string | null;
-      positionSecondary: string | null;
-      history:
-        | {
-            kind: "rows";
-            rows: RecentGameSummary[];
-            noHistoryText: string;
-          }
-        | {
-            kind: "empty";
-            text: string;
-          };
-    };
+function useOngoingSummoner(puuid: string | undefined, enabled: boolean) {
+  return useSWR(
+    enabled && puuid ? ["ongoing-game:get_summoner_by_puuid", puuid] : null,
+    ([, resolvedPuuid]) =>
+      invoke<SummonerInfo>("get_summoner_by_puuid", {
+        puuid: resolvedPuuid,
+      }),
+    {
+      dedupingInterval: 30_000,
+    },
+  );
+}
+
+function normalizeMatchModeTag(
+  context: MatchHistoryModeContext,
+  explicitTag: string | null,
+): MatchModeTag {
+  if (context.filter === "All") {
+    return "all";
+  }
+
+  switch (explicitTag) {
+    case "q_420":
+    case "q_430":
+    case "q_440":
+    case "q_450":
+    case "q_480":
+    case "q_490":
+    case "q_900":
+    case "q_1700":
+    case "q_1900":
+    case "q_2300":
+      return explicitTag;
+    default:
+      return "all";
+  }
+}
+
+function normalizeChampionId(slot: PlayerSlot): number | null {
+  const championId =
+    slot.championId > 0 ? slot.championId : slot.championPickIntent;
+  return championId > 0 ? championId : null;
+}
 
 function HistoryRow(props: { game: RecentGameSummary; t: TranslateFn }) {
   const { game, t } = props;
@@ -110,94 +127,33 @@ function PlayerHistory(props: {
   return rows.map((game) => <HistoryRow key={game.gameId} game={game} t={t} />);
 }
 
-function SnapshotCardSkeleton({ championId }: { championId: number | null }) {
+function HistoryLoadingState() {
   return (
     <SkeletonTheme
       baseColor={`color-mix(in oklch, ${vars.color.foreground} 8%, transparent)`}
       highlightColor={`color-mix(in oklch, ${vars.color.foreground} 16%, transparent)`}
       duration={1.2}
     >
-      <article className={s.playerCard}>
-        <div className={s.playerHeader}>
-          <ChampionAvatar championId={championId} />
-          <Skeleton width="72%" height={16} borderRadius={6} />
-        </div>
-        <div className={s.playerMeta}>
-          <Skeleton width="100%" height={14} borderRadius={6} />
-          <Skeleton width="100%" height={14} borderRadius={6} />
-        </div>
-        <Skeleton width="56%" height={14} borderRadius={6} />
-        <div className={s.historyList}>
-          <Skeleton width="100%" height={35} borderRadius={6} />
-          <Skeleton width="100%" height={35} borderRadius={6} />
-          <Skeleton width="100%" height={35} borderRadius={6} />
-          <Skeleton width="100%" height={35} borderRadius={6} />
-        </div>
-      </article>
+      <div className={s.historyList}>
+        <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
+      </div>
     </SkeletonTheme>
   );
 }
 
-function SnapshotCardContent(props: {
-  model: Extract<SnapshotCardModel, { variant: "content" }>;
-  t: TranslateFn;
+function SnapshotPlayerCard(props: {
+  slot: PlayerSlot;
+  matchHistoryCount: number;
 }) {
-  const { model, t } = props;
-
-  return (
-    <article className={s.playerCard}>
-      <div className={s.playerHeader}>
-        <div className={s.playerAvatarWrap}>
-          <ChampionAvatar championId={model.championId} />
-          <span className={s.levelBadge}>{model.level}</span>
-        </div>
-        <div className={s.playerName}>{model.displayName}</div>
-      </div>
-      <div className={s.playerMetaSingle}>
-        <span>
-          {model.recentGamesLabel}: {model.recentGamesValue}
-        </span>
-      </div>
-
-      <div className={s.playerStats}>
-        <div>{model.rankText || model.noRankedText}</div>
-        {model.showPosition ? (
-          <LeaguePositionPair
-            assigned={model.positionAssigned}
-            primary={model.positionPrimary}
-            secondary={model.positionSecondary}
-            assignedWidth={16}
-            assignedHeight={16}
-            preferenceWidth={12}
-            preferenceHeight={12}
-          />
-        ) : (
-          <div></div>
-        )}
-      </div>
-
-      <div className={s.historyList}>
-        {model.history.kind === "rows" ? (
-          <PlayerHistory
-            rows={model.history.rows}
-            noHistoryText={model.history.noHistoryText}
-            t={t}
-          />
-        ) : (
-          <div className={s.historyEmpty}>{model.history.text}</div>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function useSnapshotPlayerCardModel(
-  card: TeamCardEntry,
-  t: TranslateFn,
-): SnapshotCardModel {
+  const { slot, matchHistoryCount } = props;
+  const { t } = useTranslation();
   const matchHistoryFilter = useOngoingGameStore(
     (state) => state.matchHistoryFilter,
   );
+  const matchHistoryTag = useOngoingGameStore((state) => state.matchHistoryTag);
   const queueId = useOngoingGameStore((state) => state.queueId);
   const mapId = useOngoingGameStore((state) => state.mapId);
   const gameMode = useOngoingGameStore((state) => state.gameMode);
@@ -211,15 +167,34 @@ function useSnapshotPlayerCardModel(
     }),
     [matchHistoryFilter, queueId, mapId, gameMode],
   );
+  const isBot = isBotSlot(slot);
+  const puuid = !isBot && slot.puuid.trim().length > 0 ? slot.puuid : undefined;
+  const summonerQuery = useOngoingSummoner(puuid, !isBot);
+  const rankedQuery = useRankedSummary(puuid);
+  const matchHistoryQuery = useMatchHistory(
+    puuid,
+    null,
+    1,
+    matchHistoryCount,
+    normalizeMatchModeTag(modeContext, matchHistoryTag),
+  );
+  const recentGames = useMemo(
+    () => toRecentGames(matchHistoryQuery.matches, modeContext),
+    [matchHistoryQuery.matches, modeContext],
+  );
 
+  const championId = normalizeChampionId(slot);
+  const displayName = formatSlotName(slot, summonerQuery.data);
+  const level = summonerQuery.data?.summonerLevel || 0;
+  const rankText = formatRank(rankedQuery.data);
   const showPositionByMode =
     mapId === 11 || (gameMode ?? "").toUpperCase() === "CLASSIC";
-
-  const noRankedText = t("ongoingGame.noRanked", {
-    defaultValue: "No ranked data",
-  });
+  const showPositionByData = Boolean(slot.assignedPosition);
   const recentGamesLabel = t("ongoingGame.recentGames", {
     defaultValue: "Recent games",
+  });
+  const noRankedText = t("ongoingGame.noRanked", {
+    defaultValue: "No ranked data",
   });
   const noHistoryText = t("ongoingGame.noHistory", {
     defaultValue: "No match history",
@@ -227,97 +202,78 @@ function useSnapshotPlayerCardModel(
   const botNoHistoryText = t("ongoingGame.botNoHistory", {
     defaultValue: "Bot (history disabled)",
   });
+  const historyErrorText = t("ongoingGame.noHistory", {
+    defaultValue: "No match history",
+  });
 
-  if (card.kind === "slot" && !card.isBot) {
-    return {
-      variant: "skeleton",
-      championId: card.slot.champion_id,
-    };
-  }
+  return (
+    <article className={s.playerCard}>
+      <div className={s.playerHeader}>
+        <div className={s.playerAvatarWrap}>
+          <ChampionAvatar championId={championId} />
+          <span className={s.levelBadge}>{level > 0 ? level : "-"}</span>
+        </div>
+        <div className={s.playerName}>{displayName}</div>
+      </div>
 
-  const isResolvedPlayer = card.kind === "player" && !card.isBot;
-  const championId =
-    card.kind === "player" ? card.championId : card.slot.champion_id;
-  const displayName = isResolvedPlayer ? formatName(card.player) : "BOT";
-  const level = isResolvedPlayer
-    ? card.player.summoner.summonerLevel || 0
-    : "-";
-  const rankText = isResolvedPlayer ? formatRank(card.player) : "";
-  const recentGameRows = isResolvedPlayer
-    ? toRecentGames(card.player, modeContext)
-    : [];
-  const recentGamesValue = isResolvedPlayer
-    ? String(recentGameRows.length)
-    : "-";
+      <div className={s.playerMetaSingle}>
+        <span>
+          {recentGamesLabel}: {isBot ? "-" : String(recentGames.length)}
+        </span>
+      </div>
 
-  const positionAssigned =
-    card.kind === "player"
-      ? card.player.position_assigned
-      : card.slot.position_assigned;
-  const positionPrimary =
-    card.kind === "player"
-      ? card.player.position_primary
-      : card.slot.position_primary;
-  const positionSecondary =
-    card.kind === "player"
-      ? card.player.position_secondary
-      : card.slot.position_secondary;
+      <div className={s.playerStats}>
+        <div>{rankText || noRankedText}</div>
+        {showPositionByMode || showPositionByData ? (
+          <LeaguePositionPair
+            assigned={slot.assignedPosition}
+            primary={null}
+            secondary={null}
+            assignedWidth={16}
+            assignedHeight={16}
+            preferenceWidth={12}
+            preferenceHeight={12}
+          />
+        ) : (
+          <div></div>
+        )}
+      </div>
 
-  const showPositionByData = Boolean(
-    positionAssigned || positionPrimary || positionSecondary,
+      {isBot ? (
+        <div className={s.historyList}>
+          <div className={s.historyEmpty}>{botNoHistoryText}</div>
+        </div>
+      ) : matchHistoryQuery.isLoading ? (
+        <HistoryLoadingState />
+      ) : matchHistoryQuery.error ? (
+        <div className={s.historyList}>
+          <div className={s.historyEmpty}>{historyErrorText}</div>
+        </div>
+      ) : (
+        <div className={s.historyList}>
+          <PlayerHistory
+            rows={recentGames}
+            noHistoryText={noHistoryText}
+            t={t}
+          />
+        </div>
+      )}
+    </article>
   );
-
-  return {
-    variant: "content",
-    championId,
-    displayName,
-    level,
-    recentGamesLabel,
-    recentGamesValue,
-    rankText,
-    noRankedText,
-    showPosition: showPositionByMode || showPositionByData,
-    positionAssigned,
-    positionPrimary,
-    positionSecondary,
-    history: isResolvedPlayer
-      ? {
-          kind: "rows",
-          rows: recentGameRows,
-          noHistoryText,
-        }
-      : {
-          kind: "empty",
-          text: botNoHistoryText,
-        },
-  };
-}
-
-function SnapshotPlayerCard(props: { card: TeamCardEntry }) {
-  const { card } = props;
-  const { t } = useTranslation();
-  const model = useSnapshotPlayerCardModel(card, t);
-
-  if (model.variant === "skeleton") {
-    return <SnapshotCardSkeleton championId={model.championId} />;
-  }
-
-  return <SnapshotCardContent model={model} t={t} />;
 }
 
 export function TeamRow(props: {
+  matchHistoryCount: number;
   showBots: boolean;
-  players: OngoingGamePlayerSnapshot[];
   slots: PlayerSlot[];
 }) {
-  const { showBots, players, slots } = props;
+  const { matchHistoryCount, showBots, slots } = props;
   const { t } = useTranslation();
 
-  const cardEntries = toTeamCardEntries(players, slots);
-  const visibleCards = showBots
-    ? cardEntries
-    : cardEntries.filter((card) => !card.isBot);
-  const teamCols = Math.max(5, visibleCards.length);
+  const visibleSlots = showBots
+    ? slots
+    : slots.filter((slot) => !isBotSlot(slot));
+  const teamCols = Math.max(5, visibleSlots.length);
   const noDataText = t("ongoingGame.noData", {
     defaultValue: "No player data yet",
   });
@@ -330,11 +286,15 @@ export function TeamRow(props: {
           [s.teamColsVar]: String(teamCols),
         })}
       >
-        {visibleCards.length === 0 ? (
+        {visibleSlots.length === 0 ? (
           <div className={s.emptyState}>{noDataText}</div>
         ) : (
-          visibleCards.map((card) => (
-            <SnapshotPlayerCard key={card.key} card={card} />
+          visibleSlots.map((slot) => (
+            <SnapshotPlayerCard
+              key={`slot:${slot.team}:${slot.cellId}:${slot.puuid}`}
+              matchHistoryCount={matchHistoryCount}
+              slot={slot}
+            />
           ))
         )}
       </div>

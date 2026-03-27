@@ -1,8 +1,5 @@
-import type {
-  RawMatchSummaryGame,
-  RawMatchSummaryParticipant,
-} from "@/bindings/matches";
-import type { OngoingGamePlayerSnapshot } from "@/bindings/ongoing_game";
+import type { RawMatchSummaryGame } from "@/bindings/matches";
+import type { EnrichedMatch } from "@/features/history/hooks/use-match-history";
 import type {
   MatchHistoryModeContext,
   RecentGameResult,
@@ -67,25 +64,22 @@ function normalizeChampionId(
   return championId;
 }
 
-function resolveRecentGameResult(
-  game: RawMatchSummaryGame,
-  participant: RawMatchSummaryParticipant | null,
-): RecentGameResult {
+function resolveRecentGameResult(game: EnrichedMatch): RecentGameResult {
   const endOfGameResult = game.json.endOfGameResult ?? "";
 
   if (endOfGameResult.startsWith("Abort_")) {
     return "Terminated";
   }
 
-  if (participant?.gameEndedInEarlySurrender) {
+  if (game.me.gameEndedInEarlySurrender) {
     return "Remake";
   }
 
-  if (participant?.win === true) {
+  if (game.me.win === true) {
     return "Win";
   }
 
-  if (participant?.win === false) {
+  if (game.me.win === false) {
     return "Lose";
   }
 
@@ -93,28 +87,24 @@ function resolveRecentGameResult(
 }
 
 export function toRecentGames(
-  player: OngoingGamePlayerSnapshot,
+  matches: EnrichedMatch[] | undefined,
   context: MatchHistoryModeContext,
 ): RecentGameSummary[] {
-  const games = player.match_history?.games ?? [];
+  const games = matches ?? [];
 
   return games
     .filter((game) => matchHistoryGameInCurrentMode(game, context))
     .map((game) => {
-      const participant =
-        game.json.participants.find((item) => item.puuid === player.puuid) ??
-        null;
-
       return {
         gameId: game.json.gameId,
-        result: resolveRecentGameResult(game, participant),
-        championId: normalizeChampionId(participant?.championId),
-        kills: participant?.kills ?? 0,
-        deaths: participant?.deaths ?? 0,
-        assists: participant?.assists ?? 0,
+        result: resolveRecentGameResult(game),
+        championId: normalizeChampionId(game.me.championId),
+        kills: game.me.kills ?? 0,
+        deaths: game.me.deaths ?? 0,
+        assists: game.me.assists ?? 0,
         cs:
-          (participant?.totalMinionsKilled ?? 0) +
-          (participant?.neutralMinionsKilled ?? 0),
+          (game.me.totalMinionsKilled ?? 0) +
+          (game.me.neutralMinionsKilled ?? 0),
         durationSec: game.json.gameDuration ?? 0,
       };
     });

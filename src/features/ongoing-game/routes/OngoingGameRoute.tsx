@@ -6,8 +6,11 @@ import { useSettings } from "@/features/settings/context";
 import { TeamRow } from "../components/OngoingGameCards.tsx";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameRoute.css";
+import { groupTeamMembers } from "./ongoing-game.player-utils.ts";
 
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.behavior.showBots" as const;
+const ONGOING_MATCH_HISTORY_COUNT_SETTING =
+  "ongoing.behavior.matchHistoryCount" as const;
 
 export function OngoingGameRoute() {
   const { t } = useTranslation();
@@ -18,8 +21,14 @@ export function OngoingGameRoute() {
     () => settings.get<boolean>(ONGOING_SHOW_BOTS_SETTING) ?? true,
     () => settings.get<boolean>(ONGOING_SHOW_BOTS_SETTING) ?? true,
   );
-  const { blueSlots, redSlots, bluePlayers, redPlayers, phase } =
-    useOngoingGameStore();
+  const matchHistoryCount = useSyncExternalStore(
+    (onStoreChange) =>
+      settings.subscribe(ONGOING_MATCH_HISTORY_COUNT_SETTING, onStoreChange),
+    () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
+    () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
+  );
+  const { teamMembers, phase } = useOngoingGameStore();
+  const teamGroups = groupTeamMembers(teamMembers);
 
   if (phase === "Idle") {
     return (
@@ -34,8 +43,14 @@ export function OngoingGameRoute() {
 
   return (
     <div className={s.page}>
-      <TeamRow showBots={showBots} slots={blueSlots} players={bluePlayers} />
-      <TeamRow showBots={showBots} slots={redSlots} players={redPlayers} />
+      {teamGroups.map((group) => (
+        <TeamRow
+          key={`team:${group.teamId}`}
+          matchHistoryCount={matchHistoryCount}
+          showBots={showBots}
+          slots={group.members}
+        />
+      ))}
     </div>
   );
 }

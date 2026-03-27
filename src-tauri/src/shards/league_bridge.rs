@@ -7,9 +7,7 @@ use tauri::Emitter;
 
 use crate::error::AppError;
 use crate::shards::lcu::manager::LcuManagerStateEvent;
-use crate::shards::lcu::ws_event_types::is_ongoing_related_uri;
 use crate::shards::lcu::LcuShard;
-use crate::shards::ongoing_game::manager::OngoingGameManagerEvent;
 use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::sgp::SgpShard;
 use crate::shards::tauri_host::TauriHost;
@@ -70,49 +68,28 @@ impl LeagueBridgeShard {
         });
 
         #[cfg(debug_assertions)]
-        {
-            let ws_logger = jax
-                .get_shard::<crate::shards::file_logger::FileLoggerShard>()
-                .logger()
-                .cloned();
+        let ws_logger = jax
+            .get_shard::<crate::shards::file_logger::FileLoggerShard>()
+            .logger()
+            .cloned();
 
-            lcu_manager.subscribe_ws_fn(move |ws_event| {
-                let ongoing_manager = ongoing_manager.clone();
-                let ws_logger = ws_logger.clone();
-                async move {
-                    if let Some(logger) = &ws_logger {
-                        logger.write("lcu_ws_event_raw", &ws_event);
-                    }
-                    if !is_ongoing_related_uri(&ws_event.uri) {
-                        return;
-                    }
-                    ongoing_manager.handle_ws_event(ws_event).await;
+        lcu_manager.subscribe_ws_fn(move |ws_event| {
+            let ongoing_manager = ongoing_manager.clone();
+            #[cfg(debug_assertions)]
+            let ws_logger = ws_logger.clone();
+            async move {
+                #[cfg(debug_assertions)]
+                if let Some(logger) = &ws_logger {
+                    logger.write("lcu_ws_event_raw", &ws_event);
                 }
-            });
-        }
-
-        #[cfg(not(debug_assertions))]
-        {
-            lcu_manager.subscribe_ws_fn(move |ws_event| {
-                let ongoing_manager = ongoing_manager.clone();
-                async move {
-                    if !is_ongoing_related_uri(&ws_event.uri) {
-                        return;
-                    }
-                    ongoing_manager.handle_ws_event(ws_event).await;
-                }
-            });
-        }
+                ongoing_manager.handle_ws_event(ws_event).await;
+            }
+        });
     }
 
     fn setup_emit_bridge(&self, jax: Arc<Jax>) -> Result<(), AppError> {
         let app = jax.get_shard::<TauriHost>().app.clone();
         let cancel_token = jax.get_shard::<TauriHost>().cancellation_token();
-        #[cfg(debug_assertions)]
-        let ongoing_logger = jax
-            .get_shard::<crate::shards::file_logger::FileLoggerShard>()
-            .logger()
-            .cloned();
 
         let lcu_manager = jax
             .get_shard::<LcuShard>()
@@ -155,70 +132,7 @@ impl LeagueBridgeShard {
                         }
                     };
 
-                    match event {
-                        OngoingGameManagerEvent::PhaseChanged(payload) => {
-                            #[cfg(debug_assertions)]
-                            if let Some(logger) = &ongoing_logger {
-                                let summary = serde_json::json!({
-                                    "event": "phase_changed",
-                                    "phase": payload.phase,
-                                    "loading": payload.loading,
-                                    "queue_id": payload.context.queue_id,
-                                    "match_history_filter": payload.context.match_history_filter,
-                                    "match_history_tag": payload.context.match_history_tag,
-                                    "blue_slots": payload.blue_players.len(),
-                                    "blue_bot_slots": payload.blue_players.iter().filter(|slot| slot.puuid.to_ascii_uppercase().starts_with("BOT_")).count(),
-                                    "red_slots": payload.red_players.len(),
-                                    "red_bot_slots": payload.red_players.iter().filter(|slot| slot.puuid.to_ascii_uppercase().starts_with("BOT_")).count(),
-                                });
-                                logger.write("ongoing_snapshot_diag", &summary);
-                            }
-                            let _ = ongoing_app.emit("ongoing-game-phase-changed", &payload);
-                        }
-                        OngoingGameManagerEvent::SnapshotUpdated(payload) => {
-                            #[cfg(debug_assertions)]
-                            if let Some(logger) = &ongoing_logger {
-                                let blue = payload
-                                    .blue_players
-                                    .iter()
-                                    .map(|player| {
-                                        serde_json::json!({
-                                            "puuid": player.puuid,
-                                            "champion_id": player.champion_id,
-                                            "history_games": player.match_history.as_ref().map(|history| history.games.len()).unwrap_or(0),
-                                            "has_history": player.match_history.is_some(),
-                                            "has_ranked": player.ranked.is_some(),
-                                        })
-                                    })
-                                    .collect::<Vec<_>>();
-                                let red = payload
-                                    .red_players
-                                    .iter()
-                                    .map(|player| {
-                                        serde_json::json!({
-                                            "puuid": player.puuid,
-                                            "champion_id": player.champion_id,
-                                            "history_games": player.match_history.as_ref().map(|history| history.games.len()).unwrap_or(0),
-                                            "has_history": player.match_history.is_some(),
-                                            "has_ranked": player.ranked.is_some(),
-                                        })
-                                    })
-                                    .collect::<Vec<_>>();
-                                let summary = serde_json::json!({
-                                    "event": "snapshot_updated",
-                                    "phase": payload.phase,
-                                    "loading": payload.loading,
-                                    "queue_id": payload.context.queue_id,
-                                    "match_history_filter": payload.context.match_history_filter,
-                                    "match_history_tag": payload.context.match_history_tag,
-                                    "blue": blue,
-                                    "red": red,
-                                });
-                                logger.write("ongoing_snapshot_diag", &summary);
-                            }
-                            let _ = ongoing_app.emit("ongoing-game-snapshot-updated", &payload);
-                        }
-                    }
+                    let _ = ongoing_app.emit("ongoing-game-updated", &event);
                 }
             });
         }
@@ -247,4 +161,3 @@ impl Shard for LeagueBridgeShard {
         ]
     }
 }
-
