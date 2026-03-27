@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Gamepad2 } from "lucide-react";
 import { z } from "zod";
@@ -30,6 +31,7 @@ function navigateTo(path: string): void {
 
 export class OngoingGameShard implements WebShard {
   private ongoingUpdatedUnlisten: UnlistenFn | null = null;
+  private lcuFocusChangedUnlisten: UnlistenFn | null = null;
 
   public label() {
     return "OngoingGameShard";
@@ -104,12 +106,22 @@ export class OngoingGameShard implements WebShard {
         }
       },
     );
+
+    this.lcuFocusChangedUnlisten = await listen("lcu-focus-changed", () => {
+      void invoke("ongoing_game_refresh");
+    });
+
+    void invoke("ongoing_game_refresh");
   }
 
   public teardown(_jax: Jax): void {
     if (this.ongoingUpdatedUnlisten) {
       this.ongoingUpdatedUnlisten();
       this.ongoingUpdatedUnlisten = null;
+    }
+    if (this.lcuFocusChangedUnlisten) {
+      this.lcuFocusChangedUnlisten();
+      this.lcuFocusChangedUnlisten = null;
     }
 
     useOngoingGameStore.getState().reset();

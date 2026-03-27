@@ -27,7 +27,25 @@ impl LeagueBridgeShard {
         let lcu_manager = lcu_shard.initialize(cancel_token.clone());
 
         let ongoing_shard = jax.get_shard::<OngoingGameShard>();
-        let ongoing_manager = ongoing_shard.initialize(cancel_token);
+        let ongoing_manager = ongoing_shard.initialize(cancel_token.clone());
+
+        let bootstrap_lcu_manager = lcu_manager.clone();
+        let bootstrap_ongoing_shard = ongoing_shard.clone();
+        let bootstrap_jax = jax.clone();
+        let bootstrap_cancel_token = cancel_token.clone();
+        tauri_host.spawn(async move {
+            let lcu_session = bootstrap_lcu_manager.focused().await;
+            let sgp_session = if let Some(lcu) = &lcu_session {
+                let sgp_shard = bootstrap_jax.get_shard::<SgpShard>();
+                sgp_shard.spg_from_lcu(lcu.clone()).await.ok()
+            } else {
+                None
+            };
+
+            let _ = bootstrap_ongoing_shard
+                .initialize_with_focus(bootstrap_cancel_token, lcu_session, sgp_session)
+                .await;
+        });
 
         let manager_for_run = lcu_manager.clone();
         tauri_host.spawn(async move {
@@ -115,8 +133,11 @@ impl LeagueBridgeShard {
             let mut ongoing_rx = ongoing_manager.subscribe();
             let ongoing_app = app;
             let token = cancel_token;
+            let ongoing_manager_for_bootstrap = ongoing_manager.clone();
 
             tokio::spawn(async move {
+                ongoing_manager_for_bootstrap.refresh_current().await;
+
                 loop {
                     let event = tokio::select! {
                         _ = token.cancelled() => break,

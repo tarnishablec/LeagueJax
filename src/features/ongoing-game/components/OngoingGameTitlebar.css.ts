@@ -22,11 +22,37 @@ export const labels = style({
   paddingLeft: "1rem",
 });
 
-export const text = style({
+export const queueDesc = style({
   fontSize: "0.76rem",
   color: vars.color.foreground,
   overflow: "hidden",
   textOverflow: "ellipsis",
+  fontWeight: 600,
+});
+
+export const queueMeta = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  gridAutoColumns: "max-content",
+  alignItems: "center",
+  gap: 8,
+  minWidth: 0,
+});
+
+export const queueIcon = style({
+  width: 18,
+  height: 18,
+  borderRadius: 4,
+  objectFit: "cover",
+  border: `1px solid color-mix(in oklch, ${vars.color.border} 80%, transparent)`,
+});
+
+export const queueIconFallback = style({
+  width: 18,
+  height: 18,
+  borderRadius: 4,
+  border: `1px solid color-mix(in oklch, ${vars.color.border} 80%, transparent)`,
+  background: `color-mix(in oklch, ${vars.color.foreground} 12%, transparent)`,
 });
 
 export const idleText = style({

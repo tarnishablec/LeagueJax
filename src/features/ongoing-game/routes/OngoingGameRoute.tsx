@@ -6,7 +6,7 @@ import { useSettings } from "@/features/settings/context";
 import { TeamRow } from "../components/OngoingGameCards.tsx";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameRoute.css";
-import { groupTeamMembers } from "./ongoing-game.player-utils.ts";
+import { resolveOngoingTeamGroups } from "./ongoing-game.player-utils.ts";
 
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.behavior.showBots" as const;
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
@@ -27,8 +27,13 @@ export function OngoingGameRoute() {
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
   );
-  const { teamMembers, phase } = useOngoingGameStore();
-  const teamGroups = groupTeamMembers(teamMembers);
+  const { teamMembers, phase, gameflowSession, champSelectSession } =
+    useOngoingGameStore();
+  const teamGroups = resolveOngoingTeamGroups({
+    teamMembers,
+    gameflowSession,
+    champSelectSession,
+  });
 
   if (phase === "Idle") {
     return (

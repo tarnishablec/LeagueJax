@@ -40,6 +40,14 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
+        .register_asynchronous_uri_scheme_protocol("lcu", |ctx, request, responder| {
+            let app_handle = ctx.app_handle().clone();
+            tauri::async_runtime::spawn(async move {
+                responder.respond(
+                    shards::lcu::asset_proxy::handle_lcu_asset_request(app_handle, request).await,
+                );
+            });
+        })
         .invoke_handler(tauri::generate_handler![
             lcu_update_focus,
             get_current_summoner,

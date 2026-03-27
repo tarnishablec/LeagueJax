@@ -1,39 +1,53 @@
-﻿import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OngoingGameMatchHistoryFilter } from "@/bindings/ongoing_game";
+import { LcuImage } from "@/components/LcuImage";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
-import { resolveTeamLayoutLabel } from "../routes/ongoing-game.player-utils.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
+function resolveGameflowAssetIconPath(
+  assets: Record<string, unknown> | undefined,
+): string | null {
+  if (!assets) {
+    return null;
+  }
+
+  const pathCandidates = [
+    assets["icon-v2"],
+    // assets["game-select-icon-default"],
+    assets["game-select-icon-active"],
+    // assets["game-select-icon-hover"],
+  ];
+  const selectedPath = pathCandidates.find(
+    (value): value is string =>
+      typeof value === "string" && value.trim().length > 0,
+  );
+  if (!selectedPath) {
+    return null;
+  }
+
+  const normalizedPath = selectedPath.replace(/\\/g, "/").trim();
+  if (normalizedPath.length === 0) {
+    return null;
+  }
+
+  return normalizedPath;
+}
+
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
-  const {
-    phase,
-    loading,
-    teamMembers,
-    queueName,
-    queueShortName,
-    mapName,
-    gameModeName,
-    gameModeShortName,
-    matchHistoryFilter,
-  } = useOngoingGameStore();
+  const { phase, gameflowSession, matchHistoryFilter } = useOngoingGameStore();
   const [refreshing, setRefreshing] = useState(false);
   const [updatingFilter, setUpdatingFilter] = useState(false);
 
-  const modeText =
-    gameModeName ??
-    gameModeShortName ??
-    queueShortName ??
-    queueName ??
-    t("ongoingGame.titlebar.modeUnknown", { defaultValue: "Unknown Mode" });
-  const mapText =
-    mapName ??
-    t("ongoingGame.titlebar.mapUnknown", { defaultValue: "Unknown Map" });
-  const teamText = resolveTeamLayoutLabel(teamMembers, t);
+  const queueDesc = gameflowSession?.gameData.queue.detailedDescription;
+  const queueIconPath = useMemo(
+    () => resolveGameflowAssetIconPath(gameflowSession?.map.assets),
+    [gameflowSession?.map.assets],
+  );
 
   const filterOptions = useMemo(
     () => [
@@ -57,23 +71,27 @@ export function OngoingGameTitlebar() {
     [filterOptions],
   );
 
-  const busy = loading || refreshing || updatingFilter;
+  const busy = refreshing || updatingFilter;
 
   return (
     <div className={s.root} data-tauri-drag-region>
       <div className={s.labels}>
-        {phase === "Idle" && !loading ? (
+        {phase === "Idle" ? (
           <span className={s.idleText}>
             {/*{t("ongoingGame.titlebar.idle", { defaultValue: "No active game" })}*/}
           </span>
         ) : (
-          <>
-            <span className={s.text}>{modeText}</span>
-            <span className={s.separator}>·</span>
-            <span className={s.text}>{mapText}</span>
-            <span className={s.separator}>·</span>
-            <span className={s.text}>{teamText}</span>
-          </>
+          <span className={s.queueMeta}>
+            {queueIconPath ? (
+              <LcuImage
+                src={queueIconPath}
+                alt=""
+                className={s.queueIcon}
+                fallbackClassName={s.queueIconFallback}
+              />
+            ) : null}
+            <span className={s.queueDesc}>{queueDesc}</span>
+          </span>
         )}
       </div>
 
