@@ -10,6 +10,11 @@ type SelectItem = {
   label: string;
 };
 
+type SelectGroup = {
+  label: string;
+  items: SelectItem[];
+};
+
 type SettingsSelectProps = {
   collection: ReturnType<typeof createListCollection<SelectItem>>;
   value: string[];
@@ -17,6 +22,7 @@ type SettingsSelectProps = {
   disabled?: boolean;
   placeholder?: string;
   formatValue?: (label: string) => string;
+  groups?: SelectGroup[];
 };
 
 function FormattedValueText({
@@ -37,6 +43,59 @@ function FormattedValueText({
   );
 }
 
+function FlatItems({
+  collection,
+}: { collection: SettingsSelectProps["collection"] }) {
+  return (
+    <>
+      {collection.items.map((item) => (
+        <Select.Item key={item.value} item={item} className={s.item}>
+          <Select.ItemText className={s.itemText}>
+            {item.label}
+          </Select.ItemText>
+          <Select.ItemIndicator className={s.itemIndicator}>
+            <Check size={13} />
+          </Select.ItemIndicator>
+        </Select.Item>
+      ))}
+    </>
+  );
+}
+
+function GroupedItems({
+  groups,
+  collection,
+}: { groups: SelectGroup[]; collection: SettingsSelectProps["collection"] }) {
+  return (
+    <>
+      {groups.map((group) => (
+        <Select.ItemGroup key={group.label} className={s.group}>
+          {group.items.map((groupItem) => {
+            const item = collection.items.find(
+              (i) => i.value === groupItem.value,
+            );
+            if (!item) return null;
+            return (
+              <Select.Item
+                key={item.value}
+                item={item}
+                className={s.item}
+              >
+                <Select.ItemText className={s.itemText}>
+                  {item.label}
+                </Select.ItemText>
+                <Select.ItemIndicator className={s.itemIndicator}>
+                  <Check size={13} />
+                </Select.ItemIndicator>
+              </Select.Item>
+            );
+          })}
+        </Select.ItemGroup>
+      ))}
+    </>
+  );
+}
+
 export function SettingsSelect({
   collection,
   value,
@@ -44,6 +103,7 @@ export function SettingsSelect({
   disabled,
   placeholder,
   formatValue,
+  groups,
 }: SettingsSelectProps) {
   return (
     <Select.Root
@@ -77,16 +137,11 @@ export function SettingsSelect({
         <Select.Positioner className={s.positioner}>
           <Select.Content className={s.content}>
             <Select.List className={s.list}>
-              {collection.items.map((item) => (
-                <Select.Item key={item.value} item={item} className={s.item}>
-                  <Select.ItemText className={s.itemText}>
-                    {item.label}
-                  </Select.ItemText>
-                  <Select.ItemIndicator className={s.itemIndicator}>
-                    <Check size={13} />
-                  </Select.ItemIndicator>
-                </Select.Item>
-              ))}
+              {groups ? (
+                <GroupedItems groups={groups} collection={collection} />
+              ) : (
+                <FlatItems collection={collection} />
+              )}
             </Select.List>
           </Select.Content>
         </Select.Positioner>

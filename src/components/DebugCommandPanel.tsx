@@ -143,6 +143,11 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
       run: () => invoke<unknown>("get_cherry_augments"),
     },
     {
+      id: "lcu-get-queues",
+      label: "lcu_get_queues",
+      run: () => invoke<unknown>("lcu_get_queues"),
+    },
+    {
       id: "lcu-get-maps",
       label: "lcu_get_maps",
       run: () => invoke<unknown>("lcu_get_maps"),

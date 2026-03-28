@@ -110,6 +110,25 @@ export const itemText = style({
   whiteSpace: "nowrap",
 });
 
+export const group = style({
+  display: "grid",
+  gap: 2,
+  selectors: {
+    "& + &": {
+      borderTop: `1px solid ${vars.settings.controlBorder}`,
+      marginTop: 4,
+      paddingTop: 4,
+    },
+  },
+});
+
+export const groupLabel = style({
+  fontSize: "0.75rem",
+  color: vars.color.mutedForeground,
+  padding: "4px 10px 2px",
+  userSelect: "none",
+});
+
 export const itemIndicator = style({
   display: "grid",
   placeItems: "center",
