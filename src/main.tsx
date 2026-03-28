@@ -8,6 +8,7 @@ import {
 } from "@/features/settings/store/general";
 import "./styles/theme.css";
 import "./styles/global.css";
+import "react-loading-skeleton/dist/skeleton.css";
 import { initializeI18n } from "@/i18n";
 import App from "./App";
 import {

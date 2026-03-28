@@ -79,6 +79,14 @@ pub fn run() {
             let win = app.get_webview_window("main").expect("no main window");
             // win.open_devtools();
 
+            #[cfg(not(debug_assertions))]
+            {
+                let window = app.get_window("main").unwrap();
+                window
+                    .eval("window.addEventListener('contextmenu', e => e.preventDefault());")
+                    .unwrap();
+            }
+
             #[cfg(target_os = "windows")]
             {
                 if apply_mica(&win, None).is_err() {

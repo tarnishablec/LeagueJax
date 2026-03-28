@@ -1,8 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import { Pickaxe } from "lucide-react";
+import { Bot } from "lucide-react";
 import { useMemo } from "react";
-import "react-loading-skeleton/dist/skeleton.css";
 import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import useSWR from "swr";
@@ -23,7 +22,6 @@ import {
   resolveRankTierForIcon,
 } from "@/utils/rank-display";
 import {
-  formatDuration,
   historyResultClassName,
   historyResultLabel,
   toRecentGames,
@@ -36,8 +34,6 @@ import type {
 } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameCards.css.ts";
-
-type TranslateFn = (key: string, options?: { defaultValue?: string }) => string;
 
 function useOngoingSummoner(puuid: string | undefined, enabled: boolean) {
   return useSWR(
@@ -136,8 +132,9 @@ function normalizeChampionId(slot: PlayerSlot): number | null {
   return championId > 0 ? championId : null;
 }
 
-function HistoryRow(props: { game: RecentGameSummary; t: TranslateFn }) {
-  const { game, t } = props;
+function HistoryRow(props: { game: RecentGameSummary }) {
+  const { game } = props;
+  const { t } = useTranslation();
 
   return (
     <div className={s.historyRow}>
@@ -146,42 +143,31 @@ function HistoryRow(props: { game: RecentGameSummary; t: TranslateFn }) {
         imageClassName={s.historyChampionAvatar}
         fallbackClassName={s.historyChampionFallback}
       />
-      <span
-        className={historyResultClassName(game.result, {
-          winText: s.winText,
-          loseText: s.loseText,
-          remakeText: s.remakeText,
-          terminatedText: s.terminatedText,
-        })}
-      >
-        {historyResultLabel(game.result, t)}
-      </span>
+      <div className={s.matchBrief}>
+        <span
+          className={`${historyResultClassName(game.result, {
+            winText: s.winText,
+            loseText: s.loseText,
+            remakeText: s.remakeText,
+            terminatedText: s.terminatedText,
+          })} ${s.matchBriefUp}`}
+        >
+          <span>{historyResultLabel(game.result, t)}</span>
+          <span></span>
+        </span>
+        <span></span>
+      </div>
       <span className={s.kdaText}>
         {game.kills}/{game.deaths}/{game.assists}
-      </span>
-      <span className={s.historyMeta}>
-        <span className={s.historyMetaCs}>
-          <Pickaxe className={s.historyMetaIcon} aria-hidden="true" />
-          <span>{game.cs}</span>
-        </span>
-        <span>{formatDuration(game.durationSec)}</span>
       </span>
     </div>
   );
 }
 
-function PlayerHistory(props: {
-  rows: RecentGameSummary[];
-  noHistoryText: string;
-  t: TranslateFn;
-}) {
-  const { rows, noHistoryText, t } = props;
+function PlayerHistory(props: { rows: RecentGameSummary[] }) {
+  const { rows } = props;
 
-  if (rows.length === 0) {
-    return <div className={s.historyEmpty}>{noHistoryText}</div>;
-  }
-
-  return rows.map((game) => <HistoryRow key={game.gameId} game={game} t={t} />);
+  return rows.map((game) => <HistoryRow key={game.gameId} game={game} />);
 }
 
 function HistoryLoadingState() {
@@ -252,18 +238,13 @@ function SnapshotPlayerCard(props: {
   const rankText = formatRankEntryLabel(t, rankEntry);
   const rankIcon = useRankIcon(resolveRankTierForIcon(rankEntry), true);
   const showRankRow = !isBot;
-  const showPositionByMode =
-    mapId === 11 || (gameMode ?? "").toUpperCase() === "CLASSIC";
-  const showPositionByData = Boolean(slot.assignedPosition);
-  const recentGamesLabel = t("ongoingGame.recentGames", {
-    defaultValue: "Recent games",
-  });
-  const noHistoryText = t("ongoingGame.noHistory", {
-    defaultValue: "No match history",
-  });
-  const botNoHistoryText = t("ongoingGame.botNoHistory", {
-    defaultValue: "Bot (history disabled)",
-  });
+  // const showPositionByData = Boolean(slot.assignedPosition);
+  // const recentGamesLabel = t("ongoingGame.recentGames", {
+  //   defaultValue: "Recent games",
+  // });
+  // const noHistoryText = t("ongoingGame.noHistory", {
+  //   defaultValue: "No match history",
+  // });
   const historyErrorText = t("ongoingGame.noHistory", {
     defaultValue: "No match history",
   });
@@ -287,7 +268,6 @@ function SnapshotPlayerCard(props: {
               styles={{
                 gameName: {
                   fontSize: "0.75rem",
-                  marginRight: "0.5rem",
                 },
                 tagLine: {
                   fontSize: "0.7rem",
@@ -304,31 +284,23 @@ function SnapshotPlayerCard(props: {
         </div>
       </div>
 
-      <div className={s.playerMetaSingle}>
-        <span>
-          {recentGamesLabel}: {isBot ? "-" : String(recentGames.length)}
-        </span>
-      </div>
-
       <div className={s.playerStats}>
-        {showPositionByMode || showPositionByData ? (
-          <LeaguePositionPair
-            assigned={slot.assignedPosition}
-            primary={null}
-            secondary={null}
-            assignedWidth={16}
-            assignedHeight={16}
-            preferenceWidth={12}
-            preferenceHeight={12}
-          />
-        ) : (
-          <div />
-        )}
+        <LeaguePositionPair
+          assigned={slot.assignedPosition}
+          primary={null}
+          secondary={null}
+          assignedWidth={16}
+          assignedHeight={16}
+          preferenceWidth={12}
+          preferenceHeight={12}
+        />
       </div>
 
       {isBot ? (
-        <div className={s.historyList}>
-          <div className={s.historyEmpty}>{botNoHistoryText}</div>
+        <div className={s.historyList} style={{ alignContent: "center" }}>
+          <div className={s.historyEmpty}>
+            <Bot />
+          </div>
         </div>
       ) : matchHistoryQuery.isLoading ? (
         <HistoryLoadingState />
@@ -338,11 +310,7 @@ function SnapshotPlayerCard(props: {
         </div>
       ) : (
         <div className={s.historyList}>
-          <PlayerHistory
-            rows={recentGames}
-            noHistoryText={noHistoryText}
-            t={t}
-          />
+          <PlayerHistory rows={recentGames} />
         </div>
       )}
     </article>

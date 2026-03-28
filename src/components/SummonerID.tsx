@@ -18,8 +18,9 @@ export const SummonerID = ({
     <span
       style={{
         display: "grid",
-        gridTemplateColumns: "1fr auto",
+        gridTemplateColumns: "min-content auto",
         alignItems: "center",
+        justifyContent: "start",
         gap: 2,
       }}
     >

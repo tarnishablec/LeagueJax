@@ -65,7 +65,7 @@ export const dialogContent = style({
   boxShadow: `0 16px 36px ${vars.settings.selectMenuShadow}`,
   padding: 14,
   display: "grid",
-  gridTemplateRows: "auto auto auto minmax(0, 1fr)",
+  gridTemplateRows: "auto auto 1fr",
   gap: 10,
 });
 
