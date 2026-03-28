@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useSWRConfig } from "swr";
 import { LcuImage } from "@/components/LcuImage";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
-import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
 import { modeOptions } from "@/features/history/components/match-list-options";
+import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
@@ -127,9 +127,7 @@ export function OngoingGameTitlebar() {
               const next = details.value[0];
               if (!next) return;
               setModeTag(
-                next === CURRENT_MODE_VALUE
-                  ? null
-                  : (next as MatchModeTag),
+                next === CURRENT_MODE_VALUE ? null : (next as MatchModeTag),
               );
             }}
             disabled={refreshing}
