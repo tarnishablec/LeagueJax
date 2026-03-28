@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { LazyImage } from "@/components/LazyImage";
+import { SummonerID } from "@/components/SummonerID.tsx";
 import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import * as s from "../routes/HistoryRoute.css";
-import { SummonerID } from "@/components/SummonerID.tsx";
 
 function InstanceCard({ instance }: { instance: LcuInstanceInfo }) {
   const profileIconId = instance.summoner?.profileIconId ?? 0;
