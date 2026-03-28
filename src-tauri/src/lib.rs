@@ -36,7 +36,17 @@ pub fn run() {
         .with_target(true)
         .init();
 
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    // #[cfg(debug_assertions)] // only enable instrumentation in development builds
+    // let devtools = tauri_plugin_devtools::init();
+    //
+    // #[cfg(debug_assertions)]
+    // {
+    //     builder = builder.plugin(devtools);
+    // }
+
+    builder
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())

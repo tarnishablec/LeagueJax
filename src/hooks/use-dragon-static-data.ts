@@ -547,19 +547,21 @@ function resolveDragonAsset(
   context: ResolveContext,
   assetSource: AssetSource,
 ): DragonAssetData {
-  if (!context.connected && param.type === "profile-icon") {
-    return { src: null, label: null };
-  }
-
   if (assetSource === "cdragon") {
     return resolveFromCdragon(param, context.cdragonCatalog);
   }
 
-  return resolveFromDdragon(
+  const result = resolveFromDdragon(
     param,
     context.ddragonCatalog,
     context.ddragonVersion,
   );
+
+  if (result.src === null && param.type === "profile-icon") {
+    return resolveFromCdragon(param, context.cdragonCatalog);
+  }
+
+  return result;
 }
 
 export function useDragonStaticData(param: DragonAssetParam): DragonAssetData;
