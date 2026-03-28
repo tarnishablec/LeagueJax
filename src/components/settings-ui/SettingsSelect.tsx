@@ -45,14 +45,14 @@ function FormattedValueText({
 
 function FlatItems({
   collection,
-}: { collection: SettingsSelectProps["collection"] }) {
+}: {
+  collection: SettingsSelectProps["collection"];
+}) {
   return (
     <>
       {collection.items.map((item) => (
         <Select.Item key={item.value} item={item} className={s.item}>
-          <Select.ItemText className={s.itemText}>
-            {item.label}
-          </Select.ItemText>
+          <Select.ItemText className={s.itemText}>{item.label}</Select.ItemText>
           <Select.ItemIndicator className={s.itemIndicator}>
             <Check size={13} />
           </Select.ItemIndicator>
@@ -65,7 +65,10 @@ function FlatItems({
 function GroupedItems({
   groups,
   collection,
-}: { groups: SelectGroup[]; collection: SettingsSelectProps["collection"] }) {
+}: {
+  groups: SelectGroup[];
+  collection: SettingsSelectProps["collection"];
+}) {
   return (
     <>
       {groups.map((group) => (
@@ -76,11 +79,7 @@ function GroupedItems({
             );
             if (!item) return null;
             return (
-              <Select.Item
-                key={item.value}
-                item={item}
-                className={s.item}
-              >
+              <Select.Item key={item.value} item={item} className={s.item}>
                 <Select.ItemText className={s.itemText}>
                   {item.label}
                 </Select.ItemText>
