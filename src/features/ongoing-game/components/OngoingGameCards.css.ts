@@ -1,12 +1,35 @@
-import { createVar, style } from "@vanilla-extract/css";
+import { createVar, globalStyle, style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
 
 export const teamSection = style({
-  display: "block",
-  height: "100%",
-  overflow: "hidden",
+  height: "calc(100% + 6px)",
+  marginBottom: -6,
+  overflowX: "scroll",
+  overflowY: "hidden",
+});
+
+globalStyle(`${teamSection}::-webkit-scrollbar`, {
+  height: 6,
+  background: "transparent",
+});
+
+globalStyle(`${teamSection}::-webkit-scrollbar-thumb`, {
+  background: "transparent",
+  borderRadius: 3,
+});
+
+globalStyle(`${teamSection}:hover::-webkit-scrollbar-thumb`, {
+  background: "oklch(0% 0 0 / 0.25)",
+});
+
+globalStyle(`${teamSection}:hover::-webkit-scrollbar-thumb:hover`, {
+  background: "oklch(0% 0 0 / 0.4)",
+});
+
+globalStyle(`${teamSection}::-webkit-scrollbar-track`, {
+  background: "transparent",
 });
 
 export const teamRow = style({
@@ -16,7 +39,6 @@ export const teamRow = style({
   height: "100%",
   placeItems: "center",
   justifyContent: "space-between",
-  overflowX: "auto",
 });
 
 export const emptyState = style({
@@ -33,12 +55,12 @@ export const emptyState = style({
 
 export const playerCard = style({
   display: "grid",
-  gridTemplateRows: "auto auto auto 1fr",
+  gridTemplateRows: "auto auto 1fr",
   gap: 6,
   border: `1px solid ${vars.color.border}`,
   borderRadius: 10,
   padding: "10px 6px",
-  background: vars.color.accent,
+  background: vars.color.surface,
   height: "100%",
   overflow: "hidden",
   width: "100%",
@@ -76,8 +98,8 @@ export const championAvatar = style({
 });
 
 export const championAvatarFallback = style({
-  width: 24,
-  height: 24,
+  width: 40,
+  height: 40,
   borderRadius: 6,
   background: vars.color.border,
 });
@@ -144,36 +166,37 @@ export const rankText = style({
 export const historyList = style({
   display: "grid",
   gap: 4,
-  overflowY: "overlay",
-  paddingRight: 2,
+  overflowY: "auto",
   height: "100%",
   justifyItems: "stretch",
   alignItems: "center",
-  scrollbarWidth: "thin",
-  scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
+  alignContent: "start",
+  scrollbarWidth: "none",
 });
 
 export const historyRow = style({
   display: "grid",
-  gridTemplateColumns: "20px auto minmax(0, 1fr) auto",
+  gridTemplateColumns: "auto 1fr auto",
   alignItems: "center",
   gap: 6,
   fontSize: "0.74rem",
-  height: "35px",
   border: `1px solid ${vars.color.border}`,
   borderRadius: 6,
   padding: "0 6px",
+  height: 40,
   background: vars.color.accent,
   selectors: {
     "&:hover": {
       borderColor: vars.color.primary,
       background: vars.color.background,
+      cursor: "pointer",
     },
   },
 });
 
 export const historyEmpty = style({
   color: vars.color.mutedForeground,
+  height: "100%",
   fontSize: "0.72rem",
   textAlign: "center",
 });
@@ -222,6 +245,21 @@ export const historyMetaCs = style({
   gap: 3,
 });
 
+export const matchBrief = style({
+  display: "grid",
+  gridTemplateRows: "repeat(2, 1fr)",
+  justifyItems: "start",
+  alignItems: "center",
+  gap: 2,
+});
+
+export const matchBriefUp = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  gap: 8,
+  lineHeight: 1,
+});
+
 export const historyMetaIcon = style({
   width: 11,
   height: 11,
@@ -229,16 +267,16 @@ export const historyMetaIcon = style({
 });
 
 export const historyChampionAvatar = style({
-  width: 18,
-  height: 18,
+  width: 35,
+  height: 35,
   borderRadius: 4,
-  objectFit: "cover",
+  objectFit: "contain",
   border: `1px solid ${vars.color.border}`,
 });
 
 export const historyChampionFallback = style({
-  width: 18,
-  height: 18,
+  width: 35,
+  height: 35,
   borderRadius: 4,
   background: vars.color.border,
 });

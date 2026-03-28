@@ -120,7 +120,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
               </div>
               <div className={s.rankIconWrap}>
                 {soloIconUrl ? (
-                  <img
+                  <LazyImage
                     src={soloIconUrl}
                     alt={t("history.summary.solo", {
                       defaultValue: "Solo/Duo",
@@ -156,7 +156,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
               </div>
               <div className={s.rankIconWrap}>
                 {flexIconUrl ? (
-                  <img
+                  <LazyImage
                     src={flexIconUrl}
                     alt={t("history.summary.flex", { defaultValue: "Flex" })}
                     className={s.rankIcon}

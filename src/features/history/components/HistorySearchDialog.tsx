@@ -60,9 +60,9 @@ export function HistorySearchDialog({
                 <Dialog.Title className={s.title}>
                   {t("history.searchDialog.title")}
                 </Dialog.Title>
-                <Dialog.Description className={s.subtitle}>
-                  {t("history.searchDialog.subtitle")}
-                </Dialog.Description>
+                {/*<Dialog.Description className={s.subtitle}>*/}
+                {/*  {t("history.searchDialog.subtitle")}*/}
+                {/*</Dialog.Description>*/}
               </div>
               <Dialog.CloseTrigger asChild>
                 <button
@@ -77,16 +77,16 @@ export function HistorySearchDialog({
 
             <SearchForm server={server} search={search} />
 
-            <div className={s.metaRow}>
-              {server.isBootstrapping ? (
-                <span className={s.metaText}>
-                  {t("history.searchDialog.loadingServers")}
-                </span>
-              ) : null}
-              {errorMessage ? (
-                <span className={s.errorText}>{errorMessage}</span>
-              ) : null}
-            </div>
+            {/*<div className={s.metaRow}>*/}
+            {/*  {server.isBootstrapping ? (*/}
+            {/*    <span className={s.metaText}>*/}
+            {/*      {t("history.searchDialog.loadingServers")}*/}
+            {/*    </span>*/}
+            {/*  ) : null}*/}
+            {/*  {errorMessage ? (*/}
+            {/*    <span className={s.errorText}>{errorMessage}</span>*/}
+            {/*  ) : null}*/}
+            {/*</div>*/}
 
             <div className={s.resultPanel}>
               <SearchResultList
