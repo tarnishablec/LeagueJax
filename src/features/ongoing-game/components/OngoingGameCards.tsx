@@ -10,10 +10,12 @@ import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon.tsx";
 import { SummonerID } from "@/components/SummonerID.tsx";
 import {
+  type EnrichedMatch,
   type MatchModeTag,
   useMatchHistory,
 } from "@/features/history/hooks/use-match-history.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
+import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { vars } from "@/styles/theme.css.ts";
 import {
@@ -24,16 +26,21 @@ import {
 import {
   historyResultClassName,
   historyResultLabel,
-  toRecentGames,
+  resolveRecentGameResult,
 } from "../routes/ongoing-game.history-utils.ts";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
-import type {
-  MatchHistoryModeContext,
-  PlayerSlot,
-  RecentGameSummary,
-} from "../routes/ongoing-game.types.ts";
+import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameCards.css.ts";
+
+function formatGameTime(epochMs: number): string {
+  const d = new Date(epochMs);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hour = String(d.getHours()).padStart(2, "0");
+  const minute = String(d.getMinutes()).padStart(2, "0");
+  return `${month}/${day} ${hour}:${minute}`;
+}
 
 function useOngoingSummoner(puuid: string | undefined, enabled: boolean) {
   return useSWR(
@@ -48,12 +55,8 @@ function useOngoingSummoner(puuid: string | undefined, enabled: boolean) {
   );
 }
 
-function normalizeMatchModeTag(context: MatchHistoryModeContext): MatchModeTag {
-  if (context.filter === "All") {
-    return "all";
-  }
-
-  switch (context.queueId) {
+function normalizeMatchModeTag(queueId: number | null): MatchModeTag {
+  switch (queueId) {
     case 420:
       return "q_420";
     case 430:
@@ -100,74 +103,56 @@ function resolveQueueIdFromSessions(
   return null;
 }
 
-function resolveMapIdFromSessions(
-  gameflowSession: ReturnType<
-    typeof useOngoingGameStore.getState
-  >["gameflowSession"],
-): number | null {
-  const mapId =
-    gameflowSession?.map.id ?? gameflowSession?.gameData.queue.mapId;
-  if (typeof mapId === "number" && mapId > 0) {
-    return mapId;
-  }
-  return null;
-}
-
-function resolveGameModeFromSessions(
-  gameflowSession: ReturnType<
-    typeof useOngoingGameStore.getState
-  >["gameflowSession"],
-): string | null {
-  const gameMode =
-    gameflowSession?.map.gameMode ?? gameflowSession?.gameData.queue.gameMode;
-  if (typeof gameMode === "string" && gameMode.trim().length > 0) {
-    return gameMode;
-  }
-  return null;
-}
-
 function normalizeChampionId(slot: PlayerSlot): number | null {
   const championId =
     slot.championId > 0 ? slot.championId : slot.championPickIntent;
   return championId > 0 ? championId : null;
 }
 
-function HistoryRow(props: { game: RecentGameSummary }) {
+function HistoryRow(props: { game: EnrichedMatch }) {
   const { game } = props;
   const { t } = useTranslation();
+  const result = resolveRecentGameResult(game);
+  const queueName = useLcuQueueName(game.json.queueId);
+  const championId = game.me.championId > 0 ? game.me.championId : null;
 
   return (
-    <div className={s.historyRow}>
+    <div
+      className={`${s.historyRow} ${historyResultClassName(result, {
+        winText: s.winRow,
+        loseText: s.loseRow,
+        remakeText: s.remakeRow,
+        terminatedText: s.terminatedRow,
+      })}`}
+    >
       <ChampionAvatar
-        championId={game.championId}
+        championId={championId}
         imageClassName={s.historyChampionAvatar}
         fallbackClassName={s.historyChampionFallback}
       />
       <div className={s.matchBrief}>
-        <span
-          className={`${historyResultClassName(game.result, {
-            winText: s.winText,
-            loseText: s.loseText,
-            remakeText: s.remakeText,
-            terminatedText: s.terminatedText,
-          })} ${s.matchBriefUp}`}
-        >
-          <span>{historyResultLabel(game.result, t)}</span>
-          <span></span>
-        </span>
-        <span></span>
+        <span className={s.queueNameText}>{queueName}</span>
+        <div className={s.matchBriefDown}>
+          <span
+            className={`${historyResultClassName(result, {
+              winText: s.winText,
+              loseText: s.loseText,
+              remakeText: s.remakeText,
+              terminatedText: s.terminatedText,
+            })}`}
+          >
+            {historyResultLabel(result, t)}
+          </span>
+          <span className={s.gameTimeText}>
+            {formatGameTime(game.json.gameCreation)}
+          </span>
+        </div>
       </div>
       <span className={s.kdaText}>
-        {game.kills}/{game.deaths}/{game.assists}
+        {game.me.kills ?? 0}/{game.me.deaths ?? 0}/{game.me.assists ?? 0}
       </span>
     </div>
   );
-}
-
-function PlayerHistory(props: { rows: RecentGameSummary[] }) {
-  const { rows } = props;
-
-  return rows.map((game) => <HistoryRow key={game.gameId} game={game} />);
 }
 
 function HistoryLoadingState() {
@@ -193,29 +178,21 @@ function SnapshotPlayerCard(props: {
 }) {
   const { slot, matchHistoryCount } = props;
   const { t } = useTranslation();
-  const matchHistoryFilter = useOngoingGameStore(
-    (state) => state.matchHistoryFilter,
-  );
+  const storeModeTag = useOngoingGameStore((state) => state.modeTag);
   const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
   const champSelectSession = useOngoingGameStore(
     (state) => state.champSelectSession,
   );
-  const queueId = resolveQueueIdFromSessions(
-    gameflowSession,
-    champSelectSession,
-  );
-  const mapId = resolveMapIdFromSessions(gameflowSession);
-  const gameMode = resolveGameModeFromSessions(gameflowSession);
 
-  const modeContext = useMemo<MatchHistoryModeContext>(
-    () => ({
-      filter: matchHistoryFilter,
-      queueId,
-      mapId,
-      gameMode,
-    }),
-    [gameMode, mapId, matchHistoryFilter, queueId],
-  );
+  const resolvedModeTag = useMemo<MatchModeTag>(() => {
+    if (storeModeTag) return storeModeTag;
+    const queueId = resolveQueueIdFromSessions(
+      gameflowSession,
+      champSelectSession,
+    );
+    return normalizeMatchModeTag(queueId);
+  }, [storeModeTag, gameflowSession, champSelectSession]);
+
   const isBot = isBotSlot(slot);
   const puuid = !isBot && slot.puuid.trim().length > 0 ? slot.puuid : undefined;
   const summonerQuery = useOngoingSummoner(puuid, !isBot);
@@ -225,12 +202,9 @@ function SnapshotPlayerCard(props: {
     null,
     1,
     matchHistoryCount,
-    normalizeMatchModeTag(modeContext),
+    resolvedModeTag,
   );
-  const recentGames = useMemo(
-    () => toRecentGames(matchHistoryQuery.matches, modeContext),
-    [matchHistoryQuery.matches, modeContext],
-  );
+  const recentGames = matchHistoryQuery.matches ?? [];
 
   const championId = normalizeChampionId(slot);
   const level = summonerQuery.data?.summonerLevel || 0;
@@ -302,7 +276,7 @@ function SnapshotPlayerCard(props: {
             <Bot />
           </div>
         </div>
-      ) : matchHistoryQuery.isLoading ? (
+      ) : matchHistoryQuery.isLoading || matchHistoryQuery.isRefreshing ? (
         <HistoryLoadingState />
       ) : matchHistoryQuery.error ? (
         <div className={s.historyList}>
@@ -310,7 +284,9 @@ function SnapshotPlayerCard(props: {
         </div>
       ) : (
         <div className={s.historyList}>
-          <PlayerHistory rows={recentGames} />
+          {recentGames.map((game) => (
+            <HistoryRow key={game.json.gameId} game={game} />
+          ))}
         </div>
       )}
     </article>

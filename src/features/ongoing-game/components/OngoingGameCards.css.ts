@@ -180,18 +180,31 @@ export const historyRow = style({
   alignItems: "center",
   gap: 6,
   fontSize: "0.74rem",
-  border: `1px solid ${vars.color.border}`,
   borderRadius: 6,
   padding: "0 6px",
   height: 40,
-  background: vars.color.accent,
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
-      background: vars.color.background,
       cursor: "pointer",
+      filter: "brightness(1.08)",
     },
   },
+});
+
+export const winRow = style({
+  background: `color-mix(in oklch, ${vars.color.success} 12%, transparent)`,
+});
+
+export const loseRow = style({
+  background: `color-mix(in oklch, ${vars.color.error} 12%, transparent)`,
+});
+
+export const remakeRow = style({
+  background: `color-mix(in oklch, ${vars.color.mutedForeground} 8%, transparent)`,
+});
+
+export const terminatedRow = style({
+  background: `color-mix(in oklch, ${vars.color.mutedForeground} 8%, transparent)`,
 });
 
 export const historyEmpty = style({
@@ -202,27 +215,27 @@ export const historyEmpty = style({
 });
 
 export const winText = style({
-  color: "oklch(0.78 0.17 150)",
+  color: vars.color.success,
   fontWeight: 700,
 });
 
 export const loseText = style({
-  color: "oklch(0.67 0.2 28)",
+  color: vars.color.error,
   fontWeight: 700,
 });
 
 export const remakeText = style({
-  color: "oklch(0.83 0.1 96)",
+  color: vars.color.mutedForeground,
   fontWeight: 700,
 });
 
 export const terminatedText = style({
-  color: "oklch(0.7 0.03 255)",
+  color: vars.color.mutedForeground,
   fontWeight: 700,
 });
 
 export const kdaText = style({
-  color: vars.color.foreground,
+  color: vars.color.mutedForeground,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -251,13 +264,28 @@ export const matchBrief = style({
   justifyItems: "start",
   alignItems: "center",
   gap: 2,
+  overflow: "hidden",
+  textBoxTrim: "trim-both",
 });
 
-export const matchBriefUp = style({
+export const matchBriefDown = style({
   display: "grid",
   gridAutoFlow: "column",
   gap: 8,
   lineHeight: 1,
+});
+
+export const queueNameText = style({
+  color: vars.color.foreground,
+  fontWeight: 600,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+export const gameTimeText = style({
+  color: vars.color.mutedForeground,
+  fontSize: "0.68rem",
 });
 
 export const historyMetaIcon = style({

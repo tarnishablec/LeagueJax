@@ -2,11 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { OngoingGameMatchHistoryFilter } from "@/bindings/ongoing_game";
+import { useSWRConfig } from "swr";
 import { LcuImage } from "@/components/LcuImage";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
+import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
+import { modeOptions } from "@/features/history/components/match-list-options";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
+
+const CURRENT_MODE_VALUE = "__current_mode__";
 
 function resolveGameflowAssetIconPath(
   assets: Record<string, unknown> | undefined,
@@ -39,9 +43,10 @@ function resolveGameflowAssetIconPath(
 
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
-  const { phase, gameflowSession, matchHistoryFilter } = useOngoingGameStore();
+  const { phase, gameflowSession, modeTag } = useOngoingGameStore();
+  const setModeTag = useOngoingGameStore((s) => s.setModeTag);
+  const { mutate } = useSWRConfig();
   const [refreshing, setRefreshing] = useState(false);
-  const [updatingFilter, setUpdatingFilter] = useState(false);
 
   const queueDesc = gameflowSession?.gameData.queue.detailedDescription;
   const queueIconPath = useMemo(
@@ -49,29 +54,44 @@ export function OngoingGameTitlebar() {
     [gameflowSession?.map.assets],
   );
 
-  const filterOptions = useMemo(
+  const currentModeLabel = t("ongoingGame.titlebar.filterCurrentMode", {
+    defaultValue: "Current Mode",
+  });
+  const queueGroupLabel = t("ongoingGame.titlebar.filterQueueGroup", {
+    defaultValue: "Queues",
+  });
+
+  const allItems = useMemo(
     () => [
-      {
-        value: "CurrentMode",
-        label: t("ongoingGame.titlebar.filterCurrentMode", {
-          defaultValue: "Current Mode",
-        }),
-      },
-      {
-        value: "All",
-        label: t("ongoingGame.titlebar.filterAllModes", {
-          defaultValue: "All Modes",
-        }),
-      },
+      { value: CURRENT_MODE_VALUE, label: currentModeLabel },
+      ...modeOptions.map((o) => ({ value: o.value, label: t(o.labelKey) })),
     ],
-    [t],
-  );
-  const filterCollection = useMemo(
-    () => createListCollection({ items: filterOptions }),
-    [filterOptions],
+    [currentModeLabel, t],
   );
 
-  const busy = refreshing || updatingFilter;
+  const collection = useMemo(
+    () => createListCollection({ items: allItems }),
+    [allItems],
+  );
+
+  const groups = useMemo(
+    () => [
+      {
+        label: currentModeLabel,
+        items: [{ value: CURRENT_MODE_VALUE, label: currentModeLabel }],
+      },
+      {
+        label: queueGroupLabel,
+        items: modeOptions.map((o) => ({
+          value: o.value,
+          label: t(o.labelKey),
+        })),
+      },
+    ],
+    [currentModeLabel, queueGroupLabel, t],
+  );
+
+  const selectedValue = modeTag ?? CURRENT_MODE_VALUE;
 
   return (
     <div className={s.root} data-tauri-drag-region>
@@ -100,24 +120,19 @@ export function OngoingGameTitlebar() {
       <div className={s.controls}>
         <div className={s.filterSelect}>
           <SettingsSelect
-            collection={filterCollection}
-            value={[matchHistoryFilter]}
+            collection={collection}
+            groups={groups}
+            value={[selectedValue]}
             onValueChange={(details) => {
-              const next = details.value[0] as
-                | OngoingGameMatchHistoryFilter
-                | undefined;
-              if (!next || next === matchHistoryFilter) {
-                return;
-              }
-
-              setUpdatingFilter(true);
-              void invoke("ongoing_game_set_match_history_filter", {
-                filter: next,
-              }).finally(() => {
-                setUpdatingFilter(false);
-              });
+              const next = details.value[0];
+              if (!next) return;
+              setModeTag(
+                next === CURRENT_MODE_VALUE
+                  ? null
+                  : (next as MatchModeTag),
+              );
             }}
-            disabled={busy}
+            disabled={refreshing}
           />
         </div>
 
@@ -127,10 +142,18 @@ export function OngoingGameTitlebar() {
           aria-label={t("ongoingGame.titlebar.refreshAria", {
             defaultValue: "Refresh ongoing game",
           })}
-          disabled={busy}
+          disabled={refreshing}
           onClick={() => {
             setRefreshing(true);
-            void invoke("ongoing_game_refresh").finally(() => {
+            void Promise.all([
+              invoke("ongoing_game_refresh"),
+              mutate(
+                (key) =>
+                  Array.isArray(key) &&
+                  (key[0] === "get_match_summaries" ||
+                    key[0] === "ongoing-game:get_summoner_by_puuid"),
+              ),
+            ]).finally(() => {
               setRefreshing(false);
             });
           }}
