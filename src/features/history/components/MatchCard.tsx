@@ -14,6 +14,7 @@ import { MatchCardExpandedTeams } from "./MatchCardExpandedTeams";
 import { MatchCardHeader } from "./MatchCardHeader";
 import { MatchCardLoadout } from "./MatchCardLoadout";
 import { MatchCardMetrics } from "./MatchCardMetrics";
+import { MatchCardPills } from "./MatchCardPills";
 import { MatchCardPlayers } from "./MatchCardPlayers";
 
 export function MatchCard({
@@ -76,6 +77,8 @@ export function MatchCard({
               gameId={vm.gameId}
               items={vm.items}
             />
+
+            <MatchCardPills tags={vm.tags} />
           </div>
         </button>
 

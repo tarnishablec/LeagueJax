@@ -46,6 +46,7 @@ ts-rs = { version = "12.0.1", features = ["no-serde-warnings"] }
 sled = "0.34.7"
 snafu = { version = "0.9.0", features = ["backtrace"] }
 time = { version = "0.3.47", features = ["formatting"] }
+tauri-plugin-devtools = "2.0.0"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }

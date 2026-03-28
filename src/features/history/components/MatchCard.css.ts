@@ -92,13 +92,15 @@ export const championIconFallback = style({
 
 export const info = style({
   display: "grid",
+  justifyContent: "space-between",
+  height: "fit-content",
   gap: 8,
   minWidth: 0,
 });
 
 export const headerRow = style({
-  display: "grid",
-  gridTemplateColumns: "repeat(5, minmax(0, max-content))",
+  display: "flex",
+  flexWrap: "wrap",
   gap: 6,
   alignItems: "center",
 });
@@ -147,6 +149,61 @@ export const metaPill = style({
   borderRadius: 999,
   border: `1px solid ${vars.color.border}`,
   whiteSpace: "nowrap",
+});
+
+export const pillsRow = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 6,
+  alignItems: "center",
+});
+
+export const tagPill = recipe({
+  base: {
+    fontSize: "0.6875rem",
+    fontWeight: 700,
+    lineHeight: 1,
+    padding: "4px 8px",
+    borderRadius: 999,
+    whiteSpace: "nowrap",
+  },
+  variants: {
+    tag: {
+      penta: {
+        color: "oklch(0.85 0.18 85)",
+        borderColor: "oklch(0.85 0.18 85 / 0.5)",
+        background: "oklch(0.85 0.18 85 / 0.15)",
+        border: "1px solid oklch(0.85 0.18 85 / 0.5)",
+      },
+      quadra: {
+        color: "oklch(0.72 0.19 62)",
+        borderColor: "oklch(0.72 0.19 62 / 0.5)",
+        background: "oklch(0.72 0.19 62 / 0.15)",
+        border: "1px solid oklch(0.72 0.19 62 / 0.5)",
+      },
+      triple: {
+        color: "oklch(0.7 0.15 300)",
+        borderColor: "oklch(0.7 0.15 300 / 0.5)",
+        background: "oklch(0.7 0.15 300 / 0.15)",
+        border: "1px solid oklch(0.7 0.15 300 / 0.5)",
+      },
+      firstBlood: {
+        color: vars.color.error,
+        background: `color-mix(in oklch, ${vars.color.error} 12%, transparent)`,
+        border: `1px solid color-mix(in oklch, ${vars.color.error} 40%, transparent)`,
+      },
+      highestDamage: {
+        color: "oklch(0.72 0.16 45)",
+        background: "oklch(0.72 0.16 45 / 0.12)",
+        border: "1px solid oklch(0.72 0.16 45 / 0.4)",
+      },
+      mvp: {
+        color: "oklch(0.85 0.18 85)",
+        background: "oklch(0.85 0.18 85 / 0.12)",
+        border: "1px solid oklch(0.85 0.18 85 / 0.4)",
+      },
+    },
+  },
 });
 
 export const loadoutRow = style({

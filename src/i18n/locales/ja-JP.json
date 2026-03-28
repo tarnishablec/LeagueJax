@@ -70,6 +70,14 @@
         "terminated": "中断"
       }
     },
+    "tag": {
+      "penta": "ペンタキル",
+      "quadra": "クアドラキル",
+      "triple": "トリプルキル",
+      "firstBlood": "ファーストブラッド",
+      "highestDamage": "★ ダメージ",
+      "mvp": "★ MVP"
+    },
     "blueTeam": "青チーム",
     "redTeam": "赤チーム",
     "noMatches": "対戦履歴がありません",

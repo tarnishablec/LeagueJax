@@ -70,6 +70,14 @@
         "terminated": "已终止"
       }
     },
+    "tag": {
+      "penta": "五杀",
+      "quadra": "四杀",
+      "triple": "三杀",
+      "firstBlood": "一血",
+      "highestDamage": "★ 伤害",
+      "mvp": "★ MVP"
+    },
     "blueTeam": "蓝色方",
     "redTeam": "红色方",
     "noMatches": "暂无对局记录",

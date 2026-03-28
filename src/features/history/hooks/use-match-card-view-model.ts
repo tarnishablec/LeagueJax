@@ -43,6 +43,55 @@ function computeDamageShare(
   return me.totalDamageDealtToChampions / teamTotal;
 }
 
+export type MatchTag =
+  | "penta"
+  | "quadra"
+  | "triple"
+  | "firstBlood"
+  | "highestDamage"
+  | "mvp";
+
+function computeMatchTags(
+  me: RawMatchSummaryParticipant,
+  participants: RawMatchSummaryParticipant[],
+  isVictory: boolean,
+): MatchTag[] {
+  const tags: MatchTag[] = [];
+
+  if ((me.pentaKills ?? 0) > 0) {
+    tags.push("penta");
+  } else if ((me.quadraKills ?? 0) > 0) {
+    tags.push("quadra");
+  } else if ((me.tripleKills ?? 0) > 0) {
+    tags.push("triple");
+  }
+
+  if (me.firstBloodKill) {
+    tags.push("firstBlood");
+  }
+
+  const allDamage = participants.map((p) => p.totalDamageDealtToChampions);
+  if (
+    me.totalDamageDealtToChampions > 0 &&
+    me.totalDamageDealtToChampions >= Math.max(...allDamage)
+  ) {
+    tags.push("highestDamage");
+  }
+
+  if (isVictory) {
+    const teammates = participants.filter((p) => p.teamId === me.teamId);
+    const kda = (p: RawMatchSummaryParticipant) =>
+      ((p.kills ?? 0) + (p.assists ?? 0)) / Math.max(1, p.deaths ?? 1);
+    const myKda = kda(me);
+    const isHighest = teammates.every((p) => kda(p) <= myKda);
+    if (isHighest && myKda > 0) {
+      tags.push("mvp");
+    }
+  }
+
+  return tags;
+}
+
 function normalizeHistoryPosition(
   value: string | null | undefined,
 ): string | null {
@@ -101,6 +150,7 @@ export function useMatchCardViewModel({
       normalizeHistoryPosition(me.teamPosition) ??
       "FILL")
     : null;
+  const tags = computeMatchTags(me, participants, gameResult === "victory");
 
   return {
     me,
@@ -118,5 +168,6 @@ export function useMatchCardViewModel({
     subStyleId,
     damageShare,
     position,
+    tags,
   };
 }

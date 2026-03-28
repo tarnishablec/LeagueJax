@@ -70,6 +70,14 @@
         "terminated": "Terminated"
       }
     },
+    "tag": {
+      "penta": "Penta Kill",
+      "quadra": "Quadra Kill",
+      "triple": "Triple Kill",
+      "firstBlood": "First Blood",
+      "highestDamage": "★ Damage",
+      "mvp": "★ MVP"
+    },
     "blueTeam": "Blue Team",
     "redTeam": "Red Team",
     "noMatches": "No matches found",
