@@ -102,6 +102,7 @@
     "noMatches": "暂无对局记录",
     "itemsPerPage": "{{count}} 项",
     "selectClient": "选择客户端以查看战绩",
+    "viewOwnHistory": "点击查看你的战绩",
     "emptyState": "搜索召唤师以查看战绩",
     "closeTab": "关闭标签页",
     "searchDialog": {

@@ -5,7 +5,10 @@ import { useTabStore } from "@/stores/tabs";
 /** Track the last synced pid outside of React so it survives unmount/remount. */
 let lastSyncedPid: number | undefined;
 
-export function useFocusSync(connected: LcuInstanceInfo | null | undefined) {
+export function useFocusSync(
+  connected: LcuInstanceInfo | null | undefined,
+  autoOpenOwnTab: boolean,
+) {
   const { openTab, closeAllTabs } = useTabStore();
 
   useEffect(() => {
@@ -16,8 +19,8 @@ export function useFocusSync(connected: LcuInstanceInfo | null | undefined) {
     if (!connected) return;
 
     closeAllTabs();
-    if (connected.summoner) {
+    if (autoOpenOwnTab && connected.summoner) {
       openTab(connected.summoner, null);
     }
-  }, [connected, openTab, closeAllTabs]);
+  }, [connected, autoOpenOwnTab, openTab, closeAllTabs]);
 }

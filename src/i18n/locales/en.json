@@ -102,6 +102,7 @@
     "noMatches": "No matches found",
     "itemsPerPage": "{{count}} / page",
     "selectClient": "Select a client to view match history",
+    "viewOwnHistory": "Click to view your match history",
     "emptyState": "Search for a summoner to view match history",
     "closeTab": "Close tab",
     "searchDialog": {

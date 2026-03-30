@@ -18,6 +18,9 @@ export const historyI18n: Resource = {
         autoRefreshOnTabSwitch: {
           label: "Auto-refresh on tab switch",
         },
+        autoOpenOwnTab: {
+          label: "Auto-open own history on focus",
+        },
       },
     },
     history: {
@@ -112,6 +115,9 @@ export const historyI18n: Resource = {
         autoRefreshOnTabSwitch: {
           label: "切换标签页时自动刷新",
         },
+        autoOpenOwnTab: {
+          label: "聚焦时自动打开自己的战绩",
+        },
       },
     },
     history: {
@@ -205,6 +211,9 @@ export const historyI18n: Resource = {
       history: {
         autoRefreshOnTabSwitch: {
           label: "タブ切り替え時に自動更新",
+        },
+        autoOpenOwnTab: {
+          label: "フォーカス時に自分の履歴を自動表示",
         },
       },
     },
