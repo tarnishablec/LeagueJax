@@ -22,11 +22,6 @@ export function MatchCardMetrics({
     <div className={s.metricRow}>
       <div className={s.metricGroup}>
         <span className={s.metricPrimaryInline}>
-          {/*<ScoreboardIcon*/}
-          {/*  type="record"*/}
-          {/*  className={s.scoreboardIcon}*/}
-          {/*  fallbackClassName={s.scoreboardIconFallback}*/}
-          {/*/>*/}
           <span className={s.metricPrimaryText}>
             <span style={{ textBoxTrim: "trim-both" }}>
               {me.kills ?? 0}/{me.deaths ?? 0}/{me.assists ?? 0}

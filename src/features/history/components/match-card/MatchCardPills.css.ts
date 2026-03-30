@@ -1,0 +1,103 @@
+import { style } from "@vanilla-extract/css";
+import { recipe } from "@vanilla-extract/recipes";
+import { vars } from "@/styles/theme.css.ts";
+
+export const root = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 6,
+  alignItems: "center",
+});
+
+export const tagPill = recipe({
+  base: {
+    fontSize: "0.6875rem",
+    fontWeight: 700,
+    lineHeight: 1,
+    padding: "4px 8px",
+    borderRadius: 999,
+    whiteSpace: "nowrap",
+  },
+  variants: {
+    tag: {
+      penta: {
+        color: "oklch(0.85 0.18 85)",
+        borderColor: "oklch(0.85 0.18 85 / 0.5)",
+        background: "oklch(0.85 0.18 85 / 0.15)",
+        border: "1px solid oklch(0.85 0.18 85 / 0.5)",
+      },
+      quadra: {
+        color: "oklch(0.72 0.19 62)",
+        borderColor: "oklch(0.72 0.19 62 / 0.5)",
+        background: "oklch(0.72 0.19 62 / 0.15)",
+        border: "1px solid oklch(0.72 0.19 62 / 0.5)",
+      },
+      triple: {
+        color: "oklch(0.7 0.15 300)",
+        borderColor: "oklch(0.7 0.15 300 / 0.5)",
+        background: "oklch(0.7 0.15 300 / 0.15)",
+        border: "1px solid oklch(0.7 0.15 300 / 0.5)",
+      },
+      firstBlood: {
+        color: vars.color.error,
+        background: `color-mix(in oklch, ${vars.color.error} 12%, transparent)`,
+        border: `1px solid color-mix(in oklch, ${vars.color.error} 40%, transparent)`,
+      },
+      highestDamage: {
+        color: "oklch(0.72 0.16 45)",
+        background: "oklch(0.72 0.16 45 / 0.12)",
+        border: "1px solid oklch(0.72 0.16 45 / 0.4)",
+      },
+      mostTurretDamage: {
+        color: "oklch(0.68 0.12 55)",
+        background: "oklch(0.68 0.12 55 / 0.12)",
+        border: "1px solid oklch(0.68 0.12 55 / 0.4)",
+      },
+      mostDamageTaken: {
+        color: "oklch(0.65 0.14 160)",
+        background: "oklch(0.65 0.14 160 / 0.12)",
+        border: "1px solid oklch(0.65 0.14 160 / 0.4)",
+      },
+      mostHealing: {
+        color: "oklch(0.72 0.16 145)",
+        background: "oklch(0.72 0.16 145 / 0.12)",
+        border: "1px solid oklch(0.72 0.16 145 / 0.4)",
+      },
+      bestVision: {
+        color: "oklch(0.7 0.14 240)",
+        background: "oklch(0.7 0.14 240 / 0.12)",
+        border: "1px solid oklch(0.7 0.14 240 / 0.4)",
+      },
+      mostCC: {
+        color: "oklch(0.65 0.12 280)",
+        background: "oklch(0.65 0.12 280 / 0.12)",
+        border: "1px solid oklch(0.65 0.12 280 / 0.4)",
+      },
+      mvp: {
+        color: "oklch(0.85 0.18 85)",
+        background: "oklch(0.85 0.18 85 / 0.12)",
+        border: "1px solid oklch(0.85 0.18 85 / 0.4)",
+      },
+      ace: {
+        color: "oklch(0.7 0.18 280)",
+        background: "oklch(0.7 0.18 280 / 0.12)",
+        border: "1px solid oklch(0.7 0.18 280 / 0.4)",
+      },
+    },
+  },
+});
+
+export const tooltipPositioner = style({
+  zIndex: 40,
+});
+
+export const tooltipContent = style({
+  borderRadius: 8,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popover,
+  color: vars.color.foreground,
+  padding: "4px 8px",
+  fontSize: "0.6875rem",
+  maxWidth: 240,
+  boxShadow: `0 8px 24px ${vars.settings.selectMenuShadow}`,
+});

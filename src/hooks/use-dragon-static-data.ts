@@ -4,7 +4,7 @@ import {
   CDRAGON_GAME_DATA_BASE,
   CDRAGON_PERK_STYLE_ICON_BY_ID,
   DDRAGON_PERK_STYLE_ICON_BY_ID,
-} from "@/features/history/components/match-card-display";
+} from "@/features/history/components/match-card/match-card-display";
 import { useSettings } from "@/features/settings/context";
 import type { AssetSource } from "@/features/settings/store/general";
 import { SYSTEM_ASSET_SOURCE_SETTING_ID } from "@/features/settings/store/general";

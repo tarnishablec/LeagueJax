@@ -8,7 +8,7 @@ import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import {
   OUTCOME_LABEL_KEYS,
   useMatchCardViewModel,
-} from "../hooks/use-match-card-view-model";
+} from "../../hooks/use-match-card-view-model";
 import * as s from "./MatchCard.css";
 import { MatchCardExpandedTeams } from "./MatchCardExpandedTeams";
 import { MatchCardHeader } from "./MatchCardHeader";
@@ -77,9 +77,8 @@ export function MatchCard({
               gameId={vm.gameId}
               items={vm.items}
             />
-
-            <MatchCardPills tags={vm.tags} />
           </div>
+          <MatchCardPills tags={vm.tags} className={s.pillsSlot} />
         </button>
 
         <MatchCardPlayers

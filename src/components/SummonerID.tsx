@@ -18,7 +18,7 @@ export const SummonerID = ({
     <span
       style={{
         display: "grid",
-        gridTemplateColumns: "min-content auto",
+        gridTemplateColumns: "max-content auto",
         alignItems: "center",
         justifyContent: "start",
         gap: 2,
@@ -31,6 +31,7 @@ export const SummonerID = ({
           color: vars.color.foreground,
           overflow: "hidden",
           textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
           ...styles?.gameName,
         }}
       >
@@ -41,6 +42,7 @@ export const SummonerID = ({
           lineHeight: 1,
           overflow: "hidden",
           textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
           fontWeight: 400,
           color: vars.color.mutedForeground,
           ...styles?.tagLine,

@@ -15,7 +15,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 jax = { path = "../jax", features = ["setup-timing"] }
 
-tauri = { version = "2", features = ["tray-icon", "devtools"] }
+tauri = { version = "2", features = ["tray-icon"] }
 window-vibrancy = "0.7.1"
 uuid = { version = "1", features = ["serde"] }
 tauri-plugin-store = "2"
@@ -43,10 +43,10 @@ maokai-tree = { git = "https://github.com/tarnishablec/maokai", branch = "main" 
 windows-sys = { version = "0.61.2", features = ["Win32_System_Threading", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_WindowsProgramming", "Win32_System_LibraryLoader", "Wdk_System_Threading", "Win32_System_Memory"] }
 ntapi = "0.4.3"
 ts-rs = { version = "12.0.1", features = ["no-serde-warnings"] }
+webview2-com = "0.39.1"
 sled = "0.34.7"
 snafu = { version = "0.9.0", features = ["backtrace"] }
 time = { version = "0.3.47", features = ["formatting"] }
-tauri-plugin-devtools = "2.0.0"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }

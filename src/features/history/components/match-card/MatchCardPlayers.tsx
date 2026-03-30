@@ -9,6 +9,13 @@ import { useChampionIcon } from "@/hooks/use-champion-icon";
 import { defaultSummonerInfo, useTabStore } from "@/stores/tabs";
 import * as s from "./MatchCard.css";
 
+const BOT_PUUID = "00000000-0000-0000-0000-000000000000";
+
+function isBot(participant: RawMatchSummaryParticipant): boolean {
+  const puuid = participant.puuid?.trim() ?? "";
+  return puuid.length === 0 || puuid === BOT_PUUID;
+}
+
 function resolvePlayerName(participant: RawMatchSummaryParticipant): {
   gameName: string;
   tagLine: string;
@@ -151,6 +158,7 @@ export function MatchCardPlayers({
           {members.map((participant, index) => {
             const { gameName, tagLine } = resolvePlayerName(participant);
             const fullName = tagLine ? `${gameName}#${tagLine}` : gameName;
+            const bot = isBot(participant);
 
             return (
               <div
@@ -161,25 +169,29 @@ export function MatchCardPlayers({
                 className={s.playerRow}
               >
                 <PlayerIcon championId={participant.championId} />
-                <HoverCard.Root openDelay={100} closeDelay={60}>
-                  <HoverCard.Trigger
-                    type="button"
-                    aria-label="Open player history tab"
-                    className={s.playerNameButton}
-                    onClick={() => {
-                      openPlayerTab(participant, gameName, tagLine);
-                    }}
-                  >
-                    {gameName}
-                  </HoverCard.Trigger>
-                  <Portal>
-                    <HoverCard.Positioner className={s.playerHoverPositioner}>
-                      <HoverCard.Content className={s.playerHoverContent}>
-                        {fullName}
-                      </HoverCard.Content>
-                    </HoverCard.Positioner>
-                  </Portal>
-                </HoverCard.Root>
+                {bot ? (
+                  <span className={s.playerNameLabel}>{gameName}</span>
+                ) : (
+                  <HoverCard.Root openDelay={100} closeDelay={60}>
+                    <HoverCard.Trigger
+                      type="button"
+                      aria-label="Open player history tab"
+                      className={s.playerNameButton}
+                      onClick={() => {
+                        openPlayerTab(participant, gameName, tagLine);
+                      }}
+                    >
+                      {gameName}
+                    </HoverCard.Trigger>
+                    <Portal>
+                      <HoverCard.Positioner className={s.playerHoverPositioner}>
+                        <HoverCard.Content className={s.playerHoverContent}>
+                          {fullName}
+                        </HoverCard.Content>
+                      </HoverCard.Positioner>
+                    </Portal>
+                  </HoverCard.Root>
+                )}
               </div>
             );
           })}
