@@ -114,7 +114,7 @@ export const championIconFallback = style({
 export const info = style({
   display: "grid",
   justifyContent: "space-between",
-  height: "fit-content",
+  height: "100%",
   gap: 8,
   minWidth: 0,
 });

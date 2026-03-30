@@ -65,7 +65,11 @@ export function MatchCard({
               })}
             />
 
-            <MatchCardMetrics me={vm.me} gameDuration={vm.gameDuration} />
+            <MatchCardMetrics
+              me={vm.me}
+              gameDuration={vm.gameDuration}
+              damageShare={vm.damageShare}
+            />
 
             <MatchCardLoadout
               position={vm.position}

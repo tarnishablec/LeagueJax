@@ -65,6 +65,7 @@
       "unknown": "地图 {{mapId}}"
     },
     "match": {
+      "damageShare": "队伍伤害占比",
       "outcome": {
         "remake": "重开",
         "terminated": "已终止"

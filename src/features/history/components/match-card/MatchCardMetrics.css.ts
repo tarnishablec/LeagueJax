@@ -70,3 +70,17 @@ export const scoreboardIconFallback = style({
   background: `color-mix(in oklch, ${vars.color.foreground} 22%, transparent)`,
   flexShrink: 0,
 });
+
+export const tooltipPositioner = style({
+  zIndex: 40,
+});
+
+export const tooltipContent = style({
+  borderRadius: 8,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popover,
+  color: vars.color.foreground,
+  padding: "4px 8px",
+  fontSize: "0.6875rem",
+  boxShadow: `0 8px 24px ${vars.settings.selectMenuShadow}`,
+});

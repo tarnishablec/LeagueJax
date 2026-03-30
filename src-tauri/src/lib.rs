@@ -86,11 +86,10 @@ pub fn run() {
 
                 #[cfg(not(debug_assertions))]
                 win.with_webview(|webview| unsafe {
-                    use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings;
                     let controller = webview.controller();
                     if let Ok(core) = controller.CoreWebView2() {
                         if let Ok(settings) = core.Settings() {
-                            let settings: ICoreWebView2Settings = settings;
+                            let settings = settings;
                             let _ = settings.SetAreDevToolsEnabled(false.into());
                             let _ = settings.SetAreDefaultContextMenusEnabled(false.into());
                         }
