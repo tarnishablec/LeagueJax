@@ -65,6 +65,7 @@
       "unknown": "Map {{mapId}}"
     },
     "match": {
+      "damageShare": "Damage share on team",
       "outcome": {
         "remake": "Remake",
         "terminated": "Terminated"

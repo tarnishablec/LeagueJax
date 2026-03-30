@@ -65,6 +65,7 @@
       "unknown": "マップ {{mapId}}"
     },
     "match": {
+      "damageShare": "チームダメージ割合",
       "outcome": {
         "remake": "リメイク",
         "terminated": "中断"
