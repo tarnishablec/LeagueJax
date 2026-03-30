@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::shards::lcu::events::champ_select_session::{ChampSelectSessionData, TeamMember};
 use crate::shards::lcu::events::gameflow_session::GameflowSessionData;
+use crate::shards::sgp::matches::RawMatchSummaryGame;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[ts(export, export_to = "ongoing_game.ts")]
@@ -45,4 +48,5 @@ pub struct OngoingGameUpdated {
     pub gameflow_session: Option<GameflowSessionData>,
     pub champ_select_session: Option<ChampSelectSessionData>,
     pub team_members: Vec<TeamMember>,
+    pub match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
 }

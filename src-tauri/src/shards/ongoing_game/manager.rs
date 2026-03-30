@@ -17,6 +17,8 @@ use crate::shards::lcu::session::LcuSession;
 use crate::shards::ongoing_game::types::{
     OngoingGameMatchHistoryFilter, OngoingGamePhase, OngoingGameUpdated, PlayerSlot, Side,
 };
+use crate::shards::sgp::matches::RawMatchSummaryGame;
+use crate::shards::sgp::session::SgpSession;
 
 use super::driver::OngoingGameDriver;
 
@@ -40,6 +42,7 @@ pub struct OngoingGameManager {
 struct ManagerState {
     driver: Option<OngoingGameDriver>,
     lcu_session: Option<Arc<LcuSession>>,
+    sgp_session: Option<Arc<SgpSession>>,
     active_phase_task: Option<CancellationToken>,
     match_history_filter: OngoingGameMatchHistoryFilter,
     match_history_count: u32,
@@ -48,6 +51,7 @@ struct ManagerState {
     cached_champ_select_team_members: Vec<ChampSelectTeamMember>,
     cached_champ_select_gameflow_session: Option<GameflowSessionData>,
     last_known_our_side: Option<Side>,
+    cached_match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
     next_task_id: u64,
     active_task_id: Option<u64>,
 }
@@ -71,7 +75,9 @@ struct PhaseTaskRuntime {
     task_id: u64,
     phase: OngoingGamePhase,
     lcu_session: Arc<LcuSession>,
+    sgp_session: Option<Arc<SgpSession>>,
     match_history_filter: OngoingGameMatchHistoryFilter,
+    match_history_count: u32,
     cached_positions_by_puuid: HashMap<String, CachedPositionInfo>,
     last_known_our_side: Option<Side>,
 }
@@ -119,6 +125,7 @@ impl OngoingGameManager {
             state: Arc::new(tokio::sync::Mutex::new(ManagerState {
                 driver: None,
                 lcu_session: None,
+                sgp_session: None,
                 active_phase_task: None,
                 match_history_filter: OngoingGameMatchHistoryFilter::CurrentMode,
                 match_history_count: DEFAULT_MATCH_HISTORY_COUNT,
@@ -127,6 +134,7 @@ impl OngoingGameManager {
                 cached_champ_select_team_members: Vec::new(),
                 cached_champ_select_gameflow_session: None,
                 last_known_our_side: None,
+                cached_match_histories: HashMap::new(),
                 next_task_id: 1,
                 active_task_id: None,
             })),
@@ -184,7 +192,7 @@ impl OngoingGameManager {
     pub async fn handle_focus_changed(
         &self,
         lcu_session: Option<Arc<LcuSession>>,
-        _sgp_session: Option<Arc<crate::shards::sgp::session::SgpSession>>,
+        sgp_session: Option<Arc<SgpSession>>,
     ) {
         let match_history_filter = {
             let mut state = self.state.lock().await;
@@ -194,9 +202,11 @@ impl OngoingGameManager {
             state.active_task_id = None;
             state.driver = None;
             state.lcu_session = None;
+            state.sgp_session = None;
             state.cached_positions_by_puuid.clear();
             state.latest_champ_select_session = None;
             state.cached_champ_select_team_members.clear();
+            state.cached_match_histories.clear();
             state.cached_champ_select_gameflow_session = None;
             state.last_known_our_side = None;
             state.match_history_filter
@@ -212,6 +222,7 @@ impl OngoingGameManager {
                     gameflow_session: None,
                     champ_select_session: None,
                     team_members: Vec::new(),
+                    match_histories: HashMap::new(),
                 },
             );
             return;
@@ -221,6 +232,7 @@ impl OngoingGameManager {
             let mut state = self.state.lock().await;
             state.driver = Some(OngoingGameDriver::new());
             state.lcu_session = Some(lcu.clone());
+            state.sgp_session = sgp_session;
         }
 
         if let Some(request) = self.reconcile_phase_once(lcu.clone()).await {
@@ -287,6 +299,7 @@ impl OngoingGameManager {
                                     .clone(),
                                 champ_select_session: Some(payload.data.clone()),
                                 team_members,
+                                match_histories: state.cached_match_histories.clone(),
                             });
                         }
 
@@ -397,6 +410,7 @@ impl OngoingGameManager {
                 state.cached_positions_by_puuid.clear();
                 state.latest_champ_select_session = None;
                 state.cached_champ_select_team_members.clear();
+                state.cached_match_histories.clear();
                 state.cached_champ_select_gameflow_session = None;
                 state.last_known_our_side = None;
                 state.active_task_id = None;
