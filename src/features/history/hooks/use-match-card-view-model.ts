@@ -2,9 +2,9 @@ import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
+import { formatStartTime } from "@/features/history/components/match-card";
 import { useLcuMapQuery } from "@/hooks/use-lcu-maps.ts";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
-import { formatStartTime } from "../components/match-card-display";
 import { useParticipantBrief } from "./use-participant-brief.ts";
 
 export type MatchOutcome = "victory" | "defeat" | "remake" | "terminated";
@@ -49,46 +49,124 @@ export type MatchTag =
   | "triple"
   | "firstBlood"
   | "highestDamage"
-  | "mvp";
+  | "mostTurretDamage"
+  | "mostDamageTaken"
+  | "mostHealing"
+  | "bestVision"
+  | "mostCC"
+  | "mvp"
+  | "ace";
+
+const TAG_PRIORITY: Record<MatchTag, number> = {
+  mvp: 0,
+  ace: 1,
+  penta: 2,
+  quadra: 3,
+  triple: 4,
+  highestDamage: 5,
+  mostTurretDamage: 6,
+  mostDamageTaken: 7,
+  mostHealing: 8,
+  bestVision: 9,
+  mostCC: 10,
+  firstBlood: 11,
+};
+
+type StatTagRule = {
+  tag: MatchTag;
+  stat: (p: RawMatchSummaryParticipant) => number;
+  scope: "all" | "team";
+  min?: number;
+};
+
+const STAT_TAG_RULES: StatTagRule[] = [
+  {
+    tag: "highestDamage",
+    stat: (p) => p.totalDamageDealtToChampions,
+    scope: "all",
+  },
+  {
+    tag: "mostTurretDamage",
+    stat: (p) => p.damageDealtToBuildings ?? p.damageDealtToTurrets ?? 0,
+    scope: "all",
+  },
+  { tag: "mostDamageTaken", stat: (p) => p.totalDamageTaken, scope: "team" },
+  {
+    tag: "mostHealing",
+    stat: (p) => p.totalHealsOnTeammates + p.totalDamageShieldedOnTeammates,
+    scope: "all",
+    min: 5000,
+  },
+  { tag: "bestVision", stat: (p) => p.visionScore ?? 0, scope: "all" },
+  { tag: "mostCC", stat: (p) => p.totalTimeCcDealt ?? 0, scope: "all" },
+];
+
+const MULTI_KILL_TIERS: [keyof RawMatchSummaryParticipant, MatchTag][] = [
+  ["pentaKills", "penta"],
+  ["quadraKills", "quadra"],
+  ["tripleKills", "triple"],
+];
+
+function getMultiKillTag(me: RawMatchSummaryParticipant): MatchTag | null {
+  for (const [field, tag] of MULTI_KILL_TIERS) {
+    if (((me[field] as number | null) ?? 0) > 0) return tag;
+  }
+  return null;
+}
+
+function computeKda(p: RawMatchSummaryParticipant): number {
+  return ((p.kills ?? 0) + (p.assists ?? 0)) / Math.max(1, p.deaths ?? 1);
+}
+
+function getTeamTag(
+  me: RawMatchSummaryParticipant,
+  teammates: RawMatchSummaryParticipant[],
+  isVictory: boolean,
+): MatchTag | null {
+  const myKda = computeKda(me);
+  if (myKda > 0 && teammates.every((p) => computeKda(p) <= myKda)) {
+    return isVictory ? "mvp" : "ace";
+  }
+  return null;
+}
+
+function collectStatTags(
+  me: RawMatchSummaryParticipant,
+  participants: RawMatchSummaryParticipant[],
+  teammates: RawMatchSummaryParticipant[],
+): MatchTag[] {
+  const result: MatchTag[] = [];
+  for (const rule of STAT_TAG_RULES) {
+    const myValue = rule.stat(me);
+    if (myValue <= 0) continue;
+    if (rule.min && myValue < rule.min) continue;
+    const group = rule.scope === "team" ? teammates : participants;
+    if (group.every((p) => rule.stat(p) <= myValue)) {
+      result.push(rule.tag);
+    }
+  }
+  return result;
+}
 
 function computeMatchTags(
   me: RawMatchSummaryParticipant,
   participants: RawMatchSummaryParticipant[],
   isVictory: boolean,
 ): MatchTag[] {
+  const teammates = participants.filter((p) => p.teamId === me.teamId);
   const tags: MatchTag[] = [];
 
-  if ((me.pentaKills ?? 0) > 0) {
-    tags.push("penta");
-  } else if ((me.quadraKills ?? 0) > 0) {
-    tags.push("quadra");
-  } else if ((me.tripleKills ?? 0) > 0) {
-    tags.push("triple");
-  }
+  const multiKill = getMultiKillTag(me);
+  if (multiKill) tags.push(multiKill);
 
-  if (me.firstBloodKill) {
-    tags.push("firstBlood");
-  }
+  if (me.firstBloodKill) tags.push("firstBlood");
 
-  const allDamage = participants.map((p) => p.totalDamageDealtToChampions);
-  if (
-    me.totalDamageDealtToChampions > 0 &&
-    me.totalDamageDealtToChampions >= Math.max(...allDamage)
-  ) {
-    tags.push("highestDamage");
-  }
+  tags.push(...collectStatTags(me, participants, teammates));
 
-  if (isVictory) {
-    const teammates = participants.filter((p) => p.teamId === me.teamId);
-    const kda = (p: RawMatchSummaryParticipant) =>
-      ((p.kills ?? 0) + (p.assists ?? 0)) / Math.max(1, p.deaths ?? 1);
-    const myKda = kda(me);
-    const isHighest = teammates.every((p) => kda(p) <= myKda);
-    if (isHighest && myKda > 0) {
-      tags.push("mvp");
-    }
-  }
+  const teamTag = getTeamTag(me, teammates, isVictory);
+  if (teamTag) tags.push(teamTag);
 
+  tags.sort((a, b) => TAG_PRIORITY[a] - TAG_PRIORITY[b]);
   return tags;
 }
 

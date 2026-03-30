@@ -1,7 +1,7 @@
 import { HoverCard } from "@ark-ui/react/hover-card";
 import { Portal } from "@ark-ui/react/portal";
 import { useMemo } from "react";
-import { useLcuCherryAugments } from "../hooks/use-lcu-cherry-augments";
+import { useLcuCherryAugments } from "../../hooks/use-lcu-cherry-augments";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { CDRAGON_GAME_DATA_BASE } from "./match-card-display";

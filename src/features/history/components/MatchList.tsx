@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistoryRefresh } from "../hooks/use-history-refresh";
 import { type MatchModeTag, useMatchHistory } from "../hooks/use-match-history";
-import { MatchCard } from "./MatchCard";
 import * as s from "./MatchList.css";
 import { MatchListFilters } from "./MatchListFilters";
 import { MatchListPager } from "./MatchListPager";
+import { MatchCard } from "./match-card";
 import { modeOptions, pageSizeOptions } from "./match-list-options";
 
 export function MatchList({

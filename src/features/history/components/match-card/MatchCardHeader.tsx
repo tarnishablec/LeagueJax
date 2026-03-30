@@ -1,4 +1,4 @@
-import type { MatchOutcome } from "../hooks/use-match-card-view-model";
+import type { MatchOutcome } from "../../hooks/use-match-card-view-model";
 import * as s from "./MatchCard.css";
 import { formatDuration } from "./match-card-display";
 

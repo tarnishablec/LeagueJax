@@ -3,19 +3,16 @@ import { vars } from "@/styles/theme.css.ts";
 
 export const metricRow = style({
   display: "grid",
-  // gridTemplateColumns: "repeat(3, minmax(0, max-content))",
   gridAutoFlow: "column",
   gap: 16,
-  height: 18,
   alignItems: "center",
   justifyContent: "start",
 });
 
 export const metricGroup = style({
   display: "grid",
-  gridAutoFlow: "column",
   alignItems: "center",
-  gap: 10,
+  gap: 2,
   height: "100%",
 });
 
@@ -35,7 +32,8 @@ export const metricPrimaryInline = style([
     gridAutoFlow: "column",
     placeItems: "center",
     height: "100%",
-    gap: 6,
+    justifyContent: "center",
+    gap: 3,
   },
 ]);
 
@@ -43,6 +41,7 @@ export const metricPrimaryText = style({
   display: "grid",
   placeItems: "center",
   height: "100%",
+  fontSize: "1rem",
 });
 
 export const metricSecondary = style({

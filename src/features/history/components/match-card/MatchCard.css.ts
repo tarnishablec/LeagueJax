@@ -60,7 +60,7 @@ export const cardMainButton = style({
   background: "transparent",
   textAlign: "left",
   display: "grid",
-  gridTemplateColumns: "max-content minmax(0, 1fr)",
+  gridTemplateColumns: "max-content 2fr 1fr",
   alignItems: "start",
   gap: 12,
   cursor: "pointer",
@@ -70,6 +70,27 @@ export const cardMainButton = style({
       outline: `2px solid ${vars.color.primary}`,
       outlineOffset: 2,
       borderRadius: 6,
+    },
+  },
+  "@media": {
+    "screen and (max-width: 980px)": {
+      gridTemplateColumns: "max-content 2fr",
+      gridTemplateRows: "max-content max-content",
+    },
+  },
+});
+
+export const pillsSlot = style({
+  paddingLeft: 10,
+  borderLeft: `1px solid ${vars.color.border}`,
+  "@media": {
+    "screen and (max-width: 980px)": {
+      gridColumn: "2 / -1",
+      gridRow: 2,
+      paddingLeft: 0,
+      paddingTop: 10,
+      borderLeft: "none",
+      borderTop: `1px solid ${vars.color.border}`,
     },
   },
 });
@@ -151,74 +172,16 @@ export const metaPill = style({
   whiteSpace: "nowrap",
 });
 
-export const pillsRow = style({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 6,
-  alignItems: "center",
-});
-
-export const tagPill = recipe({
-  base: {
-    fontSize: "0.6875rem",
-    fontWeight: 700,
-    lineHeight: 1,
-    padding: "4px 8px",
-    borderRadius: 999,
-    whiteSpace: "nowrap",
-  },
-  variants: {
-    tag: {
-      penta: {
-        color: "oklch(0.85 0.18 85)",
-        borderColor: "oklch(0.85 0.18 85 / 0.5)",
-        background: "oklch(0.85 0.18 85 / 0.15)",
-        border: "1px solid oklch(0.85 0.18 85 / 0.5)",
-      },
-      quadra: {
-        color: "oklch(0.72 0.19 62)",
-        borderColor: "oklch(0.72 0.19 62 / 0.5)",
-        background: "oklch(0.72 0.19 62 / 0.15)",
-        border: "1px solid oklch(0.72 0.19 62 / 0.5)",
-      },
-      triple: {
-        color: "oklch(0.7 0.15 300)",
-        borderColor: "oklch(0.7 0.15 300 / 0.5)",
-        background: "oklch(0.7 0.15 300 / 0.15)",
-        border: "1px solid oklch(0.7 0.15 300 / 0.5)",
-      },
-      firstBlood: {
-        color: vars.color.error,
-        background: `color-mix(in oklch, ${vars.color.error} 12%, transparent)`,
-        border: `1px solid color-mix(in oklch, ${vars.color.error} 40%, transparent)`,
-      },
-      highestDamage: {
-        color: "oklch(0.72 0.16 45)",
-        background: "oklch(0.72 0.16 45 / 0.12)",
-        border: "1px solid oklch(0.72 0.16 45 / 0.4)",
-      },
-      mvp: {
-        color: "oklch(0.85 0.18 85)",
-        background: "oklch(0.85 0.18 85 / 0.12)",
-        border: "1px solid oklch(0.85 0.18 85 / 0.4)",
-      },
-    },
-  },
-});
-
 export const loadoutRow = style({
   display: "grid",
   gridAutoFlow: "column",
   justifyContent: "start",
-  // gridTemplateColumns: "max-content max-content max-content 1fr",
   gap: 10,
   alignItems: "center",
   minWidth: 0,
 });
 
 export const positionSlot = style({
-  // width: 23,
-  // height: 23,
   display: "grid",
   placeItems: "center",
   pointerEvents: "none",
@@ -248,7 +211,6 @@ export const subRuneStyleIcon = style({
   objectFit: "contain",
   border: `1px solid ${vars.color.border}`,
   padding: 1,
-  background: vars.color.background,
 });
 
 export const assetIconFallback = style({
@@ -453,6 +415,16 @@ export const playerIconFallback = style({
   height: 18,
   borderRadius: 4,
   background: vars.color.accent,
+});
+
+export const playerNameLabel = style({
+  fontSize: "0.6875rem",
+  lineHeight: 1.2,
+  color: vars.color.mutedForeground,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  minWidth: 0,
 });
 
 export const playerNameButton = style({

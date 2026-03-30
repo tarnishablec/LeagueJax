@@ -36,17 +36,7 @@ pub fn run() {
         .with_target(true)
         .init();
 
-    let builder = tauri::Builder::default();
-
-    // #[cfg(debug_assertions)] // only enable instrumentation in development builds
-    // let devtools = tauri_plugin_devtools::init();
-    //
-    // #[cfg(debug_assertions)]
-    // {
-    //     builder = builder.plugin(devtools);
-    // }
-
-    builder
+    tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -87,21 +77,25 @@ pub fn run() {
             let app_handle = app.handle().clone();
 
             let win = app.get_webview_window("main").expect("no main window");
-            // win.open_devtools();
-
-            #[cfg(not(debug_assertions))]
-            {
-                let window = app.get_window("main").unwrap();
-                window
-                    .eval("window.addEventListener('contextmenu', e => e.preventDefault());")
-                    .unwrap();
-            }
 
             #[cfg(target_os = "windows")]
             {
                 if apply_mica(&win, None).is_err() {
                     let _ = apply_acrylic(&win, Some((18, 18, 28, 160)));
                 }
+
+                #[cfg(not(debug_assertions))]
+                win.with_webview(|webview| unsafe {
+                    use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings;
+                    let controller = webview.controller();
+                    if let Ok(core) = controller.CoreWebView2() {
+                        if let Ok(settings) = core.Settings() {
+                            let settings: ICoreWebView2Settings = settings;
+                            let _ = settings.SetAreDevToolsEnabled(false.into());
+                            let _ = settings.SetAreDefaultContextMenusEnabled(false.into());
+                        }
+                    }
+                })?;
             }
 
             #[cfg(target_os = "macos")]
