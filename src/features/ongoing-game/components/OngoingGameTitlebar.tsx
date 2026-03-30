@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSWRConfig } from "swr";
+import type { OngoingGameMatchHistoryFilter } from "@/bindings/ongoing_game";
 import { LcuImage } from "@/components/LcuImage";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
@@ -11,6 +11,8 @@ import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
 const CURRENT_MODE_VALUE = "__current_mode__";
+const CURRENT_MODE_FILTER: OngoingGameMatchHistoryFilter = "CurrentMode";
+const ALL_MODE_FILTER: OngoingGameMatchHistoryFilter = "All";
 
 function resolveGameflowAssetIconPath(
   assets: Record<string, unknown> | undefined,
@@ -41,11 +43,16 @@ function resolveGameflowAssetIconPath(
   return normalizedPath;
 }
 
+function resolveFilterByModeTag(
+  modeTag: MatchModeTag | null,
+): OngoingGameMatchHistoryFilter {
+  return modeTag === null ? CURRENT_MODE_FILTER : ALL_MODE_FILTER;
+}
+
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
   const { phase, gameflowSession, modeTag } = useOngoingGameStore();
   const setModeTag = useOngoingGameStore((s) => s.setModeTag);
-  const { mutate } = useSWRConfig();
   const [refreshing, setRefreshing] = useState(false);
 
   const queueDesc = gameflowSession?.gameData.queue.detailedDescription;
@@ -126,9 +133,12 @@ export function OngoingGameTitlebar() {
             onValueChange={(details) => {
               const next = details.value[0];
               if (!next) return;
-              setModeTag(
-                next === CURRENT_MODE_VALUE ? null : (next as MatchModeTag),
-              );
+              const nextModeTag =
+                next === CURRENT_MODE_VALUE ? null : (next as MatchModeTag);
+              setModeTag(nextModeTag);
+              void invoke("ongoing_game_set_match_history_filter", {
+                filter: resolveFilterByModeTag(nextModeTag),
+              });
             }}
             disabled={refreshing}
           />
@@ -143,15 +153,7 @@ export function OngoingGameTitlebar() {
           disabled={refreshing}
           onClick={() => {
             setRefreshing(true);
-            void Promise.all([
-              invoke("ongoing_game_refresh"),
-              mutate(
-                (key) =>
-                  Array.isArray(key) &&
-                  (key[0] === "get_match_summaries" ||
-                    key[0] === "ongoing-game:get_summoner_by_puuid"),
-              ),
-            ]).finally(() => {
+            void invoke("ongoing_game_refresh").finally(() => {
               setRefreshing(false);
             });
           }}

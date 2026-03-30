@@ -56,13 +56,13 @@ pub struct TencentLeagueClientCmdArgs {
     #[serde(rename = "riotclient-tencent")]
     pub riotclient_tencent: bool,
     #[serde(rename = "t.lcdshost")]
-    pub t_lcdshost: String,
+    pub t_lcdshost: Option<String>,
     #[serde(rename = "t.chathost")]
-    pub t_chathost: String,
+    pub t_chathost: Option<String>,
     #[serde(rename = "t.storeurl")]
-    pub t_storeurl: String,
+    pub t_storeurl: Option<String>,
     #[serde(rename = "t.rmsurl")]
-    pub t_rmsurl: String,
+    pub t_rmsurl: Option<String>,
     #[serde(rename = "t.location")]
     pub t_location: String,
     #[serde(rename = "tglog-endpoint")]
@@ -390,10 +390,10 @@ pub fn parse_league_client_cmd_args(raw_cmdline: String) -> Result<LeagueClientC
                 &["riotclient_tencent"],
                 "riotclient-tencent",
             )?,
-            t_lcdshost: get_required_string(&values, &["t_lcdshost"], "t.lcdshost", false)?,
-            t_chathost: get_required_string(&values, &["t_chathost"], "t.chathost", false)?,
-            t_storeurl: get_required_string(&values, &["t_storeurl"], "t.storeurl", false)?,
-            t_rmsurl: get_required_string(&values, &["t_rmsurl"], "t.rmsurl", false)?,
+            t_lcdshost: get_optional_string(&values, &["t_lcdshost"]),
+            t_chathost: get_optional_string(&values, &["t_chathost"]),
+            t_storeurl: get_optional_string(&values, &["t_storeurl"]),
+            t_rmsurl: get_optional_string(&values, &["t_rmsurl"]),
             t_location: get_required_string(&values, &["t_location"], "t.location", false)?,
             tglog_endpoint: get_required_string(
                 &values,

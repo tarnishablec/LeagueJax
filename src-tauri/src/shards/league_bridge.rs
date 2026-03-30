@@ -131,8 +131,14 @@ impl LeagueBridgeShard {
 
         if let Some(ongoing_manager) = jax.get_shard::<OngoingGameShard>().manager() {
             let mut ongoing_rx = ongoing_manager.subscribe();
-            let ongoing_app = app;
-            let token = cancel_token;
+            let mut ongoing_summoners_rx = ongoing_manager.subscribe_summoners();
+            let mut ongoing_match_histories_rx = ongoing_manager.subscribe_match_histories();
+            let ongoing_app = app.clone();
+            let ongoing_summoners_app = app.clone();
+            let ongoing_match_histories_app = app;
+            let token = cancel_token.clone();
+            let summoners_token = cancel_token.clone();
+            let match_histories_token = cancel_token;
             let ongoing_manager_for_bootstrap = ongoing_manager.clone();
 
             tokio::spawn(async move {
@@ -154,6 +160,49 @@ impl LeagueBridgeShard {
                     };
 
                     let _ = ongoing_app.emit("ongoing-game-updated", &event);
+                }
+            });
+
+            tokio::spawn(async move {
+                loop {
+                    let event = tokio::select! {
+                        _ = summoners_token.cancelled() => break,
+                        result = ongoing_summoners_rx.recv() => {
+                            match result {
+                                Ok(ev) => ev,
+                                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                    tracing::warn!("OngoingGame summoners event bridge lagged, skipped {n}");
+                                    continue;
+                                }
+                                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                            }
+                        }
+                    };
+
+                    let _ = ongoing_summoners_app.emit("ongoing-game-summoners-updated", &event);
+                }
+            });
+
+            tokio::spawn(async move {
+                loop {
+                    let event = tokio::select! {
+                        _ = match_histories_token.cancelled() => break,
+                        result = ongoing_match_histories_rx.recv() => {
+                            match result {
+                                Ok(ev) => ev,
+                                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                    tracing::warn!("OngoingGame match histories event bridge lagged, skipped {n}");
+                                    continue;
+                                }
+                                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                            }
+                        }
+                    };
+
+                    let _ = ongoing_match_histories_app.emit(
+                        "ongoing-game-match-histories-updated",
+                        &event,
+                    );
                 }
             });
         }

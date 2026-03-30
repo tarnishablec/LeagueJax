@@ -4,6 +4,8 @@ use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame
 use crate::shards::lcu::summoner::SummonerInfo;
 use crate::error::AppError;
 
+const MAX_PARSE_ERROR_JSON_LOG_LEN: usize = 16_384;
+
 pub struct SgpApi {
     http_client: SgpHttpClient,
 }
@@ -15,6 +17,18 @@ impl SgpApi {
 
     pub fn sgp_server_id(&self) -> &str {
         self.http_client.sgp_server_id()
+    }
+
+    fn truncate_json_for_log(raw: &str) -> String {
+        if raw.len() <= MAX_PARSE_ERROR_JSON_LOG_LEN {
+            return raw.to_string();
+        }
+
+        format!(
+            "{}...<truncated {} chars>",
+            &raw[..MAX_PARSE_ERROR_JSON_LOG_LEN],
+            raw.len().saturating_sub(MAX_PARSE_ERROR_JSON_LOG_LEN)
+        )
     }
 
     fn resolve_server_endpoint(sgp_server_id: &str) -> Result<SgpServerEndpoints, AppError> {
@@ -115,6 +129,18 @@ impl SgpApi {
             |error| {
                 let path = error.path().to_string();
                 let source = error.inner().to_string();
+                tracing::error!(
+                    endpoint = "get_match_summaries",
+                    parse_path = %path,
+                    parse_error = %source,
+                    puuid = %puuid,
+                    start_index,
+                    count,
+                    tag = %tag.unwrap_or(""),
+                    sgp_server_id = %target_server_id,
+                    response_json = %Self::truncate_json_for_log(&response_raw),
+                    "Failed to parse SGP match summaries response"
+                );
                 AppError::other(format!(
                     "Failed to parse get_match_summaries at path {path}: {source}"
                 ))
@@ -152,6 +178,15 @@ impl SgpApi {
             |error| {
                 let path = error.path().to_string();
                 let source = error.inner().to_string();
+                tracing::error!(
+                    endpoint = "get_match_summary",
+                    parse_path = %path,
+                    parse_error = %source,
+                    game_id,
+                    sgp_server_id = %target_server_id,
+                    response_json = %Self::truncate_json_for_log(&response_raw),
+                    "Failed to parse SGP match summary response"
+                );
                 AppError::other(format!(
                     "Failed to parse get_match_summary at path {path}: {source}"
                 ))

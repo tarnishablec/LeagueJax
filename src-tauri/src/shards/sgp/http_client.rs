@@ -10,6 +10,8 @@ use crate::shards::lcu::session::LcuSession;
 
 use super::session::SgpTokenContext;
 
+const MAX_RESPONSE_LOG_BODY_LEN: usize = 16_384;
+
 #[derive(Clone, Copy)]
 pub enum SgpTokenKind {
     Access,
@@ -57,6 +59,18 @@ impl SgpHttpClient {
 
     pub fn sgp_server_id(&self) -> &str {
         &self.sgp_server_id
+    }
+
+    fn truncate_body_for_log(body: &str) -> String {
+        if body.len() <= MAX_RESPONSE_LOG_BODY_LEN {
+            return body.to_string();
+        }
+
+        format!(
+            "{}...<truncated {} chars>",
+            &body[..MAX_RESPONSE_LOG_BODY_LEN],
+            body.len().saturating_sub(MAX_RESPONSE_LOG_BODY_LEN)
+        )
     }
 
     async fn get_token(&self, kind: SgpTokenKind) -> String {
@@ -156,7 +170,8 @@ impl SgpHttpClient {
             .req_client
             .request(method.clone(), request_url)
             .header("Authorization", format!("Bearer {access_token}"))
-            .header("Accept", "application/json");
+            .header("Accept", "application/json")
+            .header("Accept-Encoding", "identity");
 
         if let Some(payload) = body {
             req = req.json(&payload);
@@ -185,7 +200,38 @@ impl SgpHttpClient {
             )));
         }
 
-        match resp.json::<Value>().await {
+        let content_type = resp
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+        let content_encoding = resp
+            .headers()
+            .get(reqwest::header::CONTENT_ENCODING)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+
+        let body_bytes = match resp.bytes().await {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                tracing::error!(
+                    method = %method,
+                    request_url = %request_url,
+                    status = %status,
+                    content_type = %content_type,
+                    content_encoding = %content_encoding,
+                    body_read_error = %error,
+                    "Failed to read SGP response body bytes"
+                );
+                return SgpResponse::Err(AppError::other(format!(
+                    "Failed to read SGP response body bytes: {error}"
+                )));
+            }
+        };
+
+        match serde_json::from_slice::<Value>(&body_bytes) {
             Ok(json) => {
                 #[cfg(debug_assertions)]
                 {
@@ -193,9 +239,26 @@ impl SgpHttpClient {
                 }
                 SgpResponse::Ok(json)
             }
-            Err(error) => SgpResponse::Err(AppError::other(format!(
-                "Failed to parse SGP response JSON: {error}"
-            ))),
+            Err(error) => {
+                let body_text = String::from_utf8_lossy(&body_bytes);
+                tracing::error!(
+                    method = %method,
+                    request_url = %request_url,
+                    status = %status,
+                    content_type = %content_type,
+                    content_encoding = %content_encoding,
+                    parse_error = %error,
+                    error_line = error.line(),
+                    error_column = error.column(),
+                    response_body = %Self::truncate_body_for_log(body_text.as_ref()),
+                    "Failed to parse SGP response JSON"
+                );
+                SgpResponse::Err(AppError::other(format!(
+                    "Failed to parse SGP response JSON: {error}"
+                )))
+            }
         }
     }
 }
+
+
