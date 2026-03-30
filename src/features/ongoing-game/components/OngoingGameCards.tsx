@@ -1,19 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { Bot } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
-import useSWR from "swr";
-import type { SummonerInfo } from "@/bindings/summoner.ts";
+import type {
+  RawMatchSummaryGame,
+  RawMatchSummaryParticipant,
+} from "@/bindings/matches.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon.tsx";
 import { SummonerID } from "@/components/SummonerID.tsx";
-import {
-  type EnrichedMatch,
-  type MatchModeTag,
-  useMatchHistory,
-} from "@/features/history/hooks/use-match-history.ts";
+import type { MatchModeTag } from "@/features/history/hooks/use-match-history.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
@@ -33,6 +30,10 @@ import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameCards.css.ts";
 
+type EnrichedMatch = RawMatchSummaryGame & {
+  me: RawMatchSummaryParticipant;
+};
+
 function formatGameTime(epochMs: number): string {
   const d = new Date(epochMs);
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -42,65 +43,19 @@ function formatGameTime(epochMs: number): string {
   return `${month}/${day} ${hour}:${minute}`;
 }
 
-function useOngoingSummoner(puuid: string | undefined, enabled: boolean) {
-  return useSWR(
-    enabled && puuid ? ["ongoing-game:get_summoner_by_puuid", puuid] : null,
-    ([, resolvedPuuid]) =>
-      invoke<SummonerInfo>("get_summoner_by_puuid", {
-        puuid: resolvedPuuid,
-      }),
-    {
-      dedupingInterval: 30_000,
-    },
-  );
-}
-
-function normalizeMatchModeTag(queueId: number | null): MatchModeTag {
-  switch (queueId) {
-    case 420:
-      return "q_420";
-    case 430:
-      return "q_430";
-    case 440:
-      return "q_440";
-    case 450:
-      return "q_450";
-    case 480:
-      return "q_480";
-    case 490:
-      return "q_490";
-    case 900:
-      return "q_900";
-    case 1700:
-      return "q_1700";
-    case 1900:
-      return "q_1900";
-    case 2300:
-      return "q_2300";
-    default:
-      return "all";
-  }
-}
-
-function resolveQueueIdFromSessions(
-  gameflowSession: ReturnType<
-    typeof useOngoingGameStore.getState
-  >["gameflowSession"],
-  champSelectSession: ReturnType<
-    typeof useOngoingGameStore.getState
-  >["champSelectSession"],
+function resolveQueueIdFromModeTag(
+  modeTag: MatchModeTag | null,
 ): number | null {
-  const fromGameflow = gameflowSession?.gameData.queue.id;
-  if (typeof fromGameflow === "number" && fromGameflow > 0) {
-    return fromGameflow;
+  if (!modeTag || modeTag === "all" || !modeTag.startsWith("q_")) {
+    return null;
   }
 
-  const fromChampSelect = champSelectSession?.queueId;
-  if (typeof fromChampSelect === "number" && fromChampSelect > 0) {
-    return fromChampSelect;
+  const parsedQueueId = Number(modeTag.slice(2));
+  if (!Number.isFinite(parsedQueueId) || parsedQueueId <= 0) {
+    return null;
   }
 
-  return null;
+  return parsedQueueId;
 }
 
 function normalizeChampionId(slot: PlayerSlot): number | null {
@@ -179,47 +134,66 @@ function SnapshotPlayerCard(props: {
   const { slot, matchHistoryCount } = props;
   const { t } = useTranslation();
   const storeModeTag = useOngoingGameStore((state) => state.modeTag);
-  const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
-  const champSelectSession = useOngoingGameStore(
-    (state) => state.champSelectSession,
+  const summonersByPuuid = useOngoingGameStore(
+    (state) => state.summonersByPuuid,
   );
-
-  const resolvedModeTag = useMemo<MatchModeTag>(() => {
-    if (storeModeTag) return storeModeTag;
-    const queueId = resolveQueueIdFromSessions(
-      gameflowSession,
-      champSelectSession,
-    );
-    return normalizeMatchModeTag(queueId);
-  }, [storeModeTag, gameflowSession, champSelectSession]);
+  const matchHistoriesByPuuid = useOngoingGameStore(
+    (state) => state.matchHistoriesByPuuid,
+  );
+  const matchHistoriesHydrated = useOngoingGameStore(
+    (state) => state.matchHistoriesHydrated,
+  );
+  const queueFilterId = useMemo(
+    () => resolveQueueIdFromModeTag(storeModeTag),
+    [storeModeTag],
+  );
 
   const isBot = isBotSlot(slot);
-  const puuid = !isBot && slot.puuid.trim().length > 0 ? slot.puuid : undefined;
-  const summonerQuery = useOngoingSummoner(puuid, !isBot);
+  const normalizedPuuid = !isBot ? slot.puuid.trim() : "";
+  const puuid = normalizedPuuid.length > 0 ? normalizedPuuid : undefined;
   const rankedQuery = useRankedSummary(puuid);
-  const matchHistoryQuery = useMatchHistory(
-    puuid,
-    null,
-    1,
-    matchHistoryCount,
-    resolvedModeTag,
+  const summoner = puuid ? summonersByPuuid[puuid] : undefined;
+  const historyBucket = puuid ? matchHistoriesByPuuid[puuid] : undefined;
+  const hasHistoryBucket = puuid
+    ? Object.hasOwn(matchHistoriesByPuuid, puuid)
+    : false;
+  const isHistoryLoading = Boolean(
+    !isBot && puuid && !matchHistoriesHydrated && !hasHistoryBucket,
   );
-  const recentGames = matchHistoryQuery.matches ?? [];
+  const recentGames = useMemo<EnrichedMatch[]>(() => {
+    if (!puuid || !historyBucket || historyBucket.length === 0) {
+      return [];
+    }
+
+    const filteredGames: EnrichedMatch[] = [];
+    for (const game of historyBucket) {
+      if (queueFilterId !== null && game.json.queueId !== queueFilterId) {
+        continue;
+      }
+
+      const me = game.json.participants.find(
+        (participant) => participant.puuid === puuid,
+      );
+      if (!me) {
+        continue;
+      }
+
+      filteredGames.push({ ...game, me });
+      if (filteredGames.length >= matchHistoryCount) {
+        break;
+      }
+    }
+
+    return filteredGames;
+  }, [historyBucket, puuid, queueFilterId, matchHistoryCount]);
 
   const championId = normalizeChampionId(slot);
-  const level = summonerQuery.data?.summonerLevel || 0;
+  const level = summoner?.summonerLevel || 0;
   const rankEntry = getBestRankEntry(rankedQuery.data);
   const rankText = formatRankEntryLabel(t, rankEntry);
   const rankIcon = useRankIcon(resolveRankTierForIcon(rankEntry), true);
   const showRankRow = !isBot;
-  // const showPositionByData = Boolean(slot.assignedPosition);
-  // const recentGamesLabel = t("ongoingGame.recentGames", {
-  //   defaultValue: "Recent games",
-  // });
-  // const noHistoryText = t("ongoingGame.noHistory", {
-  //   defaultValue: "No match history",
-  // });
-  const historyErrorText = t("ongoingGame.noHistory", {
+  const noHistoryText = t("ongoingGame.noHistory", {
     defaultValue: "No match history",
   });
 
@@ -236,9 +210,9 @@ function SnapshotPlayerCard(props: {
         />
 
         <div className={s.playerIdentity}>
-          {summonerQuery.data ? (
+          {summoner ? (
             <SummonerID
-              summoner={summonerQuery.data}
+              summoner={summoner}
               styles={{
                 gameName: {
                   fontSize: "0.75rem",
@@ -276,11 +250,11 @@ function SnapshotPlayerCard(props: {
             <Bot />
           </div>
         </div>
-      ) : matchHistoryQuery.isLoading || matchHistoryQuery.isRefreshing ? (
+      ) : isHistoryLoading ? (
         <HistoryLoadingState />
-      ) : matchHistoryQuery.error ? (
+      ) : recentGames.length === 0 ? (
         <div className={s.historyList}>
-          <div className={s.historyEmpty}>{historyErrorText}</div>
+          <div className={s.historyEmpty}>{noHistoryText}</div>
         </div>
       ) : (
         <div className={s.historyList}>

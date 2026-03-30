@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures_util::future::join_all;
 use tokio::sync::broadcast;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
@@ -14,8 +15,10 @@ use crate::shards::lcu::events::gameflow_session::{GameflowSessionData, Team as 
 use crate::shards::lcu::events::lobby::{LobbyData, Member as LobbyMember};
 use crate::shards::lcu::events::{EventType, LanePosition, LcuWsEvent};
 use crate::shards::lcu::session::LcuSession;
+use crate::shards::lcu::summoner::SummonerInfo;
 use crate::shards::ongoing_game::types::{
-    OngoingGameMatchHistoryFilter, OngoingGamePhase, OngoingGameUpdated, PlayerSlot, Side,
+    OngoingGameMatchHistoriesUpdated, OngoingGameMatchHistoryFilter,
+    OngoingGamePhase, OngoingGameSummonersUpdated, OngoingGameUpdated, PlayerSlot, Side,
 };
 use crate::shards::sgp::matches::RawMatchSummaryGame;
 use crate::shards::sgp::session::SgpSession;
@@ -35,6 +38,8 @@ const IN_GAME_SESSION_READY_RETRY_DELAY_MS: u64 = 250;
 #[derive(Clone)]
 pub struct OngoingGameManager {
     event_tx: broadcast::Sender<OngoingGameUpdated>,
+    summoners_event_tx: broadcast::Sender<OngoingGameSummonersUpdated>,
+    match_histories_event_tx: broadcast::Sender<OngoingGameMatchHistoriesUpdated>,
     state: Arc<tokio::sync::Mutex<ManagerState>>,
     cancel_token: CancellationToken,
 }
@@ -51,6 +56,7 @@ struct ManagerState {
     cached_champ_select_team_members: Vec<ChampSelectTeamMember>,
     cached_champ_select_gameflow_session: Option<GameflowSessionData>,
     last_known_our_side: Option<Side>,
+    cached_summoners_by_puuid: HashMap<String, SummonerInfo>,
     cached_match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
     next_task_id: u64,
     active_task_id: Option<u64>,
@@ -87,6 +93,8 @@ struct ActiveTaskEmitter {
     state: Arc<tokio::sync::Mutex<ManagerState>>,
     task_id: u64,
     event_tx: broadcast::Sender<OngoingGameUpdated>,
+    summoners_event_tx: broadcast::Sender<OngoingGameSummonersUpdated>,
+    match_histories_event_tx: broadcast::Sender<OngoingGameMatchHistoriesUpdated>,
 }
 
 impl ActiveTaskEmitter {
@@ -94,11 +102,15 @@ impl ActiveTaskEmitter {
         state: Arc<tokio::sync::Mutex<ManagerState>>,
         task_id: u64,
         event_tx: broadcast::Sender<OngoingGameUpdated>,
+        summoners_event_tx: broadcast::Sender<OngoingGameSummonersUpdated>,
+        match_histories_event_tx: broadcast::Sender<OngoingGameMatchHistoriesUpdated>,
     ) -> Self {
         Self {
             state,
             task_id,
             event_tx,
+            summoners_event_tx,
+            match_histories_event_tx,
         }
     }
 
@@ -115,13 +127,35 @@ impl ActiveTaskEmitter {
         emit_updated(&self.event_tx, payload);
         true
     }
+
+    async fn emit_summoners(&self, payload: OngoingGameSummonersUpdated) -> bool {
+        if !self.is_active().await {
+            return false;
+        }
+
+        emit_summoners(&self.summoners_event_tx, payload);
+        true
+    }
+
+    async fn emit_match_histories(&self, payload: OngoingGameMatchHistoriesUpdated) -> bool {
+        if !self.is_active().await {
+            return false;
+        }
+
+        emit_match_histories(&self.match_histories_event_tx, payload);
+        true
+    }
 }
 
 impl OngoingGameManager {
     pub fn new(cancel_token: CancellationToken) -> Self {
         let (event_tx, _) = broadcast::channel(64);
+        let (summoners_event_tx, _) = broadcast::channel(64);
+        let (match_histories_event_tx, _) = broadcast::channel(64);
         Self {
             event_tx,
+            summoners_event_tx,
+            match_histories_event_tx,
             state: Arc::new(tokio::sync::Mutex::new(ManagerState {
                 driver: None,
                 lcu_session: None,
@@ -134,6 +168,7 @@ impl OngoingGameManager {
                 cached_champ_select_team_members: Vec::new(),
                 cached_champ_select_gameflow_session: None,
                 last_known_our_side: None,
+                cached_summoners_by_puuid: HashMap::new(),
                 cached_match_histories: HashMap::new(),
                 next_task_id: 1,
                 active_task_id: None,
@@ -144,6 +179,16 @@ impl OngoingGameManager {
 
     pub fn subscribe(&self) -> broadcast::Receiver<OngoingGameUpdated> {
         self.event_tx.subscribe()
+    }
+
+    pub fn subscribe_summoners(&self) -> broadcast::Receiver<OngoingGameSummonersUpdated> {
+        self.summoners_event_tx.subscribe()
+    }
+
+    pub fn subscribe_match_histories(
+        &self,
+    ) -> broadcast::Receiver<OngoingGameMatchHistoriesUpdated> {
+        self.match_histories_event_tx.subscribe()
     }
 
     pub async fn set_match_history_filter(&self, filter: OngoingGameMatchHistoryFilter) {
@@ -206,6 +251,7 @@ impl OngoingGameManager {
             state.cached_positions_by_puuid.clear();
             state.latest_champ_select_session = None;
             state.cached_champ_select_team_members.clear();
+            state.cached_summoners_by_puuid.clear();
             state.cached_match_histories.clear();
             state.cached_champ_select_gameflow_session = None;
             state.last_known_our_side = None;
@@ -222,6 +268,19 @@ impl OngoingGameManager {
                     gameflow_session: None,
                     champ_select_session: None,
                     team_members: Vec::new(),
+                },
+            );
+            emit_summoners(
+                &self.summoners_event_tx,
+                OngoingGameSummonersUpdated {
+                    phase: OngoingGamePhase::Idle,
+                    summoners: Vec::new(),
+                },
+            );
+            emit_match_histories(
+                &self.match_histories_event_tx,
+                OngoingGameMatchHistoriesUpdated {
+                    phase: OngoingGamePhase::Idle,
                     match_histories: HashMap::new(),
                 },
             );
@@ -299,7 +358,6 @@ impl OngoingGameManager {
                                     .clone(),
                                 champ_select_session: Some(payload.data.clone()),
                                 team_members,
-                                match_histories: state.cached_match_histories.clone(),
                             });
                         }
 
@@ -410,6 +468,7 @@ impl OngoingGameManager {
                 state.cached_positions_by_puuid.clear();
                 state.latest_champ_select_session = None;
                 state.cached_champ_select_team_members.clear();
+                state.cached_summoners_by_puuid.clear();
                 state.cached_match_histories.clear();
                 state.cached_champ_select_gameflow_session = None;
                 state.last_known_our_side = None;
@@ -440,7 +499,9 @@ impl OngoingGameManager {
                         task_id,
                         phase: request.phase,
                         lcu_session: request.lcu_session,
+                        sgp_session: state.sgp_session.clone(),
                         match_history_filter: request.match_history_filter,
+                        match_history_count: state.match_history_count,
                         cached_positions_by_puuid: state.cached_positions_by_puuid.clone(),
                         last_known_our_side: state.last_known_our_side,
                     }),
@@ -451,6 +512,20 @@ impl OngoingGameManager {
 
         if let Some(payload) = idle_payload {
             emit_updated(&self.event_tx, payload);
+            emit_summoners(
+                &self.summoners_event_tx,
+                OngoingGameSummonersUpdated {
+                    phase: OngoingGamePhase::Idle,
+                    summoners: Vec::new(),
+                },
+            );
+            emit_match_histories(
+                &self.match_histories_event_tx,
+                OngoingGameMatchHistoriesUpdated {
+                    phase: OngoingGamePhase::Idle,
+                    match_histories: HashMap::new(),
+                },
+            );
         }
 
         let Some(task_token) = task_token else {
@@ -461,12 +536,14 @@ impl OngoingGameManager {
         };
 
         let event_tx = self.event_tx.clone();
+        let summoners_event_tx = self.summoners_event_tx.clone();
+        let match_histories_event_tx = self.match_histories_event_tx.clone();
         let state = self.state.clone();
 
         tokio::spawn(async move {
             tokio::select! {
                 _ = task_token.cancelled() => {}
-                _ = Self::fetch_phase_data(runtime, event_tx, state) => {}
+                _ = Self::fetch_phase_data(runtime, event_tx, summoners_event_tx, match_histories_event_tx, state) => {}
             }
         });
     }
@@ -480,15 +557,31 @@ impl OngoingGameManager {
     async fn fetch_phase_data(
         runtime: PhaseTaskRuntime,
         event_tx: broadcast::Sender<OngoingGameUpdated>,
+        summoners_event_tx: broadcast::Sender<OngoingGameSummonersUpdated>,
+        match_histories_event_tx: broadcast::Sender<OngoingGameMatchHistoriesUpdated>,
         state: Arc<tokio::sync::Mutex<ManagerState>>,
     ) {
         let task_id = runtime.task_id;
         match runtime.phase {
             OngoingGamePhase::ChampSelect => {
-                Self::fetch_champ_select_phase_data(runtime, event_tx, state.clone()).await;
+                Self::fetch_champ_select_phase_data(
+                    runtime,
+                    event_tx,
+                    summoners_event_tx,
+                    match_histories_event_tx,
+                    state.clone(),
+                )
+                .await;
             }
             OngoingGamePhase::InGame => {
-                Self::fetch_in_game_phase_data(runtime, event_tx, state.clone()).await;
+                Self::fetch_in_game_phase_data(
+                    runtime,
+                    event_tx,
+                    summoners_event_tx,
+                    match_histories_event_tx,
+                    state.clone(),
+                )
+                .await;
             }
             OngoingGamePhase::Idle => {}
         }
@@ -503,9 +596,17 @@ impl OngoingGameManager {
     async fn fetch_champ_select_phase_data(
         runtime: PhaseTaskRuntime,
         event_tx: broadcast::Sender<OngoingGameUpdated>,
+        summoners_event_tx: broadcast::Sender<OngoingGameSummonersUpdated>,
+        match_histories_event_tx: broadcast::Sender<OngoingGameMatchHistoriesUpdated>,
         state: Arc<tokio::sync::Mutex<ManagerState>>,
     ) {
-        let emitter = ActiveTaskEmitter::new(state.clone(), runtime.task_id, event_tx.clone());
+        let emitter = ActiveTaskEmitter::new(
+            state.clone(),
+            runtime.task_id,
+            event_tx.clone(),
+            summoners_event_tx,
+            match_histories_event_tx,
+        );
         let cached_session = {
             let guard = state.lock().await;
             guard.latest_champ_select_session.clone()
@@ -553,19 +654,89 @@ impl OngoingGameManager {
         let team_members =
             merge_team_members_with_slots(&session, &collect_slots(blue_slots, red_slots));
         let gameflow_session = fetch_gameflow_session(&runtime.lcu_session).await;
+        let queue_id = resolve_queue_id(gameflow_session.as_ref(), Some(&session));
+        let history_tag = resolve_match_history_tag(runtime.match_history_filter, queue_id);
+        let ally_puuids = collect_human_team_member_puuids(&session.my_team);
+        let visible_summoner_puuids = collect_human_team_member_puuids_all(&team_members);
+        let cached_summoners_by_puuid = {
+            let guard = state.lock().await;
+            guard.cached_summoners_by_puuid.clone()
+        };
+        let missing_summoner_puuids =
+            collect_missing_puuids(&visible_summoner_puuids, &cached_summoners_by_puuid);
         {
             let mut guard = state.lock().await;
             guard.cached_champ_select_team_members = team_members.clone();
             guard.cached_champ_select_gameflow_session = gameflow_session.clone();
         }
 
+        let visible_cached_summoners =
+            collect_summoners_by_puuids(&cached_summoners_by_puuid, &visible_summoner_puuids);
+
         let _ = emitter
             .emit_updated(OngoingGameUpdated {
                 phase: OngoingGamePhase::ChampSelect,
                 match_history_filter: runtime.match_history_filter,
-                gameflow_session,
-                champ_select_session: Some(session),
-                team_members,
+                gameflow_session: gameflow_session.clone(),
+                champ_select_session: Some(session.clone()),
+                team_members: team_members.clone(),
+            })
+            .await;
+        let _ = emitter
+            .emit_summoners(OngoingGameSummonersUpdated {
+                phase: OngoingGamePhase::ChampSelect,
+                summoners: visible_cached_summoners,
+            })
+            .await;
+
+        let summoners_task = tokio::spawn(fetch_summoners_batch(
+            runtime.lcu_session.clone(),
+            missing_summoner_puuids,
+        ));
+        let histories_task = tokio::spawn(fetch_match_histories_batch(
+            runtime.sgp_session.clone(),
+            ally_puuids,
+            runtime.match_history_count,
+            history_tag,
+        ));
+
+        let fetched_summoners_by_puuid = match summoners_task.await {
+            Ok(value) => value,
+            Err(error) => {
+                tracing::warn!("Failed to join summoners batch task: {error}");
+                HashMap::new()
+            }
+        };
+        let mut merged_summoners_by_puuid = cached_summoners_by_puuid;
+        merged_summoners_by_puuid.extend(fetched_summoners_by_puuid);
+        let visible_summoners =
+            collect_summoners_by_puuids(&merged_summoners_by_puuid, &visible_summoner_puuids);
+        {
+            let mut guard = state.lock().await;
+            guard.cached_summoners_by_puuid = merged_summoners_by_puuid;
+        }
+        let _ = emitter
+            .emit_summoners(OngoingGameSummonersUpdated {
+                phase: OngoingGamePhase::ChampSelect,
+                summoners: visible_summoners,
+            })
+            .await;
+
+        let fetched_histories = match histories_task.await {
+            Ok(value) => value,
+            Err(error) => {
+                tracing::warn!("Failed to join match histories batch task: {error}");
+                HashMap::new()
+            }
+        };
+        {
+            let mut guard = state.lock().await;
+            guard.cached_match_histories = fetched_histories.clone();
+        }
+        let _ = emitter
+            .emit_match_histories(OngoingGameMatchHistoriesUpdated {
+                phase: OngoingGamePhase::ChampSelect,
+                match_histories: fetched_histories.clone(),
             })
             .await;
     }
@@ -573,9 +744,17 @@ impl OngoingGameManager {
     async fn fetch_in_game_phase_data(
         runtime: PhaseTaskRuntime,
         event_tx: broadcast::Sender<OngoingGameUpdated>,
+        summoners_event_tx: broadcast::Sender<OngoingGameSummonersUpdated>,
+        match_histories_event_tx: broadcast::Sender<OngoingGameMatchHistoriesUpdated>,
         state: Arc<tokio::sync::Mutex<ManagerState>>,
     ) {
-        let emitter = ActiveTaskEmitter::new(state.clone(), runtime.task_id, event_tx.clone());
+        let emitter = ActiveTaskEmitter::new(
+            state.clone(),
+            runtime.task_id,
+            event_tx.clone(),
+            summoners_event_tx,
+            match_histories_event_tx,
+        );
         for attempt in 1..=IN_GAME_SESSION_READY_MAX_ATTEMPTS {
             if !emitter.is_active().await {
                 return;
@@ -618,9 +797,13 @@ impl OngoingGameManager {
             }
             let all_slots = collect_slots(blue_slots, red_slots);
             let built_team_members = build_team_members_from_slots(&all_slots);
-            let cached_team_members = {
+            let (cached_team_members, cached_summoners_by_puuid, cached_match_histories) = {
                 let guard = state.lock().await;
-                guard.cached_champ_select_team_members.clone()
+                (
+                    guard.cached_champ_select_team_members.clone(),
+                    guard.cached_summoners_by_puuid.clone(),
+                    guard.cached_match_histories.clone(),
+                )
             };
             let use_cached_team_members = !cached_team_members.is_empty()
                 && (!session_ready
@@ -632,17 +815,89 @@ impl OngoingGameManager {
             } else {
                 built_team_members
             };
+            let initial_match_histories = cached_match_histories.clone();
             {
                 let mut guard = state.lock().await;
                 guard.cached_champ_select_team_members = team_members.clone();
+                guard.cached_match_histories = initial_match_histories.clone();
             }
             let _ = emitter
                 .emit_updated(OngoingGameUpdated {
                     phase: OngoingGamePhase::InGame,
                     match_history_filter: runtime.match_history_filter,
-                    gameflow_session: Some(session),
+                    gameflow_session: Some(session.clone()),
                     champ_select_session: None,
-                    team_members,
+                    team_members: team_members.clone(),
+                })
+                .await;
+            let visible_summoner_puuids = collect_human_player_slot_puuids_all(&all_slots);
+            let visible_cached_summoners =
+                collect_summoners_by_puuids(&cached_summoners_by_puuid, &visible_summoner_puuids);
+            let _ = emitter
+                .emit_summoners(OngoingGameSummonersUpdated {
+                    phase: OngoingGamePhase::InGame,
+                    summoners: visible_cached_summoners,
+                })
+                .await;
+
+            let missing_summoner_puuids =
+                collect_missing_puuids(&visible_summoner_puuids, &cached_summoners_by_puuid);
+            let queue_id = resolve_queue_id(Some(&session), None);
+            let history_tag = resolve_match_history_tag(runtime.match_history_filter, queue_id);
+            let enemy_side = runtime.last_known_our_side.map(opposite_side);
+            let opponent_puuids =
+                collect_human_player_slot_puuids(&all_slots, enemy_side, &cached_match_histories);
+
+            let summoners_task = tokio::spawn(fetch_summoners_batch(
+                runtime.lcu_session.clone(),
+                missing_summoner_puuids,
+            ));
+            let histories_task = tokio::spawn(fetch_match_histories_batch(
+                runtime.sgp_session.clone(),
+                opponent_puuids,
+                runtime.match_history_count,
+                history_tag,
+            ));
+
+            let fetched_summoners_by_puuid = match summoners_task.await {
+                Ok(value) => value,
+                Err(error) => {
+                    tracing::warn!("Failed to join summoners batch task: {error}");
+                    HashMap::new()
+                }
+            };
+            let mut merged_summoners_by_puuid = cached_summoners_by_puuid;
+            merged_summoners_by_puuid.extend(fetched_summoners_by_puuid);
+            let visible_summoners =
+                collect_summoners_by_puuids(&merged_summoners_by_puuid, &visible_summoner_puuids);
+            {
+                let mut guard = state.lock().await;
+                guard.cached_summoners_by_puuid = merged_summoners_by_puuid;
+            }
+            let _ = emitter
+                .emit_summoners(OngoingGameSummonersUpdated {
+                    phase: OngoingGamePhase::InGame,
+                    summoners: visible_summoners,
+                })
+                .await;
+
+            let opponent_histories = match histories_task.await {
+                Ok(value) => value,
+                Err(error) => {
+                    tracing::warn!("Failed to join match histories batch task: {error}");
+                    HashMap::new()
+                }
+            };
+            let mut merged_match_histories = initial_match_histories;
+            merged_match_histories.extend(opponent_histories);
+            {
+                let mut guard = state.lock().await;
+                guard.cached_match_histories = merged_match_histories.clone();
+            }
+            let _ = emitter
+                .emit_match_histories(OngoingGameMatchHistoriesUpdated {
+                    phase: OngoingGamePhase::InGame,
+                    match_histories: merged_match_histories.clone(),
                 })
                 .await;
             return;
@@ -652,6 +907,250 @@ impl OngoingGameManager {
 
 async fn fetch_gameflow_session(lcu_session: &Arc<LcuSession>) -> Option<GameflowSessionData> {
     lcu_session.api().get_gameflow_session_typed().await.ok()
+}
+
+fn resolve_queue_id(
+    gameflow_session: Option<&GameflowSessionData>,
+    champ_select_session: Option<&ChampSelectSessionData>,
+) -> Option<u64> {
+    if let Some(session) = gameflow_session {
+        let queue_id = session.game_data.queue.id;
+        if queue_id > 0 {
+            return Some(queue_id);
+        }
+    }
+
+    if let Some(session) = champ_select_session {
+        if session.queue_id > 0 {
+            return Some(session.queue_id);
+        }
+    }
+
+    None
+}
+
+fn resolve_match_history_tag(
+    filter: OngoingGameMatchHistoryFilter,
+    queue_id: Option<u64>,
+) -> Option<String> {
+    match filter {
+        OngoingGameMatchHistoryFilter::All => None,
+        OngoingGameMatchHistoryFilter::CurrentMode => {
+            queue_id.map(|resolved_queue_id| format!("q_{resolved_queue_id}"))
+        }
+    }
+}
+
+fn collect_human_team_member_puuids(members: &[ChampSelectTeamMember]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut puuids = Vec::new();
+
+    for member in members {
+        if !champ_select_member_has_human_identity(member) {
+            continue;
+        }
+
+        let puuid = member.puuid.trim();
+        if puuid.is_empty() {
+            continue;
+        }
+
+        if seen.insert(puuid.to_string()) {
+            puuids.push(puuid.to_string());
+        }
+
+        if puuids.len() >= 5 {
+            break;
+        }
+    }
+
+    puuids
+}
+
+fn collect_human_team_member_puuids_all(members: &[ChampSelectTeamMember]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut puuids = Vec::new();
+
+    for member in members {
+        if !champ_select_member_has_human_identity(member) {
+            continue;
+        }
+
+        let puuid = member.puuid.trim();
+        if puuid.is_empty() {
+            continue;
+        }
+
+        if seen.insert(puuid.to_string()) {
+            puuids.push(puuid.to_string());
+        }
+    }
+
+    puuids
+}
+
+fn collect_human_player_slot_puuids_all(slots: &[PlayerSlot]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut puuids = Vec::new();
+
+    for slot in slots {
+        if slot.is_bot {
+            continue;
+        }
+
+        let puuid = slot.puuid.trim();
+        if puuid.is_empty() {
+            continue;
+        }
+
+        if seen.insert(puuid.to_string()) {
+            puuids.push(puuid.to_string());
+        }
+    }
+
+    puuids
+}
+
+fn collect_human_player_slot_puuids(
+    slots: &[PlayerSlot],
+    preferred_side: Option<Side>,
+    cached_match_histories: &HashMap<String, Vec<RawMatchSummaryGame>>,
+) -> Vec<String> {
+    let cached_puuids: HashSet<&str> = cached_match_histories
+        .keys()
+        .map(String::as_str)
+        .collect();
+    let mut seen = HashSet::new();
+    let mut puuids = Vec::new();
+
+    let push_slot =
+        |slot: &PlayerSlot, seen: &mut HashSet<String>, puuids: &mut Vec<String>| {
+        if slot.is_bot {
+            return;
+        }
+
+        let puuid = slot.puuid.trim();
+        if puuid.is_empty() || cached_puuids.contains(puuid) {
+            return;
+        }
+
+        if seen.insert(puuid.to_string()) {
+            puuids.push(puuid.to_string());
+        }
+    };
+
+    if let Some(side) = preferred_side {
+        for slot in slots {
+            if slot.side == side {
+                push_slot(slot, &mut seen, &mut puuids);
+                if puuids.len() >= 5 {
+                    return puuids;
+                }
+            }
+        }
+    }
+
+    for slot in slots {
+        push_slot(slot, &mut seen, &mut puuids);
+        if puuids.len() >= 5 {
+            return puuids;
+        }
+    }
+
+    puuids
+}
+
+fn collect_missing_puuids<T>(puuids: &[String], cache: &HashMap<String, T>) -> Vec<String> {
+    puuids
+        .iter()
+        .filter(|puuid| !cache.contains_key(puuid.as_str()))
+        .cloned()
+        .collect()
+}
+
+fn collect_summoners_by_puuids(
+    summoners_by_puuid: &HashMap<String, SummonerInfo>,
+    puuids: &[String],
+) -> Vec<SummonerInfo> {
+    puuids
+        .iter()
+        .filter_map(|puuid| summoners_by_puuid.get(puuid).cloned())
+        .collect()
+}
+
+async fn fetch_summoners_batch(
+    lcu_session: Arc<LcuSession>,
+    puuids: Vec<String>,
+) -> HashMap<String, SummonerInfo> {
+    if puuids.is_empty() {
+        return HashMap::new();
+    }
+
+    let tasks = puuids.into_iter().map(|puuid| {
+        let session = lcu_session.clone();
+
+        async move {
+            let result = session.api().get_summoner_by_puuid(&puuid).await;
+            match result {
+                Ok(summoner) => Some((puuid, summoner)),
+                Err(error) => {
+                    tracing::warn!("Failed to fetch summoner by puuid {puuid}: {error}");
+                    None
+                }
+            }
+        }
+    });
+
+    let mut summoners_by_puuid = HashMap::new();
+    for item in join_all(tasks).await.into_iter().flatten() {
+        let (puuid, summoner) = item;
+        summoners_by_puuid.insert(puuid, summoner);
+    }
+
+    summoners_by_puuid
+}
+
+async fn fetch_match_histories_batch(
+    sgp_session: Option<Arc<SgpSession>>,
+    puuids: Vec<String>,
+    count: u32,
+    tag: Option<String>,
+) -> HashMap<String, Vec<RawMatchSummaryGame>> {
+    if puuids.is_empty() {
+        return HashMap::new();
+    }
+
+    let Some(sgp_session) = sgp_session else {
+        tracing::warn!("OngoingGame: skip match history batch because SGP session is unavailable");
+        return HashMap::new();
+    };
+
+    let tasks = puuids.into_iter().map(|puuid| {
+        let session = sgp_session.clone();
+        let tag = tag.clone();
+
+        async move {
+            let result = session
+                .api()
+                .get_match_summaries(&puuid, 0, count, tag.as_deref(), None)
+                .await;
+            match result {
+                Ok(response) => Some((puuid, response.games)),
+                Err(error) => {
+                    tracing::warn!("Failed to fetch match history for puuid {puuid}: {error}");
+                    None
+                }
+            }
+        }
+    });
+
+    let mut histories: HashMap<String, Vec<RawMatchSummaryGame>> = HashMap::new();
+    for item in join_all(tasks).await.into_iter().flatten() {
+        let (puuid, games) = item;
+        histories.insert(puuid, games);
+    }
+
+    histories
 }
 
 fn collect_slots(mut blue_slots: Vec<PlayerSlot>, red_slots: Vec<PlayerSlot>) -> Vec<PlayerSlot> {
@@ -734,6 +1233,20 @@ fn build_team_members_from_slots(slots: &[PlayerSlot]) -> Vec<ChampSelectTeamMem
 }
 
 fn emit_updated(event_tx: &broadcast::Sender<OngoingGameUpdated>, payload: OngoingGameUpdated) {
+    let _ = event_tx.send(payload);
+}
+
+fn emit_summoners(
+    event_tx: &broadcast::Sender<OngoingGameSummonersUpdated>,
+    payload: OngoingGameSummonersUpdated,
+) {
+    let _ = event_tx.send(payload);
+}
+
+fn emit_match_histories(
+    event_tx: &broadcast::Sender<OngoingGameMatchHistoriesUpdated>,
+    payload: OngoingGameMatchHistoriesUpdated,
+) {
     let _ = event_tx.send(payload);
 }
 
@@ -1115,3 +1628,17 @@ fn side_token(side: Side) -> &'static str {
         Side::Red => "RED",
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -77,10 +77,10 @@ export type TencentLeagueClientCmdArgs = {
   "no-proxy-server": boolean;
   "ignore-certificate-errors": boolean;
   "riotclient-tencent": boolean;
-  "t.lcdshost": string;
-  "t.chathost": string;
-  "t.storeurl": string;
-  "t.rmsurl": string;
+  "t.lcdshost": string | null;
+  "t.chathost": string | null;
+  "t.storeurl": string | null;
+  "t.rmsurl": string | null;
   "t.location": string;
   "tglog-endpoint": string;
   ccs: string;

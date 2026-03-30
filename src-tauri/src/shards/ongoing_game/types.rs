@@ -5,6 +5,7 @@ use ts_rs::TS;
 
 use crate::shards::lcu::events::champ_select_session::{ChampSelectSessionData, TeamMember};
 use crate::shards::lcu::events::gameflow_session::GameflowSessionData;
+use crate::shards::lcu::summoner::SummonerInfo;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
@@ -48,5 +49,18 @@ pub struct OngoingGameUpdated {
     pub gameflow_session: Option<GameflowSessionData>,
     pub champ_select_session: Option<ChampSelectSessionData>,
     pub team_members: Vec<TeamMember>,
+}
+
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "ongoing_game.ts")]
+pub struct OngoingGameSummonersUpdated {
+    pub phase: OngoingGamePhase,
+    pub summoners: Vec<SummonerInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "ongoing_game.ts")]
+pub struct OngoingGameMatchHistoriesUpdated {
+    pub phase: OngoingGamePhase,
     pub match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
 }

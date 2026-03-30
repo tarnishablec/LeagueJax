@@ -4,10 +4,22 @@ import type {
   GameflowSessionData,
   TeamMember,
 } from "./lcu_events";
+import type { RawMatchSummaryGame } from "./matches";
+import type { SummonerInfo } from "./summoner";
+
+export type OngoingGameMatchHistoriesUpdated = {
+  phase: OngoingGamePhase;
+  match_histories: { [key in string]: Array<RawMatchSummaryGame> };
+};
 
 export type OngoingGameMatchHistoryFilter = "CurrentMode" | "All";
 
 export type OngoingGamePhase = "Idle" | "ChampSelect" | "InGame";
+
+export type OngoingGameSummonersUpdated = {
+  phase: OngoingGamePhase;
+  summoners: Array<SummonerInfo>;
+};
 
 export type OngoingGameUpdated = {
   phase: OngoingGamePhase;

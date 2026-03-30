@@ -2,7 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Gamepad2 } from "lucide-react";
 import { z } from "zod";
-import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
+import type {
+  OngoingGameMatchHistoriesUpdated,
+  OngoingGameSummonersUpdated,
+  OngoingGameUpdated,
+} from "@/bindings/ongoing_game";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SettingsShard } from "../settings/manifest";
@@ -31,6 +35,8 @@ function navigateTo(path: string): void {
 
 export class OngoingGameShard implements WebShard {
   private ongoingUpdatedUnlisten: UnlistenFn | null = null;
+  private ongoingSummonersUpdatedUnlisten: UnlistenFn | null = null;
+  private ongoingMatchHistoriesUpdatedUnlisten: UnlistenFn | null = null;
   private lcuFocusChangedUnlisten: UnlistenFn | null = null;
 
   public label() {
@@ -64,7 +70,19 @@ export class OngoingGameShard implements WebShard {
         .max(MATCH_HISTORY_COUNT_MAX),
       defaultValue: MATCH_HISTORY_COUNT_DEFAULT,
       order: 10,
-      onSet: () => {},
+      onSet: (next) => {
+        if (typeof next !== "number" || !Number.isFinite(next)) {
+          return;
+        }
+
+        const normalized = Math.max(
+          MATCH_HISTORY_COUNT_MIN,
+          Math.min(MATCH_HISTORY_COUNT_MAX, Math.trunc(next)),
+        );
+        void invoke("ongoing_game_set_match_history_count", {
+          count: normalized,
+        });
+      },
     });
     settings.registerSetting({
       id: ONGOING_AUTO_SWITCH_TO_GAME_SETTING,
@@ -88,6 +106,15 @@ export class OngoingGameShard implements WebShard {
     });
     const store = useOngoingGameStore.getState();
     store.reset();
+    const initialMatchHistoryCount =
+      settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ??
+      MATCH_HISTORY_COUNT_DEFAULT;
+    void invoke("ongoing_game_set_match_history_count", {
+      count: initialMatchHistoryCount,
+    });
+    void invoke("ongoing_game_set_match_history_filter", {
+      filter: "CurrentMode",
+    });
 
     this.ongoingUpdatedUnlisten = await listen<OngoingGameUpdated>(
       "ongoing-game-updated",
@@ -106,6 +133,22 @@ export class OngoingGameShard implements WebShard {
         }
       },
     );
+    this.ongoingSummonersUpdatedUnlisten =
+      await listen<OngoingGameSummonersUpdated>(
+        "ongoing-game-summoners-updated",
+        (event) => {
+          useOngoingGameStore.getState().applySummonersUpdated(event.payload);
+        },
+      );
+    this.ongoingMatchHistoriesUpdatedUnlisten =
+      await listen<OngoingGameMatchHistoriesUpdated>(
+        "ongoing-game-match-histories-updated",
+        (event) => {
+          useOngoingGameStore
+            .getState()
+            .applyMatchHistoriesUpdated(event.payload);
+        },
+      );
 
     this.lcuFocusChangedUnlisten = await listen("lcu-focus-changed", () => {
       void invoke("ongoing_game_refresh");
@@ -118,6 +161,14 @@ export class OngoingGameShard implements WebShard {
     if (this.ongoingUpdatedUnlisten) {
       this.ongoingUpdatedUnlisten();
       this.ongoingUpdatedUnlisten = null;
+    }
+    if (this.ongoingSummonersUpdatedUnlisten) {
+      this.ongoingSummonersUpdatedUnlisten();
+      this.ongoingSummonersUpdatedUnlisten = null;
+    }
+    if (this.ongoingMatchHistoriesUpdatedUnlisten) {
+      this.ongoingMatchHistoriesUpdatedUnlisten();
+      this.ongoingMatchHistoriesUpdatedUnlisten = null;
     }
     if (this.lcuFocusChangedUnlisten) {
       this.lcuFocusChangedUnlisten();
