@@ -102,6 +102,7 @@
     "noMatches": "対戦履歴がありません",
     "itemsPerPage": "{{count}} 件",
     "selectClient": "履歴を見るにはクライアントを選択してください",
+    "viewOwnHistory": "クリックして自分の履歴を表示",
     "emptyState": "履歴を見るにはサモナーを検索してください",
     "closeTab": "タブを閉じる",
     "searchDialog": {

@@ -13,6 +13,9 @@ import { HistoryRoute } from "./routes/HistoryRoute";
 export const HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING =
   "history.behavior.autoRefreshOnTabSwitch";
 
+export const HISTORY_AUTO_OPEN_OWN_TAB_SETTING =
+  "history.behavior.autoOpenOwnTab";
+
 export class HistoryShard implements WebShard {
   public label() {
     return "HistoryShard";
@@ -30,7 +33,9 @@ export class HistoryShard implements WebShard {
     void useTabStore.getState();
     void useLcuStore.getState();
 
-    jax.getShard(SettingsShard).registerSetting({
+    const settingsShard = jax.getShard(SettingsShard);
+
+    settingsShard.registerSetting({
       id: HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
       labelKey: "settings.history.autoRefreshOnTabSwitch.label",
       scope: "frontend",
@@ -38,6 +43,17 @@ export class HistoryShard implements WebShard {
       zod: z.boolean(),
       defaultValue: false,
       order: 10,
+      onSet: () => {},
+    });
+
+    settingsShard.registerSetting({
+      id: HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
+      labelKey: "settings.history.autoOpenOwnTab.label",
+      scope: "frontend",
+      control: { kind: "toggle" },
+      zod: z.boolean(),
+      defaultValue: true,
+      order: 11,
       onSet: () => {},
     });
   }
