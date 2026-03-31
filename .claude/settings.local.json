@@ -64,7 +64,8 @@
       "Bash(2)",
       "Bash(echo \"Exit: $?\")",
       "Bash(bun tsc:*)",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(x[''''path'''']\\) for x in data.get\\(''''tree'''',[]\\) if ''''lc-state'''' in x[''''path''''] or ''''chat'''' in x[''''path''''].lower\\(\\)]\")"
     ]
   }
 }

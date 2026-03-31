@@ -1,4 +1,4 @@
-mod commands;
+﻿mod commands;
 mod error;
 mod shards;
 mod storage;
@@ -22,7 +22,7 @@ use window_vibrancy::{apply_acrylic, apply_mica};
 use window_vibrancy::apply_acrylic;
 
 use jax::Jax;
-// ─── Runtime ─────────────────────────────────────────────────────────────────
+// 鈹€鈹€鈹€ Runtime 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -65,10 +65,12 @@ pub fn run() {
             lcu_get_game_version,
             lcu_get_ranked_tiers,
             ongoing_game_refresh,
-            ongoing_game_set_match_history_filter,
+            ongoing_game_refresh_match_histories,
+            ongoing_game_set_match_history_tag,
             ongoing_game_set_match_history_count,
             get_settings_bootstrap,
-            apply_settings_patch,
+            set_settings_value,
+            set_settings_values,
             get_shards_status,
             lcu_get_platform_config_namespaces,
             lcu_get_help
@@ -105,7 +107,7 @@ pub fn run() {
             let data_dir = app.path().app_data_dir().expect("no app data dir");
             let db_path = data_dir.join("data");
 
-            // ── Jax lifecycle: build → register → start ──
+            // 鈹€鈹€ Jax lifecycle: build 鈫?register 鈫?start 鈹€鈹€
             let jax = Jax::default()
                 .register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)))
                 .register(Arc::new(shards::persistence_sled::PersistenceSled::new(
@@ -138,20 +140,20 @@ pub fn run() {
                 match jax.start().await {
                     Ok(report) => {
                         if report.is_success() {
-                            tracing::info!("🚀 Jax started successfully with all shards.");
+                            tracing::info!("馃殌 Jax started successfully with all shards.");
                         } else {
                             for f in &report.failed {
                                 tracing::error!(
                                     shard_id = %f.id,
                                     error = %f.error,
-                                    "❌ Shard failed to setup"
+                                    "鉂?Shard failed to setup"
                                 );
                             }
                             for s in &report.skipped {
                                 tracing::warn!(
                                     shard_id = %s,
                                     "skip" = true,
-                                    "⚠️ Shard skipped due to dependency failure"
+                                    "鈿狅笍 Shard skipped due to dependency failure"
                                 );
                             }
                         }
@@ -164,7 +166,7 @@ pub fn run() {
                         }
                     }
                     Err(e) => {
-                        tracing::error!(error = %e, "🚨 Jax encountered a critical startup error");
+                        tracing::error!(error = %e, "馃毃 Jax encountered a critical startup error");
                     }
                 }
             });
@@ -188,3 +190,8 @@ pub fn run() {
             }
         });
 }
+
+
+
+
+

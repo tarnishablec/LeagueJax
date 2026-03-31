@@ -4,8 +4,7 @@ import { Settings } from "lucide-react";
 import type {
   SettingsBootstrapDto,
   SettingsChangedEventDto,
-  SettingsPatchDto,
-  SettingsPatchResultDto,
+  SettingsSnapshotDto,
 } from "@/bindings/settings.ts";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -51,7 +50,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
       this.patchQueue = this.patchQueue
         .then(() => this.pushPatch(changes))
         .catch((error: unknown) => {
-          this.logger.error({ error }, "Failed to sync settings patch");
+          this.logger.error({ error }, "Failed to sync settings changes");
         });
     });
 
@@ -67,10 +66,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
           return;
         }
 
-        this.store.applyRemotePatch(
-          event.payload.changes,
-          Number(event.payload.version),
-        );
+        this.store.applyRemotePatch(event.payload.changes);
       },
     );
   }
@@ -170,24 +166,15 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   }
 
   private async pushPatch(changes: Record<string, unknown>): Promise<void> {
-    const patch: SettingsPatchDto = {
-      changes,
-      expectedVersion: this.store.getVersion(),
-      source: this.sourceId,
-    };
-
     try {
-      const result = await invoke<SettingsPatchResultDto>(
-        "apply_settings_patch",
-        {
-          patch,
-        },
-      );
-      this.store.setVersion(Number(result.snapshot.version));
+      await invoke<SettingsSnapshotDto>("set_settings_values", {
+        changes,
+        source: this.sourceId,
+      });
     } catch (error) {
       this.logger.warn(
         { error },
-        "Settings patch rejected, refreshing from backend snapshot",
+        "Settings sync failed, refreshing from backend snapshot",
       );
       await this.refreshFromBackend({ notify: true, runOnSet: true });
     }

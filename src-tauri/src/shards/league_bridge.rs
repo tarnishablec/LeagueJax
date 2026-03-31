@@ -1,4 +1,4 @@
-﻿use core::error::Error;
+use core::error::Error;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -27,25 +27,11 @@ impl LeagueBridgeShard {
         let lcu_manager = lcu_shard.initialize(cancel_token.clone());
 
         let ongoing_shard = jax.get_shard::<OngoingGameShard>();
-        let ongoing_manager = ongoing_shard.initialize(cancel_token.clone());
+        let Some(ongoing_manager) = ongoing_shard.manager() else {
+            tracing::error!("OngoingGame manager is not initialized");
+            return;
+        };
 
-        let bootstrap_lcu_manager = lcu_manager.clone();
-        let bootstrap_ongoing_shard = ongoing_shard.clone();
-        let bootstrap_jax = jax.clone();
-        let bootstrap_cancel_token = cancel_token.clone();
-        tauri_host.spawn(async move {
-            let lcu_session = bootstrap_lcu_manager.focused().await;
-            let sgp_session = if let Some(lcu) = &lcu_session {
-                let sgp_shard = bootstrap_jax.get_shard::<SgpShard>();
-                sgp_shard.spg_from_lcu(lcu.clone()).await.ok()
-            } else {
-                None
-            };
-
-            let _ = bootstrap_ongoing_shard
-                .initialize_with_focus(bootstrap_cancel_token, lcu_session, sgp_session)
-                .await;
-        });
 
         let manager_for_run = lcu_manager.clone();
         tauri_host.spawn(async move {
@@ -53,32 +39,22 @@ impl LeagueBridgeShard {
         });
 
         let jax_for_state = jax.clone();
-        let manager_for_state = ongoing_manager.clone();
+        let ongoing_shard_for_state = ongoing_shard.clone();
         lcu_manager.clone().subscribe_state_fn(move |event| {
             let jax = jax_for_state.clone();
-            let manager = manager_for_state.clone();
+            let ongoing_shard = ongoing_shard_for_state.clone();
             async move {
                 match event {
                     LcuManagerStateEvent::FocusChanged(change) => {
-                        let (lcu_session, sgp_session) = match change.current {
+                        let lcu_session = match change.current {
                             Some(pid) => {
                                 let lcu_shard = jax.get_shard::<LcuShard>();
-                                let lcu_session =
-                                    lcu_shard.manager().and_then(|m| m.session_for_pid(pid));
-
-                                let sgp_session = if let Some(lcu) = &lcu_session {
-                                    let sgp_shard = jax.get_shard::<SgpShard>();
-                                    sgp_shard.spg_from_lcu(lcu.clone()).await.ok()
-                                } else {
-                                    None
-                                };
-
-                                (lcu_session, sgp_session)
+                                lcu_shard.manager().and_then(|m| m.session_for_pid(pid))
                             }
-                            None => (None, None),
+                            None => None,
                         };
 
-                        manager.handle_focus_changed(lcu_session, sgp_session).await;
+                        ongoing_shard.apply_focus(lcu_session).await;
                     }
                     LcuManagerStateEvent::InstancesChanged(_) => {}
                 }
@@ -131,14 +107,8 @@ impl LeagueBridgeShard {
 
         if let Some(ongoing_manager) = jax.get_shard::<OngoingGameShard>().manager() {
             let mut ongoing_rx = ongoing_manager.subscribe();
-            let mut ongoing_summoners_rx = ongoing_manager.subscribe_summoners();
-            let mut ongoing_match_histories_rx = ongoing_manager.subscribe_match_histories();
-            let ongoing_app = app.clone();
-            let ongoing_summoners_app = app.clone();
-            let ongoing_match_histories_app = app;
-            let token = cancel_token.clone();
-            let summoners_token = cancel_token.clone();
-            let match_histories_token = cancel_token;
+            let ongoing_app = app;
+            let token = cancel_token;
             let ongoing_manager_for_bootstrap = ongoing_manager.clone();
 
             tokio::spawn(async move {
@@ -159,50 +129,18 @@ impl LeagueBridgeShard {
                         }
                     };
 
-                    let _ = ongoing_app.emit("ongoing-game-updated", &event);
-                }
-            });
-
-            tokio::spawn(async move {
-                loop {
-                    let event = tokio::select! {
-                        _ = summoners_token.cancelled() => break,
-                        result = ongoing_summoners_rx.recv() => {
-                            match result {
-                                Ok(ev) => ev,
-                                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                                    tracing::warn!("OngoingGame summoners event bridge lagged, skipped {n}");
-                                    continue;
-                                }
-                                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-                            }
+                    use crate::shards::ongoing_game::types::OngoingGameEvent;
+                    match &event {
+                        OngoingGameEvent::Updated(data) => {
+                            let _ = ongoing_app.emit("ongoing-game-updated", data);
                         }
-                    };
-
-                    let _ = ongoing_summoners_app.emit("ongoing-game-summoners-updated", &event);
-                }
-            });
-
-            tokio::spawn(async move {
-                loop {
-                    let event = tokio::select! {
-                        _ = match_histories_token.cancelled() => break,
-                        result = ongoing_match_histories_rx.recv() => {
-                            match result {
-                                Ok(ev) => ev,
-                                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                                    tracing::warn!("OngoingGame match histories event bridge lagged, skipped {n}");
-                                    continue;
-                                }
-                                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-                            }
+                        OngoingGameEvent::SummonersUpdated(data) => {
+                            let _ = ongoing_app.emit("ongoing-game-summoners-updated", data);
                         }
-                    };
-
-                    let _ = ongoing_match_histories_app.emit(
-                        "ongoing-game-match-histories-updated",
-                        &event,
-                    );
+                        OngoingGameEvent::MatchHistoriesUpdated(data) => {
+                            let _ = ongoing_app.emit("ongoing-game-match-histories-updated", data);
+                        }
+                    }
                 }
             });
         }

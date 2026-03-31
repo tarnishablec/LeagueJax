@@ -120,7 +120,7 @@ export type GameflowSessionData = {
   gameData: GameData;
   gameDodge: GameDodge;
   map: Map;
-  phase: string;
+  phase: Phase;
 };
 
 export type Map = {
@@ -148,6 +148,20 @@ export type MucJwtDto = {
   jwt: string;
   targetRegion: string;
 };
+
+export type Phase =
+  | "None"
+  | "ChampSelect"
+  | "Matchmaking"
+  | "GameStart"
+  | "ReadyCheck"
+  | "InProgress"
+  | "WaitingForStats"
+  | "TerminatedInError"
+  | "Lobby"
+  | "EndOfGame"
+  | "InGame"
+  | "Unknown";
 
 export type PlayerChampionSelection = {
   championId: number;

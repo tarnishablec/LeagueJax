@@ -34,19 +34,7 @@ export type SettingsBootstrapDto = {
 
 export type SettingsChangedEventDto = {
   changes: { [key: string]: unknown };
-  version: number;
   source: string | null;
 };
 
-export type SettingsPatchDto = {
-  changes: { [key: string]: unknown };
-  expectedVersion: number | null;
-  source: string | null;
-};
-
-export type SettingsPatchResultDto = { snapshot: SettingsSnapshotDto };
-
-export type SettingsSnapshotDto = {
-  version: number;
-  values: { [key: string]: unknown };
-};
+export type SettingsSnapshotDto = { values: { [key: string]: unknown } };

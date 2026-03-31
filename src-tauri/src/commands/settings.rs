@@ -1,9 +1,11 @@
+﻿use crate::error::AppError;
 use crate::shards::settings::types::{
-    SettingsBootstrapDto, SettingsChangedEventDto, SettingsPatchDto, SettingsPatchResultDto,
+    SettingsBootstrapDto, SettingsChangedEventDto, SettingsSnapshotDto,
 };
-use crate::error::AppError;
 use crate::shards::settings::SettingsShard;
 use jax::Jax;
+use serde_json::Value;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tauri::{Emitter, State};
 
@@ -16,25 +18,46 @@ pub async fn get_settings_bootstrap(
 }
 
 #[tauri::command]
-pub async fn apply_settings_patch(
-    patch: SettingsPatchDto,
+pub async fn set_settings_value(
+    id: String,
+    value: Value,
+    source: Option<String>,
     jax: State<'_, Arc<Jax>>,
     app: tauri::AppHandle,
-) -> Result<SettingsPatchResultDto, AppError> {
+) -> Result<SettingsSnapshotDto, AppError> {
     let settings = jax.get_shard::<SettingsShard>();
-    let outcome = settings.apply_patch(&patch)?;
+    let outcome = settings.set_value(&id, value)?;
 
     if !outcome.changes.is_empty() {
         let payload = SettingsChangedEventDto {
             changes: outcome.changes,
-            version: outcome.snapshot.version,
-            source: patch.source,
+            source,
         };
         app.emit("settings_changed", payload)
             .map_err(|err| AppError::other(format!("Failed to emit settings event: {err}")))?;
     }
 
-    Ok(SettingsPatchResultDto {
-        snapshot: outcome.snapshot,
-    })
+    Ok(outcome.snapshot)
+}
+
+#[tauri::command]
+pub async fn set_settings_values(
+    changes: BTreeMap<String, Value>,
+    source: Option<String>,
+    jax: State<'_, Arc<Jax>>,
+    app: tauri::AppHandle,
+) -> Result<SettingsSnapshotDto, AppError> {
+    let settings = jax.get_shard::<SettingsShard>();
+    let outcome = settings.set_values(changes)?;
+
+    if !outcome.changes.is_empty() {
+        let payload = SettingsChangedEventDto {
+            changes: outcome.changes,
+            source,
+        };
+        app.emit("settings_changed", payload)
+            .map_err(|err| AppError::other(format!("Failed to emit settings event: {err}")))?;
+    }
+
+    Ok(outcome.snapshot)
 }

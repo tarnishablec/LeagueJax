@@ -25,7 +25,7 @@ impl Shard for LogShard {
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
-        settings.register_definition(SettingDefinitionDto {
+        let _log_level_setting = settings.register_definition(SettingDefinitionDto {
             id: LOG_LEVEL_SETTING_ID.to_string(),
             label_key: "settings.logging.level.label".to_string(),
             scope: SettingScopeDto::Shared,
@@ -70,3 +70,4 @@ impl Shard for LogShard {
         depends![SettingsShard]
     }
 }
+

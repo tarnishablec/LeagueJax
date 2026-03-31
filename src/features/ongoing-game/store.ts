@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { RawMatchSummaryGame } from "@/bindings/matches";
 import type {
   OngoingGameMatchHistoriesUpdated,
-  OngoingGameMatchHistoryFilter,
   OngoingGamePhase,
   OngoingGameSummonersUpdated,
   OngoingGameUpdated,
@@ -12,10 +11,17 @@ import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
 
 type TeamMember = OngoingGameUpdated["team_members"][number];
 
+function toModeTag(value: string | null): MatchModeTag {
+  if (value === null || value.trim().length === 0 || value === "all") {
+    return "all";
+  }
+  return value as MatchModeTag;
+}
+
 export type OngoingGameUiState = {
   phase: OngoingGamePhase;
   teamMembers: TeamMember[];
-  matchHistoryFilter: OngoingGameMatchHistoryFilter;
+  matchHistoryTag: string | null;
   modeTag: MatchModeTag | null;
   gameflowSession: OngoingGameUpdated["gameflow_session"];
   champSelectSession: OngoingGameUpdated["champ_select_session"];
@@ -27,8 +33,8 @@ export type OngoingGameUiState = {
 const initialState: OngoingGameUiState = {
   phase: "Idle",
   teamMembers: [],
-  matchHistoryFilter: "CurrentMode",
-  modeTag: null,
+  matchHistoryTag: null,
+  modeTag: "all",
   gameflowSession: null,
   champSelectSession: null,
   summonersByPuuid: {},
@@ -59,7 +65,8 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       ...state,
       phase: payload.phase,
       teamMembers: payload.team_members,
-      matchHistoryFilter: payload.match_history_filter,
+      matchHistoryTag: payload.match_history_tag,
+      modeTag: toModeTag(payload.match_history_tag),
       gameflowSession: payload.gameflow_session,
       champSelectSession: payload.champ_select_session,
       ...(payload.phase === "Idle"

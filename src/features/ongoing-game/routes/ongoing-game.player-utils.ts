@@ -17,6 +17,10 @@ export function isBotPuuid(rawPuuid: string): boolean {
 }
 
 export function isBotSlot(slot: PlayerSlot): boolean {
+  if (slot.nameVisibilityType === "HIDDEN") {
+    return false;
+  }
+
   const hasHumanIdentity =
     slot.summonerId > 0 ||
     (slot.gameName ?? "").trim().length > 0 ||

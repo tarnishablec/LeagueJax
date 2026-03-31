@@ -12,8 +12,6 @@ export type OngoingGameMatchHistoriesUpdated = {
   match_histories: { [key in string]: Array<RawMatchSummaryGame> };
 };
 
-export type OngoingGameMatchHistoryFilter = "CurrentMode" | "All";
-
 export type OngoingGamePhase = "Idle" | "ChampSelect" | "InGame";
 
 export type OngoingGameSummonersUpdated = {
@@ -23,7 +21,10 @@ export type OngoingGameSummonersUpdated = {
 
 export type OngoingGameUpdated = {
   phase: OngoingGamePhase;
-  match_history_filter: OngoingGameMatchHistoryFilter;
+  /**
+   * Current SGP tag filter (e.g. "q_420"), None = all modes.
+   */
+  match_history_tag: string | null;
   gameflow_session: GameflowSessionData | null;
   champ_select_session: ChampSelectSessionData | null;
   team_members: Array<TeamMember>;
