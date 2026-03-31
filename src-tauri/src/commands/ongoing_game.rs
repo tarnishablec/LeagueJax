@@ -1,11 +1,16 @@
 use std::sync::Arc;
 
 use jax::Jax;
+use serde_json::Value;
 use tauri::State;
 
 use crate::error::AppError;
-use crate::shards::ongoing_game::types::OngoingGameMatchHistoryFilter;
 use crate::shards::ongoing_game::OngoingGameShard;
+use crate::shards::settings::SettingsShard;
+
+const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.behavior.matchHistoryCount";
+const QUEUE_MODE_SETTING_ID: &str = "ongoing.behavior.queueMode";
+const QUEUE_MODE_ALL_VALUE: &str = "__all__";
 
 #[tauri::command]
 pub async fn ongoing_game_refresh(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
@@ -17,14 +22,26 @@ pub async fn ongoing_game_refresh(jax: State<'_, Arc<Jax>>) -> Result<(), AppErr
 }
 
 #[tauri::command]
-pub async fn ongoing_game_set_match_history_filter(
-    filter: OngoingGameMatchHistoryFilter,
+pub async fn ongoing_game_refresh_match_histories(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<(), AppError> {
     let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
         return Ok(());
     };
-    manager.set_match_history_filter(filter).await;
+    manager.refresh_match_histories().await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn ongoing_game_set_match_history_tag(
+    tag: Option<String>,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<(), AppError> {
+    let settings = jax.get_shard::<SettingsShard>();
+    let stored = tag
+        .map(Value::String)
+        .unwrap_or_else(|| Value::String(QUEUE_MODE_ALL_VALUE.to_string()));
+    settings.set_value(QUEUE_MODE_SETTING_ID, stored)?;
     Ok(())
 }
 
@@ -33,9 +50,11 @@ pub async fn ongoing_game_set_match_history_count(
     count: u32,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<(), AppError> {
-    let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
-        return Ok(());
-    };
-    manager.set_match_history_count(count).await;
+    let settings = jax.get_shard::<SettingsShard>();
+    let normalized = count.clamp(1, 200);
+    settings.set_value(
+        MATCH_HISTORY_COUNT_SETTING_ID,
+        Value::Number(serde_json::Number::from(normalized)),
+    )?;
     Ok(())
 }

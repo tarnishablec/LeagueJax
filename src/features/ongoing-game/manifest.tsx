@@ -16,13 +16,8 @@ import { ongoingGameI18n } from "./i18n";
 import { OngoingGameRoute } from "./routes/OngoingGameRoute";
 import { useOngoingGameStore } from "./store";
 
-const ONGOING_MATCH_HISTORY_COUNT_SETTING =
-  "ongoing.behavior.matchHistoryCount";
 const ONGOING_AUTO_SWITCH_TO_GAME_SETTING = "ongoing.behavior.autoSwitchToGame";
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.behavior.showBots";
-const MATCH_HISTORY_COUNT_MIN = 1;
-const MATCH_HISTORY_COUNT_MAX = 200;
-const MATCH_HISTORY_COUNT_DEFAULT = 50;
 
 function navigateTo(path: string): void {
   if (window.location.pathname === path) {
@@ -54,37 +49,6 @@ export class OngoingGameShard implements WebShard {
   public async setup(jax: Jax): Promise<void> {
     const settings = jax.getShard(SettingsShard);
     settings.registerSetting({
-      id: ONGOING_MATCH_HISTORY_COUNT_SETTING,
-      labelKey: "settings.ongoing.matchHistoryCount.label",
-      scope: "frontend",
-      control: {
-        kind: "number",
-        min: MATCH_HISTORY_COUNT_MIN,
-        max: MATCH_HISTORY_COUNT_MAX,
-        step: 1,
-      },
-      zod: z
-        .number()
-        .int()
-        .min(MATCH_HISTORY_COUNT_MIN)
-        .max(MATCH_HISTORY_COUNT_MAX),
-      defaultValue: MATCH_HISTORY_COUNT_DEFAULT,
-      order: 10,
-      onSet: (next) => {
-        if (typeof next !== "number" || !Number.isFinite(next)) {
-          return;
-        }
-
-        const normalized = Math.max(
-          MATCH_HISTORY_COUNT_MIN,
-          Math.min(MATCH_HISTORY_COUNT_MAX, Math.trunc(next)),
-        );
-        void invoke("ongoing_game_set_match_history_count", {
-          count: normalized,
-        });
-      },
-    });
-    settings.registerSetting({
       id: ONGOING_AUTO_SWITCH_TO_GAME_SETTING,
       labelKey: "settings.ongoing.autoSwitchToGame.label",
       scope: "frontend",
@@ -104,17 +68,8 @@ export class OngoingGameShard implements WebShard {
       order: 30,
       onSet: () => {},
     });
-    const store = useOngoingGameStore.getState();
-    store.reset();
-    const initialMatchHistoryCount =
-      settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ??
-      MATCH_HISTORY_COUNT_DEFAULT;
-    void invoke("ongoing_game_set_match_history_count", {
-      count: initialMatchHistoryCount,
-    });
-    void invoke("ongoing_game_set_match_history_filter", {
-      filter: "CurrentMode",
-    });
+
+    useOngoingGameStore.getState().reset();
 
     this.ongoingUpdatedUnlisten = await listen<OngoingGameUpdated>(
       "ongoing-game-updated",

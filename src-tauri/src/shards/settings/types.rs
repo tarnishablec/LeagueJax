@@ -61,7 +61,6 @@ pub struct SettingDefinitionDto {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsSnapshotDto {
-    pub version: u64,
     #[ts(type = "{ [key: string]: unknown }")]
     pub values: BTreeMap<String, Value>,
 }
@@ -79,28 +78,8 @@ pub struct SettingsBootstrapDto {
 #[ts(export, export_to = "settings.ts")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SettingsPatchDto {
-    #[ts(type = "{ [key: string]: unknown }")]
-    pub changes: BTreeMap<String, Value>,
-    pub expected_version: Option<u64>,
-    pub source: Option<String>,
-}
-
-#[derive(TS)]
-#[ts(export, export_to = "settings.ts")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SettingsPatchResultDto {
-    pub snapshot: SettingsSnapshotDto,
-}
-
-#[derive(TS)]
-#[ts(export, export_to = "settings.ts")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SettingsChangedEventDto {
     #[ts(type = "{ [key: string]: unknown }")]
     pub changes: BTreeMap<String, Value>,
-    pub version: u64,
     pub source: Option<String>,
 }

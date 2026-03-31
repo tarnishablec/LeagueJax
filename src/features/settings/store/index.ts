@@ -1,4 +1,4 @@
-import { type ZodType, z } from "zod";
+﻿import { type ZodType, z } from "zod";
 import { createStore } from "zustand/vanilla";
 import type {
   SettingControlDto,
@@ -18,7 +18,6 @@ import { createLogger, setWebLogLevel } from "@/infra/logger";
 
 interface SettingsState {
   values: Record<string, unknown>;
-  version: number;
 }
 
 type DecoratedFieldDefinition = SettingDefinition;
@@ -206,7 +205,6 @@ export function setting(definition: SettingDefinition) {
 class SettingsStore {
   private readonly store = createStore<SettingsState>()(() => ({
     values: {},
-    version: 0,
   }));
 
   private readonly registeredClasses = new WeakSet<SettingClassCtor>();
@@ -246,12 +244,6 @@ class SettingsStore {
     }
   }
 
-  private updateVersion(version: number): void {
-    this.store.setState((state) => ({
-      ...state,
-      version,
-    }));
-  }
 
   private updateRawValue(id: string, value: unknown): boolean {
     const current = this.store.getState().values[id];
@@ -570,13 +562,9 @@ class SettingsStore {
       this.applyParsedValue(rawId, definition, parsed.data, effective);
     }
 
-    this.updateVersion(snapshot.version);
   }
 
-  public applyRemotePatch(
-    changes: Record<string, unknown>,
-    version: number,
-  ): void {
+  public applyRemotePatch(changes: Record<string, unknown>): void {
     for (const [rawId, rawValue] of Object.entries(changes)) {
       if (!isSettingId(rawId)) {
         this.updateRawValue(rawId, rawValue);
@@ -607,20 +595,12 @@ class SettingsStore {
       });
     }
 
-    this.updateVersion(version);
   }
 
   public configureRemotePatchSender(sender: SettingsPatchSender | null): void {
     this.remotePatchSender = sender;
   }
-
-  public getVersion(): number {
-    return this.store.getState().version;
-  }
-
-  public setVersion(version: number): void {
-    this.updateVersion(version);
-  }
 }
 
 export { SettingsStore };
+

@@ -1,8 +1,7 @@
 pub mod types;
 
 use self::types::{
-    SettingControlDto, SettingDefinitionDto, SettingsBootstrapDto, SettingsPatchDto,
-    SettingsSnapshotDto,
+    SettingControlDto, SettingDefinitionDto, SettingsBootstrapDto, SettingsSnapshotDto,
 };
 use crate::error::AppError;
 use crate::shards::persistence_sled::PersistenceSled;
@@ -11,8 +10,11 @@ use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
 use sled::Db;
 use std::collections::BTreeMap;
+use std::future::Future;
 use std::error::Error;
 use std::sync::{Arc, OnceLock, RwLock};
+use tokio::sync::watch;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 const SETTINGS_TREE: &str = "settings";
@@ -27,15 +29,73 @@ const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 3] = [
 ];
 
 #[derive(Debug, Clone)]
-pub struct ApplyPatchOutcome {
+pub struct ApplySettingsOutcome {
     pub snapshot: SettingsSnapshotDto,
     pub changes: BTreeMap<String, Value>,
+}
+
+#[derive(Clone)]
+pub struct SettingHandle {
+    shard: Arc<SettingsShard>,
+    id: String,
+}
+
+impl SettingHandle {
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn get_value(&self) -> Result<Value, AppError> {
+        self.shard
+            .get_value(&self.id)?
+            .ok_or_else(|| AppError::other(format!("Setting {} has no value", self.id)))
+    }
+
+    pub fn set_value(&self, value: Value) -> Result<ApplySettingsOutcome, AppError> {
+        self.shard.set_value(&self.id, value)
+    }
+
+    pub fn watch(&self) -> Result<watch::Receiver<Value>, AppError> {
+        self.shard.watch_value(&self.id)
+    }
+
+    pub fn spawn_watch<F, Fut>(
+        &self,
+        emit_initial: bool,
+        on_change: F,
+    ) -> Result<JoinHandle<()>, AppError>
+    where
+        F: Fn(Value) -> Fut + Send + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
+    {
+        let initial = if emit_initial {
+            Some(self.get_value()?)
+        } else {
+            None
+        };
+
+        let mut rx = self.watch()?;
+        Ok(tokio::spawn(async move {
+            if let Some(initial) = initial {
+                on_change(initial).await;
+            }
+
+            loop {
+                if rx.changed().await.is_err() {
+                    break;
+                }
+                let next = rx.borrow().clone();
+                on_change(next).await;
+            }
+        }))
+    }
 }
 
 pub struct SettingsShard {
     db: OnceLock<Db>,
     definitions: RwLock<BTreeMap<String, SettingDefinitionDto>>,
     snapshot: RwLock<SettingsSnapshotDto>,
+    watch_senders: RwLock<BTreeMap<String, watch::Sender<Value>>>,
 }
 
 impl SettingsShard {
@@ -44,13 +104,16 @@ impl SettingsShard {
             db: OnceLock::new(),
             definitions: RwLock::new(BTreeMap::new()),
             snapshot: RwLock::new(SettingsSnapshotDto {
-                version: 0,
                 values: BTreeMap::new(),
             }),
+            watch_senders: RwLock::new(BTreeMap::new()),
         }
     }
 
-    pub fn register_definition(&self, definition: SettingDefinitionDto) -> Result<(), AppError> {
+    pub fn register_definition(
+        self: &Arc<Self>,
+        definition: SettingDefinitionDto,
+    ) -> Result<SettingHandle, AppError> {
         validate_setting_id(&definition.id)?;
         validate_definition(&definition)?;
 
@@ -62,7 +125,7 @@ impl SettingsShard {
 
             if let Some(existing) = definitions.get(&definition.id) {
                 if existing == &definition {
-                    return Ok(());
+                    return self.setting_handle(&definition.id);
                 }
                 return Err(AppError::other(format!(
                     "Setting definition conflict for id {}",
@@ -89,7 +152,32 @@ impl SettingsShard {
             self.write_snapshot_to_db(&snapshot)?;
         }
 
-        Ok(())
+        let initial_value = self
+            .get_value(&definition.id)?
+            .unwrap_or_else(|| definition.default_value.clone());
+        self.ensure_watch_sender(&definition.id, initial_value)?;
+
+        self.setting_handle(&definition.id)
+    }
+
+    pub fn setting_handle(self: &Arc<Self>, id: &str) -> Result<SettingHandle, AppError> {
+        validate_setting_id(id)?;
+
+        let has_definition = self
+            .definitions
+            .read()
+            .map_err(|_| AppError::MutexPoisoned)?
+            .contains_key(id);
+        let has_snapshot_value = self.get_value(id)?.is_some();
+
+        if !has_definition && !has_snapshot_value {
+            return Err(AppError::other(format!("Setting {id} is not registered")));
+        }
+
+        Ok(SettingHandle {
+            shard: Arc::clone(self),
+            id: id.to_string(),
+        })
     }
 
     pub fn get_bootstrap(&self) -> Result<SettingsBootstrapDto, AppError> {
@@ -117,7 +205,29 @@ impl SettingsShard {
         Ok(snapshot.values.get(id).cloned())
     }
 
-    pub fn apply_patch(&self, patch: &SettingsPatchDto) -> Result<ApplyPatchOutcome, AppError> {
+    pub fn set_value(&self, id: &str, value: Value) -> Result<ApplySettingsOutcome, AppError> {
+        validate_setting_id(id)?;
+        let mut changes = BTreeMap::new();
+        changes.insert(id.to_string(), value);
+        self.set_values(changes)
+    }
+
+    pub fn set_values(
+        &self,
+        changes: BTreeMap<String, Value>,
+    ) -> Result<ApplySettingsOutcome, AppError> {
+        if changes.is_empty() {
+            let snapshot = self
+                .snapshot
+                .read()
+                .map_err(|_| AppError::MutexPoisoned)?
+                .clone();
+            return Ok(ApplySettingsOutcome {
+                snapshot,
+                changes: BTreeMap::new(),
+            });
+        }
+
         let definitions = self
             .definitions
             .read()
@@ -128,16 +238,7 @@ impl SettingsShard {
         let snapshot_to_persist = {
             let mut snapshot = self.snapshot.write().map_err(|_| AppError::MutexPoisoned)?;
 
-            if let Some(expected) = patch.expected_version {
-                if expected != snapshot.version {
-                    return Err(AppError::other(format!(
-                        "Settings version mismatch: expected {}, got {}",
-                        expected, snapshot.version
-                    )));
-                }
-            }
-
-            for (id, value) in &patch.changes {
+            for (id, value) in &changes {
                 validate_setting_id(id)?;
 
                 if let Some(definition) = definitions.get(id) {
@@ -159,22 +260,85 @@ impl SettingsShard {
             }
 
             if changed.is_empty() {
-                return Ok(ApplyPatchOutcome {
+                return Ok(ApplySettingsOutcome {
                     snapshot: snapshot.clone(),
                     changes: changed,
                 });
             }
-
-            snapshot.version = snapshot.version.saturating_add(1);
             snapshot.clone()
         };
 
         self.write_snapshot_to_db(&snapshot_to_persist)?;
+        self.sync_watch_senders(&changed)?;
 
-        Ok(ApplyPatchOutcome {
+        Ok(ApplySettingsOutcome {
             snapshot: snapshot_to_persist,
             changes: changed,
         })
+    }
+
+    pub fn watch_value(&self, id: &str) -> Result<watch::Receiver<Value>, AppError> {
+        validate_setting_id(id)?;
+
+        {
+            let senders = self
+                .watch_senders
+                .read()
+                .map_err(|_| AppError::MutexPoisoned)?;
+            if let Some(sender) = senders.get(id) {
+                return Ok(sender.subscribe());
+            }
+        }
+
+        let initial_value = self.get_value(id)?.ok_or_else(|| {
+            AppError::other(format!(
+                "Setting {id} is not registered and has no persisted value"
+            ))
+        })?;
+
+        let sender = self.ensure_watch_sender(id, initial_value)?;
+        Ok(sender.subscribe())
+    }
+
+    fn sync_watch_senders(&self, changes: &BTreeMap<String, Value>) -> Result<(), AppError> {
+        if changes.is_empty() {
+            return Ok(());
+        }
+
+        let mut senders = self
+            .watch_senders
+            .write()
+            .map_err(|_| AppError::MutexPoisoned)?;
+
+        for (id, value) in changes {
+            if let Some(sender) = senders.get(id) {
+                sender.send_replace(value.clone());
+            } else {
+                let (sender, _receiver) = watch::channel(value.clone());
+                senders.insert(id.clone(), sender);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn ensure_watch_sender(
+        &self,
+        id: &str,
+        initial_value: Value,
+    ) -> Result<watch::Sender<Value>, AppError> {
+        let mut senders = self
+            .watch_senders
+            .write()
+            .map_err(|_| AppError::MutexPoisoned)?;
+
+        if let Some(sender) = senders.get(id) {
+            return Ok(sender.clone());
+        }
+
+        let (sender, _receiver) = watch::channel(initial_value);
+        senders.insert(id.to_string(), sender.clone());
+        Ok(sender)
     }
 
     fn read_snapshot_from_db(&self) -> Result<SettingsSnapshotDto, AppError> {
@@ -188,7 +352,6 @@ impl SettingsShard {
                 "Read settings snapshot",
             );
             return Ok(SettingsSnapshotDto {
-                version: 0,
                 values: BTreeMap::new(),
             });
         };
@@ -214,7 +377,6 @@ impl SettingsShard {
         tracing::info!(
             tree = SETTINGS_TREE,
             key = "snapshot",
-            version = snapshot.version,
             bytes = bytes.len(),
             "Persisted settings snapshot",
         );
@@ -332,7 +494,7 @@ fn parse_snapshot_bytes(bytes: &[u8]) -> Result<SettingsSnapshotDto, AppError> {
         values.insert(key.clone(), value.clone());
     }
 
-    Ok(SettingsSnapshotDto { version: 0, values })
+    Ok(SettingsSnapshotDto { values })
 }
 
 fn migrate_legacy_keys(snapshot: &mut SettingsSnapshotDto) -> usize {
@@ -350,3 +512,12 @@ fn migrate_legacy_keys(snapshot: &mut SettingsSnapshotDto) -> usize {
 
     changed
 }
+
+
+
+
+
+
+
+
+
