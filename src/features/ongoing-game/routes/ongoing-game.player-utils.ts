@@ -114,9 +114,7 @@ function shouldUseTopBottomLayout(
   teamMembers: PlayerSlot[],
 ): boolean {
   const distinctTeamIds = new Set(
-    teamMembers
-      .map((member) => member.team)
-      .filter((teamId) => teamId > 0),
+    teamMembers.map((member) => member.team).filter((teamId) => teamId > 0),
   );
 
   if (distinctTeamIds.size > 2) {

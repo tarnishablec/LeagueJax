@@ -34,8 +34,7 @@ pub async fn lcu_get_ranked_tiers(
     queue_types: Vec<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Value, AppError> {
-    let normalized_summoner_ids: Vec<i64> =
-        summoner_ids.into_iter().filter(|id| *id > 0).collect();
+    let normalized_summoner_ids: Vec<i64> = summoner_ids.into_iter().filter(|id| *id > 0).collect();
     if normalized_summoner_ids.is_empty() {
         return Err(AppError::other(
             "lcu_get_ranked_tiers requires at least one valid summoner id",
@@ -62,4 +61,3 @@ pub async fn lcu_get_ranked_tiers(
         .get_ranked_tiers(&normalized_summoner_ids, &normalized_queue_types)
         .await
 }
-

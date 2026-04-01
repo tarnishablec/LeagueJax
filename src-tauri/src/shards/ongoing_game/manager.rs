@@ -18,8 +18,8 @@ use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
 use crate::shards::ongoing_game::types::{OngoingGameEvent, OngoingGamePhase, OngoingGameUpdated};
 use crate::shards::settings::SettingHandle;
-use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
+use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::SgpShard;
 
 use super::driver::OngoingGameDriver;
@@ -77,7 +77,6 @@ impl OngoingGameManagerSettings {
             MatchHistoryModeSetting::FixedTag(tag) => Some(tag),
         }
     }
-
 }
 
 #[derive(Clone)]
@@ -164,9 +163,15 @@ impl OngoingGameManager {
             None
         };
 
-        if let Some(next_phase) = transitioned {
+        if let Some((prev_phase, next_phase)) = transitioned {
+            tracing::info!(
+                "[ongoing_game] phase transition {:?} -> {:?} lifecycle_game_id={:?}",
+                prev_phase,
+                next_phase,
+                state.lifecycle_game_id
+            );
             if next_phase == OngoingGamePhase::Idle {
-                state.clear_caches();
+                state.clear_caches_with_reason("phase_idle_transition");
             }
             let updated = state.build_updated_payload(&self.ctx.settings);
             drop(state);
@@ -180,7 +185,7 @@ impl OngoingGameManager {
             let mut state = self.ctx.state.lock().await;
             state.lcu_session = lcu_session.clone();
             state.driver = Some(OngoingGameDriver::new(self.ctx.clone()));
-            state.clear_caches();
+            state.clear_caches_with_reason("focus_changed");
             state.build_updated_payload(&self.ctx.settings)
         };
 
@@ -215,13 +220,23 @@ impl OngoingGameManager {
     pub async fn refresh_match_histories(&self) {
         let count = self.ctx.settings.match_history_count_value();
 
-        let (puuids, lcu, effective_queue_id, tag, should_start, started_updated, gen) = {
+        let (
+            puuids,
+            lcu,
+            lifecycle_game_id,
+            effective_queue_id,
+            tag,
+            should_start,
+            started_updated,
+            gen,
+        ) = {
             let mut state = self.ctx.state.lock().await;
             if state.match_histories_pending {
                 let updated = state.build_updated_payload(&self.ctx.settings);
                 (
                     Vec::new(),
                     None,
+                    state.lifecycle_game_id,
                     state.effective_queue_id(),
                     state.effective_mode_tag(&self.ctx.settings),
                     false,
@@ -234,12 +249,14 @@ impl OngoingGameManager {
                 let gen = state.generation;
                 let puuids = state.team_puuids();
                 let lcu = state.lcu_session.clone();
+                let lifecycle_game_id = state.lifecycle_game_id;
                 let effective_queue_id = state.effective_queue_id();
                 let tag = state.effective_mode_tag(&self.ctx.settings);
                 let updated = state.build_updated_payload(&self.ctx.settings);
                 (
                     puuids,
                     lcu,
+                    lifecycle_game_id,
                     effective_queue_id,
                     tag,
                     true,
@@ -260,8 +277,9 @@ impl OngoingGameManager {
         let ctx = self.ctx.clone();
         tokio::spawn(async move {
             tracing::info!(
-                "[ongoing_game] refresh_match_histories start generation={} effective_queue_id={:?} effective_mode_tag={:?} count={} puuids={}",
+                "[ongoing_game] refresh_match_histories start generation={} lifecycle_game_id={:?} effective_queue_id={:?} effective_mode_tag={:?} count={} puuids={}",
                 gen,
+                lifecycle_game_id,
                 effective_queue_id,
                 tag,
                 count,
@@ -449,7 +467,14 @@ impl ManagerState {
         }
     }
 
-    pub(crate) fn clear_caches(&mut self) {
+    pub(crate) fn clear_caches_with_reason(&mut self, reason: &str) {
+        if let Some(game_id) = self.lifecycle_game_id {
+            tracing::info!(
+                "[ongoing_game] lifecycle game_id ended game_id={} reason={}",
+                game_id,
+                reason
+            );
+        }
         self.lifecycle_game_id = None;
         self.cached_gameflow_session = None;
         self.cached_champ_select_session = None;
@@ -460,11 +485,7 @@ impl ManagerState {
         self.generation = self.generation.wrapping_add(1);
     }
 
-    pub(crate) fn sync_lifecycle_game_id(
-        &mut self,
-        event_game_id: Option<u64>,
-        source: &str,
-    ) {
+    pub(crate) fn sync_lifecycle_game_id(&mut self, event_game_id: Option<u64>, source: &str) {
         let Some(event_game_id) = event_game_id.filter(|game_id| *game_id > 0) else {
             return;
         };
@@ -486,7 +507,7 @@ impl ManagerState {
                     current,
                     event_game_id
                 );
-                self.clear_caches();
+                self.clear_caches_with_reason("game_id_changed");
                 self.lifecycle_game_id = Some(event_game_id);
             }
         }
@@ -604,7 +625,7 @@ impl ManagerState {
                     champion_id: t.champion_id,
                     summoner_id: t.summoner_id as i64,
                     team: mapped_team_id,
-                    assigned_position: Some(t.selected_position.clone()),
+                    assigned_position: t.selected_position,
                     game_name: t.summoner_name.clone(),
                     internal_name: t.summoner_internal_name.clone(),
                     ..Default::default()

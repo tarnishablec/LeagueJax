@@ -1,4 +1,4 @@
-﻿mod commands;
+mod commands;
 mod error;
 mod shards;
 mod storage;
@@ -189,8 +189,3 @@ pub fn run() {
             }
         });
 }
-
-
-
-
-

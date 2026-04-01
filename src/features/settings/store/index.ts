@@ -244,7 +244,6 @@ class SettingsStore {
     }
   }
 
-
   private updateRawValue(id: string, value: unknown): boolean {
     const current = this.store.getState().values[id];
     if (Object.is(current, value)) {
@@ -561,7 +560,6 @@ class SettingsStore {
 
       this.applyParsedValue(rawId, definition, parsed.data, effective);
     }
-
   }
 
   public applyRemotePatch(changes: Record<string, unknown>): void {
@@ -594,7 +592,6 @@ class SettingsStore {
         runOnSet: true,
       });
     }
-
   }
 
   public configureRemotePatchSender(sender: SettingsPatchSender | null): void {
@@ -603,4 +600,3 @@ class SettingsStore {
 }
 
 export { SettingsStore };
-

@@ -70,4 +70,3 @@ impl Shard for LogShard {
         depends![SettingsShard]
     }
 }
-

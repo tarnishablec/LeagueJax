@@ -100,10 +100,13 @@ impl Shard for OngoingGameShard {
             options: None,
         })?;
 
-        let manager = self.initialize(OngoingGameManagerSettings {
-            match_history_count: count_setting.clone(),
-            match_history_tag: queue_mode_setting.clone(),
-        }, sgp_shard);
+        let manager = self.initialize(
+            OngoingGameManagerSettings {
+                match_history_count: count_setting.clone(),
+                match_history_tag: queue_mode_setting.clone(),
+            },
+            sgp_shard,
+        );
 
         let count_manager = manager.clone();
         count_setting.spawn_watch(false, move |_| {

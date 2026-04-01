@@ -11,8 +11,8 @@ use crate::shards::ongoing_game::types::{
     OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGamePhase,
     OngoingGameSummonersUpdated, OngoingGameUpdated,
 };
-use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::session::SgpSession;
+use crate::shards::sgp::LcuSessionSgpExt;
 
 type DriverInput = LcuWsEvent;
 
@@ -27,6 +27,7 @@ fn event_name(event: &DriverInput) -> &'static str {
 
 struct PlayerFetchSnapshot {
     generation: u64,
+    lifecycle_game_id: Option<u64>,
     updated: OngoingGameUpdated,
     new_puuids: Vec<String>,
     new_history_puuids: Vec<String>,
@@ -77,15 +78,14 @@ impl OngoingGameDriver {
         }
     }
 
-    pub fn process(&mut self, event: &LcuWsEvent) -> Option<OngoingGamePhase> {
+    pub fn process(&mut self, event: &LcuWsEvent) -> Option<(OngoingGamePhase, OngoingGamePhase)> {
         let previous = self.current.clone();
         self.current = self.runner.dispatch(&self.behaviors, &self.current, event);
 
         if self.current != previous {
             let prev = Self::phase(&previous);
             let next = Self::phase(&self.current);
-            tracing::info!("OngoingGame phase: {prev:?} -> {next:?}");
-            Some(next)
+            Some((prev, next))
         } else {
             None
         }
@@ -274,6 +274,7 @@ async fn collect_player_fetch_snapshot(ctx: &Arc<OngoingGameContext>) -> PlayerF
 
     PlayerFetchSnapshot {
         generation: state.generation,
+        lifecycle_game_id: state.lifecycle_game_id,
         updated: updated.clone(),
         new_puuids,
         new_history_puuids,
@@ -289,9 +290,10 @@ async fn collect_player_fetch_snapshot(ctx: &Arc<OngoingGameContext>) -> PlayerF
 async fn refresh_players_from_current_state(ctx: Arc<OngoingGameContext>) {
     let snapshot = collect_player_fetch_snapshot(&ctx).await;
     tracing::info!(
-        "[ongoing_game] refresh snapshot phase={:?} generation={} team_members={} missing_summoners={} missing_histories={} raw_tag={:?} effective_queue_id={:?} effective_tag={:?} history_count={}",
+        "[ongoing_game] refresh snapshot phase={:?} generation={} lifecycle_game_id={:?} team_members={} missing_summoners={} missing_histories={} raw_tag={:?} effective_queue_id={:?} effective_tag={:?} history_count={}",
         snapshot.updated.phase,
         snapshot.generation,
+        snapshot.lifecycle_game_id,
         snapshot.updated.team_members.len(),
         snapshot.new_puuids.len(),
         snapshot.new_history_puuids.len(),
@@ -327,8 +329,9 @@ async fn refresh_players_from_current_state(ctx: Arc<OngoingGameContext>) {
             state.build_updated_payload(&ctx.settings)
         };
         tracing::info!(
-            "[ongoing_game] history fetch batch completed generation={} missing_histories_started={}",
+            "[ongoing_game] history fetch batch completed generation={} lifecycle_game_id={:?} missing_histories_started={}",
             snapshot.generation,
+            snapshot.lifecycle_game_id,
             snapshot.new_history_puuids.len()
         );
         ctx.broadcast(OngoingGameEvent::Updated(updated));
@@ -502,10 +505,21 @@ async fn fetch_single_history(
             puuid,
             generation
         );
-        upsert_history_bucket(ctx, puuid, Vec::new(), generation, "skipped(no_sgp_session)").await;
+        upsert_history_bucket(
+            ctx,
+            puuid,
+            Vec::new(),
+            generation,
+            "skipped(no_sgp_session)",
+        )
+        .await;
         return;
     };
-    let resp = match sgp.api().get_match_summaries(puuid, 0, count, tag, None).await {
+    let resp = match sgp
+        .api()
+        .get_match_summaries(puuid, 0, count, tag, None)
+        .await
+    {
         Ok(resp) => resp,
         Err(error) => {
             tracing::warn!(
@@ -527,14 +541,7 @@ async fn fetch_single_history(
         generation,
         resp.games.len()
     );
-    upsert_history_bucket(
-        ctx,
-        puuid,
-        resp.games,
-        generation,
-        "success",
-    )
-    .await;
+    upsert_history_bucket(ctx, puuid, resp.games, generation, "success").await;
 }
 
 async fn upsert_history_bucket(

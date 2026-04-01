@@ -32,7 +32,6 @@ impl LeagueBridgeShard {
             return;
         };
 
-
         let manager_for_run = lcu_manager.clone();
         tauri_host.spawn(async move {
             manager_for_run.run().await;
