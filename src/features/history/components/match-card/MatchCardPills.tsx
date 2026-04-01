@@ -15,6 +15,10 @@ const TAG_I18N_KEYS: Record<MatchTag, string> = {
   mostHealing: "history.tag.mostHealing",
   bestVision: "history.tag.bestVision",
   mostCC: "history.tag.mostCC",
+  mostCS: "history.tag.mostCS",
+  highestKP: "history.tag.highestKP",
+  mostGold: "history.tag.mostGold",
+  bestDamageEfficiency: "history.tag.bestDamageEfficiency",
   mvp: "history.tag.mvp",
   ace: "history.tag.ace",
 };
@@ -30,6 +34,10 @@ const TAG_DESC_KEYS: Record<MatchTag, string> = {
   mostHealing: "history.tag.mostHealing.desc",
   bestVision: "history.tag.bestVision.desc",
   mostCC: "history.tag.mostCC.desc",
+  mostCS: "history.tag.mostCS.desc",
+  highestKP: "history.tag.highestKP.desc",
+  mostGold: "history.tag.mostGold.desc",
+  bestDamageEfficiency: "history.tag.bestDamageEfficiency.desc",
   mvp: "history.tag.mvp.desc",
   ace: "history.tag.ace.desc",
 };

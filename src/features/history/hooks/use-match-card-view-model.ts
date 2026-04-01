@@ -54,6 +54,10 @@ export type MatchTag =
   | "mostHealing"
   | "bestVision"
   | "mostCC"
+  | "mostCS"
+  | "highestKP"
+  | "mostGold"
+  | "bestDamageEfficiency"
   | "mvp"
   | "ace";
 
@@ -69,7 +73,11 @@ const TAG_PRIORITY: Record<MatchTag, number> = {
   mostHealing: 8,
   bestVision: 9,
   mostCC: 10,
-  firstBlood: 11,
+  mostCS: 11,
+  highestKP: 12,
+  mostGold: 13,
+  bestDamageEfficiency: 14,
+  firstBlood: 15,
 };
 
 type StatTagRule = {
@@ -99,6 +107,26 @@ const STAT_TAG_RULES: StatTagRule[] = [
   },
   { tag: "bestVision", stat: (p) => p.visionScore ?? 0, scope: "all" },
   { tag: "mostCC", stat: (p) => p.totalTimeCcDealt ?? 0, scope: "all" },
+  {
+    tag: "mostCS",
+    stat: (p) => p.totalMinionsKilled + p.neutralMinionsKilled,
+    scope: "all",
+  },
+  {
+    tag: "highestKP",
+    stat: (p) => p.killParticipation ?? 0,
+    scope: "all",
+  },
+  { tag: "mostGold", stat: (p) => p.goldEarned ?? 0, scope: "all" },
+  {
+    tag: "bestDamageEfficiency",
+    stat: (p) => {
+      const gold = p.goldEarned ?? 0;
+      if (gold === 0) return 0;
+      return p.totalDamageDealtToChampions / gold;
+    },
+    scope: "all",
+  },
 ];
 
 const MULTI_KILL_TIERS: [keyof RawMatchSummaryParticipant, MatchTag][] = [
