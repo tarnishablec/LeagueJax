@@ -41,6 +41,7 @@ pub struct SettingHandle {
 }
 
 impl SettingHandle {
+    #[allow(unused)]
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -51,6 +52,7 @@ impl SettingHandle {
             .ok_or_else(|| AppError::other(format!("Setting {} has no value", self.id)))
     }
 
+    #[allow(unused)]
     pub fn set_value(&self, value: Value) -> Result<ApplySettingsOutcome, AppError> {
         self.shard.set_value(&self.id, value)
     }
