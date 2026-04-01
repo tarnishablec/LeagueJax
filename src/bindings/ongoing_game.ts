@@ -22,9 +22,21 @@ export type OngoingGameSummonersUpdated = {
 export type OngoingGameUpdated = {
   phase: OngoingGamePhase;
   /**
-   * Current SGP tag filter (e.g. "q_420"), None = all modes.
+   * User-selected match-history mode tag.
+   * - "__current_mode__": follow current queue mode
+   * - "q_xxx": fixed queue mode
+   * - None: all modes
    */
   match_history_tag: string | null;
+  /**
+   * Queue id resolved from current game context.
+   */
+  effective_queue_id: number | null;
+  /**
+   * Effective SGP mode tag after resolving `match_history_tag` against current context.
+   */
+  effective_mode_tag: string | null;
+  match_histories_pending: boolean;
   gameflow_session: GameflowSessionData | null;
   champ_select_session: ChampSelectSessionData | null;
   team_members: Array<TeamMember>;

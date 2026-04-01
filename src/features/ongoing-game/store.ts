@@ -10,8 +10,13 @@ import type { SummonerInfo } from "@/bindings/summoner";
 import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
 
 type TeamMember = OngoingGameUpdated["team_members"][number];
+const CURRENT_MODE_VALUE = "__current_mode__";
 
-function toModeTag(value: string | null): MatchModeTag {
+function toModeTag(value: string | null): MatchModeTag | null {
+  if (value === CURRENT_MODE_VALUE) {
+    return null;
+  }
+
   if (value === null || value.trim().length === 0 || value === "all") {
     return "all";
   }
@@ -22,24 +27,28 @@ export type OngoingGameUiState = {
   phase: OngoingGamePhase;
   teamMembers: TeamMember[];
   matchHistoryTag: string | null;
+  effectiveQueueId: number | null;
+  effectiveModeTag: string | null;
+  matchHistoriesPending: boolean;
   modeTag: MatchModeTag | null;
   gameflowSession: OngoingGameUpdated["gameflow_session"];
   champSelectSession: OngoingGameUpdated["champ_select_session"];
   summonersByPuuid: Record<string, SummonerInfo>;
   matchHistoriesByPuuid: Record<string, RawMatchSummaryGame[]>;
-  matchHistoriesHydrated: boolean;
 };
 
 const initialState: OngoingGameUiState = {
   phase: "Idle",
   teamMembers: [],
   matchHistoryTag: null,
+  effectiveQueueId: null,
+  effectiveModeTag: null,
+  matchHistoriesPending: false,
   modeTag: "all",
   gameflowSession: null,
   champSelectSession: null,
   summonersByPuuid: {},
   matchHistoriesByPuuid: {},
-  matchHistoriesHydrated: false,
 };
 
 type OngoingGameStore = OngoingGameUiState & {
@@ -61,22 +70,30 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
     set({ modeTag: tag });
   },
   applyUpdated: (payload) => {
-    set((state) => ({
-      ...state,
-      phase: payload.phase,
-      teamMembers: payload.team_members,
-      matchHistoryTag: payload.match_history_tag,
-      modeTag: toModeTag(payload.match_history_tag),
-      gameflowSession: payload.gameflow_session,
-      champSelectSession: payload.champ_select_session,
-      ...(payload.phase === "Idle"
-        ? {
-            summonersByPuuid: {},
-            matchHistoriesByPuuid: {},
-            matchHistoriesHydrated: false,
-          }
-        : {}),
-    }));
+    set((state) => {
+      const pendingStarted =
+        payload.match_histories_pending && !state.matchHistoriesPending;
+
+      return {
+        ...state,
+        phase: payload.phase,
+        teamMembers: payload.team_members,
+        matchHistoryTag: payload.match_history_tag,
+        effectiveQueueId: payload.effective_queue_id,
+        effectiveModeTag: payload.effective_mode_tag,
+        matchHistoriesPending: payload.match_histories_pending,
+        modeTag: toModeTag(payload.match_history_tag),
+        gameflowSession: payload.gameflow_session,
+        champSelectSession: payload.champ_select_session,
+        ...(pendingStarted ? { matchHistoriesByPuuid: {} } : {}),
+        ...(payload.phase === "Idle"
+          ? {
+              summonersByPuuid: {},
+              matchHistoriesByPuuid: {},
+            }
+          : {}),
+      };
+    });
   },
   applySummonersUpdated: (payload) => {
     set((state) => ({
@@ -98,7 +115,6 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         return {
           ...state,
           matchHistoriesByPuuid: {},
-          matchHistoriesHydrated: false,
         };
       }
 
@@ -112,7 +128,6 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       return {
         ...state,
         matchHistoriesByPuuid: nextMatchHistoriesByPuuid,
-        matchHistoriesHydrated: true,
       };
     });
   },

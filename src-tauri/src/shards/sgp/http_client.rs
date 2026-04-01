@@ -10,7 +10,7 @@ use crate::shards::lcu::session::LcuSession;
 
 use super::session::SgpTokenContext;
 
-const MAX_RESPONSE_LOG_BODY_LEN: usize = 16_384;
+const MAX_ERROR_BODY_LOG_LEN: usize = 512;
 
 #[derive(Clone, Copy)]
 pub enum SgpTokenKind {
@@ -62,14 +62,13 @@ impl SgpHttpClient {
     }
 
     fn truncate_body_for_log(body: &str) -> String {
-        if body.len() <= MAX_RESPONSE_LOG_BODY_LEN {
+        if body.len() <= MAX_ERROR_BODY_LOG_LEN {
             return body.to_string();
         }
 
         format!(
-            "{}...<truncated {} chars>",
-            &body[..MAX_RESPONSE_LOG_BODY_LEN],
-            body.len().saturating_sub(MAX_RESPONSE_LOG_BODY_LEN)
+            "{}...<truncated>",
+            &body[..MAX_ERROR_BODY_LOG_LEN],
         )
     }
 
@@ -82,24 +81,8 @@ impl SgpHttpClient {
 
     async fn refresh_tokens(&self) -> Result<(), AppError> {
         let client = self.lcu_session.api().require_http_client()?;
-
-        let entitlements = client.get("/entitlements/v1/token").await?;
-        let new_access_token = entitlements
-            .get("accessToken")
-            .and_then(|value| value.as_str())
-            .filter(|token| !token.is_empty())
-            .map(ToString::to_string)
-            .ok_or_else(|| {
-                AppError::other("LCU entitlements accessToken is missing".to_string())
-            })?;
-
-        let new_league_session_token = client
-            .get("/lol-league-session/v1/league-session-token")
-            .await?
-            .as_str()
-            .filter(|token| !token.is_empty())
-            .map(ToString::to_string)
-            .ok_or_else(|| AppError::other("LCU league session token is missing".to_string()))?;
+        let (new_access_token, new_league_session_token) =
+            super::session::fetch_lcu_tokens(&client).await?;
 
         *self.access_token.write().await = new_access_token;
         *self.league_session_token.write().await = new_league_session_token;
@@ -235,7 +218,7 @@ impl SgpHttpClient {
             Ok(json) => {
                 #[cfg(debug_assertions)]
                 {
-                    tracing::debug!("[SGP] {method} {request_url} -> {status}: {json}");
+                    tracing::debug!("[SGP] {method} {request_url} -> {status}");
                 }
                 SgpResponse::Ok(json)
             }
@@ -246,10 +229,7 @@ impl SgpHttpClient {
                     request_url = %request_url,
                     status = %status,
                     content_type = %content_type,
-                    content_encoding = %content_encoding,
                     parse_error = %error,
-                    error_line = error.line(),
-                    error_column = error.column(),
                     response_body = %Self::truncate_body_for_log(body_text.as_ref()),
                     "Failed to parse SGP response JSON"
                 );

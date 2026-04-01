@@ -9,6 +9,7 @@ const MULTI_TEAM_QUEUE_IDS = new Set<number>([
   1700, // Arena 2v2v2v2
   1710, // Arena variants
   1720, // Arena variants
+  3140, // Hextech ARAM variants
 ]);
 
 export function isBotPuuid(rawPuuid: string): boolean {
@@ -112,6 +113,16 @@ function shouldUseTopBottomLayout(
   queueId: number | null,
   teamMembers: PlayerSlot[],
 ): boolean {
+  const distinctTeamIds = new Set(
+    teamMembers
+      .map((member) => member.team)
+      .filter((teamId) => typeof teamId === "number" && teamId > 0),
+  );
+
+  if (distinctTeamIds.size > 2) {
+    return false;
+  }
+
   if (typeof queueId === "number" && queueId > 0) {
     return !MULTI_TEAM_QUEUE_IDS.has(queueId);
   }
@@ -167,12 +178,14 @@ export function resolveOngoingTeamGroups(params: {
   teamMembers: PlayerSlot[];
   gameflowSession: GameflowSessionData | null;
   champSelectSession: ChampSelectSessionData | null;
+  effectiveQueueId?: number | null;
 }): Array<{ teamId: number; members: PlayerSlot[] }> {
-  const { teamMembers, gameflowSession, champSelectSession } = params;
-  const queueId = resolveQueueIdFromSessions(
-    gameflowSession,
-    champSelectSession,
-  );
+  const { teamMembers, gameflowSession, champSelectSession, effectiveQueueId } =
+    params;
+  const queueId =
+    typeof effectiveQueueId === "number" && effectiveQueueId > 0
+      ? effectiveQueueId
+      : resolveQueueIdFromSessions(gameflowSession, champSelectSession);
   const topBottom = shouldUseTopBottomLayout(queueId, teamMembers);
 
   if (!topBottom) {
@@ -181,6 +194,10 @@ export function resolveOngoingTeamGroups(params: {
 
   const blueMembers = teamMembers.filter((member) => isBlueTeamSlot(member));
   const redMembers = teamMembers.filter((member) => isRedTeamSlot(member));
+  const matchedMembers = blueMembers.length + redMembers.length;
+  if (matchedMembers !== teamMembers.length) {
+    return groupTeamMembers(teamMembers);
+  }
 
   const orderedBlueMembers = orderByGameflowTeam(
     blueMembers,

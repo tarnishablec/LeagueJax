@@ -48,6 +48,12 @@ from_variant!(Database  => rusqlite::Error);
 from_variant!(Io        => std::io::Error);
 from_variant!(Sled      => sled::Error);
 
+impl From<serde_path_to_error::Error<serde_json::Error>> for AppError {
+    fn from(error: serde_path_to_error::Error<serde_json::Error>) -> Self {
+        Self::other(error.to_string())
+    }
+}
+
 impl AppError {
     pub fn other(message: impl Into<String>) -> Self {
         Self::Other {

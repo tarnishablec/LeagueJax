@@ -1,11 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { RefreshCw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LcuImage } from "@/components/LcuImage";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
+import { useLcuQueueName } from "@/hooks/use-lcu-queues";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
@@ -37,10 +38,9 @@ function resolveGameflowAssetIconPath(
 
 function resolveSgpTag(
   modeTag: MatchModeTag | null,
-  queueId: number | undefined,
 ): string | null {
   if (modeTag === null) {
-    return queueId ? `q_${queueId}` : null;
+    return CURRENT_MODE_VALUE;
   }
   if (modeTag === "all") {
     return null;
@@ -48,22 +48,41 @@ function resolveSgpTag(
   return modeTag;
 }
 
+function resolveSelectedValue(
+  modeTag: MatchModeTag | null,
+  selectableValues: Set<string>,
+): string {
+  if (modeTag === null) {
+    return CURRENT_MODE_VALUE;
+  }
+
+  if (selectableValues.has(modeTag)) {
+    return modeTag;
+  }
+
+  return "all";
+}
+
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
-  const { phase, gameflowSession, champSelectSession, modeTag } =
-    useOngoingGameStore();
+  const {
+    phase,
+    gameflowSession,
+    effectiveQueueId,
+    modeTag,
+    matchHistoriesPending,
+  } = useOngoingGameStore();
   const setModeTag = useOngoingGameStore((state) => state.setModeTag);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const queueDesc = gameflowSession?.gameData.queue.detailedDescription;
+  const queueName = useLcuQueueName(effectiveQueueId ?? 0);
+  const queueDesc =
+    queueName ||
+    gameflowSession?.gameData.queue.detailedDescription ||
+    gameflowSession?.map.gameModeName;
   const queueIconPath = useMemo(
     () => resolveGameflowAssetIconPath(gameflowSession?.map.assets),
     [gameflowSession?.map.assets],
   );
-  const queueId =
-    gameflowSession?.gameData.queue.id && gameflowSession.gameData.queue.id > 0
-      ? gameflowSession.gameData.queue.id
-      : champSelectSession?.queueId;
 
   const currentModeLabel = t("ongoingGame.titlebar.filterCurrentMode", {
     defaultValue: "Current Mode",
@@ -88,6 +107,11 @@ export function OngoingGameTitlebar() {
     [allItems],
   );
 
+  const selectableValues = useMemo(
+    () => new Set(allItems.map((item) => item.value)),
+    [allItems],
+  );
+
   const groups = useMemo(
     () => [
       {
@@ -105,7 +129,7 @@ export function OngoingGameTitlebar() {
     [currentModeLabel, queueGroupLabel, t],
   );
 
-  const selectedValue = modeTag ?? CURRENT_MODE_VALUE;
+  const selectedValue = resolveSelectedValue(modeTag, selectableValues);
 
   return (
     <div className={s.root} data-tauri-drag-region>
@@ -140,12 +164,13 @@ export function OngoingGameTitlebar() {
               if (!next) return;
               const nextModeTag =
                 next === CURRENT_MODE_VALUE ? null : (next as MatchModeTag);
+              const resolvedTag = resolveSgpTag(nextModeTag);
+
               setModeTag(nextModeTag);
               void invoke("ongoing_game_set_match_history_tag", {
-                tag: resolveSgpTag(nextModeTag, queueId),
+                tag: resolvedTag,
               });
             }}
-            disabled={refreshing}
           />
         </div>
 
@@ -155,12 +180,9 @@ export function OngoingGameTitlebar() {
           aria-label={t("ongoingGame.titlebar.refreshAria", {
             defaultValue: "Refresh ongoing game",
           })}
-          disabled={refreshing}
+          disabled={matchHistoriesPending}
           onClick={() => {
-            setRefreshing(true);
-            void invoke("ongoing_game_refresh_match_histories").finally(() => {
-              setRefreshing(false);
-            });
+            void invoke("ongoing_game_refresh_match_histories");
           }}
         >
           <RefreshCw size={14} />
@@ -169,5 +191,7 @@ export function OngoingGameTitlebar() {
     </div>
   );
 }
+
+
 
 

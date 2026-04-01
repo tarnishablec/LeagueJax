@@ -32,7 +32,6 @@ export class OngoingGameShard implements WebShard {
   private ongoingUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingSummonersUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingMatchHistoriesUpdatedUnlisten: UnlistenFn | null = null;
-  private lcuFocusChangedUnlisten: UnlistenFn | null = null;
 
   public label() {
     return "OngoingGameShard";
@@ -105,10 +104,6 @@ export class OngoingGameShard implements WebShard {
         },
       );
 
-    this.lcuFocusChangedUnlisten = await listen("lcu-focus-changed", () => {
-      void invoke("ongoing_game_refresh");
-    });
-
     void invoke("ongoing_game_refresh");
   }
 
@@ -125,11 +120,6 @@ export class OngoingGameShard implements WebShard {
       this.ongoingMatchHistoriesUpdatedUnlisten();
       this.ongoingMatchHistoriesUpdatedUnlisten = null;
     }
-    if (this.lcuFocusChangedUnlisten) {
-      this.lcuFocusChangedUnlisten();
-      this.lcuFocusChangedUnlisten = null;
-    }
-
     useOngoingGameStore.getState().reset();
   }
 

@@ -27,12 +27,17 @@ impl SgpShard {
             manager: SgpManager::new(),
         }
     }
+}
 
-    pub async fn spg_from_lcu(
-        &self,
-        lcu_session: Arc<LcuSession>,
-    ) -> Result<Arc<SgpSession>, AppError> {
-        self.manager.get_or_create(&lcu_session).await
+#[async_trait]
+pub trait LcuSessionSgpExt {
+    async fn to_sgp(&self, sgp_shard: &SgpShard) -> Result<Arc<SgpSession>, AppError>;
+}
+
+#[async_trait]
+impl LcuSessionSgpExt for Arc<LcuSession> {
+    async fn to_sgp(&self, sgp_shard: &SgpShard) -> Result<Arc<SgpSession>, AppError> {
+        sgp_shard.manager.get_or_create(self).await
     }
 }
 

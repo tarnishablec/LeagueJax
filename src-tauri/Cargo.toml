@@ -47,6 +47,7 @@ ts-rs = { version = "12.0.1", features = ["no-serde-warnings"] }
 sled = "0.34.7"
 snafu = { version = "0.9.0", features = ["backtrace"] }
 time = { version = "0.3.47", features = ["formatting"] }
+windows = { version = "0.62.2", features = ["Win32_System_Console"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }

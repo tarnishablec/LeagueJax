@@ -23,14 +23,12 @@ const QUEUE_MODE_ALL_VALUE: &str = "__all__";
 
 pub struct OngoingGameShard {
     manager: OnceLock<Arc<OngoingGameManager>>,
-    sgp_shard: OnceLock<Arc<SgpShard>>,
 }
 
 impl OngoingGameShard {
     pub fn new() -> Self {
         Self {
             manager: OnceLock::new(),
-            sgp_shard: OnceLock::new(),
         }
     }
 
@@ -38,12 +36,16 @@ impl OngoingGameShard {
         self.manager.get().cloned()
     }
 
-    pub fn initialize(&self, settings: OngoingGameManagerSettings) -> Arc<OngoingGameManager> {
+    pub fn initialize(
+        &self,
+        settings: OngoingGameManagerSettings,
+        sgp_shard: Arc<SgpShard>,
+    ) -> Arc<OngoingGameManager> {
         if let Some(existing) = self.manager.get() {
             return existing.clone();
         }
 
-        let manager = Arc::new(OngoingGameManager::new(settings));
+        let manager = Arc::new(OngoingGameManager::new(settings, sgp_shard));
         let _ = self.manager.set(manager.clone());
         manager
     }
@@ -57,12 +59,7 @@ impl OngoingGameShard {
             return;
         }
 
-        let sgp_session = match (lcu_session.as_ref(), self.sgp_shard.get()) {
-            (Some(lcu), Some(sgp_shard)) => sgp_shard.spg_from_lcu(lcu.clone()).await.ok(),
-            _ => None,
-        };
-
-        manager.handle_focus_changed(lcu_session, sgp_session).await;
+        manager.handle_focus_changed(lcu_session).await;
     }
 }
 
@@ -73,7 +70,6 @@ impl Shard for OngoingGameShard {
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
         let sgp_shard = jax.get_shard::<SgpShard>();
-        let _ = self.sgp_shard.set(sgp_shard);
 
         let count_setting = settings.register_definition(SettingDefinitionDto {
             id: MATCH_HISTORY_COUNT_SETTING_ID.to_string(),
@@ -107,7 +103,7 @@ impl Shard for OngoingGameShard {
         let manager = self.initialize(OngoingGameManagerSettings {
             match_history_count: count_setting.clone(),
             match_history_tag: queue_mode_setting.clone(),
-        });
+        }, sgp_shard);
 
         let count_manager = manager.clone();
         count_setting.spawn_watch(false, move |_| {
