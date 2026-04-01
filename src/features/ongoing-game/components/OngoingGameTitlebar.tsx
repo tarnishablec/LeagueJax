@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { RefreshCw } from "lucide-react";
+import { Loader, RefreshCw } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LcuImage } from "@/components/LcuImage";
@@ -180,12 +180,16 @@ export function OngoingGameTitlebar() {
           aria-label={t("ongoingGame.titlebar.refreshAria", {
             defaultValue: "Refresh ongoing game",
           })}
-          disabled={matchHistoriesPending}
+          disabled={matchHistoriesPending || phase === "Idle"}
           onClick={() => {
             void invoke("ongoing_game_refresh_match_histories");
           }}
         >
-          <RefreshCw size={14} />
+          {matchHistoriesPending ? (
+            <Loader size={14} className={s.refreshIconSpin} />
+          ) : (
+            <RefreshCw size={14} />
+          )}
         </button>
       </div>
     </div>

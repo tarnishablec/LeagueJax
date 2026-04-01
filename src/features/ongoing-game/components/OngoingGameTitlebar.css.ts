@@ -1,5 +1,10 @@
-import { style } from "@vanilla-extract/css";
+import { keyframes, style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
+
+const spin = keyframes({
+  from: { transform: "rotate(0deg)" },
+  to: { transform: "rotate(360deg)" },
+});
 
 export const root = style({
   display: "grid",
@@ -90,12 +95,17 @@ export const refreshButton = style({
   placeItems: "center",
   cursor: "pointer",
   selectors: {
-    "&:hover": {
+    "&:hover:not(:disabled)": {
       borderColor: vars.color.primary,
     },
     "&:disabled": {
-      opacity: 0.6,
-      cursor: "not-allowed",
+      opacity: 0.35,
+      cursor: "default",
+      pointerEvents: "none",
     },
   },
+});
+
+export const refreshIconSpin = style({
+  animation: `${spin} 1s linear infinite`,
 });
