@@ -1,10 +1,5 @@
-import { keyframes, style } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
-
-const spin = keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
-});
 
 export const root = style({
   display: "grid",
@@ -84,28 +79,3 @@ export const filterSelect = style({
   minWidth: 140,
 });
 
-export const refreshButton = style({
-  width: 28,
-  height: 28,
-  borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
-  color: vars.color.foreground,
-  display: "grid",
-  placeItems: "center",
-  cursor: "pointer",
-  selectors: {
-    "&:hover:not(:disabled)": {
-      borderColor: vars.color.primary,
-    },
-    "&:disabled": {
-      opacity: 0.35,
-      cursor: "default",
-      pointerEvents: "none",
-    },
-  },
-});
-
-export const refreshIconSpin = style({
-  animation: `${spin} 1s linear infinite`,
-});

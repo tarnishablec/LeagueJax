@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { RefreshButton } from "@/components/RefreshButton";
 import * as s from "./MatchList.css";
 
 export function MatchListPager({
@@ -7,6 +8,7 @@ export function MatchListPager({
   canGoPrev,
   canGoNext,
   canRefresh,
+  refreshing,
   onPrev,
   onNext,
   onRefresh,
@@ -15,6 +17,7 @@ export function MatchListPager({
   canGoPrev: boolean;
   canGoNext: boolean;
   canRefresh: boolean;
+  refreshing: boolean;
   onPrev: () => void;
   onNext: () => void;
   onRefresh: () => void;
@@ -46,17 +49,14 @@ export function MatchListPager({
       >
         <ChevronRight size={14} />
       </button>
-      <button
-        type="button"
-        className={s.refreshButton}
-        aria-label={t("history.refreshAria", {
-          defaultValue: "Refresh match history",
-        })}
+      <RefreshButton
+        loading={refreshing}
         disabled={!canRefresh}
         onClick={onRefresh}
-      >
-        <RotateCw size={14} aria-hidden="true" />
-      </button>
+        ariaLabel={t("history.refreshAria", {
+          defaultValue: "Refresh match history",
+        })}
+      />
     </div>
   );
 }

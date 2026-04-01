@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { useHistoryRefresh } from "../hooks/use-history-refresh";
+import { useSettings } from "@/features/settings/context";
+import { HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING } from "../manifest";
 import { type MatchModeTag, useMatchHistory } from "../hooks/use-match-history";
 import * as s from "./MatchList.css";
 import { MatchListFilters } from "./MatchListFilters";
@@ -16,13 +17,26 @@ export function MatchList({
   sgpServerId: string | null;
 }) {
   const { t } = useTranslation();
+  const settings = useSettings();
+  const autoRefreshOnSwitch = useSyncExternalStore(
+    (cb) => settings.subscribe(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING, cb),
+    () =>
+      settings.get<boolean>(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING) ??
+      false,
+  );
   const [modeTag, setModeTag] = useState<MatchModeTag>("all");
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(1);
-  const { refreshing, refresh } = useHistoryRefresh();
   const previousPuuidRef = useRef<string | null>(null);
-  const { matches, error, isLoading, isRefreshing, hasNextPage } =
-    useMatchHistory(puuid, sgpServerId, page, pageSize, modeTag);
+  const { matches, error, isLoading, isRefreshing, hasNextPage, refresh } =
+    useMatchHistory(
+      puuid,
+      sgpServerId,
+      page,
+      pageSize,
+      modeTag,
+      autoRefreshOnSwitch,
+    );
 
   const hasMatch = matches?.length ?? 0;
   const canGoPrev = page > 1 && !isLoading && !isRefreshing;
@@ -44,7 +58,7 @@ export function MatchList({
     label: String(option),
   }));
 
-  const canRefresh = !isLoading && !isRefreshing && !refreshing;
+  const canRefresh = !isLoading && !isRefreshing;
 
   return (
     <div className={s.panel}>
@@ -52,6 +66,7 @@ export function MatchList({
         <MatchListFilters
           modeTag={modeTag}
           pageSize={pageSize}
+          disabled={isLoading || isRefreshing}
           modeSelectOptions={modeSelectOptions}
           pageSizeSelectOptions={pageSizeSelectOptions}
           onModeChange={(value) => {
@@ -69,6 +84,7 @@ export function MatchList({
           canGoPrev={canGoPrev}
           canGoNext={canGoNext}
           canRefresh={canRefresh}
+          refreshing={isRefreshing}
           onPrev={() => setPage((current) => Math.max(1, current - 1))}
           onNext={() => setPage((current) => current + 1)}
           onRefresh={() => {

@@ -69,6 +69,7 @@ export function MatchCard({
               me={vm.me}
               gameDuration={vm.gameDuration}
               damageShare={vm.damageShare}
+              goldRank={vm.goldRank}
             />
 
             <MatchCardLoadout

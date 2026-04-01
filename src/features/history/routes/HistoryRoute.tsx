@@ -10,7 +10,10 @@ import { MatchList } from "../components/MatchList";
 import { SummaryBar } from "../components/SummaryBar";
 import { useFocusSync } from "../hooks/use-focus-sync.ts";
 import { useSummonerHydration } from "../hooks/use-summoner-hydration";
-import { HISTORY_AUTO_OPEN_OWN_TAB_SETTING } from "../manifest";
+import {
+  HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
+  HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
+} from "../manifest";
 import * as s from "./HistoryRoute.css";
 
 function OwnSummonerButton() {
@@ -77,6 +80,13 @@ export function HistoryRoute() {
       settings.subscribe(HISTORY_AUTO_OPEN_OWN_TAB_SETTING, onStoreChange),
     () => settings.get<boolean>(HISTORY_AUTO_OPEN_OWN_TAB_SETTING),
   );
+  const autoRefreshOnSwitch = useSyncExternalStore(
+    (cb) =>
+      settings.subscribe(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING, cb),
+    () =>
+      settings.get<boolean>(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING) ??
+      false,
+  );
 
   useFocusSync(connected, autoOpenOwnTab);
   useSummonerHydration(!!connected, activeTab);
@@ -91,7 +101,7 @@ export function HistoryRoute() {
 
   return (
     <div className={s.page}>
-      <SummaryBar summoner={activeTab.summoner} />
+      <SummaryBar summoner={activeTab.summoner} autoRefresh={autoRefreshOnSwitch} />
       <MatchList puuid={activeTab.puuid} sgpServerId={activeTab.sgpServerId} />
     </div>
   );

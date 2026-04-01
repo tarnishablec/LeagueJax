@@ -9,10 +9,12 @@ export function MatchCardMetrics({
   me,
   gameDuration,
   damageShare,
+  goldRank,
 }: {
   me: RawMatchSummaryParticipant;
   gameDuration: number;
   damageShare: number;
+  goldRank: number;
 }) {
   const { t } = useTranslation();
   const csTotal = me.totalMinionsKilled + me.neutralMinionsKilled;
@@ -22,6 +24,7 @@ export function MatchCardMetrics({
       : (((me.kills ?? 0) + (me.assists ?? 0)) / (me.deaths ?? 1)).toFixed(2);
   const csPerMin = (csTotal / (gameDuration / 60)).toFixed(1);
   const goldEarned = Math.max(0, me.goldEarned ?? 0);
+  const damage = Math.max(0, me.totalDamageDealtToChampions ?? 0);
   const damageShareText = `${(Math.max(0, Number.isFinite(damageShare) ? damageShare : 0) * 100).toFixed(1)}%`;
   const numberFormatter = new Intl.NumberFormat();
 
@@ -37,6 +40,7 @@ export function MatchCardMetrics({
         </span>
         <span className={s.metricSecondary}>KDA {kdaText}</span>
       </div>
+      <div className={s.divider} />
       <div className={s.metricGroup}>
         <span className={s.metricPrimaryInline}>
           <ScoreboardIcon
@@ -56,6 +60,7 @@ export function MatchCardMetrics({
         </span>
         <span className={s.metricSecondary}>{csPerMin} / min</span>
       </div>
+      <div className={s.divider} />
       <div className={s.metricGroup}>
         <span className={s.metricPrimaryInline}>
           <ScoreboardIcon
@@ -70,6 +75,26 @@ export function MatchCardMetrics({
               }}
             >
               {numberFormatter.format(goldEarned)}
+            </span>
+          </span>
+        </span>
+        <span className={s.metricSecondary}>#{goldRank}</span>
+      </div>
+      <div className={s.divider} />
+      <div className={s.metricGroup}>
+        <span className={s.metricPrimaryInline}>
+          <ScoreboardIcon
+            type="damage"
+            className={s.scoreboardIcon}
+            fallbackClassName={s.scoreboardIconFallback}
+          />
+          <span className={s.metricPrimaryText}>
+            <span
+              style={{
+                textBoxTrim: "trim-both",
+              }}
+            >
+              {numberFormatter.format(damage)}
             </span>
           </span>
         </span>

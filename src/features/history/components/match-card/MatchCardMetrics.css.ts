@@ -9,6 +9,13 @@ export const metricRow = style({
   justifyContent: "start",
 });
 
+export const divider = style({
+  width: 1,
+  alignSelf: "stretch",
+  margin: "2px 0",
+  background: `color-mix(in oklch, ${vars.color.border} 60%, transparent)`,
+});
+
 export const metricGroup = style({
   display: "grid",
   alignItems: "center",
