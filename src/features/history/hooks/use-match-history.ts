@@ -33,8 +33,9 @@ export function useMatchHistory(
   page: number,
   pageSize = 20,
   modeTag: MatchModeTag = "all",
+  autoRefreshOnSwitch = false,
 ) {
-  const { data, error, isLoading, isValidating } = useSWR(
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
     puuid
       ? ["get_match_summaries", puuid, sgpServerId, page, pageSize, modeTag]
       : null,
@@ -68,6 +69,9 @@ export function useMatchHistory(
     },
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
+      revalidateIfStale: autoRefreshOnSwitch,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     },
   );
 
@@ -77,5 +81,6 @@ export function useMatchHistory(
     isLoading,
     isRefreshing: isValidating && !isLoading,
     hasNextPage: (data?.length ?? 0) === pageSize,
+    refresh: () => mutate(),
   };
 }

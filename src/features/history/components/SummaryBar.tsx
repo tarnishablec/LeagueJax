@@ -42,7 +42,13 @@ function formatMeta(
   return `${entry.wins}${winsShort} / ${entry.leaguePoints} ${lpShort}`;
 }
 
-export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
+export function SummaryBar({
+  summoner,
+  autoRefresh = true,
+}: {
+  summoner: SummonerInfo;
+  autoRefresh?: boolean;
+}) {
   const { t } = useTranslation();
   const { src: avatarUrl } = useDragonStaticData({
     type: "profile-icon",
@@ -50,6 +56,7 @@ export function SummaryBar({ summoner }: { summoner: SummonerInfo }) {
   });
   const { data: rankedSummary, isLoading: rankedLoading } = useRankedSummary(
     summoner.puuid,
+    autoRefresh,
   );
   const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
 

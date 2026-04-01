@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Loader, RefreshCw } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LcuImage } from "@/components/LcuImage";
+import { RefreshButton } from "@/components/RefreshButton";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
@@ -172,23 +172,16 @@ export function OngoingGameTitlebar() {
           />
         </div>
 
-        <button
-          type="button"
-          className={s.refreshButton}
-          aria-label={t("ongoingGame.titlebar.refreshAria", {
+        <RefreshButton
+          loading={matchHistoriesPending}
+          disabled={phase === "Idle"}
+          ariaLabel={t("ongoingGame.titlebar.refreshAria", {
             defaultValue: "Refresh ongoing game",
           })}
-          disabled={matchHistoriesPending || phase === "Idle"}
           onClick={() => {
             void invoke("ongoing_game_refresh_match_histories");
           }}
-        >
-          {matchHistoriesPending ? (
-            <Loader size={14} className={s.refreshIconSpin} />
-          ) : (
-            <RefreshCw size={14} />
-          )}
-        </button>
+        />
       </div>
     </div>
   );

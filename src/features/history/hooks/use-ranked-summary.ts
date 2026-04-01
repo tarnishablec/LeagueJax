@@ -2,7 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import useSWR from "swr";
 import type { RankStats } from "@/bindings/rank";
 
-export function useRankedSummary(puuid: string | undefined) {
+export function useRankedSummary(
+  puuid: string | undefined,
+  autoRefresh = true,
+) {
   return useSWR(
     puuid ? ["get_ranked_summary", puuid] : null,
     ([cmd, resolvedPuuid]) =>
@@ -11,6 +14,9 @@ export function useRankedSummary(puuid: string | undefined) {
       }),
     {
       dedupingInterval: 30_000,
+      revalidateIfStale: autoRefresh,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     },
   );
 }

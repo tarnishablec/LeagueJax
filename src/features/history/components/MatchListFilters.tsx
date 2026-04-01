@@ -6,6 +6,7 @@ import type { MatchModeTag } from "../hooks/use-match-history";
 export function MatchListFilters({
   modeTag,
   pageSize,
+  disabled,
   modeSelectOptions,
   pageSizeSelectOptions,
   onModeChange,
@@ -13,6 +14,7 @@ export function MatchListFilters({
 }: {
   modeTag: MatchModeTag;
   pageSize: number;
+  disabled?: boolean;
   modeSelectOptions: Array<{ value: string; label: string }>;
   pageSizeSelectOptions: Array<{ value: string; label: string }>;
   onModeChange: (value: MatchModeTag) => void;
@@ -39,6 +41,7 @@ export function MatchListFilters({
       <SettingsSelect
         collection={modeCollection}
         value={[modeTag]}
+        disabled={disabled}
         onValueChange={(details) => {
           const next = details.value[0];
           if (next) onModeChange(next as MatchModeTag);
@@ -50,6 +53,7 @@ export function MatchListFilters({
       <SettingsSelect
         collection={pageSizeCollection}
         value={[String(pageSize)]}
+        disabled={disabled}
         onValueChange={(details) => {
           const next = details.value[0];
           if (next) onPageSizeChange(Number(next));

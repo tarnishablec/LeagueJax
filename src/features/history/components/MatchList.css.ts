@@ -79,30 +79,6 @@ export const pageIndicator = style({
   lineHeight: 1,
 });
 
-export const refreshButton = style({
-  width: 30,
-  height: 30,
-  borderRadius: 7,
-  border: `1px solid ${vars.settings.controlBorder}`,
-  background: vars.settings.controlBg,
-  color: vars.settings.controlText,
-  cursor: "pointer",
-  display: "grid",
-  placeItems: "center",
-  padding: 0,
-  transition: "border-color 120ms, color 120ms",
-  selectors: {
-    "&:hover": {
-      borderColor: vars.settings.controlHoverBorder,
-      color: vars.color.primary,
-    },
-    "&:disabled": {
-      opacity: 0.45,
-      cursor: "not-allowed",
-    },
-  },
-});
-
 export const list = style({
   display: "grid",
   gap: 8,

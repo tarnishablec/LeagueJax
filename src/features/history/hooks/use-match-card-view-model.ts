@@ -251,12 +251,15 @@ export function useMatchCardViewModel({
   const { primaryRuneId, subStyleId } = getPerkIds(me);
   const damageShare = computeDamageShare(me, participants);
   const position = supportsPosition
-    ? (normalizeHistoryPosition(me.lane) ??
+    ? (normalizeHistoryPosition(me.teamPosition) ??
       normalizeHistoryPosition(me.individualPosition) ??
-      normalizeHistoryPosition(me.teamPosition) ??
+      normalizeHistoryPosition(me.lane) ??
       "FILL")
     : null;
   const tags = computeMatchTags(me, participants, gameResult === "victory");
+  const myGold = me.goldEarned ?? 0;
+  const goldRank =
+    participants.filter((p) => (p.goldEarned ?? 0) > myGold).length + 1;
 
   return {
     me,
@@ -273,6 +276,7 @@ export function useMatchCardViewModel({
     primaryRuneId,
     subStyleId,
     damageShare,
+    goldRank,
     position,
     tags,
   };
