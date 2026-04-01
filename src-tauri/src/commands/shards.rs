@@ -1,13 +1,11 @@
-﻿use crate::shards::shard_status_types::{ShardInfoDto, ShardStatusDto, ShardsSnapshotDto};
 use crate::error::AppError;
+use crate::shards::shard_status_types::{ShardInfoDto, ShardStatusDto, ShardsSnapshotDto};
 use jax::Jax;
 use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
-pub async fn get_shards_status(
-    jax: State<'_, Arc<Jax>>,
-) -> Result<ShardsSnapshotDto, AppError> {
+pub async fn get_shards_status(jax: State<'_, Arc<Jax>>) -> Result<ShardsSnapshotDto, AppError> {
     Ok(build_shards_snapshot(&jax))
 }
 
@@ -51,4 +49,3 @@ pub fn build_shards_snapshot(jax: &Jax) -> ShardsSnapshotDto {
 
     ShardsSnapshotDto { shards }
 }
-

@@ -1,13 +1,13 @@
-﻿use std::collections::HashSet;
+use std::collections::HashSet;
 use std::sync::Arc;
 
+use crate::error::AppError;
 use crate::shards::lcu::cherry::CherryAugment;
-use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
 use crate::shards::lcu::rank::RankStats;
 use crate::shards::lcu::summoner::{SummonerInfo, SummonerSearchResult};
-use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
+use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
 use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::SgpShard;
 use crate::shards::static_cache::StaticCacheShard;
@@ -415,7 +415,10 @@ pub async fn get_match_summary(
         .get_shard::<LcuShard>()
         .manager()
         .ok_or(AppError::LcuNotConnected)?;
-    let focused_pid = manager.focused_pid().await.ok_or(AppError::LcuNotConnected)?;
+    let focused_pid = manager
+        .focused_pid()
+        .await
+        .ok_or(AppError::LcuNotConnected)?;
     let session = manager
         .session_for_pid(focused_pid)
         .ok_or(AppError::LcuNotConnected)?;
@@ -427,4 +430,3 @@ pub async fn get_match_summary(
         .get_match_summary(game_id, sgp_server_id.as_deref())
         .await
 }
-

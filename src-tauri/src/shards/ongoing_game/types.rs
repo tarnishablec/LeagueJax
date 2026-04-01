@@ -32,12 +32,12 @@ pub struct OngoingGameUpdated {
     pub phase: OngoingGamePhase,
     /// User-selected match-history mode tag.
     /// - "__current_mode__": follow current queue mode
-    /// - "q_xxx": fixed queue mode
+    /// - `q_xxx`: fixed queue mode
     /// - None: all modes
     pub match_history_tag: Option<String>,
-    /// Queue id resolved from current game context.
+    /// Queue id resolved from the current game context.
     pub effective_queue_id: Option<u64>,
-    /// Effective SGP mode tag after resolving `match_history_tag` against current context.
+    /// Effective SGP mode tag after resolving `match_history_tag` Agathe nst current context.
     pub effective_mode_tag: Option<String>,
     pub match_histories_pending: bool,
     pub gameflow_session: Option<GameflowSessionData>,
@@ -65,6 +65,7 @@ pub struct OngoingGameMatchHistoriesUpdated {
 // Unified broadcast event (single channel)
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", content = "data")]
 pub enum OngoingGameEvent {

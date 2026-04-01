@@ -15,9 +15,7 @@ pub struct SgpTokenContext {
 }
 
 /// Fetches access token and league session token from LCU.
-pub(crate) async fn fetch_lcu_tokens(
-    client: &LcuHttpClient,
-) -> Result<(String, String), AppError> {
+pub(crate) async fn fetch_lcu_tokens(client: &LcuHttpClient) -> Result<(String, String), AppError> {
     let entitlements = client.get("/entitlements/v1/token").await?;
     let access_token = entitlements
         .get("accessToken")

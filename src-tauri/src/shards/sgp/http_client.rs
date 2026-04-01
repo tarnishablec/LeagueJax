@@ -66,10 +66,7 @@ impl SgpHttpClient {
             return body.to_string();
         }
 
-        format!(
-            "{}...<truncated>",
-            &body[..MAX_ERROR_BODY_LOG_LEN],
-        )
+        format!("{}...<truncated>", &body[..MAX_ERROR_BODY_LOG_LEN],)
     }
 
     async fn get_token(&self, kind: SgpTokenKind) -> String {
@@ -240,5 +237,3 @@ impl SgpHttpClient {
         }
     }
 }
-
-

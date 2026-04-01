@@ -36,9 +36,7 @@ function resolveGameflowAssetIconPath(
   return normalizedPath;
 }
 
-function resolveSgpTag(
-  modeTag: MatchModeTag | null,
-): string | null {
+function resolveSgpTag(modeTag: MatchModeTag | null): string | null {
   if (modeTag === null) {
     return CURRENT_MODE_VALUE;
   }
@@ -195,7 +193,3 @@ export function OngoingGameTitlebar() {
     </div>
   );
 }
-
-
-
-

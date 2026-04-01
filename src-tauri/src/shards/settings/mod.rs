@@ -10,8 +10,8 @@ use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
 use sled::Db;
 use std::collections::BTreeMap;
-use std::future::Future;
 use std::error::Error;
+use std::future::Future;
 use std::sync::{Arc, OnceLock, RwLock};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
@@ -512,12 +512,3 @@ fn migrate_legacy_keys(snapshot: &mut SettingsSnapshotDto) -> usize {
 
     changed
 }
-
-
-
-
-
-
-
-
-
