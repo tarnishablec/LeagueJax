@@ -4,6 +4,7 @@ use super::api::SgpApi;
 use super::config::sgp_servers_config;
 use super::http_client::SgpHttpClient;
 use crate::error::AppError;
+use crate::shards::lcu::http_client::LcuHttpClient;
 use crate::shards::lcu::session::LcuSession;
 
 #[derive(Debug, Clone)]
@@ -11,6 +12,29 @@ pub struct SgpTokenContext {
     pub access_token: String,
     pub league_session_token: String,
     pub sgp_server_id: String,
+}
+
+/// Fetches access token and league session token from LCU.
+pub(crate) async fn fetch_lcu_tokens(
+    client: &LcuHttpClient,
+) -> Result<(String, String), AppError> {
+    let entitlements = client.get("/entitlements/v1/token").await?;
+    let access_token = entitlements
+        .get("accessToken")
+        .and_then(|value| value.as_str())
+        .filter(|token| !token.is_empty())
+        .map(ToString::to_string)
+        .ok_or_else(|| AppError::other("LCU entitlements accessToken is missing"))?;
+
+    let league_session_token = client
+        .get("/lol-league-session/v1/league-session-token")
+        .await?
+        .as_str()
+        .filter(|token| !token.is_empty())
+        .map(ToString::to_string)
+        .ok_or_else(|| AppError::other("LCU league session token is missing"))?;
+
+    Ok((access_token, league_session_token))
 }
 
 pub struct SgpSession {
@@ -35,21 +59,7 @@ async fn exchange_token_context(
 ) -> Result<SgpTokenContext, AppError> {
     let client = lcu_session.api().require_http_client()?;
 
-    let entitlements = client.get("/entitlements/v1/token").await?;
-    let access_token = entitlements
-        .get("accessToken")
-        .and_then(|value| value.as_str())
-        .filter(|token| !token.is_empty())
-        .map(ToString::to_string)
-        .ok_or_else(|| AppError::other("LCU entitlements accessToken is missing".to_string()))?;
-
-    let league_session_token = client
-        .get("/lol-league-session/v1/league-session-token")
-        .await?
-        .as_str()
-        .filter(|token| !token.is_empty())
-        .map(ToString::to_string)
-        .ok_or_else(|| AppError::other("LCU league session token is missing".to_string()))?;
+    let (access_token, league_session_token) = fetch_lcu_tokens(&client).await?;
 
     let locale_region = client
         .get("/riotclient/region-locale")

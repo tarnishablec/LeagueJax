@@ -22,7 +22,6 @@ use window_vibrancy::{apply_acrylic, apply_mica};
 use window_vibrancy::apply_acrylic;
 
 use jax::Jax;
-// 鈹€鈹€鈹€ Runtime 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -140,7 +139,7 @@ pub fn run() {
                 match jax.start().await {
                     Ok(report) => {
                         if report.is_success() {
-                            tracing::info!("馃殌 Jax started successfully with all shards.");
+                            tracing::info!("🚀 Jax started successfully with all shards.");
                         } else {
                             for f in &report.failed {
                                 tracing::error!(

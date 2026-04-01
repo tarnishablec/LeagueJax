@@ -122,6 +122,8 @@ impl LeagueBridgeShard {
                                 Ok(ev) => ev,
                                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                                     tracing::warn!("OngoingGame event bridge lagged, skipped {n}");
+                                    ongoing_manager_for_bootstrap.refresh_current().await;
+                                    ongoing_manager_for_bootstrap.refresh_match_histories().await;
                                     continue;
                                 }
                                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,

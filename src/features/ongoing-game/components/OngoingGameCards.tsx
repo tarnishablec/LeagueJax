@@ -10,7 +10,6 @@ import type {
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon.tsx";
 import { SummonerID } from "@/components/SummonerID.tsx";
-import type { MatchModeTag } from "@/features/history/hooks/use-match-history.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
@@ -41,21 +40,6 @@ function formatGameTime(epochMs: number): string {
   const hour = String(d.getHours()).padStart(2, "0");
   const minute = String(d.getMinutes()).padStart(2, "0");
   return `${month}/${day} ${hour}:${minute}`;
-}
-
-function resolveQueueIdFromModeTag(
-  modeTag: MatchModeTag | null,
-): number | null {
-  if (!modeTag || modeTag === "all" || !modeTag.startsWith("q_")) {
-    return null;
-  }
-
-  const parsedQueueId = Number(modeTag.slice(2));
-  if (!Number.isFinite(parsedQueueId) || parsedQueueId <= 0) {
-    return null;
-  }
-
-  return parsedQueueId;
 }
 
 function normalizeChampionId(slot: PlayerSlot): number | null {
@@ -133,19 +117,15 @@ function SnapshotPlayerCard(props: {
 }) {
   const { slot, matchHistoryCount } = props;
   const { t } = useTranslation();
-  const storeModeTag = useOngoingGameStore((state) => state.modeTag);
   const summonersByPuuid = useOngoingGameStore(
     (state) => state.summonersByPuuid,
   );
   const matchHistoriesByPuuid = useOngoingGameStore(
     (state) => state.matchHistoriesByPuuid,
   );
-  const matchHistoriesHydrated = useOngoingGameStore(
-    (state) => state.matchHistoriesHydrated,
-  );
-  const queueFilterId = useMemo(
-    () => resolveQueueIdFromModeTag(storeModeTag),
-    [storeModeTag],
+  const phase = useOngoingGameStore((state) => state.phase);
+  const matchHistoriesPending = useOngoingGameStore(
+    (state) => state.matchHistoriesPending,
   );
 
   const isBot = isBotSlot(slot);
@@ -158,7 +138,11 @@ function SnapshotPlayerCard(props: {
     ? Object.hasOwn(matchHistoriesByPuuid, puuid)
     : false;
   const isHistoryLoading = Boolean(
-    !isBot && puuid && !matchHistoriesHydrated && !hasHistoryBucket,
+    !isBot &&
+      puuid &&
+      !hasHistoryBucket &&
+      phase !== "Idle" &&
+      matchHistoriesPending,
   );
   const recentGames = useMemo<EnrichedMatch[]>(() => {
     if (!puuid || !historyBucket || historyBucket.length === 0) {
@@ -167,10 +151,6 @@ function SnapshotPlayerCard(props: {
 
     const filteredGames: EnrichedMatch[] = [];
     for (const game of historyBucket) {
-      if (queueFilterId !== null && game.json.queueId !== queueFilterId) {
-        continue;
-      }
-
       const me = game.json.participants.find(
         (participant) => participant.puuid === puuid,
       );
@@ -185,7 +165,7 @@ function SnapshotPlayerCard(props: {
     }
 
     return filteredGames;
-  }, [historyBucket, puuid, queueFilterId, matchHistoryCount]);
+  }, [historyBucket, puuid, matchHistoryCount]);
 
   const championId = normalizeChampionId(slot);
   const level = summoner?.summonerLevel || 0;

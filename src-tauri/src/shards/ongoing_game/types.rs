@@ -30,8 +30,16 @@ pub enum OngoingGamePhase {
 #[serde(rename_all = "snake_case")]
 pub struct OngoingGameUpdated {
     pub phase: OngoingGamePhase,
-    /// Current SGP tag filter (e.g. "q_420"), None = all modes.
+    /// User-selected match-history mode tag.
+    /// - "__current_mode__": follow current queue mode
+    /// - "q_xxx": fixed queue mode
+    /// - None: all modes
     pub match_history_tag: Option<String>,
+    /// Queue id resolved from current game context.
+    pub effective_queue_id: Option<u64>,
+    /// Effective SGP mode tag after resolving `match_history_tag` against current context.
+    pub effective_mode_tag: Option<String>,
+    pub match_histories_pending: bool,
     pub gameflow_session: Option<GameflowSessionData>,
     pub champ_select_session: Option<ChampSelectSessionData>,
     pub team_members: Vec<TeamMember>,

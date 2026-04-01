@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use serde_json::Value;
 use tokio::sync::{broadcast, Mutex};
+use tokio::task::JoinSet;
 
 use crate::shards::lcu::api::OngoingSessionSeed;
 use crate::shards::lcu::events::champ_select_session::{
@@ -17,13 +18,22 @@ use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
 use crate::shards::ongoing_game::types::{OngoingGameEvent, OngoingGamePhase, OngoingGameUpdated};
 use crate::shards::settings::SettingHandle;
+use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
-use crate::shards::sgp::session::SgpSession;
+use crate::shards::sgp::SgpShard;
 
-use super::driver::{spawn_per_player_history_fetches, OngoingGameDriver};
+use super::driver::OngoingGameDriver;
 
 pub(crate) const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
 const QUEUE_MODE_ALL_VALUE: &str = "__all__";
+const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum MatchHistoryModeSetting {
+    All,
+    CurrentMode,
+    FixedTag(String),
+}
 
 #[derive(Clone)]
 pub struct OngoingGameManagerSettings {
@@ -41,13 +51,33 @@ impl OngoingGameManagerSettings {
             .unwrap_or(DEFAULT_MATCH_HISTORY_COUNT)
     }
 
-    pub fn match_history_tag_value(&self) -> Option<String> {
+    pub fn match_history_mode_value(&self) -> MatchHistoryModeSetting {
         self.match_history_tag
             .get_value()
             .ok()
             .as_ref()
-            .and_then(parse_queue_mode_to_tag)
+            .map(parse_queue_mode_setting)
+            .unwrap_or(MatchHistoryModeSetting::All)
     }
+
+    pub fn match_history_tag_for_payload_value(&self) -> Option<String> {
+        match self.match_history_mode_value() {
+            MatchHistoryModeSetting::All => None,
+            MatchHistoryModeSetting::CurrentMode => Some(QUEUE_MODE_CURRENT_VALUE.to_string()),
+            MatchHistoryModeSetting::FixedTag(tag) => Some(tag),
+        }
+    }
+
+    pub fn match_history_effective_tag(&self, effective_queue_id: Option<u64>) -> Option<String> {
+        match self.match_history_mode_value() {
+            MatchHistoryModeSetting::All => None,
+            MatchHistoryModeSetting::CurrentMode => {
+                effective_queue_id.map(|queue_id| format!("q_{queue_id}"))
+            }
+            MatchHistoryModeSetting::FixedTag(tag) => Some(tag),
+        }
+    }
+
 }
 
 #[derive(Clone)]
@@ -56,9 +86,9 @@ pub struct OngoingGameManager {
 }
 
 impl OngoingGameManager {
-    pub(crate) fn new(settings: OngoingGameManagerSettings) -> Self {
+    pub(crate) fn new(settings: OngoingGameManagerSettings, sgp_shard: Arc<SgpShard>) -> Self {
         Self {
-            ctx: Arc::new(OngoingGameContext::new(settings)),
+            ctx: Arc::new(OngoingGameContext::new(settings, sgp_shard)),
         }
     }
 
@@ -68,32 +98,58 @@ impl OngoingGameManager {
         match &event {
             LcuWsEvent::GameflowSession(payload) => {
                 state.cached_gameflow_session = Some(payload.data.clone());
-                if has_gameflow_team_data(&payload.data) {
-                    state.cached_team_members = ManagerState::extract_gameflow_members(&payload.data);
+                if has_gameflow_team_data(&payload.data)
+                    && should_apply_gameflow_members(payload.data.phase)
+                {
+                    let next_members = ManagerState::extract_gameflow_members(&payload.data);
+                    tracing::info!(
+                        "[ongoing_game] team snapshot source=gameflow phase={:?} members={}",
+                        payload.data.phase,
+                        next_members.len()
+                    );
+                    state.cached_team_members = next_members;
+                } else if has_gameflow_team_data(&payload.data) {
+                    tracing::info!(
+                        "[ongoing_game] team snapshot source=unchanged phase={:?} existing_members={} reason=skip_gameflow_override",
+                        payload.data.phase,
+                        state.cached_team_members.len()
+                    );
                 }
             }
             LcuWsEvent::ChampSelectSession(payload) => {
                 state.cached_champ_select_session = Some(payload.data.clone());
-                state.cached_team_members = ManagerState::extract_champ_select_members(&payload.data);
+                let next_members = ManagerState::extract_champ_select_members(&payload.data);
+                tracing::info!(
+                    "[ongoing_game] team snapshot source=champ_select phase={:?} members={}",
+                    GameflowPhase::ChampSelect,
+                    next_members.len()
+                );
+                state.cached_team_members = next_members;
             }
             _ => {}
         }
 
-        if let Some(ref mut driver) = state.driver {
-            driver.process(&event);
+        let transitioned = if let Some(ref mut driver) = state.driver {
+            driver.process(&event)
+        } else {
+            None
+        };
+
+        if let Some(next_phase) = transitioned {
+            if next_phase == OngoingGamePhase::Idle {
+                state.clear_caches();
+            }
+            let updated = state.build_updated_payload(&self.ctx.settings);
+            drop(state);
+            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
         }
     }
 
-    pub async fn handle_focus_changed(
-        &self,
-        lcu_session: Option<Arc<LcuSession>>,
-        sgp_session: Option<Arc<SgpSession>>,
-    ) {
+    pub async fn handle_focus_changed(&self, lcu_session: Option<Arc<LcuSession>>) {
         let expected_focus = lcu_focus_key(lcu_session.as_ref());
         let updated = {
             let mut state = self.ctx.state.lock().await;
             state.lcu_session = lcu_session.clone();
-            state.sgp_session = sgp_session;
             state.driver = Some(OngoingGameDriver::new(self.ctx.clone()));
             state.clear_caches();
             state.build_updated_payload(&self.ctx.settings)
@@ -125,22 +181,149 @@ impl OngoingGameManager {
         };
 
         self.ctx.broadcast(OngoingGameEvent::Updated(updated));
-        self.refresh_match_histories().await;
     }
 
     pub async fn refresh_match_histories(&self) {
         let count = self.ctx.settings.match_history_count_value();
-        let tag = self.ctx.settings.match_history_tag_value();
 
-        let (puuids, sgp) = {
+        let (puuids, lcu, effective_queue_id, tag, should_start, started_updated, gen) = {
             let mut state = self.ctx.state.lock().await;
-            state.cached_match_histories.clear();
-            let puuids = state.team_puuids();
-            let sgp = state.sgp_session.clone();
-            (puuids, sgp)
+            if state.match_histories_pending {
+                let updated = state.build_updated_payload(&self.ctx.settings);
+                (
+                    Vec::new(),
+                    None,
+                    state.effective_queue_id(),
+                    state.effective_mode_tag(&self.ctx.settings),
+                    false,
+                    Some(updated),
+                    state.generation,
+                )
+            } else {
+                state.match_histories_pending = true;
+                state.cached_match_histories.clear();
+                let gen = state.generation;
+                let puuids = state.team_puuids();
+                let lcu = state.lcu_session.clone();
+                let effective_queue_id = state.effective_queue_id();
+                let tag = state.effective_mode_tag(&self.ctx.settings);
+                let updated = state.build_updated_payload(&self.ctx.settings);
+                (
+                    puuids,
+                    lcu,
+                    effective_queue_id,
+                    tag,
+                    true,
+                    Some(updated),
+                    gen,
+                )
+            }
         };
 
-        spawn_per_player_history_fetches(&self.ctx, &sgp, &puuids, count, tag.as_deref());
+        if let Some(updated) = started_updated {
+            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+        }
+
+        if !should_start {
+            return;
+        }
+
+        let ctx = self.ctx.clone();
+        tokio::spawn(async move {
+            tracing::info!(
+                "[ongoing_game] refresh_match_histories start generation={} effective_queue_id={:?} effective_mode_tag={:?} count={} puuids={}",
+                gen,
+                effective_queue_id,
+                tag,
+                count,
+                puuids.len()
+            );
+
+            let sgp = match lcu {
+                Some(ref lcu_session) => match lcu_session.to_sgp(&ctx.sgp_shard).await {
+                    Ok(sgp) => Some(sgp),
+                    Err(error) => {
+                        tracing::warn!(
+                            "[ongoing_game] refresh_match_histories: failed to create sgp session for pid={} error={}",
+                            lcu_session.auth().pid,
+                            error
+                        );
+                        None
+                    }
+                },
+                None => None,
+            };
+
+            let mut join_set = JoinSet::new();
+            for puuid in puuids {
+                let sgp = sgp.clone();
+                let tag = tag.clone();
+                join_set.spawn(async move {
+                    let Some(ref sgp) = sgp else {
+                        tracing::warn!(
+                            "[ongoing_game] refresh_match_histories fetch skipped puuid={} generation={} reason=no_sgp_session",
+                            puuid,
+                            gen
+                        );
+                        return Some((puuid, Vec::new()));
+                    };
+
+                    match sgp
+                        .api()
+                        .get_match_summaries(&puuid, 0, count, tag.as_deref(), None)
+                        .await
+                    {
+                        Ok(resp) => Some((puuid, resp.games)),
+                        Err(error) => {
+                            tracing::warn!(
+                                "[ongoing_game] refresh_match_histories fetch failed puuid={} generation={} tag={:?} count={} error={}",
+                                puuid,
+                                gen,
+                                tag,
+                                count,
+                                error
+                            );
+                            Some((puuid, Vec::new()))
+                        }
+                    }
+                });
+            }
+
+            while let Some(joined) = join_set.join_next().await {
+                let Ok(Some((puuid, games))) = joined else {
+                    continue;
+                };
+
+                let mut state = ctx.state.lock().await;
+                if state.generation != gen {
+                    break;
+                }
+                state.cached_match_histories.insert(puuid, games);
+                let phase = state
+                    .driver
+                    .as_ref()
+                    .map(|d| d.current_phase())
+                    .unwrap_or(OngoingGamePhase::Idle);
+                let all_histories = state.cached_match_histories.clone();
+                drop(state);
+
+                ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
+                    crate::shards::ongoing_game::types::OngoingGameMatchHistoriesUpdated {
+                        phase,
+                        match_histories: all_histories,
+                    },
+                ));
+            }
+
+            let updated = {
+                let mut state = ctx.state.lock().await;
+                if state.generation == gen {
+                    state.match_histories_pending = false;
+                }
+                state.build_updated_payload(&ctx.settings)
+            };
+            ctx.broadcast(OngoingGameEvent::Updated(updated));
+        });
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<OngoingGameEvent> {
@@ -187,15 +370,17 @@ impl OngoingGameManager {
 
 pub struct OngoingGameContext {
     pub(crate) settings: OngoingGameManagerSettings,
+    pub(crate) sgp_shard: Arc<SgpShard>,
     pub(crate) state: Mutex<ManagerState>,
     pub(crate) event_tx: broadcast::Sender<OngoingGameEvent>,
 }
 
 impl OngoingGameContext {
-    fn new(settings: OngoingGameManagerSettings) -> Self {
+    fn new(settings: OngoingGameManagerSettings, sgp_shard: Arc<SgpShard>) -> Self {
         let (event_tx, _) = broadcast::channel(64);
         Self {
             settings,
+            sgp_shard,
             state: Mutex::new(ManagerState::new()),
             event_tx,
         }
@@ -209,12 +394,13 @@ impl OngoingGameContext {
 pub(crate) struct ManagerState {
     pub(crate) driver: Option<OngoingGameDriver>,
     pub(crate) lcu_session: Option<Arc<LcuSession>>,
-    pub(crate) sgp_session: Option<Arc<SgpSession>>,
     pub(crate) cached_gameflow_session: Option<GameflowSessionData>,
     pub(crate) cached_champ_select_session: Option<ChampSelectSessionData>,
     pub(crate) cached_summoners_by_puuid: HashMap<String, SummonerInfo>,
     pub(crate) cached_match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
     pub(crate) cached_team_members: Vec<ChampSelectTeamMember>,
+    pub(crate) match_histories_pending: bool,
+    pub(crate) generation: u64,
 }
 
 impl ManagerState {
@@ -222,12 +408,13 @@ impl ManagerState {
         Self {
             driver: None,
             lcu_session: None,
-            sgp_session: None,
             cached_gameflow_session: None,
             cached_champ_select_session: None,
             cached_summoners_by_puuid: HashMap::new(),
             cached_match_histories: HashMap::new(),
             cached_team_members: Vec::new(),
+            match_histories_pending: false,
+            generation: 0,
         }
     }
 
@@ -237,25 +424,67 @@ impl ManagerState {
         self.cached_summoners_by_puuid.clear();
         self.cached_match_histories.clear();
         self.cached_team_members.clear();
+        self.match_histories_pending = false;
+        self.generation = self.generation.wrapping_add(1);
     }
 
     pub(crate) fn build_updated_payload(
         &self,
         settings: &OngoingGameManagerSettings,
     ) -> OngoingGameUpdated {
-        let phase = self
-            .driver
-            .as_ref()
-            .map(|d| d.current_phase())
-            .unwrap_or(OngoingGamePhase::Idle);
+        let phase = self.current_phase();
+        let effective_queue_id = self.effective_queue_id();
+        let effective_mode_tag = settings.match_history_effective_tag(effective_queue_id);
 
         OngoingGameUpdated {
             phase,
-            match_history_tag: settings.match_history_tag_value(),
+            match_history_tag: settings.match_history_tag_for_payload_value(),
+            effective_queue_id,
+            effective_mode_tag,
+            match_histories_pending: self.match_histories_pending,
             gameflow_session: self.cached_gameflow_session.clone(),
             champ_select_session: self.cached_champ_select_session.clone(),
             team_members: self.cached_team_members.clone(),
         }
+    }
+
+    pub(crate) fn current_phase(&self) -> OngoingGamePhase {
+        self.driver
+            .as_ref()
+            .map(|d| d.current_phase())
+            .unwrap_or(OngoingGamePhase::Idle)
+    }
+
+    fn champ_select_queue_id(&self) -> Option<u64> {
+        self.cached_champ_select_session
+            .as_ref()
+            .map(|session| session.queue_id)
+            .filter(|queue_id| *queue_id > 0)
+    }
+
+    fn gameflow_queue_id(&self) -> Option<u64> {
+        self.cached_gameflow_session
+            .as_ref()
+            .map(|session| session.game_data.queue.id)
+            .filter(|queue_id| *queue_id > 0)
+    }
+
+    pub(crate) fn effective_queue_id(&self) -> Option<u64> {
+        let champ_select_queue_id = self.champ_select_queue_id();
+        let gameflow_queue_id = self.gameflow_queue_id();
+
+        match self.current_phase() {
+            OngoingGamePhase::ChampSelect => champ_select_queue_id.or(gameflow_queue_id),
+            OngoingGamePhase::InGame => gameflow_queue_id.or(champ_select_queue_id),
+            OngoingGamePhase::Idle => None,
+        }
+    }
+
+    pub(crate) fn effective_mode_tag(
+        &self,
+        settings: &OngoingGameManagerSettings,
+    ) -> Option<String> {
+        settings.match_history_effective_tag(self.effective_queue_id())
     }
 
     pub(crate) fn team_puuids(&self) -> Vec<String> {
@@ -283,22 +512,23 @@ impl ManagerState {
     pub(crate) fn extract_champ_select_members(
         session: &ChampSelectSessionData,
     ) -> Vec<ChampSelectTeamMember> {
-        let mut members = session.my_team.clone();
-        members.extend(session.their_team.clone());
-        members
+        session.my_team.clone()
     }
 
     pub(crate) fn extract_gameflow_members(
         session: &GameflowSessionData,
     ) -> Vec<ChampSelectTeamMember> {
         let mut members = Vec::new();
-        for team in [&session.game_data.team_one, &session.game_data.team_two] {
+        for (team, mapped_team_id) in [
+            (&session.game_data.team_one, 100_u64),
+            (&session.game_data.team_two, 200_u64),
+        ] {
             for t in team {
                 members.push(ChampSelectTeamMember {
                     puuid: t.puuid.clone(),
                     champion_id: t.champion_id,
                     summoner_id: t.summoner_id as i64,
-                    team: t.team_participant_id,
+                    team: mapped_team_id,
                     assigned_position: Some(t.selected_position.clone()),
                     game_name: t.summoner_name.clone(),
                     internal_name: t.summoner_internal_name.clone(),
@@ -360,6 +590,13 @@ fn should_seed_phase_event(phase: GameflowPhase) -> bool {
     )
 }
 
+fn should_apply_gameflow_members(phase: GameflowPhase) -> bool {
+    matches!(
+        phase,
+        GameflowPhase::GameStart | GameflowPhase::InProgress | GameflowPhase::InGame
+    )
+}
+
 fn is_bot_puuid(puuid: &str) -> bool {
     let p = puuid.trim();
     p.is_empty() || p.eq_ignore_ascii_case("BOT") || p.to_uppercase().starts_with("BOT_")
@@ -379,11 +616,18 @@ fn parse_match_history_count(value: &Value) -> Option<u32> {
     None
 }
 
-fn parse_queue_mode_to_tag(value: &Value) -> Option<String> {
-    let raw = value.as_str()?.trim();
+fn parse_queue_mode_setting(value: &Value) -> MatchHistoryModeSetting {
+    let Some(raw) = value.as_str().map(str::trim) else {
+        return MatchHistoryModeSetting::All;
+    };
+
     if raw.is_empty() || raw == QUEUE_MODE_ALL_VALUE || raw.eq_ignore_ascii_case("all") {
-        return None;
+        return MatchHistoryModeSetting::All;
     }
 
-    Some(raw.to_string())
+    if raw == QUEUE_MODE_CURRENT_VALUE {
+        return MatchHistoryModeSetting::CurrentMode;
+    }
+
+    MatchHistoryModeSetting::FixedTag(raw.to_string())
 }

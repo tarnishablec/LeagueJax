@@ -6,5 +6,13 @@ fn main() {
         .install_default()
         .expect("Failed to install rustls crypto provider");
 
+    #[cfg(windows)]
+    {
+        unsafe {
+            windows::Win32::System::Console::SetConsoleOutputCP(65001)
+                .expect("TODO: panic message");
+        }
+    }
+
     league_jax_lib::run()
 }

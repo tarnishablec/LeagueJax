@@ -8,6 +8,7 @@ use crate::shards::lcu::summoner::{SummonerInfo, SummonerSearchResult};
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
+use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::SgpShard;
 use crate::shards::static_cache::StaticCacheShard;
 use jax::Jax;
@@ -216,7 +217,8 @@ pub async fn get_current_sgp_server_id(jax: State<'_, Arc<Jax>>) -> Result<Strin
         .manager()
         .ok_or(AppError::LcuNotConnected)?;
     let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
-    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let sgp_session = session.to_sgp(&sgp_shard).await?;
     Ok(sgp_session.api().sgp_server_id().to_string())
 }
 
@@ -252,10 +254,8 @@ pub async fn search_summoners(
         .ok_or(AppError::LcuNotConnected)?;
     let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let lcu_api = session.api();
-    let sgp_session = jax
-        .get_shard::<SgpShard>()
-        .spg_from_lcu(session.clone())
-        .await?;
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let sgp_session = session.to_sgp(&sgp_shard).await?;
     let sgp_api = sgp_session.api();
     let current_sgp_server_id = sgp_api.sgp_server_id();
     let config = sgp_servers_config()?;
@@ -349,7 +349,8 @@ pub async fn get_match_summaries(
         .manager()
         .ok_or(AppError::LcuNotConnected)?;
     let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
-    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let sgp_session = session.to_sgp(&sgp_shard).await?;
 
     let count = end_index.saturating_sub(begin_index);
     if count == 0 {
@@ -418,7 +419,8 @@ pub async fn get_match_summary(
     let session = manager
         .session_for_pid(focused_pid)
         .ok_or(AppError::LcuNotConnected)?;
-    let sgp_session = jax.get_shard::<SgpShard>().spg_from_lcu(session).await?;
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let sgp_session = session.to_sgp(&sgp_shard).await?;
 
     sgp_session
         .api()

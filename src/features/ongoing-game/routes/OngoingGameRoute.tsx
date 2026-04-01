@@ -27,12 +27,18 @@ export function OngoingGameRoute() {
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
   );
-  const { teamMembers, phase, gameflowSession, champSelectSession } =
-    useOngoingGameStore();
+  const {
+    teamMembers,
+    phase,
+    gameflowSession,
+    champSelectSession,
+    effectiveQueueId,
+  } = useOngoingGameStore();
   const teamGroups = resolveOngoingTeamGroups({
     teamMembers,
     gameflowSession,
     champSelectSession,
+    effectiveQueueId,
   });
 
   if (phase === "Idle") {
