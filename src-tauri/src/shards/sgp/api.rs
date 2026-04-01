@@ -161,13 +161,16 @@ impl SgpApi {
             )
             .await?;
 
-        Ok(serde_path_to_error::deserialize(response)?)
+        tracing::debug!(
+            "[SGP] get_summoner_by_puuid raw response puuid={puuid} payload={response}"
+        );
 
-        // Ok(entries.into_iter().next().map(|mut info| {
-        //     if info.summoner_level == 0 && info.level > 0 {
-        //         info.summoner_level = info.level;
-        //     }
-        //     info
-        // }))
+        let entries: Vec<SummonerInfo> = serde_path_to_error::deserialize(response)?;
+        Ok(entries.into_iter().next().map(|mut info| {
+            if info.summoner_level == 0 && info.level > 0 {
+                info.summoner_level = info.level;
+            }
+            info
+        }))
     }
 }

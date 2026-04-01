@@ -73,6 +73,26 @@ export const tagPill = recipe({
         background: "oklch(0.65 0.12 280 / 0.12)",
         border: "1px solid oklch(0.65 0.12 280 / 0.4)",
       },
+      mostCS: {
+        color: "oklch(0.7 0.14 110)",
+        background: "oklch(0.7 0.14 110 / 0.12)",
+        border: "1px solid oklch(0.7 0.14 110 / 0.4)",
+      },
+      highestKP: {
+        color: "oklch(0.72 0.15 30)",
+        background: "oklch(0.72 0.15 30 / 0.12)",
+        border: "1px solid oklch(0.72 0.15 30 / 0.4)",
+      },
+      mostGold: {
+        color: "oklch(0.8 0.16 90)",
+        background: "oklch(0.8 0.16 90 / 0.12)",
+        border: "1px solid oklch(0.8 0.16 90 / 0.4)",
+      },
+      bestDamageEfficiency: {
+        color: "oklch(0.7 0.14 200)",
+        background: "oklch(0.7 0.14 200 / 0.12)",
+        border: "1px solid oklch(0.7 0.14 200 / 0.4)",
+      },
       mvp: {
         color: "oklch(0.85 0.18 85)",
         background: "oklch(0.85 0.18 85 / 0.12)",

@@ -106,10 +106,12 @@ export function MatchCardPlayers({
     gameName: string,
     tagLine: string,
   ) => {
+    const optimisticPuuid = participant.puuid ?? "";
+
     // Open the tab immediately with available data for instant feedback
     openTab(
       defaultSummonerInfo({
-        puuid: participant.puuid ?? "",
+        puuid: optimisticPuuid,
         gameName,
         tagLine,
       }),
@@ -121,6 +123,12 @@ export function MatchCardPlayers({
       (resolved) => {
         if (resolved) {
           const { summoner } = resolved;
+          const samePuuid = summoner.puuid === optimisticPuuid;
+
+          // Avoid changing sgpServerId for an already-open tab with the same puuid.
+          // Otherwise the history SWR key changes and triggers a duplicate fetch.
+          const nextSgpServerId = samePuuid ? undefined : summoner.sgpServerId;
+
           openTab(
             defaultSummonerInfo({
               puuid: summoner.puuid,
@@ -130,7 +138,7 @@ export function MatchCardPlayers({
               summonerLevel: summoner.summonerLevel,
               privacy: summoner.privacy,
             }),
-            summoner.sgpServerId,
+            nextSgpServerId,
           );
         }
       },

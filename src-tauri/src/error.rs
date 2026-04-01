@@ -50,7 +50,16 @@ from_variant!(Sled      => sled::Error);
 
 impl From<serde_path_to_error::Error<serde_json::Error>> for AppError {
     fn from(error: serde_path_to_error::Error<serde_json::Error>) -> Self {
-        Self::other(error.to_string())
+        let deser_path = error.path().to_string();
+        let deser_message = error.inner().to_string();
+
+        tracing::error!(
+            deser_path = %deser_path,
+            deser_message = %deser_message,
+            "Backend deserialization failed"
+        );
+
+        Self::other(format!("{deser_path}: {deser_message}"))
     }
 }
 
