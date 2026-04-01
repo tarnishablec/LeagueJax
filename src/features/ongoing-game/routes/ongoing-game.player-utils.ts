@@ -116,7 +116,7 @@ function shouldUseTopBottomLayout(
   const distinctTeamIds = new Set(
     teamMembers
       .map((member) => member.team)
-      .filter((teamId) => typeof teamId === "number" && teamId > 0),
+      .filter((teamId) => teamId > 0),
   );
 
   if (distinctTeamIds.size > 2) {

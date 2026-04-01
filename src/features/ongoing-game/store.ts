@@ -71,9 +71,8 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
   },
   applyUpdated: (payload) => {
     set((state) => {
-      const pendingStarted =
+      const pendingTransition =
         payload.match_histories_pending && !state.matchHistoriesPending;
-
       return {
         ...state,
         phase: payload.phase,
@@ -85,13 +84,14 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         modeTag: toModeTag(payload.match_history_tag),
         gameflowSession: payload.gameflow_session,
         champSelectSession: payload.champ_select_session,
-        ...(pendingStarted ? { matchHistoriesByPuuid: {} } : {}),
         ...(payload.phase === "Idle"
           ? {
               summonersByPuuid: {},
               matchHistoriesByPuuid: {},
             }
-          : {}),
+          : pendingTransition
+            ? { matchHistoriesByPuuid: {} }
+            : {}),
       };
     });
   },

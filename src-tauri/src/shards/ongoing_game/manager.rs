@@ -97,34 +97,63 @@ impl OngoingGameManager {
 
         match &event {
             LcuWsEvent::GameflowSession(payload) => {
+                let event_game_id = extract_gameflow_game_id(&payload.data);
+                state.sync_lifecycle_game_id(event_game_id, "gameflow_session");
                 state.cached_gameflow_session = Some(payload.data.clone());
                 if has_gameflow_team_data(&payload.data)
                     && should_apply_gameflow_members(payload.data.phase)
+                    && payload.event_type != EventType::Delete
+                    && state.can_apply_member_snapshot(event_game_id)
                 {
                     let next_members = ManagerState::extract_gameflow_members(&payload.data);
                     tracing::info!(
-                        "[ongoing_game] team snapshot source=gameflow phase={:?} members={}",
+                        "[ongoing_game] team snapshot source=gameflow phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
                         payload.data.phase,
+                        payload.event_type,
+                        event_game_id,
+                        state.lifecycle_game_id,
                         next_members.len()
                     );
                     state.cached_team_members = next_members;
                 } else if has_gameflow_team_data(&payload.data) {
                     tracing::info!(
-                        "[ongoing_game] team snapshot source=unchanged phase={:?} existing_members={} reason=skip_gameflow_override",
+                        "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_gameflow_override",
                         payload.data.phase,
+                        payload.event_type,
+                        event_game_id,
+                        state.lifecycle_game_id,
                         state.cached_team_members.len()
                     );
                 }
             }
             LcuWsEvent::ChampSelectSession(payload) => {
+                let event_game_id = extract_champ_select_game_id(&payload.data);
+                state.sync_lifecycle_game_id(event_game_id, "champ_select_session");
                 state.cached_champ_select_session = Some(payload.data.clone());
-                let next_members = ManagerState::extract_champ_select_members(&payload.data);
-                tracing::info!(
-                    "[ongoing_game] team snapshot source=champ_select phase={:?} members={}",
-                    GameflowPhase::ChampSelect,
-                    next_members.len()
-                );
-                state.cached_team_members = next_members;
+                let can_apply = payload.event_type != EventType::Delete
+                    && state.current_phase() != OngoingGamePhase::InGame
+                    && state.can_apply_member_snapshot(event_game_id);
+                if can_apply {
+                    let next_members = ManagerState::extract_champ_select_members(&payload.data);
+                    tracing::info!(
+                        "[ongoing_game] team snapshot source=champ_select phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
+                        GameflowPhase::ChampSelect,
+                        payload.event_type,
+                        event_game_id,
+                        state.lifecycle_game_id,
+                        next_members.len()
+                    );
+                    state.cached_team_members = next_members;
+                } else {
+                    tracing::info!(
+                        "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_champ_select_override",
+                        state.current_phase(),
+                        payload.event_type,
+                        event_game_id,
+                        state.lifecycle_game_id,
+                        state.cached_team_members.len()
+                    );
+                }
             }
             _ => {}
         }
@@ -394,6 +423,7 @@ impl OngoingGameContext {
 pub(crate) struct ManagerState {
     pub(crate) driver: Option<OngoingGameDriver>,
     pub(crate) lcu_session: Option<Arc<LcuSession>>,
+    pub(crate) lifecycle_game_id: Option<u64>,
     pub(crate) cached_gameflow_session: Option<GameflowSessionData>,
     pub(crate) cached_champ_select_session: Option<ChampSelectSessionData>,
     pub(crate) cached_summoners_by_puuid: HashMap<String, SummonerInfo>,
@@ -408,6 +438,7 @@ impl ManagerState {
         Self {
             driver: None,
             lcu_session: None,
+            lifecycle_game_id: None,
             cached_gameflow_session: None,
             cached_champ_select_session: None,
             cached_summoners_by_puuid: HashMap::new(),
@@ -419,6 +450,7 @@ impl ManagerState {
     }
 
     pub(crate) fn clear_caches(&mut self) {
+        self.lifecycle_game_id = None;
         self.cached_gameflow_session = None;
         self.cached_champ_select_session = None;
         self.cached_summoners_by_puuid.clear();
@@ -426,6 +458,49 @@ impl ManagerState {
         self.cached_team_members.clear();
         self.match_histories_pending = false;
         self.generation = self.generation.wrapping_add(1);
+    }
+
+    pub(crate) fn sync_lifecycle_game_id(
+        &mut self,
+        event_game_id: Option<u64>,
+        source: &str,
+    ) {
+        let Some(event_game_id) = event_game_id.filter(|game_id| *game_id > 0) else {
+            return;
+        };
+
+        match self.lifecycle_game_id {
+            None => {
+                self.lifecycle_game_id = Some(event_game_id);
+                tracing::info!(
+                    "[ongoing_game] lifecycle game_id initialized source={} game_id={}",
+                    source,
+                    event_game_id
+                );
+            }
+            Some(current) if current == event_game_id => {}
+            Some(current) => {
+                tracing::info!(
+                    "[ongoing_game] lifecycle game_id changed source={} from={} to={} action=clear_caches",
+                    source,
+                    current,
+                    event_game_id
+                );
+                self.clear_caches();
+                self.lifecycle_game_id = Some(event_game_id);
+            }
+        }
+    }
+
+    pub(crate) fn can_apply_member_snapshot(&self, event_game_id: Option<u64>) -> bool {
+        let Some(event_game_id) = event_game_id.filter(|game_id| *game_id > 0) else {
+            return false;
+        };
+
+        match self.lifecycle_game_id {
+            Some(current) => current == event_game_id,
+            None => true,
+        }
     }
 
     pub(crate) fn build_updated_payload(
@@ -546,6 +621,14 @@ fn lcu_focus_key(session: Option<&Arc<LcuSession>>) -> Option<(u32, u16)> {
 
 fn has_gameflow_team_data(session: &GameflowSessionData) -> bool {
     !session.game_data.team_one.is_empty() || !session.game_data.team_two.is_empty()
+}
+
+fn extract_gameflow_game_id(session: &GameflowSessionData) -> Option<u64> {
+    (session.game_data.game_id > 0).then_some(session.game_data.game_id)
+}
+
+fn extract_champ_select_game_id(session: &ChampSelectSessionData) -> Option<u64> {
+    (session.game_id > 0).then_some(session.game_id)
 }
 
 fn seed_to_ws_events(seed: &OngoingSessionSeed) -> Vec<LcuWsEvent> {
