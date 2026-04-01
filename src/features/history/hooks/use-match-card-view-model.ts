@@ -114,7 +114,7 @@ const STAT_TAG_RULES: StatTagRule[] = [
   },
   {
     tag: "highestKP",
-    stat: (p) => p.killParticipation ?? 0,
+    stat: (p) => p.challenges?.killParticipation ?? 0,
     scope: "all",
   },
   { tag: "mostGold", stat: (p) => p.goldEarned ?? 0, scope: "all" },
