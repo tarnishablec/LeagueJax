@@ -2,10 +2,7 @@ import { style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 export const shardsPage = style({
-  display: "grid",
-  gridTemplateRows: "auto 1fr",
   height: "100%",
-  gap: 10,
 });
 
 export const toolbar = style({
@@ -50,12 +47,16 @@ export const segmentActive = style([
 ]);
 
 export const carouselRoot = style({
-  minHeight: 0,
+  display: "grid",
+  gridTemplateRows: "auto 1fr",
+  gap: 10,
+  height: "100%",
   overflow: "hidden",
 });
 
 export const carouselItemGroup = style({
   height: "100%",
+  scrollBehavior: "smooth",
 });
 
 export const carouselItem = style({

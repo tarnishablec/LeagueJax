@@ -46,7 +46,6 @@ function buildFrontendShards(): ShardInfoDto[] {
 export function ShardsPage() {
   const { t } = useTranslation();
   const [side, setSide] = useState<Side>("frontend");
-  const [viewPage, setViewPage] = useState(0);
   const [backendSnapshot, setBackendSnapshot] =
     useState<ShardsSnapshotDto | null>(null);
 
@@ -83,50 +82,53 @@ export function ShardsPage() {
 
   return (
     <div className={s.shardsPage}>
-      <div className={s.toolbar}>
-        <div className={s.segmentGroup}>
-          <button
-            type="button"
-            className={side === "frontend" ? s.segmentActive : s.segment}
-            onClick={() => setSide("frontend")}
-          >
-            {t("settings.shards.frontendTab")}
-          </button>
-          <button
-            type="button"
-            className={side === "backend" ? s.segmentActive : s.segment}
-            onClick={() => setSide("backend")}
-          >
-            {t("settings.shards.backendTab")}
-          </button>
-        </div>
-
-        <div />
-
-        <div className={s.segmentGroup}>
-          <button
-            type="button"
-            className={viewPage === 0 ? s.segmentActive : s.segment}
-            onClick={() => setViewPage(0)}
-          >
-            {t("settings.shards.viewTable")}
-          </button>
-          <button
-            type="button"
-            className={viewPage === 1 ? s.segmentActive : s.segment}
-            onClick={() => setViewPage(1)}
-          >
-            {t("settings.shards.viewGraph")}
-          </button>
-        </div>
-      </div>
-
       <Carousel.Root
         slideCount={2}
-        page={viewPage}
-        onPageChange={(details) => setViewPage(details.page)}
+        defaultPage={0}
         className={s.carouselRoot}
       >
+        <div className={s.toolbar}>
+          <div className={s.segmentGroup}>
+            <button
+              type="button"
+              className={side === "frontend" ? s.segmentActive : s.segment}
+              onClick={() => setSide("frontend")}
+            >
+              {t("settings.shards.frontendTab")}
+            </button>
+            <button
+              type="button"
+              className={side === "backend" ? s.segmentActive : s.segment}
+              onClick={() => setSide("backend")}
+            >
+              {t("settings.shards.backendTab")}
+            </button>
+          </div>
+
+          <div />
+
+          <Carousel.Context>
+            {(api) => (
+              <div className={s.segmentGroup}>
+                <button
+                  type="button"
+                  className={api.page === 0 ? s.segmentActive : s.segment}
+                  onClick={() => api.scrollToIndex(0)}
+                >
+                  {t("settings.shards.viewTable")}
+                </button>
+                <button
+                  type="button"
+                  className={api.page === 1 ? s.segmentActive : s.segment}
+                  onClick={() => api.scrollToIndex(1)}
+                >
+                  {t("settings.shards.viewGraph")}
+                </button>
+              </div>
+            )}
+          </Carousel.Context>
+        </div>
+
         <Carousel.ItemGroup className={s.carouselItemGroup}>
           <Carousel.Item index={0} className={s.carouselItem}>
             <ShardsTable shards={activeShards} labelMap={labelMap} />
