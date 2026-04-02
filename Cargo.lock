@@ -1960,12 +1960,24 @@ dependencies = [
 
 [[package]]
 name = "jax"
-version = "0.1.0"
+version = "0.2.0"
+source = "git+https://github.com/tarnishablec/jax.git?branch=main#2226b1145f1d9c3bc3f40f3db50274647a1c5a91"
 dependencies = [
  "async-trait",
  "downcast-rs",
  "futures",
  "petgraph",
+ "uuid",
+]
+
+[[package]]
+name = "jax-probes"
+version = "0.2.0"
+source = "git+https://github.com/tarnishablec/jax.git?branch=main#2226b1145f1d9c3bc3f40f3db50274647a1c5a91"
+dependencies = [
+ "async-trait",
+ "jax",
+ "spin",
  "uuid",
 ]
 
@@ -2084,6 +2096,7 @@ dependencies = [
  "base64 0.22.1",
  "futures-util",
  "jax",
+ "jax-probes",
  "maokai-runner",
  "maokai-tree",
  "ntapi",
@@ -2217,6 +2230,7 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "maokai-runner"
 version = "0.2.1"
+source = "git+https://github.com/tarnishablec/maokai?branch=main#f970b747fa30b860343a9d24fad771fa36830490"
 dependencies = [
  "maokai-tree",
 ]
@@ -2224,6 +2238,7 @@ dependencies = [
 [[package]]
 name = "maokai-tree"
 version = "0.2.1"
+source = "git+https://github.com/tarnishablec/maokai?branch=main#f970b747fa30b860343a9d24fad771fa36830490"
 dependencies = [
  "indextree",
 ]
@@ -3992,6 +4007,12 @@ dependencies = [
  "libc",
  "system-deps",
 ]
+
+[[package]]
+name = "spin"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5fe4ccb98d9c292d56fec89a5e07da7fc4cf0dc11e156b41793132775d3e591"
 
 [[package]]
 name = "sqlite-wasm-rs"

@@ -1,17 +1,22 @@
 use crate::error::AppError;
 use crate::shards::shard_status_types::{ShardInfoDto, ShardStatusDto, ShardsSnapshotDto};
 use jax::Jax;
+use jax_probes::TimingProbe;
 use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
-pub async fn get_shards_status(jax: State<'_, Arc<Jax>>) -> Result<ShardsSnapshotDto, AppError> {
-    Ok(build_shards_snapshot(&jax))
+pub async fn get_shards_status(
+    jax: State<'_, Arc<Jax>>,
+    timing: State<'_, Arc<TimingProbe>>,
+) -> Result<ShardsSnapshotDto, AppError> {
+    Ok(build_shards_snapshot(&jax, &timing))
 }
 
-pub fn build_shards_snapshot(jax: &Jax) -> ShardsSnapshotDto {
+pub fn build_shards_snapshot(jax: &Jax, timing: &TimingProbe) -> ShardsSnapshotDto {
     let all_shards = jax.list_shards();
     let report = jax.get_startup_report();
+    let durations = timing.durations();
 
     let failed_ids: std::collections::HashSet<uuid::Uuid> = report
         .map(|r| r.failed_ids.iter().copied().collect())
@@ -33,9 +38,7 @@ pub fn build_shards_snapshot(jax: &Jax) -> ShardsSnapshotDto {
                 ShardStatusDto::Running
             };
 
-            let duration_ms = report
-                .and_then(|r| r.durations.get(&id))
-                .map(|d| d.as_secs_f64() * 1000.0);
+            let duration_ms = durations.get(&id).map(|d| d.as_secs_f64() * 1000.0);
 
             ShardInfoDto {
                 id: id.to_string(),

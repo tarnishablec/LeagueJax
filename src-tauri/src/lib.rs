@@ -22,6 +22,7 @@ use window_vibrancy::{apply_acrylic, apply_mica};
 use window_vibrancy::apply_acrylic;
 
 use jax::Jax;
+use jax_probes::TimingProbe;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -107,7 +108,10 @@ pub fn run() {
             let db_path = data_dir.join("data");
 
             // 鈹€鈹€ Jax lifecycle: build 鈫?register 鈫?start 鈹€鈹€
+            let timing = Arc::new(TimingProbe::new());
+
             let jax = Jax::default()
+                .probe(timing.clone())
                 .register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)))
                 .register(Arc::new(shards::persistence_sled::PersistenceSled::new(
                     db_path,
@@ -133,6 +137,8 @@ pub fn run() {
 
             let jax = Arc::new(jax);
             app.manage(jax.clone());
+            let timing_for_emit = timing.clone();
+            app.manage(timing);
 
             let app_handle_for_emit = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -158,7 +164,7 @@ pub fn run() {
                         }
 
                         // Emit shard status event for frontend
-                        let snapshot = build_shards_snapshot(&jax);
+                        let snapshot = build_shards_snapshot(&jax, &timing_for_emit);
                         if let Err(e) = app_handle_for_emit.emit("shards_status_changed", &snapshot)
                         {
                             tracing::error!(error = %e, "Failed to emit shards_status_changed");
