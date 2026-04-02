@@ -13,13 +13,20 @@ export function useFocusSync(
 
   useEffect(() => {
     const focusedPid = connected?.pid;
-    if (focusedPid === lastSyncedPid) return;
+    const hadFocusedClient = lastSyncedPid !== undefined;
+    const didDisconnect = hadFocusedClient && focusedPid === undefined;
+    const didConnectToNewClient =
+      focusedPid !== undefined && focusedPid !== lastSyncedPid;
+
+    if (!didDisconnect && !didConnectToNewClient) return;
     lastSyncedPid = focusedPid;
 
-    if (!connected) return;
+    if (didDisconnect) {
+      closeAllTabs();
+      return;
+    }
 
-    closeAllTabs();
-    if (autoOpenOwnTab && connected.summoner) {
+    if (connected && autoOpenOwnTab && connected.summoner) {
       openTab(connected.summoner, null);
     }
   }, [connected, autoOpenOwnTab, openTab, closeAllTabs]);
