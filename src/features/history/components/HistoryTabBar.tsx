@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import type { SummonerInfo } from "@/bindings/summoner";
 import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { useTabStore } from "@/stores/tabs.ts";
@@ -208,10 +209,6 @@ interface HistoryTabItemProps {
   active: boolean;
   tabId: string;
   summoner: SummonerInfo;
-  onActivate: () => void;
-  onClose: () => void;
-  onCloseTabsToRight: (id: string) => void;
-  onCloseAllTabs: () => void;
   onAuxClick: (e: MouseEvent, id: string) => void;
   registerRef: (id: string, node: HTMLDivElement | null) => void;
 }
@@ -220,13 +217,18 @@ function HistoryTabItem({
   active,
   tabId,
   summoner,
-  onActivate,
-  onClose,
-  onCloseTabsToRight,
-  onCloseAllTabs,
   onAuxClick,
   registerRef,
 }: HistoryTabItemProps) {
+  const { t } = useTranslation();
+  const {
+    setActiveTab,
+    closeTab,
+    closeTabsToRight,
+    closeOtherTabs,
+    closeAllTabs,
+  } = useTabStore();
+
   return (
     <Menu.Root positioning={{ placement: "bottom-start", strategy: "fixed" }}>
       <Menu.ContextTrigger asChild>
@@ -237,7 +239,7 @@ function HistoryTabItem({
           <button
             type="button"
             className={s.tabMain}
-            onClick={onActivate}
+            onClick={() => setActiveTab(tabId)}
             onAuxClick={(e) => onAuxClick(e, tabId)}
           >
             <TabIcon summoner={summoner} />
@@ -249,7 +251,7 @@ function HistoryTabItem({
             aria-label="Close tab"
             onClick={(e) => {
               e.stopPropagation();
-              onClose();
+              closeTab(tabId);
             }}
           >
             <X size={12} />
@@ -262,17 +264,24 @@ function HistoryTabItem({
             <Menu.Item
               className={s.contextMenuItem}
               value={`close-right-${tabId}`}
-              onSelect={() => onCloseTabsToRight(tabId)}
+              onSelect={() => closeTabsToRight(tabId)}
             >
-              Close Tabs to the Right
+              {t("history.closeTabsToRight")}
+            </Menu.Item>
+            <Menu.Item
+              className={s.contextMenuItem}
+              value={`close-others-${tabId}`}
+              onSelect={() => closeOtherTabs(tabId)}
+            >
+              {t("history.closeOtherTabs")}
             </Menu.Item>
             <Menu.Separator className={s.contextMenuSeparator} />
             <Menu.Item
               className={s.contextMenuItem}
               value="close-all"
-              onSelect={onCloseAllTabs}
+              onSelect={() => closeAllTabs()}
             >
-              Close All Tabs
+              {t("history.closeAllTabs")}
             </Menu.Item>
           </Menu.Content>
         </Menu.Positioner>
@@ -282,14 +291,7 @@ function HistoryTabItem({
 }
 
 export function HistoryTabBar() {
-  const {
-    tabs,
-    activeTabId,
-    setActiveTab,
-    closeTab,
-    closeTabsToRight,
-    closeAllTabs,
-  } = useTabStore();
+  const { tabs, activeTabId, closeTab } = useTabStore();
   const tabRefs = useRef<TabRefsMap>({});
 
   const sortedTabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
@@ -327,10 +329,6 @@ export function HistoryTabBar() {
               active={tab.id === activeTabId}
               tabId={tab.id}
               summoner={tab.summoner}
-              onActivate={() => setActiveTab(tab.id)}
-              onClose={() => closeTab(tab.id)}
-              onCloseTabsToRight={closeTabsToRight}
-              onCloseAllTabs={closeAllTabs}
               onAuxClick={handleAuxClick}
               registerRef={(id, node) => {
                 tabRefs.current[id] = node;

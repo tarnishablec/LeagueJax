@@ -113,6 +113,9 @@
     "viewOwnHistory": "Click to view your match history",
     "emptyState": "Search for a summoner to view match history",
     "closeTab": "Close tab",
+    "closeTabsToRight": "Close Tabs to the Right",
+    "closeOtherTabs": "Close Other Tabs",
+    "closeAllTabs": "Close All Tabs",
     "searchDialog": {
       "open": "Search",
       "title": "Search Summoner",

@@ -78,4 +78,3 @@ export const filterSelect = style({
   width: 140,
   minWidth: 140,
 });
-

@@ -40,6 +40,7 @@ interface TabState {
   openTab: (summoner: SummonerInfo, sgpServerId?: string | null) => void;
   closeTab: (id: string) => void;
   closeTabsToRight: (id: string) => void;
+  closeOtherTabs: (id: string) => void;
   closeAllTabs: () => void;
   setActiveTab: (id: string) => void;
 }
@@ -116,6 +117,20 @@ export const useTabStore = create<TabState>((set, get) => ({
     set({
       tabs: next,
       activeTabId: activeStillExists ? activeTabId : (next[index]?.id ?? null),
+    });
+  },
+
+  closeOtherTabs: (id) => {
+    const { tabs, activeTabId } = get();
+    const next = tabs.filter((tab) => tab.id === id);
+    if (next.length === tabs.length) {
+      return;
+    }
+
+    const activeStillExists = next.some((tab) => tab.id === activeTabId);
+    set({
+      tabs: next,
+      activeTabId: activeStillExists ? activeTabId : (next[0]?.id ?? null),
     });
   },
 
