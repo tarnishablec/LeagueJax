@@ -117,7 +117,7 @@
       "open": "Search",
       "title": "Search Summoner",
       "subtitle": "Supports puuid, gameName#tagLine.",
-      "placeholder": "gameName#tagLine / puuid",
+      "placeholder": "Enter gameName#tagLine or puuid",
       "submit": "Search",
       "loadingServers": "Loading server context...",
       "noResults": "No summoner found for this query.",
