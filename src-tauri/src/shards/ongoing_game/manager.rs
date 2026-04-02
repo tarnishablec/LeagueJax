@@ -11,6 +11,9 @@ use crate::shards::lcu::events::champ_select_session::{
 };
 use crate::shards::lcu::events::gameflow_phase::Phase as GameflowPhase;
 use crate::shards::lcu::events::gameflow_session::{GameflowSession, GameflowSessionData};
+use crate::shards::lcu::events::teambuilder_tbd_game::{
+    TeambuilderCell, TeambuilderTbdGamePayload,
+};
 use crate::shards::lcu::events::{
     EventType, LcuWsEvent, URI_CHAMP_SELECT_SESSION, URI_GAMEFLOW_SESSION,
 };
@@ -128,12 +131,14 @@ impl OngoingGameManager {
             LcuWsEvent::ChampSelectSession(payload) => {
                 let event_game_id = extract_champ_select_game_id(&payload.data);
                 state.sync_lifecycle_game_id(event_game_id, "champ_select_session");
-                state.cached_champ_select_session = Some(payload.data.clone());
+                let merged_session =
+                    state.merge_teambuilder_into_champ_select_session(payload.data.clone());
+                state.cached_champ_select_session = Some(merged_session.clone());
                 let can_apply = payload.event_type != EventType::Delete
                     && state.current_phase() != OngoingGamePhase::InGame
                     && state.can_apply_member_snapshot(event_game_id);
                 if can_apply {
-                    let next_members = ManagerState::extract_champ_select_members(&payload.data);
+                    let next_members = ManagerState::extract_champ_select_members(&merged_session);
                     tracing::info!(
                         "[ongoing_game] team snapshot source=champ_select phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
                         GameflowPhase::ChampSelect,
@@ -146,6 +151,47 @@ impl OngoingGameManager {
                 } else {
                     tracing::info!(
                         "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_champ_select_override",
+                        state.current_phase(),
+                        payload.event_type,
+                        event_game_id,
+                        state.lifecycle_game_id,
+                        state.cached_team_members.len()
+                    );
+                }
+            }
+            LcuWsEvent::TeambuilderTbdGame(payload) => {
+                let event_game_id = extract_teambuilder_game_id(&payload.data.payload);
+                state.sync_lifecycle_game_id(event_game_id, "teambuilder_tbd_game");
+                state.cached_teambuilder_payload = Some(payload.data.payload.clone());
+                if payload.event_type == EventType::Delete
+                    || state.current_phase() == OngoingGamePhase::InGame
+                    || !state.can_apply_member_snapshot(event_game_id)
+                {
+                    tracing::info!(
+                        "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_teambuilder_override",
+                        state.current_phase(),
+                        payload.event_type,
+                        event_game_id,
+                        state.lifecycle_game_id,
+                        state.cached_team_members.len()
+                    );
+                } else if let Some(current_session) = state.cached_champ_select_session.clone() {
+                    let merged_session =
+                        state.merge_teambuilder_into_champ_select_session(current_session);
+                    let next_members = ManagerState::extract_champ_select_members(&merged_session);
+                    state.cached_champ_select_session = Some(merged_session);
+                    tracing::info!(
+                        "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
+                        GameflowPhase::ChampSelect,
+                        payload.event_type,
+                        event_game_id,
+                        state.lifecycle_game_id,
+                        next_members.len()
+                    );
+                    state.cached_team_members = next_members;
+                } else {
+                    tracing::info!(
+                        "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=await_champ_select_session",
                         state.current_phase(),
                         payload.event_type,
                         event_game_id,
@@ -444,6 +490,7 @@ pub(crate) struct ManagerState {
     pub(crate) lifecycle_game_id: Option<u64>,
     pub(crate) cached_gameflow_session: Option<GameflowSessionData>,
     pub(crate) cached_champ_select_session: Option<ChampSelectSessionData>,
+    pub(crate) cached_teambuilder_payload: Option<TeambuilderTbdGamePayload>,
     pub(crate) cached_summoners_by_puuid: HashMap<String, SummonerInfo>,
     pub(crate) cached_match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
     pub(crate) cached_team_members: Vec<ChampSelectTeamMember>,
@@ -459,6 +506,7 @@ impl ManagerState {
             lifecycle_game_id: None,
             cached_gameflow_session: None,
             cached_champ_select_session: None,
+            cached_teambuilder_payload: None,
             cached_summoners_by_puuid: HashMap::new(),
             cached_match_histories: HashMap::new(),
             cached_team_members: Vec::new(),
@@ -478,6 +526,7 @@ impl ManagerState {
         self.lifecycle_game_id = None;
         self.cached_gameflow_session = None;
         self.cached_champ_select_session = None;
+        self.cached_teambuilder_payload = None;
         self.cached_summoners_by_puuid.clear();
         self.cached_match_histories.clear();
         self.cached_team_members.clear();
@@ -611,6 +660,43 @@ impl ManagerState {
         session.my_team.clone()
     }
 
+    fn merge_teambuilder_into_champ_select_session(
+        &self,
+        mut session: ChampSelectSessionData,
+    ) -> ChampSelectSessionData {
+        let Some(payload) = self.cached_teambuilder_payload.as_ref() else {
+            return session;
+        };
+
+        if !same_game_id(session.game_id, payload.game_id) {
+            return session;
+        }
+
+        let identities = teambuilder_identities_by_cell_id(
+            &payload.champion_select_state.cells.allied_team,
+        );
+
+        if identities.is_empty() {
+            return session;
+        }
+
+        for member in &mut session.my_team {
+            let Some(identity) = identities.get(&member.cell_id) else {
+                continue;
+            };
+
+            if member.puuid.trim().is_empty() && !identity.puuid.trim().is_empty() {
+                member.puuid = identity.puuid.clone();
+            }
+
+            if member.summoner_id <= 0 && identity.summoner_id > 0 {
+                member.summoner_id = identity.summoner_id;
+            }
+        }
+
+        session
+    }
+
     pub(crate) fn extract_gameflow_members(
         session: &GameflowSessionData,
     ) -> Vec<ChampSelectTeamMember> {
@@ -650,6 +736,39 @@ fn extract_gameflow_game_id(session: &GameflowSessionData) -> Option<u64> {
 
 fn extract_champ_select_game_id(session: &ChampSelectSessionData) -> Option<u64> {
     (session.game_id > 0).then_some(session.game_id)
+}
+
+fn extract_teambuilder_game_id(payload: &TeambuilderTbdGamePayload) -> Option<u64> {
+    (payload.game_id > 0).then_some(payload.game_id)
+}
+
+fn teambuilder_identities_by_cell_id(
+    cells: &[TeambuilderCell],
+) -> HashMap<u64, TeambuilderCellIdentity> {
+    cells.iter()
+        .filter_map(|cell| {
+            let has_identity = !cell.puuid.trim().is_empty() || cell.summoner_id > 0;
+            has_identity.then(|| {
+                (
+                    cell.cell_id,
+                    TeambuilderCellIdentity {
+                        puuid: cell.puuid.clone(),
+                        summoner_id: cell.summoner_id,
+                    },
+                )
+            })
+        })
+        .collect()
+}
+
+fn same_game_id(left: u64, right: u64) -> bool {
+    left > 0 && right > 0 && left == right
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TeambuilderCellIdentity {
+    puuid: String,
+    summoner_id: i64,
 }
 
 fn seed_to_ws_events(seed: &OngoingSessionSeed) -> Vec<LcuWsEvent> {
@@ -699,6 +818,120 @@ fn should_apply_gameflow_members(phase: GameflowPhase) -> bool {
         phase,
         GameflowPhase::GameStart | GameflowPhase::InProgress | GameflowPhase::InGame
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ManagerState;
+    use crate::shards::lcu::events::champ_select_session::{ChampSelectSessionData, TeamMember};
+    use crate::shards::lcu::events::teambuilder_tbd_game::{
+        TeambuilderCell, TeambuilderCells, TeambuilderChampionSelectState, TeambuilderTbdGamePayload,
+    };
+
+    #[test]
+    fn merges_hidden_member_identity_from_teambuilder_payload() {
+        let mut state = ManagerState::new();
+        state.cached_teambuilder_payload = Some(TeambuilderTbdGamePayload {
+            game_id: 42,
+            champion_select_state: TeambuilderChampionSelectState {
+                cells: TeambuilderCells {
+                    allied_team: vec![TeambuilderCell {
+                        cell_id: 5,
+                        puuid: "ally-puuid".to_string(),
+                        summoner_id: 12345,
+                        ..Default::default()
+                    }],
+                    enemy_team: Vec::new(),
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        let merged = state.merge_teambuilder_into_champ_select_session(ChampSelectSessionData {
+            game_id: 42,
+            my_team: vec![TeamMember {
+                cell_id: 5,
+                puuid: String::new(),
+                summoner_id: 0,
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+
+        assert_eq!(merged.my_team[0].puuid, "ally-puuid");
+        assert_eq!(merged.my_team[0].summoner_id, 12345);
+    }
+
+    #[test]
+    fn preserves_existing_identity_when_champ_select_already_has_values() {
+        let mut state = ManagerState::new();
+        state.cached_teambuilder_payload = Some(TeambuilderTbdGamePayload {
+            game_id: 42,
+            champion_select_state: TeambuilderChampionSelectState {
+                cells: TeambuilderCells {
+                    allied_team: vec![TeambuilderCell {
+                        cell_id: 5,
+                        puuid: "teambuilder-puuid".to_string(),
+                        summoner_id: 12345,
+                        ..Default::default()
+                    }],
+                    enemy_team: Vec::new(),
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        let merged = state.merge_teambuilder_into_champ_select_session(ChampSelectSessionData {
+            game_id: 42,
+            my_team: vec![TeamMember {
+                cell_id: 5,
+                puuid: "existing-puuid".to_string(),
+                summoner_id: 99999,
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+
+        assert_eq!(merged.my_team[0].puuid, "existing-puuid");
+        assert_eq!(merged.my_team[0].summoner_id, 99999);
+    }
+
+    #[test]
+    fn ignores_teambuilder_payload_for_different_game_id() {
+        let mut state = ManagerState::new();
+        state.cached_teambuilder_payload = Some(TeambuilderTbdGamePayload {
+            game_id: 100,
+            champion_select_state: TeambuilderChampionSelectState {
+                cells: TeambuilderCells {
+                    allied_team: vec![TeambuilderCell {
+                        cell_id: 5,
+                        puuid: "ally-puuid".to_string(),
+                        summoner_id: 12345,
+                        ..Default::default()
+                    }],
+                    enemy_team: Vec::new(),
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        let merged = state.merge_teambuilder_into_champ_select_session(ChampSelectSessionData {
+            game_id: 42,
+            my_team: vec![TeamMember {
+                cell_id: 5,
+                puuid: String::new(),
+                summoner_id: 0,
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+
+        assert!(merged.my_team[0].puuid.is_empty());
+        assert_eq!(merged.my_team[0].summoner_id, 0);
+    }
 }
 
 fn is_bot_puuid(puuid: &str) -> bool {

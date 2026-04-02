@@ -24,16 +24,16 @@ export type OngoingGameUpdated = {
   /**
    * User-selected match-history mode tag.
    * - "__current_mode__": follow current queue mode
-   * - "q_xxx": fixed queue mode
+   * - `q_xxx`: fixed queue mode
    * - None: all modes
    */
   match_history_tag: string | null;
   /**
-   * Queue id resolved from current game context.
+   * Queue id resolved from the current game context.
    */
   effective_queue_id: number | null;
   /**
-   * Effective SGP mode tag after resolving `match_history_tag` against current context.
+   * Effective SGP mode tag after resolving `match_history_tag` Agathe nst current context.
    */
   effective_mode_tag: string | null;
   match_histories_pending: boolean;

@@ -21,6 +21,7 @@ fn event_name(event: &DriverInput) -> &'static str {
         LcuWsEvent::GameflowPhase(_) => "GameflowPhase",
         LcuWsEvent::ChampSelectSession(_) => "ChampSelectSession",
         LcuWsEvent::GameflowSession(_) => "GameflowSession",
+        LcuWsEvent::TeambuilderTbdGame(_) => "TeambuilderTbdGame",
         _ => "Other",
     }
 }
@@ -196,6 +197,15 @@ impl Behavior<DriverInput> for ChampSelectBehavior {
                 transition_from_phase_in_champ_select(payload.data)
             }
             LcuWsEvent::ChampSelectSession(_) => {
+                let ctx = self.ctx.clone();
+                tracing::info!(
+                    "[ongoing_game] ChampSelect refresh triggered by {}",
+                    event_name(event)
+                );
+                tokio::spawn(refresh_players_from_current_state(ctx));
+                EventReply::Handled
+            }
+            LcuWsEvent::TeambuilderTbdGame(_) => {
                 let ctx = self.ctx.clone();
                 tracing::info!(
                     "[ongoing_game] ChampSelect refresh triggered by {}",
