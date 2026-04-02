@@ -13,8 +13,38 @@ export const label = style({
   fontSize: "0.875rem",
   lineHeight: 1,
   display: "grid",
-  gridTemplateColumns: "1fr auto",
+  gridTemplateColumns: "auto auto 1fr",
+  alignItems: "center",
   gap: 4,
+});
+
+export const hintTrigger = style({
+  display: "inline-flex",
+  alignItems: "center",
+  color: vars.color.mutedForeground,
+  opacity: 0.5,
+  cursor: "help",
+  transition: "opacity 120ms ease",
+  selectors: {
+    "&:hover": {
+      opacity: 0.9,
+    },
+  },
+});
+
+export const hintPositioner = style({
+  zIndex: 40,
+});
+
+export const hintContent = style({
+  borderRadius: 8,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popover,
+  color: vars.color.foreground,
+  padding: "4px 8px",
+  fontSize: "0.8125rem",
+  lineHeight: 1.4,
+  maxWidth: 240,
 });
 
 export const scopeBadge = style({

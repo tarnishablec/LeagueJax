@@ -24,6 +24,7 @@ export const settingsI18n: Resource = {
       },
       language: {
         label: "Language",
+        hint: "Some text may follow the League client's language instead of this setting.",
         zhCN: "Simplified Chinese",
         en: "English",
         jaJP: "Japanese",
@@ -113,6 +114,7 @@ export const settingsI18n: Resource = {
       },
       language: {
         label: "\u8bed\u8a00",
+        hint: "部分文本的语言取决于游戏客户端的语言设置，而非此选项。",
         zhCN: "\u7b80\u4f53\u4e2d\u6587",
         en: "English",
         jaJP: "Japanese",
@@ -203,6 +205,7 @@ export const settingsI18n: Resource = {
       },
       language: {
         label: "\u8a00\u8a9e",
+        hint: "一部のテキストはこの設定ではなく、ゲームクライアントの言語設定に従います。",
         zhCN: "\u7c21\u4f53\u5b57\u4e2d\u56fd\u8a9e",
         en: "\u82f1\u8a9e",
         jaJP: "\u65e5\u672c\u8a9e",

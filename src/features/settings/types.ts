@@ -47,6 +47,7 @@ export type SettingControl =
 interface SettingDefinitionBase<TControl extends SettingControl> {
   id: SettingId;
   labelKey: string;
+  hintKey?: string;
   scope?: SettingScope;
   control: TControl;
   zod: ZodType;
