@@ -19,7 +19,7 @@ use uuid::Uuid;
 const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.behavior.matchHistoryCount";
 const MATCH_HISTORY_COUNT_DEFAULT: u32 = 50;
 const QUEUE_MODE_SETTING_ID: &str = "ongoing.behavior.queueMode";
-const QUEUE_MODE_ALL_VALUE: &str = "__all__";
+const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
 pub struct OngoingGameShard {
     manager: OnceLock<Arc<OngoingGameManager>>,
@@ -94,7 +94,7 @@ impl Shard for OngoingGameShard {
             control: SettingControlDto::Text {
                 placeholder_key: None,
             },
-            default_value: Value::String(QUEUE_MODE_ALL_VALUE.to_string()),
+            default_value: Value::String(QUEUE_MODE_CURRENT_VALUE.to_string()),
             order: Some(11),
             visible: Some(false),
             options: None,
