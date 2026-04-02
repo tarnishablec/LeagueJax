@@ -2,6 +2,16 @@ name: Build & Release
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Which jobs to run"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - github
+          - gitee
 
 permissions:
   contents: read
@@ -51,6 +61,7 @@ jobs:
 
   github-release:
     needs: build
+    if: inputs.target == 'all' || inputs.target == 'github'
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
@@ -73,6 +84,7 @@ jobs:
 
   gitee-release:
     needs: build
+    if: inputs.target == 'all' || inputs.target == 'gitee'
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
@@ -88,6 +100,12 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         shell: bash
         run: |
+          # Resolve default branch
+          DEFAULT_BRANCH=$(curl -s \
+            "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases?access_token=${GITEE_TOKEN}" \
+            | jq -r '.default_branch')
+          echo "Default branch: $DEFAULT_BRANCH"
+
           # Create release
           RELEASE_RESPONSE=$(curl -s -X POST \
             "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases" \
@@ -97,7 +115,7 @@ jobs:
               \"tag_name\": \"${TAG}\",
               \"name\": \"League Jax ${TAG}\",
               \"body\": \"Release ${TAG}\",
-              \"target_commitish\": \"main\"
+              \"target_commitish\": \"${DEFAULT_BRANCH}\"
             }")
 
           RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
