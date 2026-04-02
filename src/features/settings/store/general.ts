@@ -16,6 +16,7 @@ class GeneralSettings {
   @setting({
     id: SYSTEM_LANGUAGE_SETTING_ID,
     labelKey: "settings.language.label",
+    hintKey: "settings.language.hint",
     scope: "frontend",
     control: { kind: "select" },
     zod: z.enum(["zh-CN", "en", "ja-JP"]),

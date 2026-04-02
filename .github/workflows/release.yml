@@ -42,8 +42,7 @@ jobs:
         with:
           name: tauri-build-${{ steps.version.outputs.tag }}
           path: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.exe.sig
+            target/release/bundle/nsis/*.exe
           if-no-files-found: error
 
     outputs:

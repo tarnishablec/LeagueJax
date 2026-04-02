@@ -139,6 +139,7 @@ const InputField = ({
 export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
   const { t } = useTranslation();
   const label = t(field.labelKey);
+  const hint = field.hintKey ? t(field.hintKey) : undefined;
   const ariaLabel = `Setting ${field.id}`;
   const scopeTag = toScopeTag(field.scope);
 
@@ -149,20 +150,20 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
   switch (field.control.kind) {
     case "select":
       return (
-        <SettingsFieldRow label={label} scopeTag={scopeTag}>
+        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
           <SelectField field={field as RegisteredSelectSetting} />
         </SettingsFieldRow>
       );
     case "toggle":
       return (
-        <SettingsFieldRow label={label} scopeTag={scopeTag}>
+        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
           <ToggleField ariaLabel={ariaLabel} field={field} />
         </SettingsFieldRow>
       );
     case "text":
     case "number":
       return (
-        <SettingsFieldRow label={label} scopeTag={scopeTag}>
+        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
           <InputField
             ariaLabel={ariaLabel}
             field={field as RegisteredInputSetting}

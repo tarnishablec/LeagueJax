@@ -55,6 +55,7 @@ const onSetValueSchema = z.custom<(next: unknown, prev: unknown) => void>(
 const sharedDefinitionShape = {
   id: z.string().regex(settingIdRegex, 'id must match "page.section.field".'),
   labelKey: z.string().min(1),
+  hintKey: z.string().min(1).optional(),
   scope: settingScopeSchema,
   zod: zodSchemaValueSchema,
   defaultValue: z.unknown(),
