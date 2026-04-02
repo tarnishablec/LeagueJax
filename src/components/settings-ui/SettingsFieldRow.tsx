@@ -20,23 +20,25 @@ export function SettingsFieldRow({
   return (
     <div className={s.row}>
       <span className={s.label}>
-        <span>{label}</span>
-        {hint ? (
-          <Tooltip.Root openDelay={200} closeDelay={0}>
-            <Tooltip.Trigger asChild>
-              <span className={s.hintTrigger}>
-                <CircleAlert size={14} />
-              </span>
-            </Tooltip.Trigger>
-            <Portal>
-              <Tooltip.Positioner className={s.hintPositioner}>
-                <Tooltip.Content className={s.hintContent}>
-                  {hint}
-                </Tooltip.Content>
-              </Tooltip.Positioner>
-            </Portal>
-          </Tooltip.Root>
-        ) : null}
+        <span className={s.labelText}>
+          <span>{label}</span>
+          {hint ? (
+            <Tooltip.Root openDelay={200} closeDelay={0}>
+              <Tooltip.Trigger asChild>
+                <span className={s.hintTrigger}>
+                  <CircleAlert size={14} />
+                </span>
+              </Tooltip.Trigger>
+              <Portal>
+                <Tooltip.Positioner className={s.hintPositioner}>
+                  <Tooltip.Content className={s.hintContent}>
+                    {hint}
+                  </Tooltip.Content>
+                </Tooltip.Positioner>
+              </Portal>
+            </Tooltip.Root>
+          ) : null}
+        </span>
         <span className={s.scopeBadge}>{scopeTag ?? ""}</span>
       </span>
 
