@@ -13,7 +13,13 @@ export const label = style({
   fontSize: "0.875rem",
   lineHeight: 1,
   display: "grid",
-  gridTemplateColumns: "auto auto 1fr",
+  gridTemplateColumns: "auto 1fr auto",
+  alignItems: "center",
+  gap: 4,
+});
+
+export const labelText = style({
+  display: "inline-flex",
   alignItems: "center",
   gap: 4,
 });
@@ -52,8 +58,7 @@ export const scopeBadge = style({
   display: "block",
   fontSize: "0.75rem",
   textAlign: "center",
-  justifySelf: "stretch",
-  alignSelf: "center",
+  justifySelf: "end",
   lineHeight: 1,
   opacity: 0,
   transition: "opacity 120ms ease",
