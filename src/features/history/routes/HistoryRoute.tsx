@@ -81,8 +81,7 @@ export function HistoryRoute() {
     () => settings.get<boolean>(HISTORY_AUTO_OPEN_OWN_TAB_SETTING),
   );
   const autoRefreshOnSwitch = useSyncExternalStore(
-    (cb) =>
-      settings.subscribe(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING, cb),
+    (cb) => settings.subscribe(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING, cb),
     () =>
       settings.get<boolean>(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING) ??
       false,
@@ -101,7 +100,10 @@ export function HistoryRoute() {
 
   return (
     <div className={s.page}>
-      <SummaryBar summoner={activeTab.summoner} autoRefresh={autoRefreshOnSwitch} />
+      <SummaryBar
+        summoner={activeTab.summoner}
+        autoRefresh={autoRefreshOnSwitch}
+      />
       <MatchList puuid={activeTab.puuid} sgpServerId={activeTab.sgpServerId} />
     </div>
   );

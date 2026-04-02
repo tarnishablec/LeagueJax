@@ -5,7 +5,12 @@ import {
   SYSTEM_ASSET_SOURCE_SETTING_ID,
 } from "@/features/settings/store/general.ts";
 
-export const SCOREBOARD_ICON_TYPES = ["record", "gold", "cs", "damage"] as const;
+export const SCOREBOARD_ICON_TYPES = [
+  "record",
+  "gold",
+  "cs",
+  "damage",
+] as const;
 export type ScoreboardIconType = (typeof SCOREBOARD_ICON_TYPES)[number];
 
 const CDRAGON_POSTGAME_BASE =

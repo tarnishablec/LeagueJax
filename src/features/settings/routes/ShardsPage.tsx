@@ -82,11 +82,7 @@ export function ShardsPage() {
 
   return (
     <div className={s.shardsPage}>
-      <Carousel.Root
-        slideCount={2}
-        defaultPage={0}
-        className={s.carouselRoot}
-      >
+      <Carousel.Root slideCount={2} defaultPage={0} className={s.carouselRoot}>
         <div className={s.toolbar}>
           <div className={s.segmentGroup}>
             <button

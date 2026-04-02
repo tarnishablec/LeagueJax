@@ -92,8 +92,8 @@ pub fn run() {
                     if let Ok(core) = controller.CoreWebView2() {
                         if let Ok(settings) = core.Settings() {
                             let settings = settings;
-                            let _ = settings.SetAreDevToolsEnabled(false.into());
-                            let _ = settings.SetAreDefaultContextMenusEnabled(false.into());
+                            let _ = settings.SetAreDevToolsEnabled(false);
+                            let _ = settings.SetAreDefaultContextMenusEnabled(false);
                         }
                     }
                 })?;
@@ -107,7 +107,6 @@ pub fn run() {
             let data_dir = app.path().app_data_dir().expect("no app data dir");
             let db_path = data_dir.join("data");
 
-            // 鈹€鈹€ Jax lifecycle: build 鈫?register 鈫?start 鈹€鈹€
             let timing = Arc::new(TimingProbe::new());
 
             let jax = Jax::default()

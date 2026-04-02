@@ -113,6 +113,9 @@
     "viewOwnHistory": "点击查看你的战绩",
     "emptyState": "搜索召唤师以查看战绩",
     "closeTab": "关闭标签页",
+    "closeTabsToRight": "关闭右侧标签页",
+    "closeOtherTabs": "关闭其他标签页",
+    "closeAllTabs": "关闭所有标签页",
     "searchDialog": {
       "open": "搜索",
       "title": "搜索召唤师",

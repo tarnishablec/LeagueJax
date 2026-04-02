@@ -113,6 +113,9 @@
     "viewOwnHistory": "クリックして自分の履歴を表示",
     "emptyState": "履歴を見るにはサモナーを検索してください",
     "closeTab": "タブを閉じる",
+    "closeTabsToRight": "右側のタブを閉じる",
+    "closeOtherTabs": "他のタブを閉じる",
+    "closeAllTabs": "すべてのタブを閉じる",
     "searchDialog": {
       "open": "検索",
       "title": "サモナー検索",

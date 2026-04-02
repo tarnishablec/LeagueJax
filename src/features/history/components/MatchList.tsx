@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "@/features/settings/context";
-import { HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING } from "../manifest";
 import { type MatchModeTag, useMatchHistory } from "../hooks/use-match-history";
+import { HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING } from "../manifest";
 import * as s from "./MatchList.css";
 import { MatchListFilters } from "./MatchListFilters";
 import { MatchListPager } from "./MatchListPager";
