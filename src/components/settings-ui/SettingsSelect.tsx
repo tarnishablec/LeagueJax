@@ -23,6 +23,7 @@ type SettingsSelectProps = {
   placeholder?: string;
   formatValue?: (label: string) => string;
   groups?: SelectGroup[];
+  disablePortal?: boolean;
 };
 
 function FormattedValueText({
@@ -103,7 +104,22 @@ export function SettingsSelect({
   placeholder,
   formatValue,
   groups,
+  disablePortal,
 }: SettingsSelectProps) {
+  const listContent = (
+    <Select.Positioner className={s.positioner}>
+      <Select.Content className={s.content}>
+        <Select.List className={s.list}>
+          {groups ? (
+            <GroupedItems groups={groups} collection={collection} />
+          ) : (
+            <FlatItems collection={collection} />
+          )}
+        </Select.List>
+      </Select.Content>
+    </Select.Positioner>
+  );
+
   return (
     <Select.Root
       className={s.root}
@@ -132,19 +148,7 @@ export function SettingsSelect({
           </Select.Indicator>
         </Select.Trigger>
       </Select.Control>
-      <Portal>
-        <Select.Positioner className={s.positioner}>
-          <Select.Content className={s.content}>
-            <Select.List className={s.list}>
-              {groups ? (
-                <GroupedItems groups={groups} collection={collection} />
-              ) : (
-                <FlatItems collection={collection} />
-              )}
-            </Select.List>
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
+      {disablePortal ? listContent : <Portal>{listContent}</Portal>}
     </Select.Root>
   );
 }

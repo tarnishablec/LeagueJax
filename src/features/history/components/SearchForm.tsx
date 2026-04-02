@@ -29,6 +29,7 @@ export function SearchForm({ server, search }: SearchFormProps) {
           }}
           disabled={server.disabled}
           placeholder={t("history.searchDialog.focused")}
+          disablePortal
         />
       ) : null}
       <input

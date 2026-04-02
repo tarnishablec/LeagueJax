@@ -117,7 +117,7 @@
       "open": "検索",
       "title": "サモナー検索",
       "subtitle": "puuid / gameName#tagLine",
-      "placeholder": "gameName#tagLine / puuid",
+      "placeholder": "ゲーム名#タグライン または puuid を入力",
       "submit": "検索",
       "loadingServers": "サーバー情報を読み込み中...",
       "noResults": "該当するサモナーが見つかりません",
