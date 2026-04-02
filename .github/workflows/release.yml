@@ -1,0 +1,127 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Read version from tauri.conf.json
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Tauri app
+        run: bun run tauri:build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-build-${{ steps.version.outputs.tag }}
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe.sig
+          if-no-files-found: error
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-build-${{ needs.build.outputs.tag }}
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: tarnishablec/league-jax-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: ${{ needs.build.outputs.tag }}
+          name: League Jax ${{ needs.build.outputs.tag }}
+          draft: false
+          prerelease: false
+          files: artifacts/*
+          fail_on_unmatched_files: true
+
+  gitee-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-build-${{ needs.build.outputs.tag }}
+          path: artifacts
+
+      - name: Create Gitee Release & upload assets
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+        shell: bash
+        run: |
+          # Create release
+          RELEASE_RESPONSE=$(curl -s -X POST \
+            "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"access_token\": \"${GITEE_TOKEN}\",
+              \"tag_name\": \"${TAG}\",
+              \"name\": \"League Jax ${TAG}\",
+              \"body\": \"Release ${TAG}\",
+              \"target_commitish\": \"main\"
+            }")
+
+          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+          if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
+            echo "::error::Failed to create Gitee release: $RELEASE_RESPONSE"
+            exit 1
+          fi
+          echo "Created Gitee release ID: $RELEASE_ID"
+
+          # Upload each artifact
+          for FILE in artifacts/*; do
+            FILENAME=$(basename "$FILE")
+            echo "Uploading $FILENAME ..."
+            UPLOAD_RESPONSE=$(curl -s -X POST \
+              "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases/${RELEASE_ID}/attach_files" \
+              -H "Content-Type: multipart/form-data" \
+              -F "access_token=${GITEE_TOKEN}" \
+              -F "file=@${FILE}")
+
+            ASSET_URL=$(echo "$UPLOAD_RESPONSE" | jq -r '.browser_download_url')
+            if [ "$ASSET_URL" = "null" ] || [ -z "$ASSET_URL" ]; then
+              echo "::error::Failed to upload $FILENAME: $UPLOAD_RESPONSE"
+              exit 1
+            fi
+            echo "Uploaded: $ASSET_URL"
+          done
