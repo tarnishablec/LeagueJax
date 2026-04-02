@@ -13,7 +13,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-jax = { path = "../jax", features = ["setup-timing"] }
+jax = { git = "https://github.com/tarnishablec/jax.git", branch = "main" }
+jax-probes = { git = "https://github.com/tarnishablec/jax.git", branch = "main" }
 
 tauri = { version = "2", features = ["tray-icon"] }
 window-vibrancy = "0.7.1"

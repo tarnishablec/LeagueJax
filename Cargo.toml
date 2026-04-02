@@ -1,5 +1,5 @@
 [workspace]
-members = ["jax", "src-tauri"]
+members = ["src-tauri"]
 resolver = "3"
 
 #[patch."https://github.com/tarnishablec/maokai"]
