@@ -44,7 +44,7 @@ const initialState: OngoingGameUiState = {
   effectiveQueueId: null,
   effectiveModeTag: null,
   matchHistoriesPending: false,
-  modeTag: "all",
+  modeTag: null,
   gameflowSession: null,
   champSelectSession: null,
   summonersByPuuid: {},
