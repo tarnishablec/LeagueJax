@@ -6,6 +6,7 @@ use tokio::sync::RwLock;
 use super::session::SgpSession;
 use crate::error::AppError;
 use crate::shards::lcu::session::LcuSession;
+use crate::shards::settings::SettingHandle;
 
 pub struct SgpManager {
     sessions: RwLock<HashMap<u32, Arc<SgpSession>>>,
@@ -21,6 +22,7 @@ impl SgpManager {
     pub async fn get_or_create(
         &self,
         lcu_session: &Arc<LcuSession>,
+        request_timeout_setting: SettingHandle,
     ) -> Result<Arc<SgpSession>, AppError> {
         let pid = lcu_session.auth().pid;
 
@@ -31,7 +33,9 @@ impl SgpManager {
             }
         }
 
-        let sgp_session = Arc::new(SgpSession::new(lcu_session).await?);
+        let sgp_session = Arc::new(
+            SgpSession::new(lcu_session, request_timeout_setting).await?,
+        );
 
         {
             let mut sessions = self.sessions.write().await;
