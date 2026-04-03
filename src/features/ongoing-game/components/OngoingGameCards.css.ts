@@ -78,8 +78,8 @@ export const playerIdentity = style({
   display: "grid",
   justifyContent: "start",
   alignItems: "center",
-  alignContent: "space-evenly",
-  minWidth: 0,
+  gridTemplateRows: "repeat(2, 1fr)",
+  gap: 3,
   height: "100%",
 });
 
@@ -157,6 +157,16 @@ export const rankMiniIcon = style({
 export const rankText = style({
   fontSize: "0.72rem",
   color: vars.color.mutedForeground,
+  lineHeight: 1.1,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+});
+
+export const botLabel = style({
+  fontSize: "0.78rem",
+  fontWeight: 700,
+  color: vars.color.foreground,
   lineHeight: 1.1,
   whiteSpace: "nowrap",
   overflow: "hidden",

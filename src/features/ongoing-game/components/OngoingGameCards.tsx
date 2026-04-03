@@ -106,6 +106,11 @@ function HistoryLoadingState() {
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
+        <Skeleton width="100%" height={35} borderRadius={6} />
       </div>
     </SkeletonTheme>
   );
@@ -172,7 +177,6 @@ function SnapshotPlayerCard(props: {
   const rankEntry = getBestRankEntry(rankedQuery.data);
   const rankText = formatRankEntryLabel(t, rankEntry);
   const rankIcon = useRankIcon(resolveRankTierForIcon(rankEntry), true);
-  const showRankRow = !isBot;
   const noHistoryText = t("ongoingGame.noHistory", {
     defaultValue: "No match history",
   });
@@ -190,24 +194,30 @@ function SnapshotPlayerCard(props: {
         />
 
         <div className={s.playerIdentity}>
-          {summoner ? (
-            <SummonerID
-              summoner={summoner}
-              styles={{
-                gameName: {
-                  fontSize: "0.75rem",
-                },
-                tagLine: {
-                  fontSize: "0.7rem",
-                },
-              }}
-            />
-          ) : null}
-          {showRankRow ? (
-            <div className={s.rankRow}>
-              <img src={rankIcon} alt="" className={s.rankMiniIcon} />
-              <span className={s.rankText}>{rankText}</span>
-            </div>
+          {isBot ? (
+            <>
+              <span className={s.botLabel}>BOT</span>
+              <div></div>
+            </>
+          ) : summoner ? (
+            <>
+              <SummonerID
+                summoner={summoner}
+                styles={{
+                  gameName: {
+                    fontSize: "0.75rem",
+                  },
+                  tagLine: {
+                    fontSize: "0.7rem",
+                  },
+                }}
+              />
+
+              <div className={s.rankRow}>
+                <img src={rankIcon} alt="" className={s.rankMiniIcon} />
+                <span className={s.rankText}>{rankText}</span>
+              </div>
+            </>
           ) : null}
         </div>
       </div>
