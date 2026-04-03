@@ -17,6 +17,9 @@ export const settingsI18n: Resource = {
           preferences: {
             title: "Preferences",
           },
+          network: {
+            title: "Network",
+          },
           logging: {
             title: "Logging",
           },
@@ -39,6 +42,11 @@ export const settingsI18n: Resource = {
         label: "Asset Source",
         cdragon: "CommunityDragon",
         ddragon: "Data Dragon",
+      },
+      network: {
+        requestTimeoutSeconds: {
+          label: "Request Timeout (seconds)",
+        },
       },
       logging: {
         level: {
@@ -107,6 +115,9 @@ export const settingsI18n: Resource = {
           preferences: {
             title: "\u504f\u597d",
           },
+          network: {
+            title: "网络",
+          },
           logging: {
             title: "\u65e5\u5fd7",
           },
@@ -129,6 +140,11 @@ export const settingsI18n: Resource = {
         label: "\u8d44\u6e90\u6765\u6e90",
         cdragon: "CommunityDragon",
         ddragon: "Data Dragon",
+      },
+      network: {
+        requestTimeoutSeconds: {
+          label: "请求超时（秒）",
+        },
       },
       logging: {
         level: {
@@ -198,6 +214,9 @@ export const settingsI18n: Resource = {
           preferences: {
             title: "\u74b0\u5883\u8a2d\u5b9a",
           },
+          network: {
+            title: "ネットワーク",
+          },
           logging: {
             title: "\u30ed\u30b0",
           },
@@ -220,6 +239,11 @@ export const settingsI18n: Resource = {
         label: "\u30a2\u30bb\u30c3\u30c8\u30bd\u30fc\u30b9",
         cdragon: "CommunityDragon",
         ddragon: "Data Dragon",
+      },
+      network: {
+        requestTimeoutSeconds: {
+          label: "リクエストタイムアウト（秒）",
+        },
       },
       logging: {
         level: {

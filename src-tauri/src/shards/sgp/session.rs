@@ -6,6 +6,7 @@ use super::http_client::SgpHttpClient;
 use crate::error::AppError;
 use crate::shards::lcu::http_client::LcuHttpClient;
 use crate::shards::lcu::session::LcuSession;
+use crate::shards::settings::SettingHandle;
 
 #[derive(Debug, Clone)]
 pub struct SgpTokenContext {
@@ -40,9 +41,13 @@ pub struct SgpSession {
 }
 
 impl SgpSession {
-    pub(crate) async fn new(lcu_session: &Arc<LcuSession>) -> Result<Self, AppError> {
+    pub(crate) async fn new(
+        lcu_session: &Arc<LcuSession>,
+        request_timeout_setting: SettingHandle,
+    ) -> Result<Self, AppError> {
         let token_context = exchange_token_context(lcu_session).await?;
-        let http_client = SgpHttpClient::new(lcu_session.clone(), token_context)?;
+        let http_client =
+            SgpHttpClient::new(lcu_session.clone(), token_context, request_timeout_setting)?;
         let api = SgpApi::new(http_client);
         Ok(Self { api })
     }

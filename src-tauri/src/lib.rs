@@ -53,8 +53,9 @@ fn init_tracing<R: tauri::Runtime>(
     {
         let log_dir = _app
             .path()
-            .app_log_dir()
+            .app_data_dir()
             .map_err(|e| -> Box<dyn Error> { Box::from(e.to_string()) })?
+            .join("logs")
             .join("ws");
         fs::create_dir_all(&log_dir)?;
 
