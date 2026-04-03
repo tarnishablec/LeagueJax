@@ -36,10 +36,10 @@ export function useSnapshotPlayerCardState(
   const matchHistoriesByPuuid = useOngoingGameStore(
     (state) => state.matchHistoriesByPuuid,
   );
-  const phase = useOngoingGameStore((state) => state.phase);
-  const matchHistoriesPending = useOngoingGameStore(
-    (state) => state.matchHistoriesPending,
+  const historyStatesByPuuid = useOngoingGameStore(
+    (state) => state.historyStatesByPuuid,
   );
+  const phase = useOngoingGameStore((state) => state.phase);
 
   const isBot = isBotSlot(slot);
   const normalizedPuuid = !isBot ? slot.puuid.trim() : "";
@@ -47,6 +47,7 @@ export function useSnapshotPlayerCardState(
   const rankedQuery = useRankedSummary(puuid);
   const summoner = puuid ? summonersByPuuid[puuid] : undefined;
   const historyBucket = puuid ? matchHistoriesByPuuid[puuid] : undefined;
+  const historyState = puuid ? historyStatesByPuuid[puuid] : undefined;
   const hasHistoryBucket = puuid
     ? Object.hasOwn(matchHistoriesByPuuid, puuid)
     : false;
@@ -54,18 +55,17 @@ export function useSnapshotPlayerCardState(
   const isHistoryLoading = Boolean(
     !isBot &&
       puuid &&
+      historyState?.status === "loading" &&
       !hasHistoryBucket &&
-      phase !== "Idle" &&
-      matchHistoriesPending,
+      phase !== "Idle",
   );
 
   const hasHistoryLoadFailed = Boolean(
     !isBot &&
       puuid &&
-      summoner &&
+      historyState?.status === "failed" &&
       !hasHistoryBucket &&
-      phase !== "Idle" &&
-      !matchHistoriesPending,
+      phase !== "Idle",
   );
 
   const recentGames = useMemo<EnrichedMatch[]>(() => {

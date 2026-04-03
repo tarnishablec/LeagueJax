@@ -2,7 +2,9 @@ import { create } from "zustand";
 import type { RawMatchSummaryGame } from "@/bindings/matches";
 import type {
   OngoingGameMatchHistoriesUpdated,
+  OngoingGameMatchHistoryState,
   OngoingGamePhase,
+  OngoingGameSummonerState,
   OngoingGameSummonersUpdated,
   OngoingGameUpdated,
 } from "@/bindings/ongoing_game";
@@ -25,6 +27,7 @@ function toModeTag(value: string | null): MatchModeTag | null {
 
 export type OngoingGameUiState = {
   phase: OngoingGamePhase;
+  lifecycleGameId: number | null;
   teamMembers: TeamMember[];
   matchHistoryTag: string | null;
   effectiveQueueId: number | null;
@@ -33,12 +36,15 @@ export type OngoingGameUiState = {
   modeTag: MatchModeTag | null;
   gameflowSession: OngoingGameUpdated["gameflow_session"];
   champSelectSession: OngoingGameUpdated["champ_select_session"];
+  summonerStatesByPuuid: Record<string, OngoingGameSummonerState>;
+  historyStatesByPuuid: Record<string, OngoingGameMatchHistoryState>;
   summonersByPuuid: Record<string, SummonerInfo>;
   matchHistoriesByPuuid: Record<string, RawMatchSummaryGame[]>;
 };
 
 const initialState: OngoingGameUiState = {
   phase: "Idle",
+  lifecycleGameId: null,
   teamMembers: [],
   matchHistoryTag: null,
   effectiveQueueId: null,
@@ -47,6 +53,8 @@ const initialState: OngoingGameUiState = {
   modeTag: null,
   gameflowSession: null,
   champSelectSession: null,
+  summonerStatesByPuuid: {},
+  historyStatesByPuuid: {},
   summonersByPuuid: {},
   matchHistoriesByPuuid: {},
 };
@@ -71,8 +79,12 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
   },
   applyUpdated: (payload) => {
     set((state) => {
-      const pendingTransition =
-        payload.match_histories_pending && !state.matchHistoriesPending;
+      const summonerStatesByPuuid = Object.fromEntries(
+        payload.summoner_states.map((entry) => [entry.puuid, entry]),
+      );
+      const historyStatesByPuuid = Object.fromEntries(
+        payload.history_states.map((entry) => [entry.puuid, entry]),
+      );
       return {
         ...state,
         phase: payload.phase,
@@ -86,12 +98,27 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         champSelectSession: payload.champ_select_session,
         ...(payload.phase === "Idle"
           ? {
+              lifecycleGameId: null,
+              summonerStatesByPuuid: {},
+              historyStatesByPuuid: {},
               summonersByPuuid: {},
               matchHistoriesByPuuid: {},
             }
-          : pendingTransition
-            ? { matchHistoriesByPuuid: {} }
-            : {}),
+          : {
+              lifecycleGameId: payload.lifecycle_game_id,
+              summonerStatesByPuuid,
+              historyStatesByPuuid,
+              summonersByPuuid: Object.fromEntries(
+                payload.summoner_states
+                  .filter((entry) => entry.summoner)
+                  .map((entry) => [entry.puuid, entry.summoner as SummonerInfo]),
+              ),
+              matchHistoriesByPuuid: Object.fromEntries(
+                payload.history_states
+                  .filter((entry) => entry.games)
+                  .map((entry) => [entry.puuid, entry.games as RawMatchSummaryGame[]]),
+              ),
+            }),
       };
     });
   },
@@ -100,12 +127,24 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       ...state,
       ...(payload.phase === "Idle"
         ? {
+            summonerStatesByPuuid: {},
             summonersByPuuid: {},
           }
         : {
-            summonersByPuuid: Object.fromEntries(
-              payload.summoners.map((summoner) => [summoner.puuid, summoner]),
-            ),
+            summonerStatesByPuuid: {
+              ...state.summonerStatesByPuuid,
+              [payload.state.puuid]: payload.state,
+            },
+            summonersByPuuid: payload.state.summoner
+              ? {
+                  ...state.summonersByPuuid,
+                  [payload.state.puuid]: payload.state.summoner,
+                }
+              : (() => {
+                  const next = { ...state.summonersByPuuid };
+                  delete next[payload.state.puuid];
+                  return next;
+                })(),
           }),
     }));
   },
@@ -114,19 +153,27 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       if (payload.phase === "Idle") {
         return {
           ...state,
+          historyStatesByPuuid: {},
           matchHistoriesByPuuid: {},
         };
       }
 
+      const nextHistoryStatesByPuuid = {
+        ...state.historyStatesByPuuid,
+        [payload.state.puuid]: payload.state,
+      };
       const nextMatchHistoriesByPuuid = {
         ...state.matchHistoriesByPuuid,
       };
-      for (const [puuid, games] of Object.entries(payload.match_histories)) {
-        nextMatchHistoriesByPuuid[puuid] = games;
+      if (payload.state.games) {
+        nextMatchHistoriesByPuuid[payload.state.puuid] = payload.state.games;
+      } else {
+        delete nextMatchHistoriesByPuuid[payload.state.puuid];
       }
 
       return {
         ...state,
+        historyStatesByPuuid: nextHistoryStatesByPuuid,
         matchHistoriesByPuuid: nextMatchHistoriesByPuuid,
       };
     });

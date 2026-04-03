@@ -11,7 +11,7 @@ use crate::shards::ongoing_game::manager::{
 };
 use crate::shards::ongoing_game::types::{
     OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGamePhase,
-    OngoingGameSummonersUpdated, OngoingGameUpdated,
+    OngoingGamePlayerLoadStatus, OngoingGameSummonersUpdated, OngoingGameUpdated,
 };
 use crate::shards::sgp::session::SgpSession;
 use crate::shards::sgp::LcuSessionSgpExt;
@@ -279,9 +279,10 @@ async fn collect_player_fetch_snapshot(ctx: &Arc<OngoingGameContext>) -> PlayerF
     } else {
         state.new_history_puuids()
     };
+    state.mark_summoners_loading(&new_puuids);
     let history_fetch_started = !new_history_puuids.is_empty();
     if history_fetch_started {
-        state.match_histories_pending = true;
+        state.mark_histories_loading(&new_history_puuids);
     }
     let updated = state.build_updated_payload(&ctx.settings);
 
@@ -418,6 +419,14 @@ async fn spawn_per_player_fetches(
                         puuid,
                         generation
                     );
+                    set_summoner_state(
+                        &ctx,
+                        &puuid,
+                        generation,
+                        OngoingGamePlayerLoadStatus::Failed,
+                        None,
+                    )
+                    .await;
                     return;
                 };
                 let summoner = match lcu.api().get_summoner_by_puuid_optional(&puuid).await {
@@ -429,10 +438,14 @@ async fn spawn_per_player_fetches(
                             generation
                         );
 
-                        let mut state = ctx.state.lock().await;
-                        if state.generation == generation {
-                            state.unavailable_summoner_puuids.insert(puuid.clone());
-                        }
+                        set_summoner_state(
+                            &ctx,
+                            &puuid,
+                            generation,
+                            OngoingGamePlayerLoadStatus::Failed,
+                            None,
+                        )
+                        .await;
                         return;
                     }
                     Err(error) => {
@@ -442,44 +455,26 @@ async fn spawn_per_player_fetches(
                             generation,
                             error
                         );
+                        set_summoner_state(
+                            &ctx,
+                            &puuid,
+                            generation,
+                            OngoingGamePlayerLoadStatus::Failed,
+                            None,
+                        )
+                        .await;
                         return;
                     }
                 };
 
-                let mut state = ctx.state.lock().await;
-                if state.generation != generation {
-                    tracing::warn!(
-                        "[ongoing_game] summoner fetch dropped puuid={} request_generation={} current_generation={}",
-                        puuid,
-                        generation,
-                        state.generation
-                    );
-                    return;
-                }
-                state
-                    .cached_summoners_by_puuid
-                    .insert(summoner.puuid.clone(), summoner);
-                let phase = state
-                    .driver
-                    .as_ref()
-                    .map(|d| d.current_phase())
-                    .unwrap_or(OngoingGamePhase::Idle);
-                let all_summoners: Vec<_> =
-                    state.cached_summoners_by_puuid.values().cloned().collect();
-                drop(state);
-                tracing::info!(
-                    "[ongoing_game] summoner fetch success puuid={} generation={} cached_summoners={}",
-                    puuid,
+                set_summoner_state(
+                    &ctx,
+                    &puuid,
                     generation,
-                    all_summoners.len()
-                );
-
-                ctx.broadcast(OngoingGameEvent::SummonersUpdated(
-                    OngoingGameSummonersUpdated {
-                        phase,
-                        summoners: all_summoners,
-                    },
-                ));
+                    OngoingGamePlayerLoadStatus::Ready,
+                    Some(summoner),
+                )
+                .await;
             };
 
             let history_fut = async {
@@ -538,6 +533,15 @@ async fn fetch_single_history(
             puuid,
             generation
         );
+        set_history_state(
+            ctx,
+            puuid,
+            generation,
+            OngoingGamePlayerLoadStatus::Failed,
+            None,
+            "skipped",
+        )
+        .await;
         return;
     };
     let resp = match sgp
@@ -555,6 +559,15 @@ async fn fetch_single_history(
                 count,
                 error
             );
+            set_history_state(
+                ctx,
+                puuid,
+                generation,
+                OngoingGamePlayerLoadStatus::Failed,
+                None,
+                "failed",
+            )
+            .await;
             return;
         }
     };
@@ -565,17 +578,69 @@ async fn fetch_single_history(
         generation,
         resp.games.len()
     );
-    upsert_history_bucket(ctx, puuid, resp.games, generation, "success").await;
+    set_history_state(
+        ctx,
+        puuid,
+        generation,
+        OngoingGamePlayerLoadStatus::Ready,
+        Some(resp.games),
+        "success",
+    )
+    .await;
 }
 
-async fn upsert_history_bucket(
+async fn set_summoner_state(
     ctx: &Arc<OngoingGameContext>,
     puuid: &str,
-    games: Vec<crate::shards::sgp::matches::RawMatchSummaryGame>,
     generation: u64,
+    status: OngoingGamePlayerLoadStatus,
+    summoner: Option<crate::shards::lcu::summoner::SummonerInfo>,
+) {
+    let mut state = ctx.state.lock().await;
+    if state.generation != generation {
+        tracing::warn!(
+            "[ongoing_game] summoner fetch dropped puuid={} request_generation={} current_generation={} status={:?}",
+            puuid,
+            generation,
+            state.generation,
+            status
+        );
+        return;
+    }
+
+    state.set_summoner_status(puuid, status, summoner);
+    let phase = state
+        .driver
+        .as_ref()
+        .map(|d| d.current_phase())
+        .unwrap_or(OngoingGamePhase::Idle);
+    let summoner_state = state.summoner_state_for_puuid(puuid);
+    let cached_summoners = state.cached_summoners_by_puuid.len();
+    drop(state);
+
+    tracing::info!(
+        "[ongoing_game] summoner fetch state puuid={} generation={} cached_summoners={} status={:?}",
+        puuid,
+        generation,
+        cached_summoners,
+        status
+    );
+
+    ctx.broadcast(OngoingGameEvent::SummonersUpdated(OngoingGameSummonersUpdated {
+        phase,
+        state: summoner_state,
+    }));
+}
+
+async fn set_history_state(
+    ctx: &Arc<OngoingGameContext>,
+    puuid: &str,
+    generation: u64,
+    status: OngoingGamePlayerLoadStatus,
+    games: Option<Vec<crate::shards::sgp::matches::RawMatchSummaryGame>>,
     outcome: &str,
 ) {
-    let game_count = games.len();
+    let game_count = games.as_ref().map_or(0, Vec::len);
     let mut state = ctx.state.lock().await;
     if state.generation != generation {
         tracing::warn!(
@@ -588,28 +653,28 @@ async fn upsert_history_bucket(
         return;
     }
 
-    state.cached_match_histories.insert(puuid.to_owned(), games);
+    state.set_history_status(puuid, status, games);
     let phase = state
         .driver
         .as_ref()
         .map(|d| d.current_phase())
         .unwrap_or(OngoingGamePhase::Idle);
-    let all_histories = state.cached_match_histories.clone();
+    let history_state = state.history_state_for_puuid(puuid);
+    let cached_histories = state.cached_match_histories.len();
     drop(state);
 
     tracing::info!(
-        "[ongoing_game] broadcasting MatchHistoriesUpdated puuid={} generation={} cached_history_puuids={} latest_games={} outcome={}",
+        "[ongoing_game] broadcasting MatchHistoriesUpdated puuid={} generation={} cached_history_puuids={} latest_games={} outcome={} status={:?}",
         puuid,
         generation,
-        all_histories.len(),
+        cached_histories,
         game_count,
-        outcome
+        outcome,
+        status
     );
 
-    ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
-        OngoingGameMatchHistoriesUpdated {
+    ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(OngoingGameMatchHistoriesUpdated {
             phase,
-            match_histories: all_histories,
-        },
-    ));
+            state: history_state,
+        }));
 }

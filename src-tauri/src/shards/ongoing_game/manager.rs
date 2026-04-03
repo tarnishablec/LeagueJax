@@ -19,7 +19,10 @@ use crate::shards::lcu::events::{
 };
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
-use crate::shards::ongoing_game::types::{OngoingGameEvent, OngoingGamePhase, OngoingGameUpdated};
+use crate::shards::ongoing_game::types::{
+    OngoingGameEvent, OngoingGameMatchHistoryState, OngoingGamePhase,
+    OngoingGamePlayerLoadStatus, OngoingGameSummonerState, OngoingGameUpdated,
+};
 use crate::shards::settings::SettingHandle;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
 use crate::shards::sgp::LcuSessionSgpExt;
@@ -302,10 +305,15 @@ impl OngoingGameManager {
                     state.generation,
                 )
             } else {
-                state.match_histories_pending = true;
-                state.cached_match_histories.clear();
                 let gen = state.generation;
-                let puuids = state.team_puuids();
+                let puuids = state
+                    .team_players()
+                    .into_iter()
+                    .map(|(puuid, _)| puuid)
+                    .collect::<Vec<_>>();
+                state.cached_match_histories.clear();
+                state.history_status_by_puuid.clear();
+                state.mark_histories_loading(&puuids);
                 let lcu = state.lcu_session.clone();
                 let lifecycle_game_id = state.lifecycle_game_id;
                 let effective_queue_id = state.effective_queue_id();
@@ -368,7 +376,7 @@ impl OngoingGameManager {
                 join_set.spawn(async move {
                     let permit = match semaphore.acquire_owned().await {
                         Ok(permit) => permit,
-                        Err(_) => return None,
+                        Err(_) => return Some((puuid, OngoingGamePlayerLoadStatus::Failed, None)),
                     };
                     let _permit = permit;
 
@@ -378,7 +386,7 @@ impl OngoingGameManager {
                             puuid,
                             gen
                         );
-                        return None;
+                        return Some((puuid, OngoingGamePlayerLoadStatus::Failed, None));
                     };
 
                     match sgp
@@ -386,7 +394,7 @@ impl OngoingGameManager {
                         .get_match_summaries(&puuid, 0, count, tag.as_deref(), None)
                         .await
                     {
-                        Ok(resp) => Some((puuid, resp.games)),
+                        Ok(resp) => Some((puuid, OngoingGamePlayerLoadStatus::Ready, Some(resp.games))),
                         Err(error) => {
                             tracing::warn!(
                                 "[ongoing_game] refresh_match_histories fetch failed puuid={} generation={} tag={:?} count={} error={}",
@@ -396,14 +404,14 @@ impl OngoingGameManager {
                                 count,
                                 error
                             );
-                            None
+                            Some((puuid, OngoingGamePlayerLoadStatus::Failed, None))
                         }
                     }
                 });
             }
 
             while let Some(joined) = join_set.join_next().await {
-                let Ok(Some((puuid, games))) = joined else {
+                let Ok(Some((puuid, status, games))) = joined else {
                     continue;
                 };
 
@@ -411,19 +419,19 @@ impl OngoingGameManager {
                 if state.generation != gen {
                     break;
                 }
-                state.cached_match_histories.insert(puuid, games);
+                state.set_history_status(&puuid, status, games);
                 let phase = state
                     .driver
                     .as_ref()
                     .map(|d| d.current_phase())
                     .unwrap_or(OngoingGamePhase::Idle);
-                let all_histories = state.cached_match_histories.clone();
+                let history_state = state.history_state_for_puuid(&puuid);
                 drop(state);
 
                 ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
                     crate::shards::ongoing_game::types::OngoingGameMatchHistoriesUpdated {
                         phase,
-                        match_histories: all_histories,
+                        state: history_state,
                     },
                 ));
             }
@@ -431,7 +439,7 @@ impl OngoingGameManager {
             let updated = {
                 let mut state = ctx.state.lock().await;
                 if state.generation == gen {
-                    state.match_histories_pending = false;
+                    state.update_match_histories_pending();
                 }
                 state.build_updated_payload(&ctx.settings)
             };
@@ -514,8 +522,9 @@ pub(crate) struct ManagerState {
     pub(crate) cached_teambuilder_payload: Option<TeambuilderTbdGamePayload>,
     pub(crate) cached_locked_teambuilder_payload: Option<TeambuilderTbdGamePayload>,
     pub(crate) cached_summoners_by_puuid: HashMap<String, SummonerInfo>,
-    pub(crate) unavailable_summoner_puuids: HashSet<String>,
+    pub(crate) summoner_status_by_puuid: HashMap<String, OngoingGamePlayerLoadStatus>,
     pub(crate) cached_match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
+    pub(crate) history_status_by_puuid: HashMap<String, OngoingGamePlayerLoadStatus>,
     pub(crate) cached_team_members: Vec<ChampSelectTeamMember>,
     pub(crate) match_histories_pending: bool,
     pub(crate) generation: u64,
@@ -533,8 +542,9 @@ impl ManagerState {
             cached_teambuilder_payload: None,
             cached_locked_teambuilder_payload: None,
             cached_summoners_by_puuid: HashMap::new(),
-            unavailable_summoner_puuids: HashSet::new(),
+            summoner_status_by_puuid: HashMap::new(),
             cached_match_histories: HashMap::new(),
+            history_status_by_puuid: HashMap::new(),
             cached_team_members: Vec::new(),
             match_histories_pending: false,
             generation: 0,
@@ -555,8 +565,9 @@ impl ManagerState {
         self.cached_teambuilder_payload = None;
         self.cached_locked_teambuilder_payload = None;
         self.cached_summoners_by_puuid.clear();
-        self.unavailable_summoner_puuids.clear();
+        self.summoner_status_by_puuid.clear();
         self.cached_match_histories.clear();
+        self.history_status_by_puuid.clear();
         self.cached_team_members.clear();
         self.match_histories_pending = false;
         self.generation = self.generation.wrapping_add(1);
@@ -611,10 +622,13 @@ impl ManagerState {
 
         OngoingGameUpdated {
             phase,
+            lifecycle_game_id: self.lifecycle_game_id,
             match_history_tag: self.match_history_mode.payload_value(),
             effective_queue_id,
             effective_mode_tag,
             match_histories_pending: self.match_histories_pending,
+            summoner_states: self.summoner_states(),
+            history_states: self.history_states(),
             gameflow_session: self.cached_gameflow_session.clone(),
             champ_select_session: self.cached_champ_select_session.clone(),
             team_members: self.cached_team_members.clone(),
@@ -661,28 +675,160 @@ impl ManagerState {
             .effective_tag(self.effective_queue_id())
     }
 
-    pub(crate) fn team_puuids(&self) -> Vec<String> {
-        self.cached_team_members
-            .iter()
-            .map(|m| m.puuid.clone())
-            .filter(|p| !is_bot_puuid(p))
-            .collect()
+    pub(crate) fn team_players(&self) -> Vec<(String, u64)> {
+        let mut seen = HashSet::new();
+        let mut players = Vec::new();
+
+        for member in &self.cached_team_members {
+            if is_bot_puuid(&member.puuid) || !seen.insert(member.puuid.clone()) {
+                continue;
+            }
+            players.push((member.puuid.clone(), member.team));
+        }
+
+        players
     }
 
     pub(crate) fn new_puuids(&self) -> Vec<String> {
-        self.team_puuids()
+        self.team_players()
             .into_iter()
-            .filter(|p| {
-                !self.cached_summoners_by_puuid.contains_key(p)
-                    && !self.unavailable_summoner_puuids.contains(p)
-            })
+            .map(|(puuid, _)| puuid)
+            .filter(|p| !self.summoner_status_by_puuid.contains_key(p))
             .collect()
     }
 
     pub(crate) fn new_history_puuids(&self) -> Vec<String> {
-        self.team_puuids()
+        self.team_players()
             .into_iter()
-            .filter(|p| !self.cached_match_histories.contains_key(p))
+            .map(|(puuid, _)| puuid)
+            .filter(|p| !self.history_status_by_puuid.contains_key(p))
+            .collect()
+    }
+
+    pub(crate) fn mark_summoners_loading(&mut self, puuids: &[String]) {
+        for puuid in puuids {
+            self.summoner_status_by_puuid
+                .insert(puuid.clone(), OngoingGamePlayerLoadStatus::Loading);
+        }
+    }
+
+    pub(crate) fn mark_histories_loading(&mut self, puuids: &[String]) {
+        for puuid in puuids {
+            self.history_status_by_puuid
+                .insert(puuid.clone(), OngoingGamePlayerLoadStatus::Loading);
+        }
+        self.update_match_histories_pending();
+    }
+
+    pub(crate) fn set_history_status(
+        &mut self,
+        puuid: &str,
+        status: OngoingGamePlayerLoadStatus,
+        games: Option<Vec<RawMatchSummaryGame>>,
+    ) {
+        self.history_status_by_puuid.insert(puuid.to_owned(), status);
+        match games {
+            Some(games) => {
+                self.cached_match_histories.insert(puuid.to_owned(), games);
+            }
+            None => {
+                self.cached_match_histories.remove(puuid);
+            }
+        }
+        self.update_match_histories_pending();
+    }
+
+    pub(crate) fn set_summoner_status(
+        &mut self,
+        puuid: &str,
+        status: OngoingGamePlayerLoadStatus,
+        summoner: Option<SummonerInfo>,
+    ) {
+        self.summoner_status_by_puuid.insert(puuid.to_owned(), status);
+        match summoner {
+            Some(summoner) => {
+                self.cached_summoners_by_puuid.insert(puuid.to_owned(), summoner);
+            }
+            None => {
+                self.cached_summoners_by_puuid.remove(puuid);
+            }
+        }
+    }
+
+    pub(crate) fn summoner_state_for_puuid(&self, puuid: &str) -> OngoingGameSummonerState {
+        OngoingGameSummonerState {
+            game_id: self.lifecycle_game_id,
+            puuid: puuid.to_owned(),
+            team_id: self.team_id_for_puuid(puuid),
+            status: self
+                .summoner_status_by_puuid
+                .get(puuid)
+                .copied()
+                .unwrap_or(OngoingGamePlayerLoadStatus::Idle),
+            summoner: self.cached_summoners_by_puuid.get(puuid).cloned(),
+        }
+    }
+
+    pub(crate) fn history_state_for_puuid(&self, puuid: &str) -> OngoingGameMatchHistoryState {
+        OngoingGameMatchHistoryState {
+            game_id: self.lifecycle_game_id,
+            puuid: puuid.to_owned(),
+            team_id: self.team_id_for_puuid(puuid),
+            status: self
+                .history_status_by_puuid
+                .get(puuid)
+                .copied()
+                .unwrap_or(OngoingGamePlayerLoadStatus::Idle),
+            games: self.cached_match_histories.get(puuid).cloned(),
+        }
+    }
+
+    pub(crate) fn team_id_for_puuid(&self, puuid: &str) -> u64 {
+        self.cached_team_members
+            .iter()
+            .find(|member| member.puuid == puuid)
+            .map(|member| member.team)
+            .unwrap_or_default()
+    }
+
+    fn update_match_histories_pending(&mut self) {
+        self.match_histories_pending = self
+            .history_status_by_puuid
+            .values()
+            .any(|status| *status == OngoingGamePlayerLoadStatus::Loading);
+    }
+
+    fn summoner_states(&self) -> Vec<OngoingGameSummonerState> {
+        self.team_players()
+            .into_iter()
+            .map(|(puuid, team_id)| OngoingGameSummonerState {
+                game_id: self.lifecycle_game_id,
+                puuid: puuid.clone(),
+                team_id,
+                status: self
+                    .summoner_status_by_puuid
+                    .get(&puuid)
+                    .copied()
+                    .unwrap_or(OngoingGamePlayerLoadStatus::Idle),
+                summoner: self.cached_summoners_by_puuid.get(&puuid).cloned(),
+            })
+            .collect()
+    }
+
+    fn history_states(&self) -> Vec<OngoingGameMatchHistoryState> {
+        self.team_players()
+            .into_iter()
+            .map(|(puuid, team_id)| OngoingGameMatchHistoryState {
+                game_id: self.lifecycle_game_id,
+                puuid: puuid.clone(),
+                team_id,
+                status: self
+                    .history_status_by_puuid
+                    .get(&puuid)
+                    .copied()
+                    .unwrap_or(OngoingGamePlayerLoadStatus::Idle),
+                games: self.cached_match_histories.get(&puuid).cloned(),
+            })
             .collect()
     }
 
@@ -1646,5 +1792,41 @@ mod tests {
                 && member.champion_id == 147
                 && member.champion_pick_intent == 147
         }));
+    }
+
+    #[test]
+    fn same_puuid_is_not_re_requested_within_same_lifecycle() {
+        let mut state = ManagerState::new();
+        state.cached_team_members = vec![TeamMember {
+            puuid: "ally-puuid".to_string(),
+            summoner_id: 12345,
+            ..Default::default()
+        }];
+
+        assert_eq!(state.new_history_puuids(), vec!["ally-puuid".to_string()]);
+
+        state.mark_histories_loading(&["ally-puuid".to_string()]);
+
+        assert!(state.new_history_puuids().is_empty());
+    }
+
+    #[test]
+    fn lifecycle_reset_allows_history_request_again() {
+        let mut state = ManagerState::new();
+        state.cached_team_members = vec![TeamMember {
+            puuid: "ally-puuid".to_string(),
+            summoner_id: 12345,
+            ..Default::default()
+        }];
+        state.mark_histories_loading(&["ally-puuid".to_string()]);
+
+        state.clear_caches_with_reason("test_reset");
+        state.cached_team_members = vec![TeamMember {
+            puuid: "ally-puuid".to_string(),
+            summoner_id: 12345,
+            ..Default::default()
+        }];
+
+        assert_eq!(state.new_history_puuids(), vec!["ally-puuid".to_string()]);
     }
 }
