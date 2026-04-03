@@ -1,14 +1,12 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use reqwest::Client;
 use serde_json::Value;
 use tokio::sync::RwLock;
 
 use crate::error::AppError;
-use crate::shards::lcu::REQUEST_TIMEOUT_DEFAULT_SECONDS;
+use crate::network_config::NetworkConfig;
 use crate::shards::lcu::session::LcuSession;
-use crate::shards::settings::SettingHandle;
 
 use super::session::SgpTokenContext;
 
@@ -45,7 +43,7 @@ enum SgpResponse {
 pub struct SgpHttpClient {
     req_client: Client,
     lcu_session: Arc<LcuSession>,
-    request_timeout_setting: SettingHandle,
+    network_config: Arc<NetworkConfig>,
     access_token: RwLock<String>,
     league_session_token: RwLock<String>,
     sgp_server_id: String,
@@ -58,7 +56,7 @@ impl SgpHttpClient {
     pub fn new(
         lcu_session: Arc<LcuSession>,
         initial_tokens: SgpTokenContext,
-        request_timeout_setting: SettingHandle,
+        network_config: Arc<NetworkConfig>,
     ) -> Result<Self, AppError> {
         let req_client = Client::builder()
             .http1_only()
@@ -70,7 +68,7 @@ impl SgpHttpClient {
         Ok(Self {
             req_client,
             lcu_session,
-            request_timeout_setting,
+            network_config,
             access_token: RwLock::new(initial_tokens.access_token),
             league_session_token: RwLock::new(initial_tokens.league_session_token),
             sgp_server_id: initial_tokens.sgp_server_id,
@@ -87,18 +85,6 @@ impl SgpHttpClient {
         }
 
         format!("{}...<truncated>", &body[..MAX_ERROR_BODY_LOG_LEN],)
-    }
-
-    fn request_timeout(&self) -> Duration {
-        let seconds = self
-            .request_timeout_setting
-            .get_value()
-            .ok()
-            .and_then(|value| value.as_u64())
-            .filter(|seconds| *seconds > 0)
-            .unwrap_or(REQUEST_TIMEOUT_DEFAULT_SECONDS);
-
-        Duration::from_secs(seconds)
     }
 
     async fn get_token(&self, kind: SgpTokenKind) -> String {
@@ -181,7 +167,7 @@ impl SgpHttpClient {
         let mut req = self
             .req_client
             .request(method.clone(), request_url)
-            .timeout(self.request_timeout())
+            .timeout(self.network_config.request_timeout())
             .header("Authorization", format!("Bearer {access_token}"))
             .header("Accept", "application/json")
             .header("Accept-Encoding", "identity");

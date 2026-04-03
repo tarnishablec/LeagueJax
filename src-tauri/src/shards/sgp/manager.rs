@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use crate::network_config::NetworkConfig;
 use super::session::SgpSession;
 use crate::error::AppError;
 use crate::shards::lcu::session::LcuSession;
-use crate::shards::settings::SettingHandle;
 
 pub struct SgpManager {
     sessions: RwLock<HashMap<u32, Arc<SgpSession>>>,
@@ -22,7 +22,7 @@ impl SgpManager {
     pub async fn get_or_create(
         &self,
         lcu_session: &Arc<LcuSession>,
-        request_timeout_setting: SettingHandle,
+        network_config: Arc<NetworkConfig>,
     ) -> Result<Arc<SgpSession>, AppError> {
         let pid = lcu_session.auth().pid;
 
@@ -33,9 +33,7 @@ impl SgpManager {
             }
         }
 
-        let sgp_session = Arc::new(
-            SgpSession::new(lcu_session, request_timeout_setting).await?,
-        );
+        let sgp_session = Arc::new(SgpSession::new(lcu_session, network_config).await?);
 
         {
             let mut sessions = self.sessions.write().await;

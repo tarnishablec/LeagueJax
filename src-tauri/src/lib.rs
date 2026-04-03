@@ -1,5 +1,6 @@
 mod commands;
 mod error;
+mod network_config;
 mod shards;
 mod storage;
 mod utils;
