@@ -60,21 +60,11 @@ impl LeagueBridgeShard {
             }
         });
 
-        #[cfg(debug_assertions)]
-        let ws_logger = jax
-            .get_shard::<crate::shards::file_logger::FileLoggerShard>()
-            .logger()
-            .cloned();
-
         lcu_manager.subscribe_ws_fn(move |ws_event| {
             let ongoing_manager = ongoing_manager.clone();
-            #[cfg(debug_assertions)]
-            let ws_logger = ws_logger.clone();
             async move {
                 #[cfg(debug_assertions)]
-                if let Some(logger) = &ws_logger {
-                    logger.write("lcu_ws_event_raw", &ws_event);
-                }
+                tracing::debug!(target: "lcu_ws_raw", ?ws_event, "LCU websocket raw event");
                 ongoing_manager.handle_ws_event(ws_event).await;
             }
         });
@@ -161,12 +151,6 @@ impl Shard for LeagueBridgeShard {
     }
 
     fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![
-            TauriHost,
-            LcuShard,
-            OngoingGameShard,
-            SgpShard,
-            crate::shards::file_logger::FileLoggerShard
-        ]
+        depends![TauriHost, LcuShard, OngoingGameShard, SgpShard]
     }
 }
