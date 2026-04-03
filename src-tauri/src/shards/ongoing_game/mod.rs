@@ -18,8 +18,6 @@ use uuid::Uuid;
 
 const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.behavior.matchHistoryCount";
 const MATCH_HISTORY_COUNT_DEFAULT: u32 = 50;
-const QUEUE_MODE_SETTING_ID: &str = "ongoing.behavior.queueMode";
-const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
 pub struct OngoingGameShard {
     manager: OnceLock<Arc<OngoingGameManager>>,
@@ -87,23 +85,9 @@ impl Shard for OngoingGameShard {
             options: None,
         })?;
 
-        let queue_mode_setting = settings.register_definition(SettingDefinitionDto {
-            id: QUEUE_MODE_SETTING_ID.to_string(),
-            label_key: "settings.ongoing.queueMode.label".to_string(),
-            scope: SettingScopeDto::Backend,
-            control: SettingControlDto::Text {
-                placeholder_key: None,
-            },
-            default_value: Value::String(QUEUE_MODE_CURRENT_VALUE.to_string()),
-            order: Some(11),
-            visible: Some(false),
-            options: None,
-        })?;
-
         let manager = self.initialize(
             OngoingGameManagerSettings {
                 match_history_count: count_setting.clone(),
-                match_history_tag: queue_mode_setting.clone(),
             },
             sgp_shard,
         );
@@ -113,14 +97,6 @@ impl Shard for OngoingGameShard {
             let count_manager = count_manager.clone();
             async move {
                 count_manager.refresh_match_histories().await;
-            }
-        })?;
-
-        let queue_mode_manager = manager.clone();
-        queue_mode_setting.spawn_watch(false, move |_| {
-            let queue_mode_manager = queue_mode_manager.clone();
-            async move {
-                queue_mode_manager.refresh_current().await;
             }
         })?;
 
