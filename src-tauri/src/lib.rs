@@ -4,8 +4,16 @@ mod shards;
 mod storage;
 mod utils;
 
+use std::error::Error;
+#[cfg(debug_assertions)]
+use std::fs;
 use std::sync::Arc;
 use tauri::{Emitter, Manager, RunEvent};
+#[cfg(debug_assertions)]
+use tracing_subscriber::filter::filter_fn;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::Layer;
 
 use crate::commands::history::*;
 use crate::commands::lcu::*;
@@ -24,18 +32,61 @@ use window_vibrancy::apply_acrylic;
 use jax::Jax;
 use jax_probes::TimingProbe;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "league_jax_lib=debug".into()),
-        )
+struct TracingState {
+    #[cfg(debug_assertions)]
+    _lcu_ws_raw_guard: tracing_appender::non_blocking::WorkerGuard,
+}
+
+fn init_tracing<R: tauri::Runtime>(
+    _app: &tauri::App<R>,
+) -> Result<TracingState, Box<dyn Error>> {
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "league_jax_lib=debug".into());
+
+    let console_layer = tracing_subscriber::fmt::layer()
         .with_file(true)
         .with_line_number(true)
         .with_target(true)
-        .init();
+        .with_filter(env_filter);
 
+    #[cfg(debug_assertions)]
+    {
+        let log_dir = _app
+            .path()
+            .app_log_dir()
+            .map_err(|e| -> Box<dyn Error> { Box::from(e.to_string()) })?
+            .join("ws");
+        fs::create_dir_all(&log_dir)?;
+
+        let file_appender = tracing_appender::rolling::daily(log_dir, "lcu-ws-raw.log");
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+        let ws_file_layer = tracing_subscriber::fmt::layer()
+            .with_ansi(false)
+            .with_file(false)
+            .with_line_number(false)
+            .with_target(false)
+            .with_writer(non_blocking)
+            .with_filter(filter_fn(|metadata| metadata.target() == "lcu_ws_raw"));
+
+        tracing_subscriber::registry()
+            .with(console_layer)
+            .with(ws_file_layer)
+            .init();
+
+        Ok(TracingState {
+            _lcu_ws_raw_guard: guard,
+        })
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        tracing_subscriber::registry().with(console_layer).init();
+        Ok(TracingState {})
+    }
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_opener::init())
@@ -77,6 +128,9 @@ pub fn run() {
             lcu_get_help
         ])
         .setup(move |app| {
+            let tracing_state = init_tracing(app)?;
+            app.manage(tracing_state);
+
             let app_handle = app.handle().clone();
 
             let win = app.get_webview_window("main").expect("no main window");
@@ -118,7 +172,6 @@ pub fn run() {
                 )))
                 .register(Arc::new(shards::settings::SettingsShard::new()))
                 .register(Arc::new(shards::log::LogShard::new()))
-                .register(Arc::new(shards::file_logger::FileLoggerShard::new()))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
                 .register(Arc::new(shards::league_bridge::LeagueBridgeShard::new()))
                 .register(Arc::new(shards::static_cache::StaticCacheShard::new()))
