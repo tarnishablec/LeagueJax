@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -21,6 +19,39 @@ pub enum OngoingGamePhase {
     InGame,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, TS)]
+#[ts(export, export_to = "ongoing_game.ts")]
+#[serde(rename_all = "snake_case")]
+pub enum OngoingGamePlayerLoadStatus {
+    #[default]
+    Idle,
+    Loading,
+    Ready,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "ongoing_game.ts")]
+#[serde(rename_all = "snake_case")]
+pub struct OngoingGameSummonerState {
+    pub game_id: Option<u64>,
+    pub puuid: String,
+    pub team_id: u64,
+    pub status: OngoingGamePlayerLoadStatus,
+    pub summoner: Option<SummonerInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "ongoing_game.ts")]
+#[serde(rename_all = "snake_case")]
+pub struct OngoingGameMatchHistoryState {
+    pub game_id: Option<u64>,
+    pub puuid: String,
+    pub team_id: u64,
+    pub status: OngoingGamePlayerLoadStatus,
+    pub games: Option<Vec<RawMatchSummaryGame>>,
+}
+
 // ---------------------------------------------------------------------------
 // Broadcast payloads
 // ---------------------------------------------------------------------------
@@ -30,6 +61,7 @@ pub enum OngoingGamePhase {
 #[serde(rename_all = "snake_case")]
 pub struct OngoingGameUpdated {
     pub phase: OngoingGamePhase,
+    pub lifecycle_game_id: Option<u64>,
     /// User-selected match-history mode tag.
     /// - "__current_mode__": follow current queue mode
     /// - `q_xxx`: fixed queue mode
@@ -40,6 +72,8 @@ pub struct OngoingGameUpdated {
     /// Effective SGP mode tag after resolving `match_history_tag` Agathe nst current context.
     pub effective_mode_tag: Option<String>,
     pub match_histories_pending: bool,
+    pub summoner_states: Vec<OngoingGameSummonerState>,
+    pub history_states: Vec<OngoingGameMatchHistoryState>,
     pub gameflow_session: Option<GameflowSessionData>,
     pub champ_select_session: Option<ChampSelectSessionData>,
     pub team_members: Vec<TeamMember>,
@@ -50,7 +84,7 @@ pub struct OngoingGameUpdated {
 #[serde(rename_all = "snake_case")]
 pub struct OngoingGameSummonersUpdated {
     pub phase: OngoingGamePhase,
-    pub summoners: Vec<SummonerInfo>,
+    pub state: OngoingGameSummonerState,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -58,7 +92,7 @@ pub struct OngoingGameSummonersUpdated {
 #[serde(rename_all = "snake_case")]
 pub struct OngoingGameMatchHistoriesUpdated {
     pub phase: OngoingGamePhase,
-    pub match_histories: HashMap<String, Vec<RawMatchSummaryGame>>,
+    pub state: OngoingGameMatchHistoryState,
 }
 
 // ---------------------------------------------------------------------------

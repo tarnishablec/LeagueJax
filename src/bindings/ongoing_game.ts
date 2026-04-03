@@ -9,18 +9,41 @@ import type { SummonerInfo } from "./summoner";
 
 export type OngoingGameMatchHistoriesUpdated = {
   phase: OngoingGamePhase;
-  match_histories: { [key in string]: Array<RawMatchSummaryGame> };
+  state: OngoingGameMatchHistoryState;
+};
+
+export type OngoingGameMatchHistoryState = {
+  game_id: number | null;
+  puuid: string;
+  team_id: number;
+  status: OngoingGamePlayerLoadStatus;
+  games: Array<RawMatchSummaryGame> | null;
 };
 
 export type OngoingGamePhase = "Idle" | "ChampSelect" | "InGame";
 
+export type OngoingGamePlayerLoadStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "failed";
+
+export type OngoingGameSummonerState = {
+  game_id: number | null;
+  puuid: string;
+  team_id: number;
+  status: OngoingGamePlayerLoadStatus;
+  summoner: SummonerInfo | null;
+};
+
 export type OngoingGameSummonersUpdated = {
   phase: OngoingGamePhase;
-  summoners: Array<SummonerInfo>;
+  state: OngoingGameSummonerState;
 };
 
 export type OngoingGameUpdated = {
   phase: OngoingGamePhase;
+  lifecycle_game_id: number | null;
   /**
    * User-selected match-history mode tag.
    * - "__current_mode__": follow current queue mode
@@ -37,6 +60,8 @@ export type OngoingGameUpdated = {
    */
   effective_mode_tag: string | null;
   match_histories_pending: boolean;
+  summoner_states: Array<OngoingGameSummonerState>;
+  history_states: Array<OngoingGameMatchHistoryState>;
   gameflow_session: GameflowSessionData | null;
   champ_select_session: ChampSelectSessionData | null;
   team_members: Array<TeamMember>;
