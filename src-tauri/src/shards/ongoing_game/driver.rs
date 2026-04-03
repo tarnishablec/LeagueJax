@@ -415,8 +415,21 @@ async fn spawn_per_player_fetches(
                     );
                     return;
                 };
-                let summoner = match lcu.api().get_summoner_by_puuid(&puuid).await {
-                    Ok(summoner) => summoner,
+                let summoner = match lcu.api().get_summoner_by_puuid_optional(&puuid).await {
+                    Ok(Some(summoner)) => summoner,
+                    Ok(None) => {
+                        tracing::info!(
+                            "[ongoing_game] summoner fetch unavailable puuid={} generation={} reason=not_found",
+                            puuid,
+                            generation
+                        );
+
+                        let mut state = ctx.state.lock().await;
+                        if state.generation == generation {
+                            state.unavailable_summoner_puuids.insert(puuid.clone());
+                        }
+                        return;
+                    }
                     Err(error) => {
                         tracing::warn!(
                             "[ongoing_game] summoner fetch failed puuid={} generation={} error={}",
