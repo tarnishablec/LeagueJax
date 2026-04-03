@@ -6,34 +6,34 @@ pub mod matches;
 pub mod session;
 
 use core::error::Error;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 
 use self::manager::SgpManager;
 use self::session::SgpSession;
+use crate::network_config::{NetworkConfig, REQUEST_TIMEOUT_SETTING_ID};
 use crate::error::AppError;
 use crate::shards::lcu::session::LcuSession;
-use crate::shards::lcu::{LcuShard, REQUEST_TIMEOUT_SETTING_ID};
-use crate::shards::settings::{SettingHandle, SettingsShard};
-use std::sync::OnceLock;
+use crate::shards::lcu::LcuShard;
+use crate::shards::settings::SettingsShard;
 
 pub struct SgpShard {
     pub manager: SgpManager,
-    request_timeout_setting: OnceLock<SettingHandle>,
+    network_config: OnceLock<Arc<NetworkConfig>>,
 }
 
 impl SgpShard {
     pub fn new() -> Self {
         Self {
             manager: SgpManager::new(),
-            request_timeout_setting: OnceLock::new(),
+            network_config: OnceLock::new(),
         }
     }
 
-    pub fn request_timeout_setting(&self) -> Option<SettingHandle> {
-        self.request_timeout_setting.get().cloned()
+    pub fn network_config(&self) -> Option<Arc<NetworkConfig>> {
+        self.network_config.get().cloned()
     }
 }
 
@@ -45,12 +45,12 @@ pub trait LcuSessionSgpExt {
 #[async_trait]
 impl LcuSessionSgpExt for Arc<LcuSession> {
     async fn to_sgp(&self, sgp_shard: &SgpShard) -> Result<Arc<SgpSession>, AppError> {
-        let request_timeout_setting = sgp_shard
-            .request_timeout_setting()
-            .ok_or_else(|| AppError::other("SGP request timeout setting is not initialized"))?;
+        let network_config = sgp_shard
+            .network_config()
+            .ok_or_else(|| AppError::other("SGP network config is not initialized"))?;
         sgp_shard
             .manager
-            .get_or_create(self, request_timeout_setting)
+            .get_or_create(self, network_config)
             .await
     }
 }
@@ -61,8 +61,8 @@ impl Shard for SgpShard {
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
-        let request_timeout_setting = settings.setting_handle(REQUEST_TIMEOUT_SETTING_ID)?;
-        let _ = self.request_timeout_setting.set(request_timeout_setting);
+        let _ = settings.setting_handle(REQUEST_TIMEOUT_SETTING_ID)?;
+        let _ = self.network_config.set(Arc::new(NetworkConfig::new(settings)));
         Ok(())
     }
 

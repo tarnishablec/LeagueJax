@@ -3,10 +3,10 @@ use std::sync::Arc;
 use super::api::SgpApi;
 use super::config::sgp_servers_config;
 use super::http_client::SgpHttpClient;
+use crate::network_config::NetworkConfig;
 use crate::error::AppError;
 use crate::shards::lcu::http_client::LcuHttpClient;
 use crate::shards::lcu::session::LcuSession;
-use crate::shards::settings::SettingHandle;
 
 #[derive(Debug, Clone)]
 pub struct SgpTokenContext {
@@ -43,11 +43,10 @@ pub struct SgpSession {
 impl SgpSession {
     pub(crate) async fn new(
         lcu_session: &Arc<LcuSession>,
-        request_timeout_setting: SettingHandle,
+        network_config: Arc<NetworkConfig>,
     ) -> Result<Self, AppError> {
         let token_context = exchange_token_context(lcu_session).await?;
-        let http_client =
-            SgpHttpClient::new(lcu_session.clone(), token_context, request_timeout_setting)?;
+        let http_client = SgpHttpClient::new(lcu_session.clone(), token_context, network_config)?;
         let api = SgpApi::new(http_client);
         Ok(Self { api })
     }
