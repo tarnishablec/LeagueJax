@@ -66,7 +66,17 @@
       "Bash(bun tsc:*)",
       "Bash(xargs wc:*)",
       "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(x[''''path'''']\\) for x in data.get\\(''''tree'''',[]\\) if ''''lc-state'''' in x[''''path''''] or ''''chat'''' in x[''''path''''].lower\\(\\)]\")",
-      "Bash(awk 'NR==671' \"D:/Desktop/Web/LeagueJax/log.txt\")"
+      "Bash(awk 'NR==671' \"D:/Desktop/Web/LeagueJax/log.txt\")",
+      "Read(//d/Steam/steamapps/common/Aseprite/**)",
+      "Bash(\"D:/Steam/steamapps/common/Aseprite/Aseprite.exe\" --version)",
+      "Bash(\"C:/Users/tarni/.claude/plugins/cache/pixel-plugin/pixel-plugin/0.5.0/bin/pixel-mcp\" --health)",
+      "Bash(C:/Users/tarni/.claude/plugins/cache/pixel-plugin/pixel-plugin/0.5.0/bin/pixel-mcp-windows-amd64.exe:*)",
+      "mcp__plugin_pixel-plugin_aseprite__create_canvas",
+      "mcp__plugin_pixel-plugin_aseprite__get_sprite_info",
+      "mcp__plugin_pixel-plugin_aseprite__add_layer",
+      "mcp__plugin_pixel-plugin_aseprite__add_frame",
+      "mcp__plugin_pixel-plugin_aseprite__draw_pixels",
+      "mcp__plugin_pixel-plugin_aseprite__link_cel"
     ]
   }
 }
