@@ -28,20 +28,36 @@ use crate::shards::sgp::SgpShard;
 use super::driver::OngoingGameDriver;
 
 pub(crate) const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
-const QUEUE_MODE_ALL_VALUE: &str = "__all__";
 const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum MatchHistoryModeSetting {
+pub enum MatchHistoryModeSetting {
     All,
     CurrentMode,
     FixedTag(String),
 }
 
+impl MatchHistoryModeSetting {
+    fn payload_value(&self) -> Option<String> {
+        match self {
+            Self::All => None,
+            Self::CurrentMode => Some(QUEUE_MODE_CURRENT_VALUE.to_string()),
+            Self::FixedTag(tag) => Some(tag.clone()),
+        }
+    }
+
+    fn effective_tag(&self, effective_queue_id: Option<u64>) -> Option<String> {
+        match self {
+            Self::All => None,
+            Self::CurrentMode => effective_queue_id.map(|queue_id| format!("q_{queue_id}")),
+            Self::FixedTag(tag) => Some(tag.clone()),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct OngoingGameManagerSettings {
     pub match_history_count: SettingHandle,
-    pub match_history_tag: SettingHandle,
 }
 
 impl OngoingGameManagerSettings {
@@ -52,33 +68,6 @@ impl OngoingGameManagerSettings {
             .as_ref()
             .and_then(parse_match_history_count)
             .unwrap_or(DEFAULT_MATCH_HISTORY_COUNT)
-    }
-
-    pub fn match_history_mode_value(&self) -> MatchHistoryModeSetting {
-        self.match_history_tag
-            .get_value()
-            .ok()
-            .as_ref()
-            .map(parse_queue_mode_setting)
-            .unwrap_or(MatchHistoryModeSetting::All)
-    }
-
-    pub fn match_history_tag_for_payload_value(&self) -> Option<String> {
-        match self.match_history_mode_value() {
-            MatchHistoryModeSetting::All => None,
-            MatchHistoryModeSetting::CurrentMode => Some(QUEUE_MODE_CURRENT_VALUE.to_string()),
-            MatchHistoryModeSetting::FixedTag(tag) => Some(tag),
-        }
-    }
-
-    pub fn match_history_effective_tag(&self, effective_queue_id: Option<u64>) -> Option<String> {
-        match self.match_history_mode_value() {
-            MatchHistoryModeSetting::All => None,
-            MatchHistoryModeSetting::CurrentMode => {
-                effective_queue_id.map(|queue_id| format!("q_{queue_id}"))
-            }
-            MatchHistoryModeSetting::FixedTag(tag) => Some(tag),
-        }
     }
 }
 
@@ -257,6 +246,19 @@ impl OngoingGameManager {
     pub async fn refresh_current(&self) {
         let updated = {
             let state = self.ctx.state.lock().await;
+            state.build_updated_payload(&self.ctx.settings)
+        };
+
+        self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+    }
+
+    pub async fn set_match_history_mode(&self, mode: MatchHistoryModeSetting) {
+        let updated = {
+            let mut state = self.ctx.state.lock().await;
+            if state.match_history_mode == mode {
+                return;
+            }
+            state.match_history_mode = mode;
             state.build_updated_payload(&self.ctx.settings)
         };
 
@@ -487,6 +489,7 @@ impl OngoingGameContext {
 pub(crate) struct ManagerState {
     pub(crate) driver: Option<OngoingGameDriver>,
     pub(crate) lcu_session: Option<Arc<LcuSession>>,
+    pub(crate) match_history_mode: MatchHistoryModeSetting,
     pub(crate) lifecycle_game_id: Option<u64>,
     pub(crate) cached_gameflow_session: Option<GameflowSessionData>,
     pub(crate) cached_champ_select_session: Option<ChampSelectSessionData>,
@@ -503,6 +506,7 @@ impl ManagerState {
         Self {
             driver: None,
             lcu_session: None,
+            match_history_mode: MatchHistoryModeSetting::CurrentMode,
             lifecycle_game_id: None,
             cached_gameflow_session: None,
             cached_champ_select_session: None,
@@ -575,15 +579,15 @@ impl ManagerState {
 
     pub(crate) fn build_updated_payload(
         &self,
-        settings: &OngoingGameManagerSettings,
+        _settings: &OngoingGameManagerSettings,
     ) -> OngoingGameUpdated {
         let phase = self.current_phase();
         let effective_queue_id = self.effective_queue_id();
-        let effective_mode_tag = settings.match_history_effective_tag(effective_queue_id);
+        let effective_mode_tag = self.match_history_mode.effective_tag(effective_queue_id);
 
         OngoingGameUpdated {
             phase,
-            match_history_tag: settings.match_history_tag_for_payload_value(),
+            match_history_tag: self.match_history_mode.payload_value(),
             effective_queue_id,
             effective_mode_tag,
             match_histories_pending: self.match_histories_pending,
@@ -627,9 +631,9 @@ impl ManagerState {
 
     pub(crate) fn effective_mode_tag(
         &self,
-        settings: &OngoingGameManagerSettings,
+        _settings: &OngoingGameManagerSettings,
     ) -> Option<String> {
-        settings.match_history_effective_tag(self.effective_queue_id())
+        self.match_history_mode.effective_tag(self.effective_queue_id())
     }
 
     pub(crate) fn team_puuids(&self) -> Vec<String> {
@@ -951,20 +955,4 @@ fn parse_match_history_count(value: &Value) -> Option<u32> {
     }
 
     None
-}
-
-fn parse_queue_mode_setting(value: &Value) -> MatchHistoryModeSetting {
-    let Some(raw) = value.as_str().map(str::trim) else {
-        return MatchHistoryModeSetting::All;
-    };
-
-    if raw.is_empty() || raw == QUEUE_MODE_ALL_VALUE || raw.eq_ignore_ascii_case("all") {
-        return MatchHistoryModeSetting::All;
-    }
-
-    if raw == QUEUE_MODE_CURRENT_VALUE {
-        return MatchHistoryModeSetting::CurrentMode;
-    }
-
-    MatchHistoryModeSetting::FixedTag(raw.to_string())
 }
