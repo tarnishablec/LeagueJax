@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use serde_json::Value;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{broadcast, Mutex, Semaphore};
 use tokio::task::JoinSet;
 
 use crate::shards::lcu::api::OngoingSessionSeed;
@@ -28,6 +28,7 @@ use crate::shards::sgp::SgpShard;
 use super::driver::OngoingGameDriver;
 
 pub(crate) const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
+pub(crate) const MAX_MATCH_HISTORY_FETCH_CONCURRENCY: usize = 3;
 const BOT_PUUID: &str = "BOT";
 const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
@@ -358,18 +359,26 @@ impl OngoingGameManager {
                 None => None,
             };
 
+            let semaphore = Arc::new(Semaphore::new(MAX_MATCH_HISTORY_FETCH_CONCURRENCY));
             let mut join_set = JoinSet::new();
             for puuid in puuids {
                 let sgp = sgp.clone();
                 let tag = tag.clone();
+                let semaphore = semaphore.clone();
                 join_set.spawn(async move {
+                    let permit = match semaphore.acquire_owned().await {
+                        Ok(permit) => permit,
+                        Err(_) => return None,
+                    };
+                    let _permit = permit;
+
                     let Some(ref sgp) = sgp else {
                         tracing::warn!(
                             "[ongoing_game] refresh_match_histories fetch skipped puuid={} generation={} reason=no_sgp_session",
                             puuid,
                             gen
                         );
-                        return Some((puuid, Vec::new()));
+                        return None;
                     };
 
                     match sgp
@@ -387,7 +396,7 @@ impl OngoingGameManager {
                                 count,
                                 error
                             );
-                            Some((puuid, Vec::new()))
+                            None
                         }
                     }
                 });
@@ -821,8 +830,18 @@ impl ManagerState {
             return false;
         };
 
-        is_practice_tool_gameflow(gameflow)
-            && same_game_id(gameflow.game_data.game_id, payload.game_id)
+        if !same_game_id(gameflow.game_data.game_id, payload.game_id) {
+            return false;
+        }
+
+        if is_practice_tool_gameflow(gameflow) {
+            return true;
+        }
+
+        let locked_member_count = extract_teambuilder_allied_members(payload).len()
+            + self.extract_teambuilder_enemy_slots_for_ingame(payload).len();
+        let gameflow_member_count = Self::extract_gameflow_members(gameflow).len();
+        locked_member_count > gameflow_member_count
     }
 
     fn merge_gameflow_with_locked_teambuilder_members(
