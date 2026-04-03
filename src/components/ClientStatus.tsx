@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
+import { LazyImage } from "@/components/LazyImage.tsx";
 import { SummonerID } from "@/components/SummonerID.tsx";
 import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
@@ -50,19 +51,24 @@ function TriggerIcon({
   isLoading: boolean;
   iconSize: number;
 }) {
+  const [imageErrored, setImageErrored] = useState(false);
+
   if (hasSummoner && avatarUrl) {
     return (
-      <img
+      <LazyImage
         src={avatarUrl}
         alt="Profile icon"
-        width={iconSize * 1.3}
-        height={iconSize * 1.3}
         className={s.avatar}
+        style={assignInlineVars({
+          [s.avatarSizeVar]: `${iconSize * 1.3}px`,
+        })}
+        fallbackClassName={imageErrored ? s.avatarLoading : s.avatar}
+        onError={() => setImageErrored(true)}
       />
     );
   }
 
-  if (isLoading) {
+  if (isLoading || imageErrored) {
     return (
       <div
         className={s.avatarLoading}
@@ -128,7 +134,12 @@ function ClientCardContent({
   return (
     <>
       {hasSummoner && avatarUrl ? (
-        <img src={avatarUrl} alt="Profile icon" className={s.instanceIcon} />
+        <LazyImage
+          src={avatarUrl}
+          alt="Profile icon"
+          className={s.instanceIcon}
+          fallbackClassName={s.instanceIconFallback}
+        />
       ) : (
         <div className={s.instanceIconFallback}>
           <Unplug size={14} aria-hidden="true" />

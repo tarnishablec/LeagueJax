@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import type { CSSProperties } from "react";
 import { lazyFadeIn } from "./LazyImage.css.ts";
 
 const listeners = new Map<Element, () => void>();
@@ -22,12 +23,14 @@ export function LazyImage({
   className,
   fallbackClassName,
   onError,
+  style,
 }: {
   src: string;
   alt: string;
   className: string;
   fallbackClassName?: string;
   onError?: () => void;
+  style?: CSSProperties;
 }) {
   const [visible, setVisible] = useState(false);
   const [errored, setErrored] = useState(false);
@@ -43,7 +46,7 @@ export function LazyImage({
   }, []);
 
   if (errored && !onError && fallbackClassName) {
-    return <span className={fallbackClassName} aria-hidden="true" />;
+    return <span className={fallbackClassName} style={style} aria-hidden="true" />;
   }
 
   if (!visible) {
@@ -51,6 +54,7 @@ export function LazyImage({
       <span
         ref={ref}
         className={fallbackClassName ?? className}
+        style={style}
         aria-hidden="true"
       />
     );
@@ -62,6 +66,7 @@ export function LazyImage({
       src={src}
       alt={alt}
       className={`${className} ${lazyFadeIn}`}
+      style={style}
       decoding="async"
       onLoad={(e) => {
         e.currentTarget.dataset.loaded = "";

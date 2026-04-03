@@ -45,13 +45,15 @@ export const trigger = recipe({
   },
 });
 
+export const avatarSizeVar = createVar();
+
 export const avatar = style({
+  width: avatarSizeVar,
+  height: avatarSizeVar,
   borderRadius: "50%",
   objectFit: "cover",
   justifySelf: "center",
 });
-
-export const avatarSizeVar = createVar();
 
 const spin = keyframes({
   "0%": { transform: "rotate(0deg)" },
@@ -216,6 +218,7 @@ export const instanceInfo = style({
   display: "grid",
   gap: 1,
   minWidth: 0,
+  paddingTop: 2,
 });
 
 export const instancePath = style({
@@ -228,6 +231,7 @@ export const instancePath = style({
 export const instancePid = style({
   color: vars.color.mutedForeground,
   fontSize: "0.7rem",
+  textBoxTrim: "trim-end",
 });
 
 // ─── State indicator ────────────────────────────────────────────────────────

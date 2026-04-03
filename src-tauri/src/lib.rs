@@ -62,6 +62,8 @@ fn init_tracing<R: tauri::Runtime>(
         let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
         let ws_file_layer = tracing_subscriber::fmt::layer()
             .with_ansi(false)
+            .without_time()
+            .with_level(false)
             .with_file(false)
             .with_line_number(false)
             .with_target(false)

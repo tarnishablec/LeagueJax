@@ -6,13 +6,16 @@ use maokai_tree::{DataView, State, StateTree, TreeView};
 use crate::shards::lcu::events::gameflow_phase::Phase;
 use crate::shards::lcu::events::LcuWsEvent;
 use crate::shards::lcu::session::LcuSession;
-use crate::shards::ongoing_game::manager::OngoingGameContext;
+use crate::shards::ongoing_game::manager::{
+    OngoingGameContext, MAX_MATCH_HISTORY_FETCH_CONCURRENCY,
+};
 use crate::shards::ongoing_game::types::{
     OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGamePhase,
     OngoingGameSummonersUpdated, OngoingGameUpdated,
 };
 use crate::shards::sgp::session::SgpSession;
 use crate::shards::sgp::LcuSessionSgpExt;
+use tokio::sync::Semaphore;
 
 type DriverInput = LcuWsEvent;
 
@@ -388,11 +391,13 @@ async fn spawn_per_player_fetches(
     };
 
     let mut join_set = tokio::task::JoinSet::new();
+    let history_semaphore = Arc::new(Semaphore::new(MAX_MATCH_HISTORY_FETCH_CONCURRENCY));
     for puuid in all_puuids {
         let ctx = ctx.clone();
         let puuid = puuid.clone();
         let lcu = lcu.clone();
         let sgp = sgp.clone();
+        let history_semaphore = history_semaphore.clone();
         let needs_summoner = summoner_puuids.contains(&puuid);
         let needs_history = history_puuids.contains(&puuid);
         let tag = tag.map(|t| t.to_owned());
@@ -488,6 +493,11 @@ async fn spawn_per_player_fetches(
                     tag,
                     history_count
                 );
+                let permit = match history_semaphore.acquire_owned().await {
+                    Ok(permit) => permit,
+                    Err(_) => return,
+                };
+                let _permit = permit;
                 fetch_single_history(
                     &ctx,
                     &sgp,
@@ -528,14 +538,6 @@ async fn fetch_single_history(
             puuid,
             generation
         );
-        upsert_history_bucket(
-            ctx,
-            puuid,
-            Vec::new(),
-            generation,
-            "skipped(no_sgp_session)",
-        )
-        .await;
         return;
     };
     let resp = match sgp
@@ -553,7 +555,6 @@ async fn fetch_single_history(
                 count,
                 error
             );
-            upsert_history_bucket(ctx, puuid, Vec::new(), generation, "failed").await;
             return;
         }
     };

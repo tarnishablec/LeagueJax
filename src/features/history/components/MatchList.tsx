@@ -38,7 +38,7 @@ export function MatchList({
       autoRefreshOnSwitch,
     );
 
-  const hasMatch = matches?.length ?? 0;
+  const matchCount = matches?.length ?? 0;
   const canGoPrev = page > 1 && !isLoading && !isRefreshing;
   const canGoNext = hasNextPage && !isLoading && !isRefreshing;
 
@@ -95,17 +95,13 @@ export function MatchList({
 
       {isLoading ? (
         <div className={s.emptyState}>{t("common.loading")}</div>
-      ) : null}
-
-      {error ? (
+      ) : error ? (
         <div className={s.emptyState}>
           {t("history.loadFailed", {
             defaultValue: "Failed to load match history",
           })}
         </div>
-      ) : null}
-
-      {!isLoading && !error && !hasMatch ? (
+      ) : matchCount === 0 ? (
         <div className={s.emptyState}>
           {modeTag === "all"
             ? t("history.noMatches")
@@ -113,9 +109,7 @@ export function MatchList({
                 defaultValue: "No matches found in this queue",
               })}
         </div>
-      ) : null}
-
-      {!isLoading && !error && hasMatch ? (
+      ) : (
         <div className={s.list}>
           {matches?.map((match) => (
             <MatchCard
@@ -126,7 +120,7 @@ export function MatchList({
             />
           ))}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

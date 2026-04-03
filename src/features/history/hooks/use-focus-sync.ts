@@ -15,15 +15,14 @@ export function useFocusSync(
     const focusedPid = connected?.pid;
     const hadFocusedClient = lastSyncedPid !== undefined;
     const didDisconnect = hadFocusedClient && focusedPid === undefined;
-    const didConnectToNewClient =
+    const didChangeFocusedClient =
       focusedPid !== undefined && focusedPid !== lastSyncedPid;
 
-    if (!didDisconnect && !didConnectToNewClient) return;
+    if (!didDisconnect && !didChangeFocusedClient) return;
     lastSyncedPid = focusedPid;
 
-    if (didDisconnect) {
+    if (didDisconnect || didChangeFocusedClient) {
       closeAllTabs();
-      return;
     }
 
     if (connected && autoOpenOwnTab && connected.summoner) {
