@@ -59,6 +59,56 @@ function stableRecord<V>(
   return prev;
 }
 
+function sameTeamMember(left: TeamMember, right: TeamMember): boolean {
+  return (
+    left.assignedPosition === right.assignedPosition &&
+    left.cellId === right.cellId &&
+    left.championId === right.championId &&
+    left.championPickIntent === right.championPickIntent &&
+    left.gameName === right.gameName &&
+    left.internalName === right.internalName &&
+    left.isAutoFilled === right.isAutoFilled &&
+    left.isHumanoid === right.isHumanoid &&
+    left.nameVisibilityType === right.nameVisibilityType &&
+    left.obfuscatePuuid === right.obfuscatePuuid &&
+    left.obfuscateSummonerId === right.obfuscateSummonerId &&
+    left.pickMode === right.pickMode &&
+    left.pickTurn === right.pickTurn &&
+    left.playerAlias === right.playerAlias &&
+    left.playerType === right.playerType &&
+    left.puuid === right.puuid &&
+    left.selectedSkinId === right.selectedSkinId &&
+    left.spell1Id === right.spell1Id &&
+    left.spell2Id === right.spell2Id &&
+    left.summonerId === right.summonerId &&
+    left.tagLine === right.tagLine &&
+    left.team === right.team &&
+    left.wardSkinId === right.wardSkinId
+  );
+}
+
+function stableTeamMembers(
+  prev: TeamMember[],
+  next: TeamMember[],
+): TeamMember[] {
+  if (prev.length !== next.length) {
+    return next;
+  }
+
+  let changed = false;
+  const stableMembers = next.map((member, index) => {
+    const prevMember = prev[index];
+    if (prevMember && sameTeamMember(prevMember, member)) {
+      return prevMember;
+    }
+
+    changed = true;
+    return member;
+  });
+
+  return changed ? stableMembers : prev;
+}
+
 function toModeTag(value: string | null): MatchModeTag | null {
   if (value === CURRENT_MODE_VALUE) {
     return null;
@@ -128,7 +178,7 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         return {
           ...state,
           phase: payload.phase,
-          teamMembers: payload.team_members,
+          teamMembers: stableTeamMembers(state.teamMembers, payload.team_members),
           matchHistoryTag: payload.match_history_tag,
           effectiveQueueId: payload.effective_queue_id,
           effectiveModeTag: payload.effective_mode_tag,
@@ -177,7 +227,7 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       return {
         ...state,
         phase: payload.phase,
-        teamMembers: payload.team_members,
+        teamMembers: stableTeamMembers(state.teamMembers, payload.team_members),
         matchHistoryTag: payload.match_history_tag,
         effectiveQueueId: payload.effective_queue_id,
         effectiveModeTag: payload.effective_mode_tag,

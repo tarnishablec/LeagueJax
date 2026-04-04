@@ -10,3 +10,7 @@ export const page = style({
   padding: "12px",
   paddingTop: 4,
 });
+
+export const rowSpacer = style({
+  minHeight: 0,
+});

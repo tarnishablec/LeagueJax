@@ -109,7 +109,6 @@ type SnapshotPlayerCardHistoryProps = {
   historyLoadFailedText: string;
   isBot: boolean;
   isHistoryLoading: boolean;
-  noHistoryText: string;
   recentGames: EnrichedMatch[];
 };
 
@@ -120,14 +119,13 @@ export const SnapshotPlayerCardHistory = memo(
       historyLoadFailedText,
       isBot,
       isHistoryLoading,
-      noHistoryText,
       recentGames,
     } = props;
 
     if (isBot) {
       return (
-        <div className={s.historyList} style={{ alignContent: "center" }}>
-          <div className={s.historyEmpty}>
+        <div className={s.historyCenteredState}>
+          <div>
             <Bot />
           </div>
         </div>
@@ -140,18 +138,14 @@ export const SnapshotPlayerCardHistory = memo(
 
     if (hasHistoryLoadFailed) {
       return (
-        <div className={s.historyList}>
-          <div className={s.historyEmpty}>{historyLoadFailedText}</div>
+        <div className={s.historyCenteredState}>
+          <div>{historyLoadFailedText}</div>
         </div>
       );
     }
 
     if (recentGames.length === 0) {
-      return (
-        <div className={s.historyList}>
-          <div className={s.historyEmpty}>{noHistoryText}</div>
-        </div>
-      );
+      return <div className={s.historyBlank} />;
     }
 
     return <SnapshotPlayerCardHistoryList recentGames={recentGames} />;

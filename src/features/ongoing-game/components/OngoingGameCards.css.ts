@@ -224,6 +224,19 @@ export const historyEmpty = style({
   textAlign: "center",
 });
 
+export const historyCenteredState = style({
+  display: "grid",
+  placeItems: "center",
+  height: "100%",
+  color: vars.color.mutedForeground,
+  fontSize: "0.72rem",
+  textAlign: "center",
+});
+
+export const historyBlank = style({
+  height: "100%",
+});
+
 export const winText = style({
   color: vars.color.success,
   fontWeight: 700,

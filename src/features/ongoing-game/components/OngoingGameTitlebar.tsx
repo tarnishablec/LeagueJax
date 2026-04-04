@@ -63,23 +63,43 @@ function resolveSelectedValue(
 
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
-  const {
-    phase,
-    gameflowSession,
-    effectiveQueueId,
-    modeTag,
-    matchHistoriesPending,
-  } = useOngoingGameStore();
+  const phase = useOngoingGameStore((state) => state.phase);
+  const effectiveQueueId = useOngoingGameStore((state) => state.effectiveQueueId);
+  const modeTag = useOngoingGameStore((state) => state.modeTag);
+  const matchHistoriesPending = useOngoingGameStore(
+    (state) => state.matchHistoriesPending,
+  );
+  const queueIconAssetPath = useOngoingGameStore((state) => {
+    const assets = state.gameflowSession?.map.assets;
+    if (!assets) {
+      return null;
+    }
+
+    const pathCandidates = [assets["icon-v2"], assets["game-select-icon-active"]];
+    const selectedPath = pathCandidates.find(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    );
+    return selectedPath ?? null;
+  });
+  const queueDetailedDescription = useOngoingGameStore(
+    (state) => state.gameflowSession?.gameData.queue.detailedDescription ?? null,
+  );
+  const gameModeName = useOngoingGameStore(
+    (state) => state.gameflowSession?.map.gameModeName ?? null,
+  );
   const setModeTag = useOngoingGameStore((state) => state.setModeTag);
 
   const queueName = useLcuQueueName(effectiveQueueId ?? 0);
-  const queueDesc =
-    queueName ||
-    gameflowSession?.gameData.queue.detailedDescription ||
-    gameflowSession?.map.gameModeName;
+  const queueDesc = queueName || queueDetailedDescription || gameModeName;
   const queueIconPath = useMemo(
-    () => resolveGameflowAssetIconPath(gameflowSession?.map.assets),
-    [gameflowSession?.map.assets],
+    () =>
+      queueIconAssetPath
+        ? resolveGameflowAssetIconPath({
+            "icon-v2": queueIconAssetPath,
+          })
+        : null,
+    [queueIconAssetPath],
   );
 
   const currentModeLabel = t("ongoingGame.titlebar.filterCurrentMode", {

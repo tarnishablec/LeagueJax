@@ -15,7 +15,7 @@ use crate::shards::lcu::events::teambuilder_tbd_game::{
     TeambuilderCell, TeambuilderTbdGamePayload,
 };
 use crate::shards::lcu::events::{
-    EventType, LcuWsEvent, URI_CHAMP_SELECT_SESSION, URI_GAMEFLOW_SESSION,
+    EventType, LanePosition, LcuWsEvent, URI_CHAMP_SELECT_SESSION, URI_GAMEFLOW_SESSION,
 };
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
@@ -101,12 +101,12 @@ impl OngoingGameManager {
                     && payload.event_type != EventType::Delete
                     && state.can_apply_member_snapshot(event_game_id)
                 {
-                    let next_members =
-                        if state.should_merge_locked_teambuilder_roster(&payload.data) {
-                            state.merge_gameflow_with_locked_teambuilder_members(&payload.data)
-                        } else {
-                            ManagerState::extract_gameflow_members(&payload.data)
-                        };
+                    let next_members = if state.should_merge_locked_teambuilder_roster(&payload.data)
+                    {
+                        state.merge_gameflow_with_locked_teambuilder_members(&payload.data)
+                    } else {
+                        ManagerState::extract_gameflow_members(&payload.data)
+                    };
                     tracing::info!(
                         "[ongoing_game] team snapshot source=gameflow phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
                         payload.data.phase,
@@ -130,33 +130,15 @@ impl OngoingGameManager {
             LcuWsEvent::ChampSelectSession(payload) => {
                 let event_game_id = extract_champ_select_game_id(&payload.data);
                 state.sync_lifecycle_game_id(event_game_id, "champ_select_session");
-                let merged_session =
-                    state.merge_teambuilder_into_champ_select_session(payload.data.clone());
-                state.cached_champ_select_session = Some(merged_session.clone());
-                let can_apply = payload.event_type != EventType::Delete
-                    && state.current_phase() != OngoingGamePhase::InGame
-                    && state.can_apply_member_snapshot(event_game_id);
-                if can_apply {
-                    let next_members = state.extract_champ_select_members(&merged_session);
-                    tracing::info!(
-                        "[ongoing_game] team snapshot source=champ_select phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
-                        GameflowPhase::ChampSelect,
-                        payload.event_type,
-                        event_game_id,
-                        state.lifecycle_game_id,
-                        next_members.len()
-                    );
-                    state.cached_team_members = next_members;
-                } else {
-                    tracing::info!(
-                        "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_champ_select_override",
-                        state.current_phase(),
-                        payload.event_type,
-                        event_game_id,
-                        state.lifecycle_game_id,
-                        state.cached_team_members.len()
-                    );
-                }
+                state.cached_champ_select_session = Some(payload.data.clone());
+                tracing::info!(
+                    "[ongoing_game] champ_select metadata updated event_type={:?} event_game_id={:?} lifecycle_game_id={:?} my_team={} their_team={}",
+                    payload.event_type,
+                    event_game_id,
+                    state.lifecycle_game_id,
+                    payload.data.my_team.len(),
+                    payload.data.their_team.len()
+                );
             }
             LcuWsEvent::TeambuilderTbdGame(payload) => {
                 let event_game_id = extract_teambuilder_game_id(&payload.data.payload);
@@ -177,11 +159,8 @@ impl OngoingGameManager {
                         state.lifecycle_game_id,
                         state.cached_team_members.len()
                     );
-                } else if let Some(current_session) = state.cached_champ_select_session.clone() {
-                    let merged_session =
-                        state.merge_teambuilder_into_champ_select_session(current_session);
-                    let next_members = state.extract_champ_select_members(&merged_session);
-                    state.cached_champ_select_session = Some(merged_session);
+                } else {
+                    let next_members = extract_teambuilder_allied_members(&payload.data.payload);
                     tracing::info!(
                         "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
                         GameflowPhase::ChampSelect,
@@ -191,15 +170,6 @@ impl OngoingGameManager {
                         next_members.len()
                     );
                     state.cached_team_members = next_members;
-                } else {
-                    tracing::info!(
-                        "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=await_champ_select_session",
-                        state.current_phase(),
-                        payload.event_type,
-                        event_game_id,
-                        state.lifecycle_game_id,
-                        state.cached_team_members.len()
-                    );
                 }
             }
             _ => {}
@@ -238,11 +208,7 @@ impl OngoingGameManager {
 
         let Some(lcu_session) = lcu_session else {
             // Disconnected — broadcast Idle so the frontend clears the view.
-            let updated = {
-                let state = self.ctx.state.lock().await;
-                state.build_updated_payload(&self.ctx.settings)
-            };
-            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+            self.refresh_current().await;
             return;
         };
 
@@ -464,22 +430,14 @@ impl OngoingGameManager {
         let Ok(seed) = lcu_session.api().get_ongoing_session_seed().await else {
             // Seed fetch failed — broadcast current (Idle) state so the frontend
             // is not stuck on stale data.
-            let updated = {
-                let state = self.ctx.state.lock().await;
-                state.build_updated_payload(&self.ctx.settings)
-            };
-            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+            self.refresh_current().await;
             return;
         };
 
         let seed_events = seed_to_ws_events(&seed);
         if seed_events.is_empty() {
             // No active game — broadcast current (Idle) state.
-            let updated = {
-                let state = self.ctx.state.lock().await;
-                state.build_updated_payload(&self.ctx.settings)
-            };
-            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+            self.refresh_current().await;
             return;
         }
 
@@ -494,11 +452,7 @@ impl OngoingGameManager {
             return;
         }
 
-        let updated = {
-            let state = self.ctx.state.lock().await;
-            state.build_updated_payload(&self.ctx.settings)
-        };
-        self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+        self.refresh_current().await;
     }
 
     async fn current_focus_matches(&self, expected_focus: Option<(u32, u16)>) -> bool {
@@ -850,121 +804,6 @@ impl ManagerState {
             .collect()
     }
 
-    pub(crate) fn extract_champ_select_members(
-        &self,
-        session: &ChampSelectSessionData,
-    ) -> Vec<ChampSelectTeamMember> {
-        let gameflow_identities = self.gameflow_identities_by_summoner_id();
-        session
-            .my_team
-            .iter()
-            .cloned()
-            .map(|member| self.normalize_champ_select_member(member, &gameflow_identities))
-            .collect()
-    }
-
-    fn merge_teambuilder_into_champ_select_session(
-        &self,
-        mut session: ChampSelectSessionData,
-    ) -> ChampSelectSessionData {
-        let Some(payload) = self.cached_teambuilder_payload.as_ref() else {
-            return session;
-        };
-
-        if !same_game_id(session.game_id, payload.game_id) {
-            return session;
-        }
-
-        let identities =
-            teambuilder_identities_by_cell_id(&payload.champion_select_state.cells.allied_team);
-
-        if identities.is_empty() {
-            return session;
-        }
-
-        for member in &mut session.my_team {
-            let Some(identity) = identities.get(&member.cell_id) else {
-                continue;
-            };
-
-            if member.puuid.trim().is_empty() && !identity.puuid.trim().is_empty() {
-                member.puuid = identity.puuid.clone();
-            }
-
-            if member.summoner_id <= 0 && identity.summoner_id > 0 {
-                member.summoner_id = identity.summoner_id;
-            }
-        }
-
-        session
-    }
-
-    fn normalize_champ_select_member(
-        &self,
-        mut member: ChampSelectTeamMember,
-        gameflow_identities: &HashMap<i64, GameflowIdentity>,
-    ) -> ChampSelectTeamMember {
-        let teambuilder_identity = self
-            .cached_teambuilder_payload
-            .as_ref()
-            .and_then(|payload| {
-                payload
-                    .champion_select_state
-                    .cells
-                    .allied_team
-                    .iter()
-                    .find(|cell| cell.cell_id == member.cell_id)
-            });
-
-        if let Some(identity) = teambuilder_identity {
-            if identity.summoner_id == 0 {
-                return mark_member_as_bot(member);
-            }
-        }
-
-        if let Some(identity) = gameflow_identities.get(&member.summoner_id) {
-            if !has_resolved_puuid(&member.puuid) && has_resolved_puuid(&identity.puuid) {
-                member.puuid = identity.puuid.clone();
-            }
-
-            if member.game_name.trim().is_empty() && !identity.game_name.trim().is_empty() {
-                member.game_name = identity.game_name.clone();
-            }
-
-            if member.internal_name.trim().is_empty() && !identity.internal_name.trim().is_empty() {
-                member.internal_name = identity.internal_name.clone();
-            }
-        }
-
-        finalize_member_identity(member)
-    }
-
-    fn gameflow_identities_by_summoner_id(&self) -> HashMap<i64, GameflowIdentity> {
-        let Some(session) = self.cached_gameflow_session.as_ref() else {
-            return HashMap::new();
-        };
-
-        session
-            .game_data
-            .team_one
-            .iter()
-            .chain(session.game_data.team_two.iter())
-            .filter_map(|member| {
-                let summoner_id = member.summoner_id as i64;
-                (summoner_id > 0).then(|| {
-                    (
-                        summoner_id,
-                        GameflowIdentity {
-                            puuid: member.puuid.clone(),
-                            game_name: member.summoner_name.clone(),
-                            internal_name: member.summoner_internal_name.clone(),
-                        },
-                    )
-                })
-            })
-            .collect()
-    }
-
     pub(crate) fn extract_gameflow_members(
         session: &GameflowSessionData,
     ) -> Vec<ChampSelectTeamMember> {
@@ -998,14 +837,7 @@ impl ManagerState {
             return false;
         }
 
-        if is_practice_tool_gameflow(gameflow) {
-            return true;
-        }
-
-        let locked_member_count = extract_teambuilder_allied_members(payload).len()
-            + self.extract_teambuilder_enemy_slots_for_ingame(payload).len();
-        let gameflow_member_count = Self::extract_gameflow_members(gameflow).len();
-        locked_member_count > gameflow_member_count
+        is_practice_tool_gameflow(gameflow)
     }
 
     fn merge_gameflow_with_locked_teambuilder_members(
@@ -1016,12 +848,42 @@ impl ManagerState {
             return Self::extract_gameflow_members(gameflow);
         };
 
-        let locked_allied_members = extract_teambuilder_allied_members(payload);
-        let locked_enemy_slots = self.extract_teambuilder_enemy_slots_for_ingame(payload);
         let gameflow_members = Self::extract_gameflow_members(gameflow);
+        let locked_allied_members = extract_teambuilder_allied_members(payload);
+        let allied_gameflow_team = gameflow_members
+            .iter()
+            .find_map(|gameflow_member| {
+                locked_allied_members
+                    .iter()
+                    .any(|locked_member| matches_member_identity(gameflow_member, locked_member))
+                    .then_some(gameflow_member.team)
+            })
+            .unwrap_or_else(|| {
+                locked_allied_members
+                    .first()
+                    .and_then(|member| map_teambuilder_team_to_gameflow_team(member.team))
+                    .unwrap_or(100)
+            });
+        let enemy_gameflow_team = if allied_gameflow_team == 100 { 200 } else { 100 };
+
+        let locked_allied_members = locked_allied_members
+            .into_iter()
+            .map(|member| ChampSelectTeamMember {
+                team: allied_gameflow_team,
+                ..member
+            })
+            .collect();
+        let locked_enemy_slots = self
+            .extract_teambuilder_enemy_slots_for_ingame(payload)
+            .into_iter()
+            .map(|member| ChampSelectTeamMember {
+                team: enemy_gameflow_team,
+                ..member
+            })
+            .collect();
         let (gameflow_allied_members, gameflow_enemy_members): (Vec<_>, Vec<_>) = gameflow_members
             .into_iter()
-            .partition(|member| member.team == 100);
+            .partition(|member| member.team == allied_gameflow_team);
 
         let mut merged = merge_locked_roster_with_gameflow_members(
             locked_allied_members,
@@ -1092,26 +954,6 @@ fn extract_champ_select_game_id(session: &ChampSelectSessionData) -> Option<u64>
 
 fn extract_teambuilder_game_id(payload: &TeambuilderTbdGamePayload) -> Option<u64> {
     (payload.game_id > 0).then_some(payload.game_id)
-}
-
-fn teambuilder_identities_by_cell_id(
-    cells: &[TeambuilderCell],
-) -> HashMap<u64, TeambuilderCellIdentity> {
-    cells
-        .iter()
-        .filter_map(|cell| {
-            let has_identity = !cell.puuid.trim().is_empty() || cell.summoner_id > 0;
-            has_identity.then(|| {
-                (
-                    cell.cell_id,
-                    TeambuilderCellIdentity {
-                        puuid: cell.puuid.clone(),
-                        summoner_id: cell.summoner_id,
-                    },
-                )
-            })
-        })
-        .collect()
 }
 
 fn same_game_id(left: u64, right: u64) -> bool {
@@ -1192,9 +1034,8 @@ fn merge_locked_roster_with_gameflow_members(
     let mut merged = Vec::with_capacity(locked_members.len() + remaining_gameflow.len());
 
     for locked_member in locked_members {
-        let matched_index = remaining_gameflow
-            .iter()
-            .position(|gameflow_member| matches_member_identity(gameflow_member, &locked_member));
+        let matched_index =
+            find_matching_locked_gameflow_index(&locked_member, &remaining_gameflow);
 
         if let Some(index) = matched_index {
             let gameflow_member = remaining_gameflow.remove(index);
@@ -1206,6 +1047,34 @@ fn merge_locked_roster_with_gameflow_members(
 
     merged.extend(remaining_gameflow);
     merged
+}
+
+fn find_matching_locked_gameflow_index(
+    locked_member: &ChampSelectTeamMember,
+    gameflow_members: &[ChampSelectTeamMember],
+) -> Option<usize> {
+    if let Some(index) = gameflow_members
+        .iter()
+        .position(|gameflow_member| matches_member_identity(gameflow_member, locked_member))
+    {
+        return Some(index);
+    }
+
+    if locked_member.champion_id > 0 {
+        let mut matches = gameflow_members
+            .iter()
+            .enumerate()
+            .filter(|(_, member)| member.champion_id == locked_member.champion_id)
+            .map(|(index, _)| index);
+
+        if let Some(first_match) = matches.next() {
+            if matches.next().is_none() {
+                return Some(first_match);
+            }
+        }
+    }
+
+    None
 }
 
 fn merge_locked_enemy_slots_with_gameflow_members(
@@ -1282,37 +1151,28 @@ fn overlay_member_from_gameflow(
 }
 
 fn normalize_teambuilder_team_id(team_id: u64) -> u64 {
+    team_id
+}
+
+fn map_teambuilder_team_to_gameflow_team(team_id: u64) -> Option<u64> {
     match team_id {
-        1 => 100,
-        2 => 200,
-        other => other,
+        1 => Some(100),
+        2 => Some(200),
+        _ => None,
     }
 }
 
-fn lane_position_from_teambuilder(raw: &str) -> crate::shards::lcu::events::LanePosition {
+fn lane_position_from_teambuilder(raw: &str) -> LanePosition {
     match raw.trim().to_ascii_lowercase().as_str() {
-        "middle" | "mid" => crate::shards::lcu::events::LanePosition::Middle,
-        "top" => crate::shards::lcu::events::LanePosition::Top,
-        "bottom" | "bot" | "adc" => crate::shards::lcu::events::LanePosition::Bottom,
-        "jungle" | "jg" => crate::shards::lcu::events::LanePosition::Jungle,
-        "utility" | "support" | "sup" => crate::shards::lcu::events::LanePosition::Utility,
-        "fill" => crate::shards::lcu::events::LanePosition::Fill,
-        "afk" => crate::shards::lcu::events::LanePosition::AFK,
-        _ => crate::shards::lcu::events::LanePosition::None,
+        "middle" | "mid" => LanePosition::Middle,
+        "top" => LanePosition::Top,
+        "bottom" | "bot" | "adc" => LanePosition::Bottom,
+        "jungle" | "jg" => LanePosition::Jungle,
+        "utility" | "support" | "sup" => LanePosition::Utility,
+        "fill" => LanePosition::Fill,
+        "afk" => LanePosition::AFK,
+        _ => LanePosition::None,
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct TeambuilderCellIdentity {
-    puuid: String,
-    summoner_id: i64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct GameflowIdentity {
-    puuid: String,
-    game_name: String,
-    internal_name: String,
 }
 
 fn has_resolved_puuid(raw: &str) -> bool {
@@ -1407,8 +1267,8 @@ fn parse_match_history_count(value: &Value) -> Option<u32> {
 
 #[cfg(test)]
 mod tests {
-    use super::ManagerState;
-    use crate::shards::lcu::events::champ_select_session::{ChampSelectSessionData, TeamMember};
+    use super::{extract_teambuilder_allied_members, ManagerState};
+    use crate::shards::lcu::events::champ_select_session::TeamMember;
     use crate::shards::lcu::events::gameflow_phase::Phase;
     use crate::shards::lcu::events::gameflow_session::{
         GameData, GameflowSessionData, Queue, Team,
@@ -1417,24 +1277,6 @@ mod tests {
         TeambuilderCell, TeambuilderCells, TeambuilderChampionSelectState,
         TeambuilderTbdGamePayload,
     };
-
-    fn single_member_champ_select_session(
-        game_id: u64,
-        cell_id: u64,
-        puuid: &str,
-        summoner_id: i64,
-    ) -> ChampSelectSessionData {
-        ChampSelectSessionData {
-            game_id,
-            my_team: vec![TeamMember {
-                cell_id,
-                puuid: puuid.to_string(),
-                summoner_id,
-                ..Default::default()
-            }],
-            ..Default::default()
-        }
-    }
 
     fn single_member_teambuilder_payload(
         game_id: u64,
@@ -1461,115 +1303,49 @@ mod tests {
     }
 
     #[test]
-    fn merges_hidden_member_identity_from_teambuilder_payload() {
-        let mut state = ManagerState::new();
-        state.cached_teambuilder_payload = Some(single_member_teambuilder_payload(
-            42,
-            5,
-            "ally-puuid",
-            12345,
-        ));
-
-        let merged = state.merge_teambuilder_into_champ_select_session(
-            single_member_champ_select_session(42, 5, "", 0),
-        );
-
-        assert_eq!(merged.my_team[0].puuid, "ally-puuid");
-        assert_eq!(merged.my_team[0].summoner_id, 12345);
-    }
-
-    #[test]
-    fn preserves_existing_identity_when_champ_select_already_has_values() {
-        let mut state = ManagerState::new();
-        state.cached_teambuilder_payload = Some(single_member_teambuilder_payload(
-            42,
-            5,
-            "teambuilder-puuid",
-            12345,
-        ));
-
-        let merged = state.merge_teambuilder_into_champ_select_session(
-            single_member_champ_select_session(42, 5, "existing-puuid", 99999),
-        );
-
-        assert_eq!(merged.my_team[0].puuid, "existing-puuid");
-        assert_eq!(merged.my_team[0].summoner_id, 99999);
-    }
-
-    #[test]
-    fn ignores_teambuilder_payload_for_different_game_id() {
-        let mut state = ManagerState::new();
-        state.cached_teambuilder_payload = Some(single_member_teambuilder_payload(
-            100,
-            5,
-            "ally-puuid",
-            12345,
-        ));
-
-        let merged = state.merge_teambuilder_into_champ_select_session(
-            single_member_champ_select_session(42, 5, "", 0),
-        );
-
-        assert!(merged.my_team[0].puuid.is_empty());
-        assert_eq!(merged.my_team[0].summoner_id, 0);
-    }
-
-    #[test]
-    fn normalizes_unresolved_member_to_bot() {
-        let state = ManagerState::new();
-
-        let members =
-            state.extract_champ_select_members(&single_member_champ_select_session(0, 5, "", 0));
-
-        assert_eq!(members[0].puuid, "BOT");
-    }
-
-    #[test]
-    fn marks_teambuilder_member_with_zero_summoner_id_as_bot() {
-        let mut state = ManagerState::new();
-        state.cached_teambuilder_payload = Some(single_member_teambuilder_payload(
-            42,
-            5,
-            "fake-bot-puuid",
-            0,
-        ));
-
-        let mut session = single_member_champ_select_session(42, 5, "fake-bot-puuid", 0);
-        session.my_team[0].champion_id = 236;
-        let members = state.extract_champ_select_members(&session);
-
-        assert_eq!(members[0].puuid, "BOT");
-        assert_eq!(members[0].summoner_id, 0);
-    }
-
-    #[test]
-    fn fills_champ_select_puuid_from_gameflow_identity() {
-        let mut state = ManagerState::new();
-        state.cached_gameflow_session = Some(GameflowSessionData {
-            phase: Phase::ChampSelect,
-            game_data: GameData {
-                team_one: vec![Team {
-                    puuid: "resolved-puuid".to_string(),
-                    summoner_id: 12345,
-                    summoner_name: "Resolved".to_string(),
-                    summoner_internal_name: "ResolvedInternal".to_string(),
-                    ..Default::default()
-                }],
-                queue: Queue {
-                    id: 420,
-                    ..Default::default()
+    fn teambuilder_allied_members_only_include_allies() {
+        let payload = TeambuilderTbdGamePayload {
+            game_id: 42,
+            champion_select_state: TeambuilderChampionSelectState {
+                cells: TeambuilderCells {
+                    allied_team: vec![TeambuilderCell {
+                        team_id: 1,
+                        cell_id: 1,
+                        puuid: "ally-puuid".to_string(),
+                        summoner_id: 12345,
+                        champion_id: 110,
+                        ..Default::default()
+                    }],
+                    enemy_team: vec![TeambuilderCell {
+                        team_id: 2,
+                        cell_id: 6,
+                        champion_id: 147,
+                        name_visibility_type: "HIDDEN".to_string(),
+                        ..Default::default()
+                    }],
                 },
                 ..Default::default()
             },
             ..Default::default()
-        });
+        };
 
-        let members = state
-            .extract_champ_select_members(&single_member_champ_select_session(0, 5, "", 12345));
+        let members = extract_teambuilder_allied_members(&payload);
 
-        assert_eq!(members[0].puuid, "resolved-puuid");
-        assert_eq!(members[0].game_name, "Resolved");
-        assert_eq!(members[0].internal_name, "ResolvedInternal");
+        assert_eq!(members.len(), 1);
+        assert_eq!(members[0].team, 1);
+        assert_eq!(members[0].puuid, "ally-puuid");
+        assert_eq!(members[0].champion_id, 110);
+    }
+
+    #[test]
+    fn teambuilder_allied_members_mark_zero_summoner_as_bot() {
+        let payload = single_member_teambuilder_payload(42, 5, "fake-bot-puuid", 0);
+
+        let members = extract_teambuilder_allied_members(&payload);
+
+        assert_eq!(members.len(), 1);
+        assert_eq!(members[0].puuid, "BOT");
+        assert_eq!(members[0].summoner_id, 0);
     }
 
     #[test]
@@ -1813,6 +1589,166 @@ mod tests {
     }
 
     #[test]
+    fn practice_tool_red_side_allied_team_stays_red_in_gameflow_merge() {
+        let mut state = ManagerState::new();
+        state.cached_locked_teambuilder_payload = Some(TeambuilderTbdGamePayload {
+            game_id: 42,
+            queue_id: 3140,
+            champion_select_state: TeambuilderChampionSelectState {
+                subphase: "GAME_STARTING".to_string(),
+                cells: TeambuilderCells {
+                    allied_team: vec![
+                        TeambuilderCell {
+                            team_id: 2,
+                            cell_id: 4,
+                            puuid: "local-red-puuid".to_string(),
+                            summoner_id: 12345,
+                            champion_id: 222,
+                            ..Default::default()
+                        },
+                        TeambuilderCell {
+                            team_id: 2,
+                            cell_id: 5,
+                            puuid: "bot-1".to_string(),
+                            summoner_id: 0,
+                            champion_id: 254,
+                            ..Default::default()
+                        },
+                        TeambuilderCell {
+                            team_id: 2,
+                            cell_id: 6,
+                            puuid: "bot-2".to_string(),
+                            summoner_id: 0,
+                            champion_id: 901,
+                            ..Default::default()
+                        },
+                        TeambuilderCell {
+                            team_id: 2,
+                            cell_id: 7,
+                            puuid: "bot-3".to_string(),
+                            summoner_id: 0,
+                            champion_id: 68,
+                            ..Default::default()
+                        },
+                        TeambuilderCell {
+                            team_id: 2,
+                            cell_id: 8,
+                            puuid: "bot-4".to_string(),
+                            summoner_id: 0,
+                            champion_id: 37,
+                            ..Default::default()
+                        },
+                    ],
+                    enemy_team: vec![
+                        TeambuilderCell {
+                            team_id: 1,
+                            cell_id: 0,
+                            champion_id: 81,
+                            name_visibility_type: "HIDDEN".to_string(),
+                            ..Default::default()
+                        },
+                        TeambuilderCell {
+                            team_id: 1,
+                            cell_id: 1,
+                            champion_id: 44,
+                            name_visibility_type: "HIDDEN".to_string(),
+                            ..Default::default()
+                        },
+                        TeambuilderCell {
+                            team_id: 1,
+                            cell_id: 2,
+                            champion_id: 6,
+                            name_visibility_type: "HIDDEN".to_string(),
+                            ..Default::default()
+                        },
+                    ],
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        let merged = state.merge_gameflow_with_locked_teambuilder_members(&GameflowSessionData {
+            phase: Phase::InProgress,
+            map: crate::shards::lcu::events::gameflow_session::Map {
+                game_mode: "PRACTICETOOL".to_string(),
+                ..Default::default()
+            },
+            game_data: GameData {
+                game_id: 42,
+                queue: Queue {
+                    id: 3140,
+                    game_mode: "PRACTICETOOL".to_string(),
+                    ..Default::default()
+                },
+                team_one: vec![
+                    Team {
+                        puuid: "enemy-bot-1".to_string(),
+                        summoner_id: 0,
+                        champion_id: 81,
+                        ..Default::default()
+                    },
+                    Team {
+                        puuid: "enemy-bot-2".to_string(),
+                        summoner_id: 0,
+                        champion_id: 44,
+                        ..Default::default()
+                    },
+                    Team {
+                        puuid: "enemy-bot-3".to_string(),
+                        summoner_id: 0,
+                        champion_id: 6,
+                        ..Default::default()
+                    },
+                ],
+                team_two: vec![
+                    Team {
+                        puuid: "local-red-puuid".to_string(),
+                        summoner_id: 12345,
+                        champion_id: 222,
+                        ..Default::default()
+                    },
+                    Team {
+                        puuid: "red-bot-1".to_string(),
+                        summoner_id: 0,
+                        champion_id: 254,
+                        ..Default::default()
+                    },
+                    Team {
+                        puuid: "red-bot-2".to_string(),
+                        summoner_id: 0,
+                        champion_id: 901,
+                        ..Default::default()
+                    },
+                    Team {
+                        puuid: "red-bot-3".to_string(),
+                        summoner_id: 0,
+                        champion_id: 68,
+                        ..Default::default()
+                    },
+                    Team {
+                        puuid: "red-bot-4".to_string(),
+                        summoner_id: 0,
+                        champion_id: 37,
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        let allied_count = merged.iter().filter(|member| member.team == 200).count();
+        let enemy_count = merged.iter().filter(|member| member.team == 100).count();
+
+        assert_eq!(allied_count, 5);
+        assert_eq!(enemy_count, 3);
+        assert!(merged
+            .iter()
+            .any(|member| member.puuid == "local-red-puuid" && member.team == 200));
+    }
+
+    #[test]
     fn same_puuid_is_not_re_requested_within_same_lifecycle() {
         let mut state = ManagerState::new();
         state.cached_team_members = vec![TeamMember {
@@ -1847,4 +1783,74 @@ mod tests {
 
         assert_eq!(state.new_history_puuids(), vec!["ally-puuid".to_string()]);
     }
+
+    #[test]
+    fn ingame_gameflow_roster_replaces_champ_select_roster_even_when_shorter() {
+        let mut state = ManagerState::new();
+        state.lifecycle_game_id = Some(42);
+        state.cached_team_members = vec![
+            TeamMember {
+                team: 2,
+                cell_id: 4,
+                puuid: "ally-1".to_string(),
+                ..Default::default()
+            },
+            TeamMember {
+                team: 2,
+                cell_id: 5,
+                puuid: "ally-2".to_string(),
+                ..Default::default()
+            },
+            TeamMember {
+                team: 2,
+                cell_id: 6,
+                puuid: "ally-3".to_string(),
+                ..Default::default()
+            },
+            TeamMember {
+                team: 2,
+                cell_id: 7,
+                puuid: "ally-4".to_string(),
+                ..Default::default()
+            },
+            TeamMember {
+                team: 2,
+                cell_id: 8,
+                puuid: "ally-5".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        let session = GameflowSessionData {
+            phase: Phase::InProgress,
+            game_data: GameData {
+                game_id: 42,
+                team_one: vec![Team {
+                    puuid: "blue-ally".to_string(),
+                    summoner_id: 11,
+                    champion_id: 110,
+                    ..Default::default()
+                }],
+                team_two: vec![Team {
+                    puuid: "red-ally".to_string(),
+                    summoner_id: 22,
+                    champion_id: 222,
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let event_game_id = super::extract_gameflow_game_id(&session);
+        assert!(state.can_apply_member_snapshot(event_game_id));
+
+        let next_members = ManagerState::extract_gameflow_members(&session);
+        state.cached_team_members = next_members;
+
+        assert_eq!(state.cached_team_members.len(), 2);
+        assert_eq!(state.cached_team_members[0].team, 100);
+        assert_eq!(state.cached_team_members[1].team, 200);
+    }
+
 }
