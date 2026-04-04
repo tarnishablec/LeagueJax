@@ -32,6 +32,8 @@ export class OngoingGameShard implements WebShard {
   private ongoingUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingSummonersUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingMatchHistoriesUpdatedUnlisten: UnlistenFn | null = null;
+  private pendingUpdated: OngoingGameUpdated | null = null;
+  private updateRafId: number | null = null;
 
   public label() {
     return "OngoingGameShard";
@@ -68,22 +70,31 @@ export class OngoingGameShard implements WebShard {
       onSet: () => {},
     });
 
-    useOngoingGameStore.getState().reset();
-
     this.ongoingUpdatedUnlisten = await listen<OngoingGameUpdated>(
       "ongoing-game-updated",
       (event) => {
-        const previousPhase = useOngoingGameStore.getState().phase;
-        useOngoingGameStore.getState().applyUpdated(event.payload);
-
+        // Check auto-switch eagerly before coalescing so it fires immediately.
         const autoSwitch = settings.get<boolean>(
           ONGOING_AUTO_SWITCH_TO_GAME_SETTING,
         );
-        const enteredActiveGame =
-          previousPhase === "Idle" && event.payload.phase !== "Idle";
+        if (autoSwitch) {
+          const currentPhase = useOngoingGameStore.getState().phase;
+          if (currentPhase === "Idle" && event.payload.phase !== "Idle") {
+            navigateTo("/game");
+          }
+        }
 
-        if (autoSwitch && enteredActiveGame) {
-          navigateTo("/game");
+        // Coalesce rapid Updated events — only the latest snapshot matters.
+        this.pendingUpdated = event.payload;
+        if (this.updateRafId == null) {
+          this.updateRafId = requestAnimationFrame(() => {
+            this.updateRafId = null;
+            const pending = this.pendingUpdated;
+            if (pending) {
+              this.pendingUpdated = null;
+              useOngoingGameStore.getState().applyUpdated(pending);
+            }
+          });
         }
       },
     );
@@ -108,6 +119,11 @@ export class OngoingGameShard implements WebShard {
   }
 
   public teardown(_jax: Jax): void {
+    if (this.updateRafId != null) {
+      cancelAnimationFrame(this.updateRafId);
+      this.updateRafId = null;
+      this.pendingUpdated = null;
+    }
     if (this.ongoingUpdatedUnlisten) {
       this.ongoingUpdatedUnlisten();
       this.ongoingUpdatedUnlisten = null;

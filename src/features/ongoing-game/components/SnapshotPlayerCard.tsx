@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon.tsx";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
@@ -6,7 +7,7 @@ import { SnapshotPlayerCardHeader } from "./SnapshotPlayerCardHeader.tsx";
 import { SnapshotPlayerCardHistory } from "./SnapshotPlayerCardHistory.tsx";
 import { useSnapshotPlayerCardState } from "./use-snapshot-player-card-state.ts";
 
-export function SnapshotPlayerCard(props: {
+export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
   slot: PlayerSlot;
   matchHistoryCount: number;
 }) {
@@ -47,4 +48,4 @@ export function SnapshotPlayerCard(props: {
       />
     </article>
   );
-}
+});

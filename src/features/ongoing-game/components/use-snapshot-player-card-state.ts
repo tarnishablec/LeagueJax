@@ -30,27 +30,24 @@ export function useSnapshotPlayerCardState(
   matchHistoryCount: number,
   t: TFunction,
 ) {
-  const summonersByPuuid = useOngoingGameStore(
-    (state) => state.summonersByPuuid,
-  );
-  const matchHistoriesByPuuid = useOngoingGameStore(
-    (state) => state.matchHistoriesByPuuid,
-  );
-  const historyStatesByPuuid = useOngoingGameStore(
-    (state) => state.historyStatesByPuuid,
-  );
   const phase = useOngoingGameStore((state) => state.phase);
 
   const isBot = isBotSlot(slot);
   const normalizedPuuid = !isBot ? slot.puuid.trim() : "";
   const puuid = normalizedPuuid.length > 0 ? normalizedPuuid : undefined;
   const rankedQuery = useRankedSummary(puuid);
-  const summoner = puuid ? summonersByPuuid[puuid] : undefined;
-  const historyBucket = puuid ? matchHistoriesByPuuid[puuid] : undefined;
-  const historyState = puuid ? historyStatesByPuuid[puuid] : undefined;
-  const hasHistoryBucket = puuid
-    ? Object.hasOwn(matchHistoriesByPuuid, puuid)
-    : false;
+  const summoner = useOngoingGameStore((state) =>
+    puuid ? state.summonersByPuuid[puuid] : undefined,
+  );
+  const historyBucket = useOngoingGameStore((state) =>
+    puuid ? state.matchHistoriesByPuuid[puuid] : undefined,
+  );
+  const historyState = useOngoingGameStore((state) =>
+    puuid ? state.historyStatesByPuuid[puuid] : undefined,
+  );
+  const hasHistoryBucket = useOngoingGameStore((state) =>
+    puuid ? Object.hasOwn(state.matchHistoriesByPuuid, puuid) : false,
+  );
 
   const isHistoryLoading = Boolean(
     !isBot &&
