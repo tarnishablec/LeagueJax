@@ -178,7 +178,10 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         return {
           ...state,
           phase: payload.phase,
-          teamMembers: stableTeamMembers(state.teamMembers, payload.team_members),
+          teamMembers: stableTeamMembers(
+            state.teamMembers,
+            payload.team_members,
+          ),
           matchHistoryTag: payload.match_history_tag,
           effectiveQueueId: payload.effective_queue_id,
           effectiveModeTag: payload.effective_mode_tag,

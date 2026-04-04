@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
 import type { CSSProperties } from "react";
+import { useCallback, useState } from "react";
 import { lazyFadeIn } from "./LazyImage.css.ts";
 
 const listeners = new Map<Element, () => void>();
@@ -46,7 +46,9 @@ export function LazyImage({
   }, []);
 
   if (errored && !onError && fallbackClassName) {
-    return <span className={fallbackClassName} style={style} aria-hidden="true" />;
+    return (
+      <span className={fallbackClassName} style={style} aria-hidden="true" />
+    );
   }
 
   if (!visible) {

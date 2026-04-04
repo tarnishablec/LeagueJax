@@ -45,7 +45,7 @@ export function OngoingGameRoute() {
         champSelectSession,
         effectiveQueueId,
       }),
-    [champSelectSession, effectiveQueueId, gameflowSession, teamMembers],
+    [champSelectSession, effectiveQueueId, gameflowSession, teamMembers, phase],
   );
 
   if (phase === "Idle") {
