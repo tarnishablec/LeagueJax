@@ -64,7 +64,9 @@ function resolveSelectedValue(
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
   const phase = useOngoingGameStore((state) => state.phase);
-  const effectiveQueueId = useOngoingGameStore((state) => state.effectiveQueueId);
+  const effectiveQueueId = useOngoingGameStore(
+    (state) => state.effectiveQueueId,
+  );
   const modeTag = useOngoingGameStore((state) => state.modeTag);
   const matchHistoriesPending = useOngoingGameStore(
     (state) => state.matchHistoriesPending,
@@ -75,7 +77,10 @@ export function OngoingGameTitlebar() {
       return null;
     }
 
-    const pathCandidates = [assets["icon-v2"], assets["game-select-icon-active"]];
+    const pathCandidates = [
+      assets["icon-v2"],
+      assets["game-select-icon-active"],
+    ];
     const selectedPath = pathCandidates.find(
       (value): value is string =>
         typeof value === "string" && value.trim().length > 0,
@@ -83,7 +88,8 @@ export function OngoingGameTitlebar() {
     return selectedPath ?? null;
   });
   const queueDetailedDescription = useOngoingGameStore(
-    (state) => state.gameflowSession?.gameData.queue.detailedDescription ?? null,
+    (state) =>
+      state.gameflowSession?.gameData.queue.detailedDescription ?? null,
   );
   const gameModeName = useOngoingGameStore(
     (state) => state.gameflowSession?.map.gameModeName ?? null,

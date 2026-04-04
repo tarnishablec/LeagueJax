@@ -12,9 +12,7 @@ type SnapshotPlayerCardHeaderProps = {
   summoner?: SummonerInfo;
 };
 
-export function SnapshotPlayerCardHeader(
-  props: SnapshotPlayerCardHeaderProps,
-) {
+export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
   const { championId, isBot, level, rankIcon, rankText, summoner } = props;
 
   return (

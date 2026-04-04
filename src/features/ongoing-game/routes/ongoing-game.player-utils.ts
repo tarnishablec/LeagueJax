@@ -1,8 +1,8 @@
-import type { OngoingGamePhase } from "@/bindings/ongoing_game";
 import type {
   ChampSelectSessionData,
   GameflowSessionData,
 } from "@/bindings/lcu_events";
+import type { OngoingGamePhase } from "@/bindings/ongoing_game";
 import type { SummonerInfo } from "@/bindings/summoner";
 import type { PlayerSlot } from "./ongoing-game.types";
 
@@ -195,8 +195,7 @@ export function resolveOngoingTeamGroups(params: {
     gameflowSession,
     champSelectSession,
     effectiveQueueId,
-  } =
-    params;
+  } = params;
   const queueId =
     typeof effectiveQueueId === "number" && effectiveQueueId > 0
       ? effectiveQueueId
@@ -207,8 +206,12 @@ export function resolveOngoingTeamGroups(params: {
     return groupTeamMembers(teamMembers);
   }
 
-  const blueMembers = teamMembers.filter((member) => isBlueTeamSlot(member, phase));
-  const redMembers = teamMembers.filter((member) => isRedTeamSlot(member, phase));
+  const blueMembers = teamMembers.filter((member) =>
+    isBlueTeamSlot(member, phase),
+  );
+  const redMembers = teamMembers.filter((member) =>
+    isRedTeamSlot(member, phase),
+  );
   const matchedMembers = blueMembers.length + redMembers.length;
   if (matchedMembers !== teamMembers.length) {
     return groupTeamMembers(teamMembers);

@@ -176,7 +176,8 @@ export const ongoingGameI18n: Resource = {
       noRanked: "ランクデータなし",
       recentGames: "最近の試合",
       noHistory: "戦績なし",
-      historyLoadFailed: "戦績の読み込みに失敗しました。手動更新で再試行してください",
+      historyLoadFailed:
+        "戦績の読み込みに失敗しました。手動更新で再試行してください",
       botNoHistory: "BOT（戦績取得なし）",
       idleEmpty: "進行中の対局はありません",
       historyResultWin: "勝利",
