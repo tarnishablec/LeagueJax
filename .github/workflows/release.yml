@@ -100,15 +100,54 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         shell: bash
         run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          REPO_API="https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases"
+
           # Resolve default branch
-          DEFAULT_BRANCH=$(curl -s \
-            "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases?access_token=${GITEE_TOKEN}" \
+          DEFAULT_BRANCH=$(curl -fsS \
+            "${REPO_API}?access_token=${GITEE_TOKEN}" \
             | jq -r '.default_branch')
           echo "Default branch: $DEFAULT_BRANCH"
 
-          # Create release
-          RELEASE_RESPONSE=$(curl -s -X POST \
-            "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases" \
+          # Always remove the existing release for this tag before creating a new one.
+          EXISTING_RESPONSE=$(curl -sS -w '\n%{http_code}' \
+            "${REPO_API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
+          EXISTING_HTTP_CODE=$(echo "$EXISTING_RESPONSE" | tail -n1)
+          EXISTING_BODY=$(echo "$EXISTING_RESPONSE" | sed '$d')
+          EXISTING_RELEASE_ID=$(echo "$EXISTING_BODY" | jq -r '.id // empty')
+
+          if [ "$EXISTING_HTTP_CODE" -ge 200 ] && [ "$EXISTING_HTTP_CODE" -lt 300 ] && [ -n "$EXISTING_RELEASE_ID" ] && [ "$EXISTING_RELEASE_ID" != "null" ]; then
+            echo "Deleting existing Gitee release for ${TAG} (ID: $EXISTING_RELEASE_ID) ..."
+            DELETE_RESPONSE=$(curl -sS -w '\n%{http_code}' -X DELETE \
+              "${REPO_API}/releases/${EXISTING_RELEASE_ID}?access_token=${GITEE_TOKEN}")
+            DELETE_HTTP_CODE=$(echo "$DELETE_RESPONSE" | tail -n1)
+            DELETE_BODY=$(echo "$DELETE_RESPONSE" | sed '$d')
+
+            if [ "$DELETE_HTTP_CODE" -lt 200 ] || [ "$DELETE_HTTP_CODE" -ge 300 ]; then
+              echo "::error::Failed to delete existing Gitee release for ${TAG}: $DELETE_BODY"
+              exit 1
+            fi
+
+            # Gitee may take a moment to fully remove the tag-release association.
+            for _ in 1 2 3 4 5; do
+              VERIFY_RESPONSE=$(curl -sS -w '\n%{http_code}' \
+                "${REPO_API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
+              VERIFY_HTTP_CODE=$(echo "$VERIFY_RESPONSE" | tail -n1)
+              if [ "$VERIFY_HTTP_CODE" -eq 404 ]; then
+                break
+              fi
+              sleep 2
+            done
+          elif [ "$EXISTING_HTTP_CODE" -ne 404 ]; then
+            echo "::error::Failed to query existing Gitee release for ${TAG}: $EXISTING_BODY"
+            exit 1
+          fi
+
+          # Create a fresh release for this tag.
+          CREATE_RESPONSE=$(curl -sS -w '\n%{http_code}' -X POST \
+            "${REPO_API}/releases" \
             -H "Content-Type: application/json" \
             -d "{
               \"access_token\": \"${GITEE_TOKEN}\",
@@ -118,19 +157,28 @@ jobs:
               \"target_commitish\": \"${DEFAULT_BRANCH}\"
             }")
 
-          RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
-          if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
-            echo "::error::Failed to create Gitee release: $RELEASE_RESPONSE"
+          CREATE_HTTP_CODE=$(echo "$CREATE_RESPONSE" | tail -n1)
+          CREATE_BODY=$(echo "$CREATE_RESPONSE" | sed '$d')
+
+          RELEASE_ID=$(echo "$CREATE_BODY" | jq -r '.id // empty')
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "::error::Failed to create Gitee release (HTTP ${CREATE_HTTP_CODE}): $CREATE_BODY"
             exit 1
           fi
           echo "Created Gitee release ID: $RELEASE_ID"
 
+          FILES=(artifacts/*)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No artifacts found to upload."
+            exit 1
+          fi
+
           # Upload each artifact
-          for FILE in artifacts/*; do
+          for FILE in "${FILES[@]}"; do
             FILENAME=$(basename "$FILE")
             echo "Uploading $FILENAME ..."
-            UPLOAD_RESPONSE=$(curl -s -X POST \
-              "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases/${RELEASE_ID}/attach_files" \
+            UPLOAD_RESPONSE=$(curl -fsS -X POST \
+              "${REPO_API}/releases/${RELEASE_ID}/attach_files" \
               -H "Content-Type: multipart/form-data" \
               -F "access_token=${GITEE_TOKEN}" \
               -F "file=@${FILE}")
