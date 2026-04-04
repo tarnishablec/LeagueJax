@@ -229,20 +229,25 @@ impl OngoingGameManager {
 
     pub async fn handle_focus_changed(&self, lcu_session: Option<Arc<LcuSession>>) {
         let expected_focus = lcu_focus_key(lcu_session.as_ref());
-        let updated = {
+        {
             let mut state = self.ctx.state.lock().await;
             state.lcu_session = lcu_session.clone();
             state.driver = Some(OngoingGameDriver::new(self.ctx.clone()));
             state.clear_caches_with_reason("focus_changed");
-            state.build_updated_payload(&self.ctx.settings)
-        };
-
-        self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+        }
 
         let Some(lcu_session) = lcu_session else {
+            // Disconnected — broadcast Idle so the frontend clears the view.
+            let updated = {
+                let state = self.ctx.state.lock().await;
+                state.build_updated_payload(&self.ctx.settings)
+            };
+            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
             return;
         };
 
+        // Connected — let seed_from_current_session handle the first broadcast
+        // to avoid an intermediate Idle flash on the frontend.
         let manager = self.clone();
         tokio::spawn(async move {
             manager
@@ -457,11 +462,24 @@ impl OngoingGameManager {
         lcu_session: Arc<LcuSession>,
     ) {
         let Ok(seed) = lcu_session.api().get_ongoing_session_seed().await else {
+            // Seed fetch failed — broadcast current (Idle) state so the frontend
+            // is not stuck on stale data.
+            let updated = {
+                let state = self.ctx.state.lock().await;
+                state.build_updated_payload(&self.ctx.settings)
+            };
+            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
             return;
         };
 
         let seed_events = seed_to_ws_events(&seed);
         if seed_events.is_empty() {
+            // No active game — broadcast current (Idle) state.
+            let updated = {
+                let state = self.ctx.state.lock().await;
+                state.build_updated_payload(&self.ctx.settings)
+            };
+            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
             return;
         }
 

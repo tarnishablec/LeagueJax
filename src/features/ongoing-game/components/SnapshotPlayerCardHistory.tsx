@@ -1,4 +1,5 @@
 import { Bot } from "lucide-react";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
@@ -9,8 +10,8 @@ import {
   historyResultLabel,
   resolveRecentGameResult,
 } from "../routes/ongoing-game.history-utils.ts";
-import type { EnrichedMatch } from "./use-snapshot-player-card-state.ts";
 import * as s from "./OngoingGameCards.css.ts";
+import type { EnrichedMatch } from "./use-snapshot-player-card-state.ts";
 
 function formatGameTime(epochMs: number): string {
   const d = new Date(epochMs);
@@ -21,7 +22,7 @@ function formatGameTime(epochMs: number): string {
   return `${month}/${day} ${hour}:${minute}`;
 }
 
-function HistoryRow(props: { game: EnrichedMatch }) {
+const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
   const { game } = props;
   const { t } = useTranslation();
   const result = resolveRecentGameResult(game);
@@ -65,7 +66,7 @@ function HistoryRow(props: { game: EnrichedMatch }) {
       </span>
     </div>
   );
-}
+});
 
 function HistoryLoadingState() {
   return (
@@ -89,7 +90,9 @@ function HistoryLoadingState() {
   );
 }
 
-function SnapshotPlayerCardHistoryList(props: { recentGames: EnrichedMatch[] }) {
+function SnapshotPlayerCardHistoryList(props: {
+  recentGames: EnrichedMatch[];
+}) {
   const { recentGames } = props;
 
   return (
@@ -110,47 +113,47 @@ type SnapshotPlayerCardHistoryProps = {
   recentGames: EnrichedMatch[];
 };
 
-export function SnapshotPlayerCardHistory(
-  props: SnapshotPlayerCardHistoryProps,
-) {
-  const {
-    hasHistoryLoadFailed,
-    historyLoadFailedText,
-    isBot,
-    isHistoryLoading,
-    noHistoryText,
-    recentGames,
-  } = props;
+export const SnapshotPlayerCardHistory = memo(
+  function SnapshotPlayerCardHistory(props: SnapshotPlayerCardHistoryProps) {
+    const {
+      hasHistoryLoadFailed,
+      historyLoadFailedText,
+      isBot,
+      isHistoryLoading,
+      noHistoryText,
+      recentGames,
+    } = props;
 
-  if (isBot) {
-    return (
-      <div className={s.historyList} style={{ alignContent: "center" }}>
-        <div className={s.historyEmpty}>
-          <Bot />
+    if (isBot) {
+      return (
+        <div className={s.historyList} style={{ alignContent: "center" }}>
+          <div className={s.historyEmpty}>
+            <Bot />
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (isHistoryLoading) {
-    return <HistoryLoadingState />;
-  }
+    if (isHistoryLoading) {
+      return <HistoryLoadingState />;
+    }
 
-  if (hasHistoryLoadFailed) {
-    return (
-      <div className={s.historyList}>
-        <div className={s.historyEmpty}>{historyLoadFailedText}</div>
-      </div>
-    );
-  }
+    if (hasHistoryLoadFailed) {
+      return (
+        <div className={s.historyList}>
+          <div className={s.historyEmpty}>{historyLoadFailedText}</div>
+        </div>
+      );
+    }
 
-  if (recentGames.length === 0) {
-    return (
-      <div className={s.historyList}>
-        <div className={s.historyEmpty}>{noHistoryText}</div>
-      </div>
-    );
-  }
+    if (recentGames.length === 0) {
+      return (
+        <div className={s.historyList}>
+          <div className={s.historyEmpty}>{noHistoryText}</div>
+        </div>
+      );
+    }
 
-  return <SnapshotPlayerCardHistoryList recentGames={recentGames} />;
-}
+    return <SnapshotPlayerCardHistoryList recentGames={recentGames} />;
+  },
+);

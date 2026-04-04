@@ -27,13 +27,15 @@ export function OngoingGameRoute() {
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
   );
-  const {
-    teamMembers,
-    phase,
-    gameflowSession,
-    champSelectSession,
-    effectiveQueueId,
-  } = useOngoingGameStore();
+  const teamMembers = useOngoingGameStore((state) => state.teamMembers);
+  const phase = useOngoingGameStore((state) => state.phase);
+  const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
+  const champSelectSession = useOngoingGameStore(
+    (state) => state.champSelectSession,
+  );
+  const effectiveQueueId = useOngoingGameStore(
+    (state) => state.effectiveQueueId,
+  );
   const teamGroups = resolveOngoingTeamGroups({
     teamMembers,
     gameflowSession,
