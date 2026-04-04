@@ -1,3 +1,4 @@
+import type { OngoingGamePhase } from "@/bindings/ongoing_game";
 import type {
   ChampSelectSessionData,
   GameflowSessionData,
@@ -101,15 +102,24 @@ function resolveQueueIdFromSessions(
   return null;
 }
 
-function isBlueTeamSlot(slot: PlayerSlot): boolean {
-  return slot.team === 100 || slot.team === 1;
+function isBlueTeamSlot(slot: PlayerSlot, phase: OngoingGamePhase): boolean {
+  if (phase === "ChampSelect") {
+    return slot.team === 1;
+  }
+
+  return slot.team === 100;
 }
 
-function isRedTeamSlot(slot: PlayerSlot): boolean {
-  return slot.team === 200 || slot.team === 2;
+function isRedTeamSlot(slot: PlayerSlot, phase: OngoingGamePhase): boolean {
+  if (phase === "ChampSelect") {
+    return slot.team === 2;
+  }
+
+  return slot.team === 200;
 }
 
 function shouldUseTopBottomLayout(
+  phase: OngoingGamePhase,
   queueId: number | null,
   teamMembers: PlayerSlot[],
 ): boolean {
@@ -125,8 +135,8 @@ function shouldUseTopBottomLayout(
     return !MULTI_TEAM_QUEUE_IDS.has(queueId);
   }
 
-  const hasBlue = teamMembers.some((member) => isBlueTeamSlot(member));
-  const hasRed = teamMembers.some((member) => isRedTeamSlot(member));
+  const hasBlue = teamMembers.some((member) => isBlueTeamSlot(member, phase));
+  const hasRed = teamMembers.some((member) => isRedTeamSlot(member, phase));
   return hasBlue || hasRed;
 }
 
@@ -173,42 +183,55 @@ function orderByGameflowTeam(
 }
 
 export function resolveOngoingTeamGroups(params: {
+  phase: OngoingGamePhase;
   teamMembers: PlayerSlot[];
   gameflowSession: GameflowSessionData | null;
   champSelectSession: ChampSelectSessionData | null;
   effectiveQueueId?: number | null;
 }): Array<{ teamId: number; members: PlayerSlot[] }> {
-  const { teamMembers, gameflowSession, champSelectSession, effectiveQueueId } =
+  const {
+    phase,
+    teamMembers,
+    gameflowSession,
+    champSelectSession,
+    effectiveQueueId,
+  } =
     params;
   const queueId =
     typeof effectiveQueueId === "number" && effectiveQueueId > 0
       ? effectiveQueueId
       : resolveQueueIdFromSessions(gameflowSession, champSelectSession);
-  const topBottom = shouldUseTopBottomLayout(queueId, teamMembers);
+  const topBottom = shouldUseTopBottomLayout(phase, queueId, teamMembers);
 
   if (!topBottom) {
     return groupTeamMembers(teamMembers);
   }
 
-  const blueMembers = teamMembers.filter((member) => isBlueTeamSlot(member));
-  const redMembers = teamMembers.filter((member) => isRedTeamSlot(member));
+  const blueMembers = teamMembers.filter((member) => isBlueTeamSlot(member, phase));
+  const redMembers = teamMembers.filter((member) => isRedTeamSlot(member, phase));
   const matchedMembers = blueMembers.length + redMembers.length;
   if (matchedMembers !== teamMembers.length) {
     return groupTeamMembers(teamMembers);
   }
 
-  const orderedBlueMembers = orderByGameflowTeam(
-    blueMembers,
-    gameflowSession?.gameData.teamOne.map((player) => player.puuid) ?? [],
-  );
-  const orderedRedMembers = orderByGameflowTeam(
-    redMembers,
-    gameflowSession?.gameData.teamTwo.map((player) => player.puuid) ?? [],
-  );
+  const orderedBlueMembers =
+    phase === "InGame"
+      ? orderByGameflowTeam(
+          blueMembers,
+          gameflowSession?.gameData.teamOne.map((player) => player.puuid) ?? [],
+        )
+      : blueMembers;
+  const orderedRedMembers =
+    phase === "InGame"
+      ? orderByGameflowTeam(
+          redMembers,
+          gameflowSession?.gameData.teamTwo.map((player) => player.puuid) ?? [],
+        )
+      : redMembers;
 
   return [
-    { teamId: 100, members: orderedBlueMembers },
-    { teamId: 200, members: orderedRedMembers },
+    { teamId: phase === "ChampSelect" ? 1 : 100, members: orderedBlueMembers },
+    { teamId: phase === "ChampSelect" ? 2 : 200, members: orderedRedMembers },
   ];
 }
 
@@ -217,20 +240,20 @@ function compareTeamIds(left: number, right: number): number {
     return 0;
   }
 
-  if (left === 100) {
+  if (left === 100 || left === 1) {
     return -1;
   }
 
-  if (right === 100) {
+  if (right === 100 || right === 1) {
     return 1;
   }
 
-  if (left === 200) {
-    return right === 100 ? 1 : -1;
+  if (left === 200 || left === 2) {
+    return right === 100 || right === 1 ? 1 : -1;
   }
 
-  if (right === 200) {
-    return left === 100 ? -1 : 1;
+  if (right === 200 || right === 2) {
+    return left === 100 || left === 1 ? -1 : 1;
   }
 
   return left - right;
@@ -242,7 +265,10 @@ export function resolveTeamLayoutLabel(
 ): string {
   const teamIds = new Set(teamMembers.map((member) => member.team));
 
-  if (teamIds.has(100) && teamIds.has(200)) {
+  if (
+    (teamIds.has(100) && teamIds.has(200)) ||
+    (teamIds.has(1) && teamIds.has(2))
+  ) {
     return t("ongoingGame.titlebar.layoutBlueRed", {
       defaultValue: "Blue vs Red",
     });

@@ -1,5 +1,5 @@
 import { Swords } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { useSettings } from "@/features/settings/context";
@@ -36,12 +36,17 @@ export function OngoingGameRoute() {
   const effectiveQueueId = useOngoingGameStore(
     (state) => state.effectiveQueueId,
   );
-  const teamGroups = resolveOngoingTeamGroups({
-    teamMembers,
-    gameflowSession,
-    champSelectSession,
-    effectiveQueueId,
-  });
+  const teamGroups = useMemo(
+    () =>
+      resolveOngoingTeamGroups({
+        phase,
+        teamMembers,
+        gameflowSession,
+        champSelectSession,
+        effectiveQueueId,
+      }),
+    [champSelectSession, effectiveQueueId, gameflowSession, teamMembers],
+  );
 
   if (phase === "Idle") {
     return (
@@ -54,8 +59,14 @@ export function OngoingGameRoute() {
     );
   }
 
+  const shouldOffsetSingleRedTeam =
+    phase === "ChampSelect" &&
+    teamGroups.length === 1 &&
+    teamGroups[0]?.teamId === 2;
+
   return (
     <div className={s.page}>
+      {shouldOffsetSingleRedTeam ? <div className={s.rowSpacer} /> : null}
       {teamGroups.map((group) => (
         <TeamRow
           key={`team:${group.teamId}`}

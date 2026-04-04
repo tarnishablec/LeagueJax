@@ -5,6 +5,22 @@ import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import * as s from "./OngoingGameCards.css.ts";
 import { SnapshotPlayerCard } from "./SnapshotPlayerCard.tsx";
 
+function getSlotKey(slot: PlayerSlot, index: number): string {
+  if (slot.cellId > 0) {
+    return `slot:${slot.team}:${slot.cellId}`;
+  }
+
+  if (slot.summonerId > 0) {
+    return `slot:${slot.team}:summoner:${slot.summonerId}`;
+  }
+
+  if (slot.puuid.trim().length > 0) {
+    return `slot:${slot.team}:puuid:${slot.puuid}`;
+  }
+
+  return `slot:${slot.team}:fallback:${index}`;
+}
+
 export function TeamRow(props: {
   matchHistoryCount: number;
   showBots: boolean;
@@ -32,9 +48,9 @@ export function TeamRow(props: {
         {visibleSlots.length === 0 ? (
           <div className={s.emptyState}>{noDataText}</div>
         ) : (
-          visibleSlots.map((slot) => (
+          visibleSlots.map((slot, index) => (
             <SnapshotPlayerCard
-              key={`slot:${slot.team}:${slot.cellId}:${slot.puuid}`}
+              key={getSlotKey(slot, index)}
               matchHistoryCount={matchHistoryCount}
               slot={slot}
             />
