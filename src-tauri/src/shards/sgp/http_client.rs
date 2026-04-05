@@ -59,7 +59,6 @@ impl SgpHttpClient {
         network_config: Arc<NetworkConfig>,
     ) -> Result<Self, AppError> {
         let req_client = Client::builder()
-            .http1_only()
             .no_proxy()
             .user_agent(Self::USER_AGENT)
             .build()
@@ -169,8 +168,7 @@ impl SgpHttpClient {
             .request(method.clone(), request_url)
             .timeout(self.network_config.request_timeout())
             .header("Authorization", format!("Bearer {access_token}"))
-            .header("Accept", "application/json")
-            .header("Accept-Encoding", "identity");
+            .header("Accept", "application/json");
 
         if let Some(payload) = body.as_ref() {
             req = req.json(payload);
