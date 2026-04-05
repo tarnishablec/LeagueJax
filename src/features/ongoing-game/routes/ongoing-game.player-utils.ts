@@ -102,20 +102,12 @@ function resolveQueueIdFromSessions(
   return null;
 }
 
-function isBlueTeamSlot(slot: PlayerSlot, phase: OngoingGamePhase): boolean {
-  if (phase === "ChampSelect") {
-    return slot.team === 1;
-  }
-
-  return slot.team === 100;
+function isBlueTeamSlot(slot: PlayerSlot, _phase: OngoingGamePhase): boolean {
+  return slot.team === 1 || slot.team === 100;
 }
 
-function isRedTeamSlot(slot: PlayerSlot, phase: OngoingGamePhase): boolean {
-  if (phase === "ChampSelect") {
-    return slot.team === 2;
-  }
-
-  return slot.team === 200;
+function isRedTeamSlot(slot: PlayerSlot, _phase: OngoingGamePhase): boolean {
+  return slot.team === 2 || slot.team === 200;
 }
 
 function shouldUseTopBottomLayout(
@@ -138,48 +130,6 @@ function shouldUseTopBottomLayout(
   const hasBlue = teamMembers.some((member) => isBlueTeamSlot(member, phase));
   const hasRed = teamMembers.some((member) => isRedTeamSlot(member, phase));
   return hasBlue || hasRed;
-}
-
-function orderByGameflowTeam(
-  members: PlayerSlot[],
-  gameflowTeamPuuids: string[],
-): PlayerSlot[] {
-  if (members.length <= 1 || gameflowTeamPuuids.length === 0) {
-    return members;
-  }
-
-  const byPuuid = new Map<string, PlayerSlot[]>();
-  for (const member of members) {
-    const list = byPuuid.get(member.puuid);
-    if (list) {
-      list.push(member);
-    } else {
-      byPuuid.set(member.puuid, [member]);
-    }
-  }
-
-  const ordered: PlayerSlot[] = [];
-  for (const puuid of gameflowTeamPuuids) {
-    if (!puuid || puuid.trim().length === 0) {
-      continue;
-    }
-    const list = byPuuid.get(puuid);
-    if (!list || list.length === 0) {
-      continue;
-    }
-    const member = list.shift();
-    if (member) {
-      ordered.push(member);
-    }
-  }
-
-  for (const member of members) {
-    if (!ordered.includes(member)) {
-      ordered.push(member);
-    }
-  }
-
-  return ordered;
 }
 
 export function resolveOngoingTeamGroups(params: {
@@ -217,25 +167,21 @@ export function resolveOngoingTeamGroups(params: {
     return groupTeamMembers(teamMembers);
   }
 
-  const orderedBlueMembers =
-    phase === "InGame"
-      ? orderByGameflowTeam(
-          blueMembers,
-          gameflowSession?.gameData.teamOne.map((player) => player.puuid) ?? [],
-        )
-      : blueMembers;
-  const orderedRedMembers =
-    phase === "InGame"
-      ? orderByGameflowTeam(
-          redMembers,
-          gameflowSession?.gameData.teamTwo.map((player) => player.puuid) ?? [],
-        )
-      : redMembers;
+  const blueTeamId =
+    blueMembers[0]?.team ?? (phase === "ChampSelect" ? 1 : 100);
+  const redTeamId = redMembers[0]?.team ?? (phase === "ChampSelect" ? 2 : 200);
 
   return [
-    { teamId: phase === "ChampSelect" ? 1 : 100, members: orderedBlueMembers },
-    { teamId: phase === "ChampSelect" ? 2 : 200, members: orderedRedMembers },
+    { teamId: blueTeamId, members: blueMembers },
+    { teamId: redTeamId, members: redMembers },
   ];
+}
+
+/** Maps both champ-select (1/2) and in-game (100/200) team IDs to a stable value. */
+export function normalizeTeamId(teamId: number): number {
+  if (teamId === 1 || teamId === 100) return 1;
+  if (teamId === 2 || teamId === 200) return 2;
+  return teamId;
 }
 
 function compareTeamIds(left: number, right: number): number {

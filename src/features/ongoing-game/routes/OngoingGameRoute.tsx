@@ -6,7 +6,10 @@ import { useSettings } from "@/features/settings/context";
 import { TeamRow } from "../components/OngoingGameCards.tsx";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameRoute.css";
-import { resolveOngoingTeamGroups } from "./ongoing-game.player-utils.ts";
+import {
+  normalizeTeamId,
+  resolveOngoingTeamGroups,
+} from "./ongoing-game.player-utils.ts";
 
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.behavior.showBots" as const;
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
@@ -62,14 +65,14 @@ export function OngoingGameRoute() {
   const shouldOffsetSingleRedTeam =
     phase === "ChampSelect" &&
     teamGroups.length === 1 &&
-    teamGroups[0]?.teamId === 2;
+    normalizeTeamId(teamGroups[0]?.teamId ?? 0) === 2;
 
   return (
     <div className={s.page}>
       {shouldOffsetSingleRedTeam ? <div className={s.rowSpacer} /> : null}
       {teamGroups.map((group) => (
         <TeamRow
-          key={`team:${group.teamId}`}
+          key={`team:${normalizeTeamId(group.teamId)}`}
           matchHistoryCount={matchHistoryCount}
           showBots={showBots}
           slots={group.members}
