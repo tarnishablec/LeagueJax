@@ -48,7 +48,7 @@ jobs:
         run: bun run tauri:build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tauri-build-${{ steps.version.outputs.tag }}
           path: |
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: tauri-build-${{ needs.build.outputs.tag }}
           path: artifacts
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: tauri-build-${{ needs.build.outputs.tag }}
           path: artifacts
