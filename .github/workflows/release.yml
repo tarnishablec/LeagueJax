@@ -181,11 +181,10 @@ jobs:
               echo "Uploading $FILENAME (attempt $ATTEMPT) ..."
               UPLOAD_RESPONSE=$(curl -sS --max-time 300 -X POST \
                 "${REPO_API}/releases/${RELEASE_ID}/attach_files" \
-                -H "Content-Type: multipart/form-data" \
                 -F "access_token=${GITEE_TOKEN}" \
                 -F "file=@${FILE}" 2>&1) || true
 
-              ASSET_URL=$(echo "$UPLOAD_RESPONSE" | jq -r '.browser_download_url // empty' 2>/dev/null)
+              ASSET_URL=$(echo "$UPLOAD_RESPONSE" | jq -r '.browser_download_url // empty' 2>/dev/null) || true
               if [ -n "$ASSET_URL" ] && [ "$ASSET_URL" != "null" ]; then
                 echo "Uploaded: $ASSET_URL"
                 UPLOADED=true
