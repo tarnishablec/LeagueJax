@@ -49,13 +49,16 @@ export const settingsI18n: Resource = {
         },
       },
       logging: {
-        level: {
-          label: "Log Level",
+        detailedMode: {
+          label: "Detailed Logging",
+          hint: "Enable debug-level file logging for troubleshooting.",
         },
-        levelDebug: "Debug",
-        levelInfo: "Info",
-        levelWarn: "Warn",
-        levelError: "Error",
+        openDir: {
+          label: "Open Log Directory",
+        },
+        cleanLogs: {
+          label: "Clean Old Logs",
+        },
       },
       registry: {
         tab: "Registry",
@@ -147,13 +150,16 @@ export const settingsI18n: Resource = {
         },
       },
       logging: {
-        level: {
-          label: "\u65e5\u5fd7\u7b49\u7ea7",
+        detailedMode: {
+          label: "详细日志",
+          hint: "启用 debug 级别的文件日志，用于排查问题。",
         },
-        levelDebug: "\u8c03\u8bd5",
-        levelInfo: "\u4fe1\u606f",
-        levelWarn: "\u8b66\u544a",
-        levelError: "\u9519\u8bef",
+        openDir: {
+          label: "打开日志目录",
+        },
+        cleanLogs: {
+          label: "清理旧日志",
+        },
       },
       registry: {
         tab: "\u6ce8\u518c\u8868",
@@ -246,13 +252,16 @@ export const settingsI18n: Resource = {
         },
       },
       logging: {
-        level: {
-          label: "\u30ed\u30b0\u30ec\u30d9\u30eb",
+        detailedMode: {
+          label: "詳細ログ",
+          hint: "トラブルシューティング用に debug レベルのファイルログを有効にします。",
         },
-        levelDebug: "\u30c7\u30d0\u30c3\u30b0",
-        levelInfo: "\u60c5\u5831",
-        levelWarn: "\u8b66\u544a",
-        levelError: "\u30a8\u30e9\u30fc",
+        openDir: {
+          label: "ログディレクトリを開く",
+        },
+        cleanLogs: {
+          label: "古いログを削除",
+        },
       },
       registry: {
         tab: "\u30ec\u30b8\u30b9\u30c8\u30ea",

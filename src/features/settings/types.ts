@@ -21,7 +21,8 @@ export type SettingControl =
       min?: number;
       max?: number;
       step?: number;
-    };
+    }
+  | { kind: "action" };
 
 // ── Frontend-only types ──────────────────────────────────────────────────────
 export type SettingId = `${string}.${string}.${string}`;
@@ -69,6 +70,11 @@ export interface NumberSettingDefinition extends SettingDefinitionBase {
   control: Extract<SettingControl, { kind: "number" }>;
 }
 
+export interface ActionSettingDefinition extends SettingDefinitionBase {
+  control: Extract<SettingControl, { kind: "action" }>;
+  onAction: () => void;
+}
+
 export type InputSettingDefinition =
   | TextSettingDefinition
   | NumberSettingDefinition;
@@ -77,7 +83,8 @@ export type SettingDefinition =
   | SelectSettingDefinition
   | ToggleSettingDefinition
   | TextSettingDefinition
-  | NumberSettingDefinition;
+  | NumberSettingDefinition
+  | ActionSettingDefinition;
 
 export type RegisteredSetting = SettingDefinition & {
   order: number;

@@ -6,7 +6,6 @@ mod storage;
 mod utils;
 
 use std::error::Error;
-#[cfg(debug_assertions)]
 use std::fs;
 use std::sync::Arc;
 use tauri::{Emitter, Manager, RunEvent};
@@ -34,12 +33,13 @@ use jax::Jax;
 use jax_probes::TimingProbe;
 
 struct TracingState {
+    _file_guard: tracing_appender::non_blocking::WorkerGuard,
     #[cfg(debug_assertions)]
     _lcu_ws_raw_guard: tracing_appender::non_blocking::WorkerGuard,
 }
 
 fn init_tracing<R: tauri::Runtime>(
-    _app: &tauri::App<R>,
+    app: &tauri::App<R>,
 ) -> Result<TracingState, Box<dyn Error>> {
     let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| "league_jax_lib=debug".into());
@@ -50,18 +50,33 @@ fn init_tracing<R: tauri::Runtime>(
         .with_target(true)
         .with_filter(env_filter);
 
+    // File layer — enabled in all builds
+    let log_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| -> Box<dyn Error> { Box::from(e.to_string()) })?
+        .join("logs");
+    fs::create_dir_all(&log_dir)?;
+
+    let file_appender = tracing_appender::rolling::daily(&log_dir, "league-jax.log");
+    let (file_non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .with_file(true)
+        .with_line_number(true)
+        .with_target(true)
+        .with_writer(file_non_blocking)
+        .with_filter(
+            tracing_subscriber::EnvFilter::new("league_jax_lib=info"),
+        );
+
     #[cfg(debug_assertions)]
     {
-        let log_dir = _app
-            .path()
-            .app_data_dir()
-            .map_err(|e| -> Box<dyn Error> { Box::from(e.to_string()) })?
-            .join("logs")
-            .join("ws");
-        fs::create_dir_all(&log_dir)?;
+        let ws_log_dir = log_dir.join("ws");
+        fs::create_dir_all(&ws_log_dir)?;
 
-        let file_appender = tracing_appender::rolling::daily(log_dir, "lcu-ws-raw.log");
-        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+        let ws_appender = tracing_appender::rolling::daily(ws_log_dir, "lcu-ws-raw.log");
+        let (ws_non_blocking, ws_guard) = tracing_appender::non_blocking(ws_appender);
         let ws_file_layer = tracing_subscriber::fmt::layer()
             .with_ansi(false)
             .without_time()
@@ -69,23 +84,30 @@ fn init_tracing<R: tauri::Runtime>(
             .with_file(false)
             .with_line_number(false)
             .with_target(false)
-            .with_writer(non_blocking)
+            .with_writer(ws_non_blocking)
             .with_filter(filter_fn(|metadata| metadata.target() == "lcu_ws_raw"));
 
         tracing_subscriber::registry()
             .with(console_layer)
+            .with(file_layer)
             .with(ws_file_layer)
             .init();
 
         Ok(TracingState {
-            _lcu_ws_raw_guard: guard,
+            _file_guard: file_guard,
+            _lcu_ws_raw_guard: ws_guard,
         })
     }
 
     #[cfg(not(debug_assertions))]
     {
-        tracing_subscriber::registry().with(console_layer).init();
-        Ok(TracingState {})
+        tracing_subscriber::registry()
+            .with(console_layer)
+            .with(file_layer)
+            .init();
+        Ok(TracingState {
+            _file_guard: file_guard,
+        })
     }
 }
 
@@ -129,7 +151,8 @@ pub fn run() {
             set_settings_values,
             get_shards_status,
             lcu_get_platform_config_namespaces,
-            lcu_get_help
+            lcu_get_help,
+            execute_setting_action
         ])
         .setup(move |app| {
             let tracing_state = init_tracing(app)?;
