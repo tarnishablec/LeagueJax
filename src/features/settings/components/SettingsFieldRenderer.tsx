@@ -2,6 +2,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import {
   createListCollection,
+  SettingsActionButton,
   SettingsFieldRow,
   SettingsInput,
   SettingsSelect,
@@ -21,6 +22,10 @@ type RegisteredSelectSetting = Extract<
 type RegisteredInputSetting = Extract<
   RegisteredSetting,
   { control: { kind: "text" | "number" } }
+>;
+type RegisteredActionSetting = Extract<
+  RegisteredSetting,
+  { control: { kind: "action" } }
 >;
 
 const useSettingValue = (id: SettingId): unknown => {
@@ -136,6 +141,19 @@ const InputField = ({
   );
 };
 
+const ActionField = ({ field }: { field: RegisteredActionSetting }) => {
+  const { t } = useTranslation();
+  const label = t(field.labelKey);
+
+  return (
+    <SettingsActionButton
+      ariaLabel={`Action ${field.id}`}
+      label={label}
+      onClick={field.onAction}
+    />
+  );
+};
+
 export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
   const { t } = useTranslation();
   const label = t(field.labelKey);
@@ -168,6 +186,12 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
             ariaLabel={ariaLabel}
             field={field as RegisteredInputSetting}
           />
+        </SettingsFieldRow>
+      );
+    case "action":
+      return (
+        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
+          <ActionField field={field as RegisteredActionSetting} />
         </SettingsFieldRow>
       );
     default:

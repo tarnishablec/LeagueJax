@@ -1,4 +1,5 @@
-﻿import { type ZodType, z } from "zod";
+﻿import { invoke } from "@tauri-apps/api/core";
+import { type ZodType, z } from "zod";
 import { createStore } from "zustand/vanilla";
 import type {
   SettingDefinitionDto,
@@ -13,7 +14,7 @@ import type {
   SettingsPatchSender,
 } from "@/features/settings/types";
 import { AppError, type AppThatError } from "@/infra/errors";
-import { createLogger, setWebLogLevel } from "@/infra/logger";
+import { createLogger } from "@/infra/logger";
 
 interface SettingsState {
   values: Record<string, unknown>;
@@ -22,7 +23,6 @@ interface SettingsState {
 type DecoratedFieldDefinition = SettingDefinition;
 
 const settingIdRegex = /^[^.]+\.[^.]+\.[^.]+$/;
-const SHARED_LOG_LEVEL_SETTING_ID = "system.logging.level";
 const settingOptionSchema = z
   .object({
     value: z.string().min(1),
@@ -105,11 +105,25 @@ const numberSettingDefinitionSchema = z
   })
   .strict();
 
+const onActionValueSchema = z.custom<() => void>(
+  (value) => typeof value === "function",
+  { message: "onAction must be a function." },
+);
+
+const actionSettingDefinitionSchema = z
+  .object({
+    ...sharedDefinitionShape,
+    control: z.object({ kind: z.literal("action") }).strict(),
+    onAction: onActionValueSchema,
+  })
+  .strict();
+
 const settingDefinitionSchema = z.union([
   selectSettingDefinitionSchema,
   toggleSettingDefinitionSchema,
   textSettingDefinitionSchema,
   numberSettingDefinitionSchema,
+  actionSettingDefinitionSchema,
 ]);
 
 const settingsClasses = new WeakSet<SettingClassCtor>();
@@ -163,6 +177,8 @@ function buildRemoteZod(
       }
       return z.enum([first, ...rest] as [string, ...string[]]);
     }
+    case "action":
+      return z.null();
     default:
       return z.unknown();
   }
@@ -344,13 +360,9 @@ class SettingsStore {
     }
   }
 
-  private buildRemoteOnSet(id: string): (next: unknown, prev: unknown) => void {
-    if (id === SHARED_LOG_LEVEL_SETTING_ID) {
-      return (next) => {
-        setWebLogLevel(next);
-      };
-    }
-
+  private buildRemoteOnSet(
+    _id: string,
+  ): (next: unknown, prev: unknown) => void {
     return () => {};
   }
 
@@ -414,6 +426,15 @@ class SettingsStore {
             min: definition.control.min ?? undefined,
             max: definition.control.max ?? undefined,
             step: definition.control.step ?? undefined,
+          },
+        };
+        break;
+      case "action":
+        mapped = {
+          ...shared,
+          control: { kind: "action" },
+          onAction: () => {
+            void invoke("execute_setting_action", { id: definition.id });
           },
         };
         break;

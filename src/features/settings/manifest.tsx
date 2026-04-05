@@ -8,7 +8,7 @@ import type {
 } from "@/bindings/settings.ts";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { createLogger, setWebLogLevel } from "@/infra/logger";
+import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
@@ -25,8 +25,6 @@ import type {
   SettingId,
   SettingsShardApi,
 } from "./types";
-
-const SHARED_LOG_LEVEL_SETTING_ID = "system.logging.level";
 
 export class SettingsShard implements WebShard, SettingsShardApi {
   private readonly sourceId = `web-${crypto.randomUUID()}`;
@@ -55,9 +53,6 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     });
 
     await this.refreshFromBackend({ notify: false, runOnSet: false });
-
-    const currentLogLevel = this.store.get<string>(SHARED_LOG_LEVEL_SETTING_ID);
-    setWebLogLevel(currentLogLevel);
 
     this.changedUnlisten = await listen<SettingsChangedEventDto>(
       "settings_changed",

@@ -19,13 +19,12 @@ use uuid::Uuid;
 
 const SETTINGS_TREE: &str = "settings";
 const SETTINGS_SNAPSHOT_KEY: &[u8] = b"snapshot";
-const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 3] = [
+const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 2] = [
     (
         "general.preferences.language",
         "system.preferences.language",
     ),
     ("general.preferences.theme", "system.preferences.theme"),
-    ("core.logging.level", "system.logging.level"),
 ];
 
 #[derive(Debug, Clone)]
@@ -93,11 +92,14 @@ impl SettingHandle {
     }
 }
 
+type ActionHandler = Box<dyn Fn() -> Result<Value, AppError> + Send + Sync>;
+
 pub struct SettingsShard {
     db: OnceLock<Db>,
     definitions: RwLock<BTreeMap<String, SettingDefinitionDto>>,
     snapshot: RwLock<SettingsSnapshotDto>,
     watch_senders: RwLock<BTreeMap<String, watch::Sender<Value>>>,
+    action_handlers: RwLock<BTreeMap<String, ActionHandler>>,
 }
 
 impl SettingsShard {
@@ -109,6 +111,7 @@ impl SettingsShard {
                 values: BTreeMap::new(),
             }),
             watch_senders: RwLock::new(BTreeMap::new()),
+            action_handlers: RwLock::new(BTreeMap::new()),
         }
     }
 
@@ -160,6 +163,55 @@ impl SettingsShard {
         self.ensure_watch_sender(&definition.id, initial_value)?;
 
         self.setting_handle(&definition.id)
+    }
+
+    pub fn register_action<F>(
+        self: &Arc<Self>,
+        definition: SettingDefinitionDto,
+        handler: F,
+    ) -> Result<(), AppError>
+    where
+        F: Fn() -> Result<Value, AppError> + Send + Sync + 'static,
+    {
+        if !matches!(definition.control, SettingControlDto::Action) {
+            return Err(AppError::other(format!(
+                "register_action requires Action control, got {:?} for {}",
+                definition.control, definition.id
+            )));
+        }
+
+        validate_setting_id(&definition.id)?;
+
+        {
+            let mut definitions = self
+                .definitions
+                .write()
+                .map_err(|_| AppError::MutexPoisoned)?;
+            definitions.insert(definition.id.clone(), definition.clone());
+        }
+
+        {
+            let mut handlers = self
+                .action_handlers
+                .write()
+                .map_err(|_| AppError::MutexPoisoned)?;
+            handlers.insert(definition.id.clone(), Box::new(handler));
+        }
+
+        Ok(())
+    }
+
+    pub fn invoke_action(&self, id: &str) -> Result<Value, AppError> {
+        let handlers = self
+            .action_handlers
+            .read()
+            .map_err(|_| AppError::MutexPoisoned)?;
+
+        let handler = handlers
+            .get(id)
+            .ok_or_else(|| AppError::other(format!("No action handler registered for {id}")))?;
+
+        handler()
     }
 
     pub fn setting_handle(self: &Arc<Self>, id: &str) -> Result<SettingHandle, AppError> {
@@ -449,7 +501,9 @@ fn validate_setting_id(id: &str) -> Result<(), AppError> {
 }
 
 fn validate_definition(definition: &SettingDefinitionDto) -> Result<(), AppError> {
-    if !is_value_compatible(definition, &definition.default_value) {
+    if !matches!(definition.control, SettingControlDto::Action)
+        && !is_value_compatible(definition, &definition.default_value)
+    {
         return Err(AppError::other(format!(
             "Default value is incompatible with setting {}",
             definition.id
@@ -482,6 +536,7 @@ fn is_value_compatible(definition: &SettingDefinitionDto, value: &Value) -> bool
                 .as_ref()
                 .is_none_or(|options| options.iter().any(|item| item.value == current))
         }),
+        SettingControlDto::Action => value.is_null(),
     }
 }
 

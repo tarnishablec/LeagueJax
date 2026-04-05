@@ -10,7 +10,8 @@ export type SettingControlDto =
       min: number | null;
       max: number | null;
       step: number | null;
-    };
+    }
+  | { kind: "action" };
 
 export type SettingDefinitionDto = {
   id: string;

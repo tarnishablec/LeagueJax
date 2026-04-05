@@ -1,3 +1,4 @@
+export { SettingsActionButton } from "./SettingsActionButton";
 export { SettingsFieldRow } from "./SettingsFieldRow";
 export { SettingsInput } from "./SettingsInput";
 export { SettingsSectionCard } from "./SettingsSectionCard";

@@ -10,6 +10,15 @@ use std::sync::Arc;
 use tauri::{Emitter, State};
 
 #[tauri::command]
+pub async fn execute_setting_action(
+    id: String,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Value, AppError> {
+    let settings = jax.get_shard::<SettingsShard>();
+    settings.invoke_action(&id)
+}
+
+#[tauri::command]
 pub async fn get_settings_bootstrap(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SettingsBootstrapDto, AppError> {

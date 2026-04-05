@@ -41,6 +41,7 @@ pub enum SettingControlDto {
         max: Option<f64>,
         step: Option<f64>,
     },
+    Action,
 }
 
 #[derive(TS)]
