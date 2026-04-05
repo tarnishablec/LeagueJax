@@ -173,20 +173,29 @@ jobs:
             exit 1
           fi
 
-          # Upload each artifact
+          # Upload each artifact (with timeout + retry)
           for FILE in "${FILES[@]}"; do
             FILENAME=$(basename "$FILE")
-            echo "Uploading $FILENAME ..."
-            UPLOAD_RESPONSE=$(curl -fsS -X POST \
-              "${REPO_API}/releases/${RELEASE_ID}/attach_files" \
-              -H "Content-Type: multipart/form-data" \
-              -F "access_token=${GITEE_TOKEN}" \
-              -F "file=@${FILE}")
+            UPLOADED=false
+            for ATTEMPT in 1 2 3; do
+              echo "Uploading $FILENAME (attempt $ATTEMPT) ..."
+              UPLOAD_RESPONSE=$(curl -sS --max-time 300 -X POST \
+                "${REPO_API}/releases/${RELEASE_ID}/attach_files" \
+                -H "Content-Type: multipart/form-data" \
+                -F "access_token=${GITEE_TOKEN}" \
+                -F "file=@${FILE}" 2>&1) || true
 
-            ASSET_URL=$(echo "$UPLOAD_RESPONSE" | jq -r '.browser_download_url')
-            if [ "$ASSET_URL" = "null" ] || [ -z "$ASSET_URL" ]; then
-              echo "::error::Failed to upload $FILENAME: $UPLOAD_RESPONSE"
+              ASSET_URL=$(echo "$UPLOAD_RESPONSE" | jq -r '.browser_download_url // empty' 2>/dev/null)
+              if [ -n "$ASSET_URL" ] && [ "$ASSET_URL" != "null" ]; then
+                echo "Uploaded: $ASSET_URL"
+                UPLOADED=true
+                break
+              fi
+              echo "::warning::Upload attempt $ATTEMPT failed: $UPLOAD_RESPONSE"
+              sleep 5
+            done
+            if [ "$UPLOADED" != "true" ]; then
+              echo "::error::Failed to upload $FILENAME after 3 attempts"
               exit 1
             fi
-            echo "Uploaded: $ASSET_URL"
           done
