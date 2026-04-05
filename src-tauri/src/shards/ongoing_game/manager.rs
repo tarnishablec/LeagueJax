@@ -104,8 +104,10 @@ impl OngoingGameManager {
                     let next_members = if state.should_merge_locked_teambuilder_roster(&payload.data)
                     {
                         state.merge_gameflow_with_locked_teambuilder_members(&payload.data)
-                    } else {
+                    } else if state.cached_team_members.is_empty() {
                         ManagerState::extract_gameflow_members(&payload.data)
+                    } else {
+                        state.merge_cached_with_gameflow_members(&payload.data)
                     };
                     tracing::info!(
                         "[ongoing_game] team snapshot source=gameflow phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
@@ -896,6 +898,67 @@ impl ManagerState {
         merged
     }
 
+    /// Merge gameflow members into the existing `cached_team_members`, preserving
+    /// the cached order within each team bucket. Gameflow data is overlaid onto
+    /// matching cached members; any gameflow-only members are appended per-bucket.
+    fn merge_cached_with_gameflow_members(
+        &self,
+        gameflow: &GameflowSessionData,
+    ) -> Vec<ChampSelectTeamMember> {
+        let gameflow_members = Self::extract_gameflow_members(gameflow);
+
+        // Build a mapping from cached team id → gameflow team id (1→100, 2→200).
+        // If the cached members already use gameflow-style ids (100/200), the map
+        // is an identity.
+        let team_id_map = build_cached_to_gameflow_team_map(&self.cached_team_members, &gameflow_members);
+
+        // Partition gameflow members by team.
+        let mut gameflow_by_team: HashMap<u64, Vec<ChampSelectTeamMember>> =
+            HashMap::new();
+        for member in gameflow_members {
+            gameflow_by_team
+                .entry(member.team)
+                .or_default()
+                .push(member);
+        }
+
+        let mut merged: Vec<ChampSelectTeamMember> = Vec::with_capacity(self.cached_team_members.len());
+
+        // Walk cached members in their original order, overlay gameflow data.
+        for cached_member in &self.cached_team_members {
+            let gameflow_team = team_id_map
+                .get(&cached_member.team)
+                .copied()
+                .unwrap_or(cached_member.team);
+            let remaining = gameflow_by_team.get_mut(&gameflow_team);
+
+            if let Some(remaining) = remaining {
+                let matched_index = find_matching_locked_gameflow_index(cached_member, remaining);
+                if let Some(index) = matched_index {
+                    let gameflow_member = remaining.remove(index);
+                    merged.push(overlay_member_from_gameflow(
+                        cached_member.clone(),
+                        gameflow_member,
+                    ));
+                    continue;
+                }
+            }
+            // No gameflow match — keep cached member but remap its team id.
+            let mut kept = cached_member.clone();
+            kept.team = gameflow_team;
+            merged.push(finalize_member_identity(kept));
+        }
+
+        // Append any gameflow members that had no cached counterpart.
+        for (_, remaining) in gameflow_by_team {
+            for member in remaining {
+                merged.push(member);
+            }
+        }
+
+        merged
+    }
+
     fn extract_teambuilder_enemy_slots_for_ingame(
         &self,
         locked_payload: &TeambuilderTbdGamePayload,
@@ -1049,6 +1112,25 @@ fn merge_locked_roster_with_gameflow_members(
     merged
 }
 
+fn find_unique_champion_match(
+    champion_id: u64,
+    members: &[ChampSelectTeamMember],
+) -> Option<usize> {
+    if champion_id == 0 {
+        return None;
+    }
+    let mut matches = members
+        .iter()
+        .enumerate()
+        .filter(|(_, m)| m.champion_id == champion_id)
+        .map(|(i, _)| i);
+    let first = matches.next()?;
+    if matches.next().is_some() {
+        return None;
+    }
+    Some(first)
+}
+
 fn find_matching_locked_gameflow_index(
     locked_member: &ChampSelectTeamMember,
     gameflow_members: &[ChampSelectTeamMember],
@@ -1060,21 +1142,7 @@ fn find_matching_locked_gameflow_index(
         return Some(index);
     }
 
-    if locked_member.champion_id > 0 {
-        let mut matches = gameflow_members
-            .iter()
-            .enumerate()
-            .filter(|(_, member)| member.champion_id == locked_member.champion_id)
-            .map(|(index, _)| index);
-
-        if let Some(first_match) = matches.next() {
-            if matches.next().is_none() {
-                return Some(first_match);
-            }
-        }
-    }
-
-    None
+    find_unique_champion_match(locked_member.champion_id, gameflow_members)
 }
 
 fn merge_locked_enemy_slots_with_gameflow_members(
@@ -1101,21 +1169,8 @@ fn find_matching_enemy_gameflow_index(
     enemy_slot: &ChampSelectTeamMember,
     gameflow_enemy_members: &[ChampSelectTeamMember],
 ) -> Option<usize> {
-    if enemy_slot.champion_id > 0 {
-        let mut matches = gameflow_enemy_members
-            .iter()
-            .enumerate()
-            .filter(|(_, member)| member.champion_id == enemy_slot.champion_id)
-            .map(|(index, _)| index);
-
-        if let Some(first_match) = matches.next() {
-            if matches.next().is_none() {
-                return Some(first_match);
-            }
-        }
-    }
-
-    gameflow_enemy_members.first().map(|_| 0)
+    find_unique_champion_match(enemy_slot.champion_id, gameflow_enemy_members)
+        .or_else(|| gameflow_enemy_members.first().map(|_| 0))
 }
 
 fn matches_member_identity(
@@ -1148,6 +1203,37 @@ fn overlay_member_from_gameflow(
     }
 
     finalize_member_identity(base_member)
+}
+
+/// Build a mapping from cached team ids to gameflow team ids by finding members
+/// that appear in both sets (matched by identity) and recording which team id
+/// changed.  Falls back to the well-known 1→100, 2→200 mapping.
+fn build_cached_to_gameflow_team_map(
+    cached: &[ChampSelectTeamMember],
+    gameflow: &[ChampSelectTeamMember],
+) -> HashMap<u64, u64> {
+    let mut map = HashMap::new();
+
+    for cached_member in cached {
+        if map.contains_key(&cached_member.team) {
+            continue;
+        }
+        for gf_member in gameflow {
+            if matches_member_identity(gf_member, cached_member) {
+                map.insert(cached_member.team, gf_member.team);
+                break;
+            }
+        }
+    }
+
+    // Fallback for any cached teams that had no identity match.
+    for cached_member in cached {
+        map.entry(cached_member.team).or_insert_with(|| {
+            map_teambuilder_team_to_gameflow_team(cached_member.team).unwrap_or(cached_member.team)
+        });
+    }
+
+    map
 }
 
 fn normalize_teambuilder_team_id(team_id: u64) -> u64 {
