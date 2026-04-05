@@ -113,9 +113,9 @@ const InputField = ({
       ariaLabel={ariaLabel}
       type={inputType}
       value={String(value ?? "")}
-      min={numberControl?.min}
-      max={numberControl?.max}
-      step={numberControl?.step}
+      min={numberControl?.min ?? undefined}
+      max={numberControl?.max ?? undefined}
+      step={numberControl?.step ?? undefined}
       placeholder={placeholder}
       onValueChange={(next) => {
         if (field.control.kind === "number") {

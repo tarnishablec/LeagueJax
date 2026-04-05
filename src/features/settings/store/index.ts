@@ -1,7 +1,6 @@
 ﻿import { type ZodType, z } from "zod";
 import { createStore } from "zustand/vanilla";
 import type {
-  SettingControlDto,
   SettingDefinitionDto,
   SettingsSnapshotDto,
 } from "@/bindings/settings.ts";
@@ -131,6 +130,7 @@ function definitionSignature(definition: SettingDefinition): string {
   const normalized = {
     id: definition.id,
     labelKey: definition.labelKey,
+    hintKey: definition.hintKey ?? null,
     scope: definition.scope ?? "frontend",
     control: definition.control,
     defaultValue: definition.defaultValue,
@@ -142,7 +142,7 @@ function definitionSignature(definition: SettingDefinition): string {
 }
 
 function buildRemoteZod(
-  control: SettingControlDto,
+  control: SettingDefinitionDto["control"],
   remoteOptions: { value: string; labelKey: string }[],
 ): ZodType {
   switch (control.kind) {
@@ -366,70 +366,55 @@ class SettingsStore {
     const remoteOptions = (definition.options ?? []).map((option) => ({
       value: option.value,
       labelKey: option.labelKey,
+      displayLabel: option.displayLabel ?? undefined,
     }));
+
+    const shared = {
+      id: definition.id,
+      labelKey: definition.labelKey,
+      hintKey: definition.hintKey ?? undefined,
+      scope: definition.scope,
+      zod: buildRemoteZod(definition.control, remoteOptions),
+      defaultValue: definition.defaultValue,
+      order: definition.order ?? undefined,
+      visible: definition.visible ?? undefined,
+      onSet: this.buildRemoteOnSet(definition.id),
+    } as const;
 
     let mapped: SettingDefinition;
     switch (definition.control.kind) {
       case "select":
         mapped = {
-          id: definition.id,
-          labelKey: definition.labelKey,
-          scope: definition.scope,
+          ...shared,
           control: { kind: "select" },
-          zod: buildRemoteZod(definition.control, remoteOptions),
-          defaultValue: definition.defaultValue,
           options: remoteOptions,
-          order: definition.order ?? undefined,
-          visible: definition.visible ?? undefined,
-          onSet: this.buildRemoteOnSet(definition.id),
         };
         break;
       case "toggle":
         mapped = {
-          id: definition.id,
-          labelKey: definition.labelKey,
-          scope: definition.scope,
+          ...shared,
           control: { kind: "toggle" },
-          zod: buildRemoteZod(definition.control, remoteOptions),
-          defaultValue: definition.defaultValue,
-          order: definition.order ?? undefined,
-          visible: definition.visible ?? undefined,
-          onSet: this.buildRemoteOnSet(definition.id),
         };
         break;
       case "text":
         mapped = {
-          id: definition.id,
-          labelKey: definition.labelKey,
-          scope: definition.scope,
+          ...shared,
           control: {
             kind: "text",
-            placeholderKey: definition.control.placeholder_key ?? undefined,
+            placeholderKey: definition.control.placeholderKey ?? undefined,
           },
-          zod: buildRemoteZod(definition.control, remoteOptions),
-          defaultValue: definition.defaultValue,
-          order: definition.order ?? undefined,
-          visible: definition.visible ?? undefined,
-          onSet: this.buildRemoteOnSet(definition.id),
         };
         break;
       case "number":
         mapped = {
-          id: definition.id,
-          labelKey: definition.labelKey,
-          scope: definition.scope,
+          ...shared,
           control: {
             kind: "number",
-            placeholderKey: definition.control.placeholder_key ?? undefined,
+            placeholderKey: definition.control.placeholderKey ?? undefined,
             min: definition.control.min ?? undefined,
             max: definition.control.max ?? undefined,
             step: definition.control.step ?? undefined,
           },
-          zod: buildRemoteZod(definition.control, remoteOptions),
-          defaultValue: definition.defaultValue,
-          order: definition.order ?? undefined,
-          visible: definition.visible ?? undefined,
-          onSet: this.buildRemoteOnSet(definition.id),
         };
         break;
       default:

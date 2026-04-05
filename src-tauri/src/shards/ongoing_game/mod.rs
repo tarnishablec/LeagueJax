@@ -72,6 +72,7 @@ impl Shard for OngoingGameShard {
         let count_setting = settings.register_definition(SettingDefinitionDto {
             id: MATCH_HISTORY_COUNT_SETTING_ID.to_string(),
             label_key: "settings.ongoing.matchHistoryCount.label".to_string(),
+            hint_key: None,
             scope: SettingScopeDto::Shared,
             control: SettingControlDto::Number {
                 placeholder_key: None,

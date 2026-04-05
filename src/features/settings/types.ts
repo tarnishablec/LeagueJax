@@ -1,8 +1,30 @@
 import type { ZodType } from "zod";
+import type { SettingScopeDto } from "@/bindings/settings";
 
-export type SettingControlKind = "select" | "toggle" | "text" | "number";
+// ── Re-export from Rust DTO ─────────────────────────────────────────────────
+export type SettingScope = SettingScopeDto;
+
+// ── Frontend-adapted data types (null → optional for JS ergonomics) ─────────
+export interface SettingOption {
+  value: string;
+  labelKey: string;
+  displayLabel?: string;
+}
+
+export type SettingControl =
+  | { kind: "select" }
+  | { kind: "toggle" }
+  | { kind: "text"; placeholderKey?: string }
+  | {
+      kind: "number";
+      placeholderKey?: string;
+      min?: number;
+      max?: number;
+      step?: number;
+    };
+
+// ── Frontend-only types ──────────────────────────────────────────────────────
 export type SettingId = `${string}.${string}.${string}`;
-export type SettingScope = "frontend" | "backend" | "shared";
 
 export interface HydrateOptions {
   notify?: boolean;
@@ -11,65 +33,41 @@ export interface HydrateOptions {
 
 export type SettingsPatchSender = (changes: Record<string, unknown>) => void;
 
-export interface SettingOption {
-  value: string;
-  labelKey: string;
-  displayLabel?: string;
-}
-
-export interface SelectSettingControl {
-  kind: "select";
-}
-
-export interface ToggleSettingControl {
-  kind: "toggle";
-}
-
-export interface TextSettingControl {
-  kind: "text";
-  placeholderKey?: string;
-}
-
-export interface NumberSettingControl {
-  kind: "number";
-  placeholderKey?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-}
-
-export type SettingControl =
-  | SelectSettingControl
-  | ToggleSettingControl
-  | TextSettingControl
-  | NumberSettingControl;
-
-interface SettingDefinitionBase<TControl extends SettingControl> {
+/**
+ * Frontend-enriched setting definition.
+ * Shares the same field names as the Rust `SettingDefinitionDto` for data fields,
+ * with added runtime-only fields (`zod`, `onSet`).
+ * Nullable DTO fields are narrowed to optional for JS ergonomics.
+ */
+interface SettingDefinitionBase {
   id: SettingId;
   labelKey: string;
   hintKey?: string;
   scope?: SettingScope;
-  control: TControl;
-  zod: ZodType;
+  control: SettingControl;
   defaultValue: unknown;
   order?: number;
   visible?: boolean;
+  zod: ZodType;
   onSet: (next: unknown, prev: unknown) => void;
 }
 
-export interface SelectSettingDefinition
-  extends SettingDefinitionBase<SelectSettingControl> {
+export interface SelectSettingDefinition extends SettingDefinitionBase {
+  control: Extract<SettingControl, { kind: "select" }>;
   options: SettingOption[];
 }
 
-export interface ToggleSettingDefinition
-  extends SettingDefinitionBase<ToggleSettingControl> {}
+export interface ToggleSettingDefinition extends SettingDefinitionBase {
+  control: Extract<SettingControl, { kind: "toggle" }>;
+}
 
-export interface TextSettingDefinition
-  extends SettingDefinitionBase<TextSettingControl> {}
+export interface TextSettingDefinition extends SettingDefinitionBase {
+  control: Extract<SettingControl, { kind: "text" }>;
+}
 
-export interface NumberSettingDefinition
-  extends SettingDefinitionBase<NumberSettingControl> {}
+export interface NumberSettingDefinition extends SettingDefinitionBase {
+  control: Extract<SettingControl, { kind: "number" }>;
+}
 
 export type InputSettingDefinition =
   | TextSettingDefinition
