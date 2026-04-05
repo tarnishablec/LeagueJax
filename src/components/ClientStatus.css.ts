@@ -1,4 +1,4 @@
-import { createVar, keyframes, style } from "@vanilla-extract/css";
+import { createVar, globalStyle, keyframes, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { iconCol } from "@/layout/__root.css";
 import { vars } from "@/styles/theme.css";
@@ -84,12 +84,11 @@ export const avatarLoading = style({
 export const connectingIcon = style({
   justifySelf: "center",
   animation: `${spinRotate} 2s linear infinite`,
-  selectors: {
-    "&> circle": {
-      animation: `${spinDash} 1.4s ease-in-out infinite`,
-      transformOrigin: "center",
-    },
-  },
+});
+
+globalStyle(`${connectingIcon} circle`, {
+  animation: `${spinDash} 1.4s ease-in-out infinite`,
+  transformOrigin: "center",
 });
 
 export const label = recipe({
