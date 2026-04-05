@@ -20,6 +20,7 @@ pub enum SettingScopeDto {
 pub struct SettingOptionDto {
     pub value: String,
     pub label_key: String,
+    pub display_label: Option<String>,
 }
 
 #[derive(TS)]
@@ -29,9 +30,11 @@ pub struct SettingOptionDto {
 pub enum SettingControlDto {
     Select,
     Toggle,
+    #[serde(rename_all = "camelCase")]
     Text {
         placeholder_key: Option<String>,
     },
+    #[serde(rename_all = "camelCase")]
     Number {
         placeholder_key: Option<String>,
         min: Option<f64>,
@@ -47,6 +50,7 @@ pub enum SettingControlDto {
 pub struct SettingDefinitionDto {
     pub id: String,
     pub label_key: String,
+    pub hint_key: Option<String>,
     pub scope: SettingScopeDto,
     pub control: SettingControlDto,
     #[ts(type = "unknown")]

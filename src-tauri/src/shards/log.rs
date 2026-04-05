@@ -28,6 +28,7 @@ impl Shard for LogShard {
         let _log_level_setting = settings.register_definition(SettingDefinitionDto {
             id: LOG_LEVEL_SETTING_ID.to_string(),
             label_key: "settings.logging.level.label".to_string(),
+            hint_key: None,
             scope: SettingScopeDto::Shared,
             control: SettingControlDto::Select,
             default_value: Value::String("info".to_string()),
@@ -37,18 +38,22 @@ impl Shard for LogShard {
                 SettingOptionDto {
                     value: "debug".to_string(),
                     label_key: "settings.logging.levelDebug".to_string(),
+                    display_label: None,
                 },
                 SettingOptionDto {
                     value: "info".to_string(),
                     label_key: "settings.logging.levelInfo".to_string(),
+                    display_label: None,
                 },
                 SettingOptionDto {
                     value: "warn".to_string(),
                     label_key: "settings.logging.levelWarn".to_string(),
+                    display_label: None,
                 },
                 SettingOptionDto {
                     value: "error".to_string(),
                     label_key: "settings.logging.levelError".to_string(),
+                    display_label: None,
                 },
             ]),
         })?;

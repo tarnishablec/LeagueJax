@@ -3,10 +3,10 @@
 export type SettingControlDto =
   | { kind: "select" }
   | { kind: "toggle" }
-  | { kind: "text"; placeholder_key: string | null }
+  | { kind: "text"; placeholderKey: string | null }
   | {
       kind: "number";
-      placeholder_key: string | null;
+      placeholderKey: string | null;
       min: number | null;
       max: number | null;
       step: number | null;
@@ -15,6 +15,7 @@ export type SettingControlDto =
 export type SettingDefinitionDto = {
   id: string;
   labelKey: string;
+  hintKey: string | null;
   scope: SettingScopeDto;
   control: SettingControlDto;
   defaultValue: unknown;
@@ -23,7 +24,11 @@ export type SettingDefinitionDto = {
   options: Array<SettingOptionDto> | null;
 };
 
-export type SettingOptionDto = { value: string; labelKey: string };
+export type SettingOptionDto = {
+  value: string;
+  labelKey: string;
+  displayLabel: string | null;
+};
 
 export type SettingScopeDto = "frontend" | "backend" | "shared";
 
