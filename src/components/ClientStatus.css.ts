@@ -55,6 +55,17 @@ export const avatar = style({
   justifySelf: "center",
 });
 
+const spinRotate = keyframes({
+  "0%": { transform: "rotate(0deg)" },
+  "100%": { transform: "rotate(360deg)" },
+});
+
+const spinDash = keyframes({
+  "0%": { strokeDasharray: "1, 150", strokeDashoffset: "0" },
+  "50%": { strokeDasharray: "90, 150", strokeDashoffset: "-35" },
+  "100%": { strokeDasharray: "1, 150", strokeDashoffset: "-124" },
+});
+
 const spin = keyframes({
   "0%": { transform: "rotate(0deg)" },
   "100%": { transform: "rotate(360deg)" },
@@ -68,6 +79,17 @@ export const avatarLoading = style({
   borderTopColor: vars.color.primary,
   justifySelf: "center",
   animation: `${spin} 1s linear infinite`,
+});
+
+export const connectingIcon = style({
+  justifySelf: "center",
+  animation: `${spinRotate} 2s linear infinite`,
+  selectors: {
+    "&> circle": {
+      animation: `${spinDash} 1.4s ease-in-out infinite`,
+      transformOrigin: "center",
+    },
+  },
 });
 
 export const label = recipe({
