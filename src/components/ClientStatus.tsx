@@ -9,7 +9,7 @@ import {
 } from "@floating-ui/react";
 import { invoke } from "@tauri-apps/api/core";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import { Unlink, Unplug } from "lucide-react";
+import { LoaderCircle, Unlink, Unplug } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
@@ -43,17 +43,17 @@ function renderInstanceStateLabel(
 function TriggerIcon({
   avatarUrl,
   hasSummoner,
-  isLoading,
+  isConnecting,
   iconSize,
 }: {
   avatarUrl: string | null;
   hasSummoner: boolean;
-  isLoading: boolean;
+  isConnecting: boolean;
   iconSize: number;
 }) {
   const [imageErrored, setImageErrored] = useState(false);
 
-  if (hasSummoner && avatarUrl) {
+  if (hasSummoner && avatarUrl && !imageErrored) {
     return (
       <LazyImage
         src={avatarUrl}
@@ -62,21 +62,18 @@ function TriggerIcon({
         style={assignInlineVars({
           [s.avatarSizeVar]: `${iconSize * 1.3}px`,
         })}
-        fallbackClassName={imageErrored ? s.avatarLoading : s.avatar}
+        fallbackClassName={s.avatar}
         onError={() => setImageErrored(true)}
       />
     );
   }
 
-  if (isLoading || imageErrored) {
+  if (isConnecting) {
     return (
-      <div
-        className={s.avatarLoading}
-        style={assignInlineVars({
-          [s.avatarSizeVar]: `${iconSize * 1.3}px`,
-        })}
-        aria-label="Connecting"
-        role="img"
+      <LoaderCircle
+        size={iconSize}
+        aria-hidden="true"
+        className={s.connectingIcon}
       />
     );
   }
@@ -253,10 +250,14 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
   const focusedInstance = useLcuStore((st) =>
     st.instances.find((i) => i.isFocused),
   );
-  const focusedDisplayState = focusedInstance
-    ? normalizeState(focusedInstance.state)
-    : null;
   const instances = useLcuStore((st) => st.instances);
+  const connectingInstance = useLcuStore((st) =>
+    st.instances.find((i) => i.state !== "ready" && i.state !== "closing"),
+  );
+  const activeInstance = focusedInstance ?? connectingInstance;
+  const focusedDisplayState = activeInstance
+    ? normalizeState(activeInstance.state)
+    : null;
 
   const summoner = focusedReady?.summoner;
   const hasFocusedSummoner = !!(focusedReady && summoner);
@@ -264,7 +265,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
     type: "profile-icon",
     profileIconId: hasFocusedSummoner ? (summoner?.profileIconId ?? 0) : 0,
   });
-  const isLoading = !!focusedInstance && focusedInstance.state !== "ready";
+  const isConnecting = !!activeInstance && !hasFocusedSummoner;
 
   const handleClick = () => {
     if (!summoner) {
@@ -299,7 +300,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
           <TriggerIcon
             avatarUrl={avatarUrl}
             hasSummoner={hasFocusedSummoner}
-            isLoading={isLoading}
+            isConnecting={isConnecting}
             iconSize={iconSize}
           />
           <span className={s.label({ collapsed })}>
