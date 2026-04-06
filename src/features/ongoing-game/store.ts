@@ -15,38 +15,29 @@ type TeamMember = OngoingGameUpdated["team_members"][number];
 const CURRENT_MODE_VALUE = "__current_mode__";
 
 // ---------------------------------------------------------------------------
-// Reference-stability helpers — reuse old objects when data is equivalent
-// so that Zustand selectors (Object.is) skip unnecessary React re-renders.
+// Generic reference-stability helpers
 // ---------------------------------------------------------------------------
 
-function stableGames(
-  prev: RawMatchSummaryGame[] | undefined,
-  next: RawMatchSummaryGame[],
-): RawMatchSummaryGame[] {
-  if (!prev || prev.length !== next.length) return next;
-  for (let i = 0; i < prev.length; i++) {
-    if (prev[i].json.gameId !== next[i].json.gameId) return next;
+/** Shallow-compare two flat objects by own enumerable keys. */
+function shallowEqual<T extends Record<string, unknown>>(a: T, b: T): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (a[key] !== b[key]) return false;
   }
-  return prev;
+  return true;
 }
 
-function stableSummoner(
-  prev: SummonerInfo | undefined,
-  next: SummonerInfo,
-): SummonerInfo {
-  if (
-    prev &&
-    prev.puuid === next.puuid &&
-    prev.summonerLevel === next.summonerLevel &&
-    prev.profileIconId === next.profileIconId &&
-    prev.gameName === next.gameName &&
-    prev.tagLine === next.tagLine
-  ) {
-    return prev;
-  }
-  return next;
+/** Return `prev` when all values are identical, avoiding a new reference. */
+function stableRef<T extends Record<string, unknown>>(
+  prev: T | undefined,
+  next: T,
+): T {
+  return prev && shallowEqual(prev, next) ? prev : next;
 }
 
+/** Return `prev` when all entries are reference-equal. */
 function stableRecord<V>(
   prev: Record<string, V>,
   next: Record<string, V>,
@@ -59,25 +50,50 @@ function stableRecord<V>(
   return prev;
 }
 
+function stableGames(
+  prev: RawMatchSummaryGame[] | undefined,
+  next: RawMatchSummaryGame[],
+): RawMatchSummaryGame[] {
+  if (!prev || prev.length !== next.length) return next;
+  for (let i = 0; i < prev.length; i++) {
+    if (prev[i].json.gameId !== next[i].json.gameId) return next;
+  }
+  return prev;
+}
+
+function stableTeamMembers(
+  prev: TeamMember[],
+  next: TeamMember[],
+): TeamMember[] {
+  if (prev.length !== next.length) return next;
+  let changed = false;
+  const stable = next.map((member, i) => {
+    const p = prev[i];
+    if (p && shallowEqual(p, member)) return p;
+    changed = true;
+    return member;
+  });
+  return changed ? stable : prev;
+}
+
 // ---------------------------------------------------------------------------
-// Merge helpers for applyUpdated — preserve existing Ready data when the
-// Updated payload would regress it (stale snapshot racing with incremental
-// SummonersUpdated / MatchHistoriesUpdated events).
+// Merge helpers — preserve existing Ready data when the Updated payload
+// would regress it (stale snapshot racing with incremental events).
 // ---------------------------------------------------------------------------
 
 function mergeSummoners(
   payload: OngoingGameUpdated,
   existing: Record<string, SummonerInfo>,
-  payloadPuuids: Set<string>,
+  teamPuuids: Set<string>,
 ): Record<string, SummonerInfo> {
   const merged: Record<string, SummonerInfo> = {};
   for (const entry of payload.summoner_states) {
     if (entry.summoner) {
-      merged[entry.puuid] = stableSummoner(
+      merged[entry.puuid] = stableRef(
         existing[entry.puuid],
         entry.summoner as SummonerInfo,
       );
-    } else if (payloadPuuids.has(entry.puuid) && existing[entry.puuid]) {
+    } else if (teamPuuids.has(entry.puuid) && existing[entry.puuid]) {
       merged[entry.puuid] = existing[entry.puuid];
     }
   }
@@ -87,7 +103,7 @@ function mergeSummoners(
 function mergeHistories(
   payload: OngoingGameUpdated,
   existing: Record<string, RawMatchSummaryGame[]>,
-  payloadPuuids: Set<string>,
+  teamPuuids: Set<string>,
 ): Record<string, RawMatchSummaryGame[]> {
   const merged: Record<string, RawMatchSummaryGame[]> = {};
   for (const entry of payload.history_states) {
@@ -96,73 +112,25 @@ function mergeHistories(
         existing[entry.puuid],
         entry.games as RawMatchSummaryGame[],
       );
-    } else if (payloadPuuids.has(entry.puuid) && existing[entry.puuid]) {
+    } else if (teamPuuids.has(entry.puuid) && existing[entry.puuid]) {
       merged[entry.puuid] = existing[entry.puuid];
     }
   }
   return merged;
 }
 
-function sameTeamMember(left: TeamMember, right: TeamMember): boolean {
-  return (
-    left.assignedPosition === right.assignedPosition &&
-    left.cellId === right.cellId &&
-    left.championId === right.championId &&
-    left.championPickIntent === right.championPickIntent &&
-    left.gameName === right.gameName &&
-    left.internalName === right.internalName &&
-    left.isAutoFilled === right.isAutoFilled &&
-    left.isHumanoid === right.isHumanoid &&
-    left.nameVisibilityType === right.nameVisibilityType &&
-    left.obfuscatePuuid === right.obfuscatePuuid &&
-    left.obfuscateSummonerId === right.obfuscateSummonerId &&
-    left.pickMode === right.pickMode &&
-    left.pickTurn === right.pickTurn &&
-    left.playerAlias === right.playerAlias &&
-    left.playerType === right.playerType &&
-    left.puuid === right.puuid &&
-    left.selectedSkinId === right.selectedSkinId &&
-    left.spell1Id === right.spell1Id &&
-    left.spell2Id === right.spell2Id &&
-    left.summonerId === right.summonerId &&
-    left.tagLine === right.tagLine &&
-    left.team === right.team &&
-    left.wardSkinId === right.wardSkinId
-  );
-}
-
-function stableTeamMembers(
-  prev: TeamMember[],
-  next: TeamMember[],
-): TeamMember[] {
-  if (prev.length !== next.length) {
-    return next;
-  }
-
-  let changed = false;
-  const stableMembers = next.map((member, index) => {
-    const prevMember = prev[index];
-    if (prevMember && sameTeamMember(prevMember, member)) {
-      return prevMember;
-    }
-
-    changed = true;
-    return member;
-  });
-
-  return changed ? stableMembers : prev;
-}
+// ---------------------------------------------------------------------------
 
 function toModeTag(value: string | null): MatchModeTag | null {
-  if (value === CURRENT_MODE_VALUE) {
-    return null;
-  }
-
-  if (value === null || value.trim().length === 0 || value === "all") {
+  if (value === CURRENT_MODE_VALUE) return null;
+  if (value === null || value.trim().length === 0 || value === "all")
     return "all";
-  }
   return value as MatchModeTag;
 }
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
 
 export type OngoingGameUiState = {
   phase: OngoingGamePhase;
@@ -208,31 +176,40 @@ type OngoingGameStore = OngoingGameUiState & {
   ) => void;
 };
 
+/** Fields shared by every applyUpdated branch. */
+function commonFields(payload: OngoingGameUpdated) {
+  return {
+    phase: payload.phase,
+    matchHistoryTag: payload.match_history_tag,
+    effectiveQueueId: payload.effective_queue_id,
+    effectiveModeTag: payload.effective_mode_tag,
+    matchHistoriesPending: payload.match_histories_pending,
+    modeTag: toModeTag(payload.match_history_tag),
+    gameflowSession: payload.gameflow_session,
+    champSelectSession: payload.champ_select_session,
+  } as const;
+}
+
 export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
   ...initialState,
-  reset: () => {
-    set(initialState);
-  },
-  setModeTag: (tag) => {
-    set({ modeTag: tag });
-  },
+
+  reset: () => set(initialState),
+
+  setModeTag: (tag) => set({ modeTag: tag }),
+
   applyUpdated: (payload) => {
     set((state) => {
+      const shared = commonFields(payload);
+      const teamMembers = stableTeamMembers(
+        state.teamMembers,
+        payload.team_members,
+      );
+
       if (payload.phase === "Idle") {
         return {
           ...state,
-          phase: payload.phase,
-          teamMembers: stableTeamMembers(
-            state.teamMembers,
-            payload.team_members,
-          ),
-          matchHistoryTag: payload.match_history_tag,
-          effectiveQueueId: payload.effective_queue_id,
-          effectiveModeTag: payload.effective_mode_tag,
-          matchHistoriesPending: payload.match_histories_pending,
-          modeTag: toModeTag(payload.match_history_tag),
-          gameflowSession: payload.gameflow_session,
-          champSelectSession: payload.champ_select_session,
+          ...shared,
+          teamMembers,
           lifecycleGameId: null,
           summonerStatesByPuuid: {},
           historyStatesByPuuid: {},
@@ -241,78 +218,62 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         };
       }
 
-      const payloadPuuids = new Set(payload.team_members.map((m) => m.puuid));
-      const nextSummonerStates = Object.fromEntries(
-        payload.summoner_states.map((entry) => [entry.puuid, entry]),
-      );
-      const nextHistoryStates = Object.fromEntries(
-        payload.history_states.map((entry) => [entry.puuid, entry]),
-      );
-      const nextSummoners = mergeSummoners(
-        payload,
-        state.summonersByPuuid,
-        payloadPuuids,
-      );
-      const nextHistories = mergeHistories(
-        payload,
-        state.matchHistoriesByPuuid,
-        payloadPuuids,
-      );
+      const teamPuuids = new Set(payload.team_members.map((m) => m.puuid));
 
       return {
         ...state,
-        phase: payload.phase,
-        teamMembers: stableTeamMembers(state.teamMembers, payload.team_members),
-        matchHistoryTag: payload.match_history_tag,
-        effectiveQueueId: payload.effective_queue_id,
-        effectiveModeTag: payload.effective_mode_tag,
-        matchHistoriesPending: payload.match_histories_pending,
-        modeTag: toModeTag(payload.match_history_tag),
-        gameflowSession: payload.gameflow_session,
-        champSelectSession: payload.champ_select_session,
+        ...shared,
+        teamMembers,
         lifecycleGameId: payload.lifecycle_game_id,
         summonerStatesByPuuid: stableRecord(
           state.summonerStatesByPuuid,
-          nextSummonerStates,
+          Object.fromEntries(payload.summoner_states.map((e) => [e.puuid, e])),
         ),
         historyStatesByPuuid: stableRecord(
           state.historyStatesByPuuid,
-          nextHistoryStates,
+          Object.fromEntries(payload.history_states.map((e) => [e.puuid, e])),
         ),
-        summonersByPuuid: stableRecord(state.summonersByPuuid, nextSummoners),
+        summonersByPuuid: stableRecord(
+          state.summonersByPuuid,
+          mergeSummoners(payload, state.summonersByPuuid, teamPuuids),
+        ),
         matchHistoriesByPuuid: stableRecord(
           state.matchHistoriesByPuuid,
-          nextHistories,
+          mergeHistories(payload, state.matchHistoriesByPuuid, teamPuuids),
         ),
       };
     });
   },
+
   applySummonersUpdated: (payload) => {
-    set((state) => ({
-      ...state,
-      ...(payload.phase === "Idle"
-        ? {
-            summonerStatesByPuuid: {},
-            summonersByPuuid: {},
-          }
-        : {
-            summonerStatesByPuuid: {
-              ...state.summonerStatesByPuuid,
-              [payload.state.puuid]: payload.state,
-            },
-            summonersByPuuid: payload.state.summoner
-              ? {
-                  ...state.summonersByPuuid,
-                  [payload.state.puuid]: payload.state.summoner,
-                }
-              : (() => {
-                  const next = { ...state.summonersByPuuid };
-                  delete next[payload.state.puuid];
-                  return next;
-                })(),
-          }),
-    }));
+    set((state) => {
+      if (payload.phase === "Idle") {
+        return {
+          ...state,
+          summonerStatesByPuuid: {},
+          summonersByPuuid: {},
+        };
+      }
+
+      const { puuid, summoner } = payload.state;
+      const nextSummoners = { ...state.summonersByPuuid };
+      if (summoner) {
+        nextSummoners[puuid] = summoner;
+      } else {
+        delete nextSummoners[puuid];
+      }
+
+      return {
+        ...state,
+        summonerStatesByPuuid: {
+          ...state.summonerStatesByPuuid,
+          [puuid]: payload.state,
+        },
+        summonersByPuuid: nextSummoners,
+      };
+    });
   },
+
   applyMatchHistoriesUpdated: (payload) => {
     set((state) => {
       if (payload.phase === "Idle") {
@@ -323,23 +284,21 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         };
       }
 
-      const nextHistoryStatesByPuuid = {
-        ...state.historyStatesByPuuid,
-        [payload.state.puuid]: payload.state,
-      };
-      const nextMatchHistoriesByPuuid = {
-        ...state.matchHistoriesByPuuid,
-      };
-      if (payload.state.games) {
-        nextMatchHistoriesByPuuid[payload.state.puuid] = payload.state.games;
+      const { puuid, games } = payload.state;
+      const nextHistories = { ...state.matchHistoriesByPuuid };
+      if (games) {
+        nextHistories[puuid] = games;
       } else {
-        delete nextMatchHistoriesByPuuid[payload.state.puuid];
+        delete nextHistories[puuid];
       }
 
       return {
         ...state,
-        historyStatesByPuuid: nextHistoryStatesByPuuid,
-        matchHistoriesByPuuid: nextMatchHistoriesByPuuid,
+        historyStatesByPuuid: {
+          ...state.historyStatesByPuuid,
+          [puuid]: payload.state,
+        },
+        matchHistoriesByPuuid: nextHistories,
       };
     });
   },
