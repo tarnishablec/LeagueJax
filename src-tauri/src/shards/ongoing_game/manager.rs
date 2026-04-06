@@ -20,8 +20,8 @@ use crate::shards::lcu::events::{
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
 use crate::shards::ongoing_game::types::{
-    OngoingGameEvent, OngoingGameMatchHistoryState, OngoingGamePhase,
-    OngoingGamePlayerLoadStatus, OngoingGameSummonerState, OngoingGameUpdated,
+    OngoingGameEvent, OngoingGameMatchHistoryState, OngoingGamePhase, OngoingGamePlayerLoadStatus,
+    OngoingGameSummonerState, OngoingGameUpdated,
 };
 use crate::shards::settings::SettingHandle;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
@@ -96,19 +96,18 @@ impl OngoingGameManager {
                 let event_game_id = extract_gameflow_game_id(&payload.data);
                 state.sync_lifecycle_game_id(event_game_id, "gameflow_session");
                 state.cached_gameflow_session = Some(payload.data.clone());
-                if has_gameflow_team_data(&payload.data)
-                    && should_apply_gameflow_members(payload.data.phase)
+                if should_apply_gameflow_members(payload.data.phase)
                     && payload.event_type != EventType::Delete
                     && state.can_apply_member_snapshot(event_game_id)
                 {
-                    let next_members = if state.should_merge_locked_teambuilder_roster(&payload.data)
-                    {
-                        state.merge_gameflow_with_locked_teambuilder_members(&payload.data)
-                    } else if state.cached_team_members.is_empty() {
-                        ManagerState::extract_gameflow_members(&payload.data)
-                    } else {
-                        state.merge_cached_with_gameflow_members(&payload.data)
-                    };
+                    let next_members =
+                        if state.should_merge_locked_teambuilder_roster(&payload.data) {
+                            state.merge_gameflow_with_locked_teambuilder_members(&payload.data)
+                        } else if state.cached_team_members.is_empty() {
+                            ManagerState::extract_gameflow_members(&payload.data)
+                        } else {
+                            state.merge_cached_with_gameflow_members(&payload.data)
+                        };
                     tracing::info!(
                         "[ongoing_game] team snapshot source=gameflow phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
                         payload.data.phase,
@@ -118,7 +117,7 @@ impl OngoingGameManager {
                         next_members.len()
                     );
                     state.cached_team_members = next_members;
-                } else if has_gameflow_team_data(&payload.data) {
+                } else {
                     tracing::info!(
                         "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_gameflow_override",
                         payload.data.phase,
@@ -700,7 +699,8 @@ impl ManagerState {
         status: OngoingGamePlayerLoadStatus,
         games: Option<Vec<RawMatchSummaryGame>>,
     ) {
-        self.history_status_by_puuid.insert(puuid.to_owned(), status);
+        self.history_status_by_puuid
+            .insert(puuid.to_owned(), status);
         match games {
             Some(games) => {
                 self.cached_match_histories.insert(puuid.to_owned(), games);
@@ -718,10 +718,12 @@ impl ManagerState {
         status: OngoingGamePlayerLoadStatus,
         summoner: Option<SummonerInfo>,
     ) {
-        self.summoner_status_by_puuid.insert(puuid.to_owned(), status);
+        self.summoner_status_by_puuid
+            .insert(puuid.to_owned(), status);
         match summoner {
             Some(summoner) => {
-                self.cached_summoners_by_puuid.insert(puuid.to_owned(), summoner);
+                self.cached_summoners_by_puuid
+                    .insert(puuid.to_owned(), summoner);
             }
             None => {
                 self.cached_summoners_by_puuid.remove(puuid);
@@ -866,7 +868,11 @@ impl ManagerState {
                     .and_then(|member| map_teambuilder_team_to_gameflow_team(member.team))
                     .unwrap_or(100)
             });
-        let enemy_gameflow_team = if allied_gameflow_team == 100 { 200 } else { 100 };
+        let enemy_gameflow_team = if allied_gameflow_team == 100 {
+            200
+        } else {
+            100
+        };
 
         let locked_allied_members = locked_allied_members
             .into_iter()
@@ -910,11 +916,11 @@ impl ManagerState {
         // Build a mapping from cached team id → gameflow team id (1→100, 2→200).
         // If the cached members already use gameflow-style ids (100/200), the map
         // is an identity.
-        let team_id_map = build_cached_to_gameflow_team_map(&self.cached_team_members, &gameflow_members);
+        let team_id_map =
+            build_cached_to_gameflow_team_map(&self.cached_team_members, &gameflow_members);
 
         // Partition gameflow members by team.
-        let mut gameflow_by_team: HashMap<u64, Vec<ChampSelectTeamMember>> =
-            HashMap::new();
+        let mut gameflow_by_team: HashMap<u64, Vec<ChampSelectTeamMember>> = HashMap::new();
         for member in gameflow_members {
             gameflow_by_team
                 .entry(member.team)
@@ -922,7 +928,8 @@ impl ManagerState {
                 .push(member);
         }
 
-        let mut merged: Vec<ChampSelectTeamMember> = Vec::with_capacity(self.cached_team_members.len());
+        let mut merged: Vec<ChampSelectTeamMember> =
+            Vec::with_capacity(self.cached_team_members.len());
 
         // Walk cached members in their original order, overlay gameflow data.
         for cached_member in &self.cached_team_members {
@@ -1001,10 +1008,6 @@ impl ManagerState {
 
 fn lcu_focus_key(session: Option<&Arc<LcuSession>>) -> Option<(u32, u16)> {
     session.map(|entry| (entry.auth().pid, entry.auth().port))
-}
-
-fn has_gameflow_team_data(session: &GameflowSessionData) -> bool {
-    !session.game_data.team_one.is_empty() || !session.game_data.team_two.is_empty()
 }
 
 fn extract_gameflow_game_id(session: &GameflowSessionData) -> Option<u64> {
@@ -1938,5 +1941,4 @@ mod tests {
         assert_eq!(state.cached_team_members[0].team, 100);
         assert_eq!(state.cached_team_members[1].team, 200);
     }
-
 }
