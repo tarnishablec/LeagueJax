@@ -303,6 +303,8 @@ async fn collect_player_fetch_snapshot(ctx: &Arc<OngoingGameContext>) -> PlayerF
 
 async fn refresh_players_from_current_state(ctx: Arc<OngoingGameContext>) {
     let snapshot = collect_player_fetch_snapshot(&ctx).await;
+    let has_new_work =
+        !snapshot.new_puuids.is_empty() || !snapshot.new_history_puuids.is_empty();
     tracing::info!(
         "[ongoing_game] refresh snapshot phase={:?} generation={} lifecycle_game_id={:?} team_members={} missing_summoners={} missing_histories={} raw_tag={:?} effective_queue_id={:?} effective_tag={:?} history_count={}",
         snapshot.updated.phase,
@@ -321,7 +323,13 @@ async fn refresh_players_from_current_state(ctx: Arc<OngoingGameContext>) {
         snapshot.new_puuids,
         snapshot.new_history_puuids
     );
-    ctx.broadcast(OngoingGameEvent::Updated(snapshot.updated));
+
+    // Only broadcast when there are new players to fetch — avoids redundant
+    // Updated events that can race with individual SummonersUpdated /
+    // MatchHistoriesUpdated events and cause frontend flickering.
+    if has_new_work {
+        ctx.broadcast(OngoingGameEvent::Updated(snapshot.updated));
+    }
 
     spawn_per_player_fetches(
         &ctx,
