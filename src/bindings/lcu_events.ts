@@ -150,6 +150,8 @@ export type MucJwtDto = {
   targetRegion: string;
 };
 
+export type NameVisibilityType = "HIDDEN" | "VISIBLE";
+
 export type Phase =
   | "None"
   | "ChampSelect"
@@ -237,7 +239,7 @@ export type TeamMember = {
   internalName: string;
   isAutoFilled: boolean;
   isHumanoid: boolean;
-  nameVisibilityType: string;
+  nameVisibilityType: NameVisibilityType;
   obfuscatePuuid: string;
   obfuscateSummonerId: number;
   pickMode: number;
