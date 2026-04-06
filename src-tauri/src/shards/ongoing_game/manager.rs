@@ -1095,7 +1095,7 @@ fn teambuilder_cell_to_member(cell: &TeambuilderCell) -> ChampSelectTeamMember {
         tag_line: cell.tag_line.clone(),
         spell1_id: cell.spell1_id,
         spell2_id: cell.spell2_id,
-        name_visibility_type: cell.name_visibility_type.clone(),
+        name_visibility_type: cell.name_visibility_type.into(),
         summoner_id: cell.summoner_id,
         assigned_position: lane_position_from_teambuilder(&cell.assigned_position),
         team: normalize_teambuilder_team_id(cell.team_id),
@@ -1291,7 +1291,8 @@ fn mark_member_as_bot(mut member: ChampSelectTeamMember) -> ChampSelectTeamMembe
     member.game_name.clear();
     member.tag_line.clear();
     member.internal_name.clear();
-    member.name_visibility_type = "VISIBLE".to_string();
+    member.name_visibility_type =
+        super::super::lcu::events::champ_select_session::NameVisibilityType::VISIBLE;
     member.summoner_id = 0;
     member.puuid = BOT_PUUID.to_string();
     member
@@ -1374,7 +1375,7 @@ mod tests {
         GameData, GameflowSessionData, Queue, Team,
     };
     use crate::shards::lcu::events::teambuilder_tbd_game::{
-        TeambuilderCell, TeambuilderCells, TeambuilderChampionSelectState,
+        NameVisibilityType, TeambuilderCell, TeambuilderCells, TeambuilderChampionSelectState,
         TeambuilderTbdGamePayload,
     };
 
@@ -1420,7 +1421,7 @@ mod tests {
                         team_id: 2,
                         cell_id: 6,
                         champion_id: 147,
-                        name_visibility_type: "HIDDEN".to_string(),
+                        name_visibility_type: NameVisibilityType::HIDDEN,
                         ..Default::default()
                     }],
                 },
@@ -1535,14 +1536,14 @@ mod tests {
                             team_id: 2,
                             cell_id: 2,
                             champion_id: 236,
-                            name_visibility_type: "HIDDEN".to_string(),
+                            name_visibility_type: NameVisibilityType::HIDDEN,
                             ..Default::default()
                         },
                         TeambuilderCell {
                             team_id: 2,
                             cell_id: 3,
                             champion_id: 147,
-                            name_visibility_type: "HIDDEN".to_string(),
+                            name_visibility_type: NameVisibilityType::HIDDEN,
                             ..Default::default()
                         },
                     ],
@@ -1592,7 +1593,8 @@ mod tests {
             member.puuid == "BOT"
                 && member.team == 200
                 && member.champion_id == 147
-                && member.name_visibility_type == "VISIBLE"
+                && member.name_visibility_type
+                    == crate::shards::lcu::events::champ_select_session::NameVisibilityType::HIDDEN
         }));
     }
 
@@ -1618,7 +1620,7 @@ mod tests {
                         cell_id: 2,
                         champion_id: 0,
                         champion_pick_intent: 0,
-                        name_visibility_type: "HIDDEN".to_string(),
+                        name_visibility_type: NameVisibilityType::HIDDEN,
                         ..Default::default()
                     }],
                 },
@@ -1647,7 +1649,7 @@ mod tests {
                         champion_pick_intent: 147,
                         spell1_id: 4,
                         spell2_id: 7,
-                        name_visibility_type: "HIDDEN".to_string(),
+                        name_visibility_type: NameVisibilityType::HIDDEN,
                         ..Default::default()
                     }],
                 },
@@ -1744,21 +1746,21 @@ mod tests {
                             team_id: 1,
                             cell_id: 0,
                             champion_id: 81,
-                            name_visibility_type: "HIDDEN".to_string(),
+                            name_visibility_type: NameVisibilityType::HIDDEN,
                             ..Default::default()
                         },
                         TeambuilderCell {
                             team_id: 1,
                             cell_id: 1,
                             champion_id: 44,
-                            name_visibility_type: "HIDDEN".to_string(),
+                            name_visibility_type: NameVisibilityType::HIDDEN,
                             ..Default::default()
                         },
                         TeambuilderCell {
                             team_id: 1,
                             cell_id: 2,
                             champion_id: 6,
-                            name_visibility_type: "HIDDEN".to_string(),
+                            name_visibility_type: NameVisibilityType::HIDDEN,
                             ..Default::default()
                         },
                     ],
