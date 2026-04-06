@@ -126,7 +126,7 @@ export function MatchCardPlayers({
           const samePuuid = summoner.puuid === optimisticPuuid;
 
           // Avoid changing sgpServerId for an already-open tab with the same puuid.
-          // Otherwise the history SWR key changes and triggers a duplicate fetch.
+          // Otherwise, the history SWR key changes and triggers a duplicate fetch.
           const nextSgpServerId = samePuuid ? undefined : summoner.sgpServerId;
 
           openTab(
