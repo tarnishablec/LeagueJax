@@ -3,8 +3,9 @@ import { vars } from "@/styles/theme.css";
 
 export const root = style({
   display: "grid",
-  gridTemplateColumns: "auto 1fr auto",
+  gridTemplateColumns: "auto auto",
   alignItems: "center",
+  justifyContent: "space-between",
   gap: 8,
   minWidth: 0,
   height: "100%",
