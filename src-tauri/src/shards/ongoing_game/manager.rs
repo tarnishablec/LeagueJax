@@ -162,15 +162,26 @@ impl OngoingGameManager {
                     );
                 } else {
                     let next_members = extract_teambuilder_allied_members(&payload.data.payload);
-                    tracing::info!(
-                        "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
-                        GameflowPhase::ChampSelect,
-                        payload.event_type,
-                        event_game_id,
-                        state.lifecycle_game_id,
-                        next_members.len()
-                    );
-                    state.cached_team_members = next_members;
+                    if next_members.is_empty() && !state.cached_team_members.is_empty() {
+                        tracing::info!(
+                            "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_empty_teambuilder_replace",
+                            state.current_phase(),
+                            payload.event_type,
+                            event_game_id,
+                            state.lifecycle_game_id,
+                            state.cached_team_members.len()
+                        );
+                    } else {
+                        tracing::info!(
+                            "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
+                            GameflowPhase::ChampSelect,
+                            payload.event_type,
+                            event_game_id,
+                            state.lifecycle_game_id,
+                            next_members.len()
+                        );
+                        state.cached_team_members = next_members;
+                    }
                 }
             }
             _ => {}

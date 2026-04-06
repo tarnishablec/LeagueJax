@@ -59,6 +59,50 @@ function stableRecord<V>(
   return prev;
 }
 
+// ---------------------------------------------------------------------------
+// Merge helpers for applyUpdated — preserve existing Ready data when the
+// Updated payload would regress it (stale snapshot racing with incremental
+// SummonersUpdated / MatchHistoriesUpdated events).
+// ---------------------------------------------------------------------------
+
+function mergeSummoners(
+  payload: OngoingGameUpdated,
+  existing: Record<string, SummonerInfo>,
+  payloadPuuids: Set<string>,
+): Record<string, SummonerInfo> {
+  const merged: Record<string, SummonerInfo> = {};
+  for (const entry of payload.summoner_states) {
+    if (entry.summoner) {
+      merged[entry.puuid] = stableSummoner(
+        existing[entry.puuid],
+        entry.summoner as SummonerInfo,
+      );
+    } else if (payloadPuuids.has(entry.puuid) && existing[entry.puuid]) {
+      merged[entry.puuid] = existing[entry.puuid];
+    }
+  }
+  return merged;
+}
+
+function mergeHistories(
+  payload: OngoingGameUpdated,
+  existing: Record<string, RawMatchSummaryGame[]>,
+  payloadPuuids: Set<string>,
+): Record<string, RawMatchSummaryGame[]> {
+  const merged: Record<string, RawMatchSummaryGame[]> = {};
+  for (const entry of payload.history_states) {
+    if (entry.games) {
+      merged[entry.puuid] = stableGames(
+        existing[entry.puuid],
+        entry.games as RawMatchSummaryGame[],
+      );
+    } else if (payloadPuuids.has(entry.puuid) && existing[entry.puuid]) {
+      merged[entry.puuid] = existing[entry.puuid];
+    }
+  }
+  return merged;
+}
+
 function sameTeamMember(left: TeamMember, right: TeamMember): boolean {
   return (
     left.assignedPosition === right.assignedPosition &&
@@ -197,34 +241,22 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         };
       }
 
-      // Build next maps with per-entry reference stability.
+      const payloadPuuids = new Set(payload.team_members.map((m) => m.puuid));
       const nextSummonerStates = Object.fromEntries(
         payload.summoner_states.map((entry) => [entry.puuid, entry]),
       );
       const nextHistoryStates = Object.fromEntries(
         payload.history_states.map((entry) => [entry.puuid, entry]),
       );
-      const nextSummoners = Object.fromEntries(
-        payload.summoner_states
-          .filter((entry) => entry.summoner)
-          .map((entry) => [
-            entry.puuid,
-            stableSummoner(
-              state.summonersByPuuid[entry.puuid],
-              entry.summoner as SummonerInfo,
-            ),
-          ]),
+      const nextSummoners = mergeSummoners(
+        payload,
+        state.summonersByPuuid,
+        payloadPuuids,
       );
-      const nextHistories = Object.fromEntries(
-        payload.history_states
-          .filter((entry) => entry.games)
-          .map((entry) => [
-            entry.puuid,
-            stableGames(
-              state.matchHistoriesByPuuid[entry.puuid],
-              entry.games as RawMatchSummaryGame[],
-            ),
-          ]),
+      const nextHistories = mergeHistories(
+        payload,
+        state.matchHistoriesByPuuid,
+        payloadPuuids,
       );
 
       return {
