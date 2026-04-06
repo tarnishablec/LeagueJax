@@ -6,7 +6,6 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
-import { useLcuQueueName } from "@/hooks/use-lcu-queues";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
@@ -64,9 +63,7 @@ function resolveSelectedValue(
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
   const phase = useOngoingGameStore((state) => state.phase);
-  const effectiveQueueId = useOngoingGameStore(
-    (state) => state.effectiveQueueId,
-  );
+
   const modeTag = useOngoingGameStore((state) => state.modeTag);
   const matchHistoriesPending = useOngoingGameStore(
     (state) => state.matchHistoriesPending,
@@ -91,13 +88,9 @@ export function OngoingGameTitlebar() {
     (state) =>
       state.gameflowSession?.gameData.queue.detailedDescription ?? null,
   );
-  const gameModeName = useOngoingGameStore(
-    (state) => state.gameflowSession?.map.gameModeName ?? null,
-  );
+
   const setModeTag = useOngoingGameStore((state) => state.setModeTag);
 
-  const queueName = useLcuQueueName(effectiveQueueId ?? 0);
-  const queueDesc = queueName || queueDetailedDescription || gameModeName;
   const queueIconPath = useMemo(
     () =>
       queueIconAssetPath
@@ -170,12 +163,10 @@ export function OngoingGameTitlebar() {
                 fallbackClassName={s.queueIconFallback}
               />
             ) : null}
-            <span className={s.queueDesc}>{queueDesc}</span>
+            <span className={s.queueDesc}>{queueDetailedDescription}</span>
           </span>
         )}
       </div>
-
-      <div></div>
 
       <div className={s.controls}>
         <div className={s.filterSelect}>

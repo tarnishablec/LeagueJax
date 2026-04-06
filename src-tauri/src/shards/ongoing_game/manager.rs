@@ -20,8 +20,9 @@ use crate::shards::lcu::events::{
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
 use crate::shards::ongoing_game::types::{
-    OngoingGameEvent, OngoingGameMatchHistoryState, OngoingGamePhase, OngoingGamePlayerLoadStatus,
-    OngoingGameSummonerState, OngoingGameUpdated,
+    OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGameMatchHistoryState,
+    OngoingGamePhase, OngoingGamePlayerLoadStatus, OngoingGameSummonerState,
+    OngoingGameSummonersUpdated, OngoingGameUpdated,
 };
 use crate::shards::settings::SettingHandle;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
@@ -240,12 +241,12 @@ impl OngoingGameManager {
     }
 
     pub async fn refresh_current(&self) {
-        let updated = {
-            let state = self.ctx.state.lock().await;
-            state.build_updated_payload(&self.ctx.settings)
-        };
-
+        let state = self.ctx.state.lock().await;
+        let updated = state.build_updated_payload(&self.ctx.settings);
         self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+        // Re-emit individual events so the frontend receives cached data
+        // (the lightweight Updated payload no longer carries it).
+        state.emit_cached_individual_events(&self.ctx);
     }
 
     pub async fn set_match_history_mode(&self, mode: MatchHistoryModeSetting) {
@@ -785,6 +786,8 @@ impl ManagerState {
             .any(|status| *status == OngoingGamePlayerLoadStatus::Loading);
     }
 
+    /// Lightweight summoner states for Updated payloads — carries status only,
+    /// no heavy summoner data (sent via individual SummonersUpdated events).
     fn summoner_states(&self) -> Vec<OngoingGameSummonerState> {
         self.team_players()
             .into_iter()
@@ -797,11 +800,13 @@ impl ManagerState {
                     .get(&puuid)
                     .copied()
                     .unwrap_or(OngoingGamePlayerLoadStatus::Idle),
-                summoner: self.cached_summoners_by_puuid.get(&puuid).cloned(),
+                summoner: None,
             })
             .collect()
     }
 
+    /// Lightweight history states for Updated payloads — carries status only,
+    /// no heavy games arrays (sent via individual MatchHistoriesUpdated events).
     fn history_states(&self) -> Vec<OngoingGameMatchHistoryState> {
         self.team_players()
             .into_iter()
@@ -814,9 +819,38 @@ impl ManagerState {
                     .get(&puuid)
                     .copied()
                     .unwrap_or(OngoingGamePlayerLoadStatus::Idle),
-                games: self.cached_match_histories.get(&puuid).cloned(),
+                games: None,
             })
             .collect()
+    }
+
+    /// Emit individual SummonersUpdated / MatchHistoriesUpdated for every
+    /// player that already has cached data.  Used on refresh / bootstrap so
+    /// the frontend receives the actual data through the incremental channel.
+    pub(crate) fn emit_cached_individual_events(&self, ctx: &OngoingGameContext) {
+        let phase = self.current_phase();
+        for (puuid, _team_id) in self.team_players() {
+            if let Some(status) = self.summoner_status_by_puuid.get(&puuid) {
+                if *status == OngoingGamePlayerLoadStatus::Ready {
+                    ctx.broadcast(OngoingGameEvent::SummonersUpdated(
+                        OngoingGameSummonersUpdated {
+                            phase,
+                            state: self.summoner_state_for_puuid(&puuid),
+                        },
+                    ));
+                }
+            }
+            if let Some(status) = self.history_status_by_puuid.get(&puuid) {
+                if *status == OngoingGamePlayerLoadStatus::Ready {
+                    ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
+                        OngoingGameMatchHistoriesUpdated {
+                            phase,
+                            state: self.history_state_for_puuid(&puuid),
+                        },
+                    ));
+                }
+            }
+        }
     }
 
     pub(crate) fn extract_gameflow_members(

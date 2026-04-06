@@ -174,6 +174,10 @@ type OngoingGameStore = OngoingGameUiState & {
   applyMatchHistoriesUpdated: (
     payload: OngoingGameMatchHistoriesUpdated,
   ) => void;
+  batchSummonersUpdated: (batch: OngoingGameSummonersUpdated[]) => void;
+  batchMatchHistoriesUpdated: (
+    batch: OngoingGameMatchHistoriesUpdated[],
+  ) => void;
 };
 
 /** Fields shared by every applyUpdated branch. */
@@ -298,6 +302,58 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
           ...state.historyStatesByPuuid,
           [puuid]: payload.state,
         },
+        matchHistoriesByPuuid: nextHistories,
+      };
+    });
+  },
+
+  batchSummonersUpdated: (batch) => {
+    set((state) => {
+      const nextStates = { ...state.summonerStatesByPuuid };
+      const nextSummoners = { ...state.summonersByPuuid };
+      for (const payload of batch) {
+        if (payload.phase === "Idle") {
+          return { ...state, summonerStatesByPuuid: {}, summonersByPuuid: {} };
+        }
+        const { puuid, summoner } = payload.state;
+        nextStates[puuid] = payload.state;
+        if (summoner) {
+          nextSummoners[puuid] = summoner;
+        } else {
+          delete nextSummoners[puuid];
+        }
+      }
+      return {
+        ...state,
+        summonerStatesByPuuid: nextStates,
+        summonersByPuuid: nextSummoners,
+      };
+    });
+  },
+
+  batchMatchHistoriesUpdated: (batch) => {
+    set((state) => {
+      const nextStates = { ...state.historyStatesByPuuid };
+      const nextHistories = { ...state.matchHistoriesByPuuid };
+      for (const payload of batch) {
+        if (payload.phase === "Idle") {
+          return {
+            ...state,
+            historyStatesByPuuid: {},
+            matchHistoriesByPuuid: {},
+          };
+        }
+        const { puuid, games } = payload.state;
+        nextStates[puuid] = payload.state;
+        if (games) {
+          nextHistories[puuid] = games;
+        } else {
+          delete nextHistories[puuid];
+        }
+      }
+      return {
+        ...state,
+        historyStatesByPuuid: nextStates,
         matchHistoriesByPuuid: nextHistories,
       };
     });

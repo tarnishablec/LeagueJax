@@ -28,12 +28,47 @@ function navigateTo(path: string): void {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
+/** Collects items within a single animation frame, then flushes them in one batch. */
+function createRafBatcher<T>(flush: (batch: T[]) => void) {
+  let pending: T[] = [];
+  let rafId: number | null = null;
+
+  return {
+    push(item: T) {
+      pending.push(item);
+      if (rafId == null) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          if (pending.length > 0) {
+            const batch = pending;
+            pending = [];
+            flush(batch);
+          }
+        });
+      }
+    },
+    cancel() {
+      if (rafId != null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      pending = [];
+    },
+  };
+}
+
 export class OngoingGameShard implements WebShard {
   private ongoingUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingSummonersUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingMatchHistoriesUpdatedUnlisten: UnlistenFn | null = null;
   private pendingUpdated: OngoingGameUpdated | null = null;
   private updateRafId: number | null = null;
+  private summonerBatcher = createRafBatcher<OngoingGameSummonersUpdated>(
+    (batch) => useOngoingGameStore.getState().batchSummonersUpdated(batch),
+  );
+  private historyBatcher = createRafBatcher<OngoingGameMatchHistoriesUpdated>(
+    (batch) => useOngoingGameStore.getState().batchMatchHistoriesUpdated(batch),
+  );
 
   public label() {
     return "OngoingGameShard";
@@ -101,18 +136,12 @@ export class OngoingGameShard implements WebShard {
     this.ongoingSummonersUpdatedUnlisten =
       await listen<OngoingGameSummonersUpdated>(
         "ongoing-game-summoners-updated",
-        (event) => {
-          useOngoingGameStore.getState().applySummonersUpdated(event.payload);
-        },
+        (event) => this.summonerBatcher.push(event.payload),
       );
     this.ongoingMatchHistoriesUpdatedUnlisten =
       await listen<OngoingGameMatchHistoriesUpdated>(
         "ongoing-game-match-histories-updated",
-        (event) => {
-          useOngoingGameStore
-            .getState()
-            .applyMatchHistoriesUpdated(event.payload);
-        },
+        (event) => this.historyBatcher.push(event.payload),
       );
 
     void invoke("ongoing_game_refresh");
@@ -124,6 +153,8 @@ export class OngoingGameShard implements WebShard {
       this.updateRafId = null;
       this.pendingUpdated = null;
     }
+    this.summonerBatcher.cancel();
+    this.historyBatcher.cancel();
     if (this.ongoingUpdatedUnlisten) {
       this.ongoingUpdatedUnlisten();
       this.ongoingUpdatedUnlisten = null;
