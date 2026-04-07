@@ -79,7 +79,9 @@
       "mcp__plugin_pixel-plugin_aseprite__link_cel",
       "WebFetch(domain:www.mingweisamuel.com)",
       "Read(//tmp/**)",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('/tmp/lcu-openapi.json'\\)\\); s=d['components']['schemas']['LolChampSelectChampSelectSummoner']; print\\(json.dumps\\(s, indent=2\\)\\)\")",
+      "Bash(python:*)"
     ]
   }
 }

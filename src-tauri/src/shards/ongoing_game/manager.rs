@@ -7,8 +7,10 @@ use tokio::task::JoinSet;
 
 use crate::shards::lcu::api::OngoingSessionSeed;
 use crate::shards::lcu::concepts::champ_select_session::{
-    ChampSelectSession, ChampSelectSessionData, TeamMember as ChampSelectTeamMember,
+    ChampSelectSession, ChampSelectSessionData, NameVisibilityType,
+    TeamMember as ChampSelectTeamMember,
 };
+use crate::shards::lcu::concepts::champ_select_summoner::ChampSelectSummoner;
 use crate::shards::lcu::concepts::gameflow_phase::Phase as GameflowPhase;
 use crate::shards::lcu::concepts::gameflow_session::{GameflowSession, GameflowSessionData};
 use crate::shards::lcu::concepts::teambuilder_tbd_game::{
@@ -537,7 +539,92 @@ impl OngoingGameManager {
             return;
         }
 
+        // Backfill hidden puuid / summoner id using the per-cell summoner
+        // snapshots that were fetched alongside the seed.  This is a one-shot
+        // cold-start concern, so we apply it directly rather than round-trip
+        // through a synthesized WS event.
+        if !seed.champ_select_summoners.is_empty() {
+            self.apply_champ_select_summoners(&seed.champ_select_summoners)
+                .await;
+        }
+
         self.refresh_current().await;
+    }
+
+    /// Merge per-cell `ChampSelectSummoner` snapshots into
+    /// `cached_team_members` by `cell_id`, used during cold start to replace
+    /// obfuscated identity fields from `/lol-champ-select/v1/session`
+    /// (hidden-name ranked pre-reveal) with the real values returned by
+    /// `/lol-champ-select/v1/summoners/{cellId}`.
+    async fn apply_champ_select_summoners(&self, summoners: &[ChampSelectSummoner]) {
+        if summoners.is_empty() {
+            return;
+        }
+
+        let mut state = self.ctx.state.lock().await;
+        if state.cached_team_members.is_empty() {
+            return;
+        }
+
+        let by_cell: HashMap<u64, &ChampSelectSummoner> = summoners
+            .iter()
+            .filter(|s| s.cell_id >= 0)
+            .map(|s| (s.cell_id as u64, s))
+            .collect();
+
+        let mut changed = false;
+        for member in state.cached_team_members.iter_mut() {
+            let Some(summoner) = by_cell.get(&member.cell_id) else {
+                continue;
+            };
+
+            if !summoner.puuid.trim().is_empty() && member.puuid != summoner.puuid {
+                member.puuid = summoner.puuid.clone();
+                changed = true;
+            }
+            if summoner.summoner_id > 0 && member.summoner_id != summoner.summoner_id {
+                member.summoner_id = summoner.summoner_id;
+                changed = true;
+            }
+            if !summoner.game_name.trim().is_empty() && member.game_name != summoner.game_name {
+                member.game_name = summoner.game_name.clone();
+                changed = true;
+            }
+            if !summoner.tag_line.trim().is_empty() && member.tag_line != summoner.tag_line {
+                member.tag_line = summoner.tag_line.clone();
+                changed = true;
+            }
+            if !summoner.obfuscated_puuid.trim().is_empty()
+                && member.obfuscate_puuid != summoner.obfuscated_puuid
+            {
+                member.obfuscate_puuid = summoner.obfuscated_puuid.clone();
+                changed = true;
+            }
+            if summoner.obfuscated_summoner_id > 0
+                && member.obfuscate_summoner_id != summoner.obfuscated_summoner_id as u64
+            {
+                member.obfuscate_summoner_id = summoner.obfuscated_summoner_id as u64;
+                changed = true;
+            }
+            // If the per-cell endpoint reports a concrete visibility and the
+            // current entry is still the default (VISIBLE), overwrite it.
+            if matches!(summoner.name_visibility_type, NameVisibilityType::HIDDEN)
+                && member.name_visibility_type != NameVisibilityType::HIDDEN
+            {
+                member.name_visibility_type = NameVisibilityType::HIDDEN;
+                changed = true;
+            }
+        }
+
+        if changed {
+            tracing::info!(
+                "[ongoing_game] backfilled {} champ-select cells via per-cell summoner fetch",
+                state.cached_team_members.len()
+            );
+            let updated = state.build_updated_payload(&self.ctx.settings);
+            drop(state);
+            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+        }
     }
 
     async fn current_focus_matches(&self, expected_focus: Option<(u32, u16)>) -> bool {
