@@ -21,13 +21,15 @@ export function MatchCard({
   match,
   sgpServerId,
   me,
+  defaultExpanded = false,
 }: {
   me: RawMatchSummaryParticipant;
   match: RawMatchSummaryGame;
   sgpServerId: string | null;
+  defaultExpanded?: boolean;
 }) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const vm = useMatchCardViewModel({ match, me });
   const outcomeLabel = t(OUTCOME_LABEL_KEYS[vm.gameResult], {
     defaultValue: vm.gameResult,

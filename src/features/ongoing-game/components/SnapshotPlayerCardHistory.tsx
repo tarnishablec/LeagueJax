@@ -1,8 +1,11 @@
+import { Dialog } from "@ark-ui/react/dialog";
+import { Portal } from "@ark-ui/react/portal";
 import { Bot } from "lucide-react";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
+import { MatchCard } from "@/features/history/components/match-card/MatchCard";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { vars } from "@/styles/theme.css.ts";
 import {
@@ -30,41 +33,65 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
   const championId = game.me.championId > 0 ? game.me.championId : null;
 
   return (
-    <div
-      className={`${s.historyRow} ${historyResultClassName(result, {
-        winText: s.winRow,
-        loseText: s.loseRow,
-        remakeText: s.remakeRow,
-        terminatedText: s.terminatedRow,
-      })}`}
-    >
-      <ChampionAvatar
-        championId={championId}
-        imageClassName={s.historyChampionAvatar}
-        fallbackClassName={s.historyChampionFallback}
-      />
-      <div className={s.matchBrief}>
-        <span className={s.queueNameText}>{queueName}</span>
-        <div className={s.matchBriefDown}>
-          <span
-            className={`${historyResultClassName(result, {
-              winText: s.winText,
-              loseText: s.loseText,
-              remakeText: s.remakeText,
-              terminatedText: s.terminatedText,
-            })}`}
-          >
-            {historyResultLabel(result, t)}
+    <Dialog.Root lazyMount unmountOnExit closeOnEscape>
+      <Dialog.Trigger asChild>
+        <button
+          type="button"
+          className={`${s.historyRowButtonReset} ${s.historyRow} ${historyResultClassName(
+            result,
+            {
+              winText: s.winRow,
+              loseText: s.loseRow,
+              remakeText: s.remakeRow,
+              terminatedText: s.terminatedRow,
+            },
+          )}`}
+        >
+          <ChampionAvatar
+            championId={championId}
+            imageClassName={s.historyChampionAvatar}
+            fallbackClassName={s.historyChampionFallback}
+          />
+          <div className={s.matchBrief}>
+            <span className={s.queueNameText}>{queueName}</span>
+            <div className={s.matchBriefDown}>
+              <span
+                className={`${historyResultClassName(result, {
+                  winText: s.winText,
+                  loseText: s.loseText,
+                  remakeText: s.remakeText,
+                  terminatedText: s.terminatedText,
+                })}`}
+                style={{
+                  fontSize: "0.75rem",
+                }}
+              >
+                {historyResultLabel(result, t)}
+              </span>
+              <span className={s.gameTimeText}>
+                {formatGameTime(game.json.gameCreation)}
+              </span>
+            </div>
+          </div>
+          <span className={s.kdaText}>
+            {game.me.kills ?? 0}/{game.me.deaths ?? 0}/{game.me.assists ?? 0}
           </span>
-          <span className={s.gameTimeText}>
-            {formatGameTime(game.json.gameCreation)}
-          </span>
-        </div>
-      </div>
-      <span className={s.kdaText}>
-        {game.me.kills ?? 0}/{game.me.deaths ?? 0}/{game.me.assists ?? 0}
-      </span>
-    </div>
+        </button>
+      </Dialog.Trigger>
+      <Portal>
+        <Dialog.Backdrop className={s.historyDialogBackdrop} />
+        <Dialog.Positioner className={s.historyDialogPositioner}>
+          <Dialog.Content className={s.historyDialogContent}>
+            <MatchCard
+              match={game}
+              me={game.me}
+              sgpServerId={null}
+              defaultExpanded
+            />
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
   );
 });
 

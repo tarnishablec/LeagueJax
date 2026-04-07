@@ -201,6 +201,48 @@ export const historyRow = style({
   },
 });
 
+export const historyRowButtonReset = style({
+  width: "100%",
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  font: "inherit",
+  textAlign: "left",
+});
+
+export const historyDialogBackdrop = style({
+  position: "fixed",
+  inset: 0,
+  background: "oklch(0.06 0 0 / 0.62)",
+  zIndex: 40,
+  selectors: {
+    "&[hidden]": { display: "none" },
+  },
+});
+
+export const historyDialogPositioner = style({
+  position: "fixed",
+  inset: 0,
+  display: "grid",
+  placeItems: "center",
+  padding: 20,
+  zIndex: 41,
+  selectors: {
+    "&[hidden]": { display: "none" },
+  },
+});
+
+export const historyDialogContent = style({
+  width: "min(820px, calc(100vw - 40px))",
+  maxHeight: "calc(100vh - 40px)",
+  overflow: "auto",
+  borderRadius: 12,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popover,
+  color: vars.color.foreground,
+  padding: 14,
+});
+
 export const winRow = style({
   background: `color-mix(in oklch, ${vars.color.success} 12%, transparent)`,
 });
@@ -296,6 +338,7 @@ export const matchBriefDown = style({
   gridAutoFlow: "column",
   gap: 8,
   lineHeight: 1,
+  alignItems: "center",
 });
 
 export const queueNameText = style({
@@ -304,6 +347,7 @@ export const queueNameText = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+  fontSize: "0.65rem",
 });
 
 export const gameTimeText = style({
