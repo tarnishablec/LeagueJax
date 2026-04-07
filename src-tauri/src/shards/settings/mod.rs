@@ -19,12 +19,16 @@ use uuid::Uuid;
 
 const SETTINGS_TREE: &str = "settings";
 const SETTINGS_SNAPSHOT_KEY: &[u8] = b"snapshot";
-const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 2] = [
+const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 3] = [
     (
         "general.preferences.language",
         "system.preferences.language",
     ),
     ("general.preferences.theme", "system.preferences.theme"),
+    (
+        "system.logging.detailedMode",
+        "system.logging.recordToFile",
+    ),
 ];
 
 #[derive(Debug, Clone)]
