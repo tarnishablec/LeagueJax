@@ -304,6 +304,25 @@ export const kdaText = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+  fontSize: "0.75rem",
+});
+
+export const kdaCell = style({
+  display: "grid",
+  gridTemplateRows: "repeat(2, auto)",
+  justifyItems: "end",
+  alignItems: "center",
+  gap: 2,
+  lineHeight: 1,
+});
+
+export const positionText = style({
+  color: vars.color.mutedForeground,
+  fontSize: "0.68rem",
+  fontWeight: 600,
+  textTransform: "uppercase",
+  whiteSpace: "nowrap",
+  lineHeight: 1,
 });
 
 export const historyMeta = style({

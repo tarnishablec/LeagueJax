@@ -198,7 +198,7 @@ function computeMatchTags(
   return tags;
 }
 
-function normalizeHistoryPosition(
+export function normalizeHistoryPosition(
   value: string | null | undefined,
 ): string | null {
   const normalized = value?.trim().toUpperCase();

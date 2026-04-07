@@ -5,7 +5,9 @@ import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
+import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
 import { MatchCard } from "@/features/history/components/match-card/MatchCard";
+import { normalizeHistoryPosition } from "@/features/history/hooks/use-match-card-view-model";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { vars } from "@/styles/theme.css.ts";
 import {
@@ -31,6 +33,10 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
   const result = resolveRecentGameResult(game);
   const queueName = useLcuQueueName(game.json.queueId);
   const championId = game.me.championId > 0 ? game.me.championId : null;
+  const position =
+    normalizeHistoryPosition(game.me.teamPosition) ??
+    normalizeHistoryPosition(game.me.individualPosition) ??
+    normalizeHistoryPosition(game.me.lane);
 
   return (
     <Dialog.Root lazyMount unmountOnExit closeOnEscape>
@@ -73,9 +79,16 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
               </span>
             </div>
           </div>
-          <span className={s.kdaText}>
-            {game.me.kills ?? 0}/{game.me.deaths ?? 0}/{game.me.assists ?? 0}
-          </span>
+          <div className={s.kdaCell}>
+            <span className={s.kdaText}>
+              {game.me.kills ?? 0}/{game.me.deaths ?? 0}/{game.me.assists ?? 0}
+            </span>
+            {position ? (
+              <LeaguePositionIcon position={position} width={14} height={14} />
+            ) : (
+              <span className={s.positionText}>-</span>
+            )}
+          </div>
         </button>
       </Dialog.Trigger>
       <Portal>
