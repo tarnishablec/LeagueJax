@@ -6,9 +6,13 @@ mod storage;
 mod utils;
 
 use std::error::Error;
-use std::fs;
-use std::sync::Arc;
+use std::io::{self, Write};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, RunEvent};
+use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
+use tracing_subscriber::fmt::writer::MakeWriter;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
@@ -30,8 +34,102 @@ use window_vibrancy::apply_acrylic;
 use jax::Jax;
 use jax_probes::TimingProbe;
 
+#[derive(Clone)]
+struct FileLoggingHandle {
+    inner: Arc<Mutex<FileLoggingState>>,
+}
+
+struct FileLoggingState {
+    writer: Option<NonBlocking>,
+    guard: Option<WorkerGuard>,
+}
+
+impl FileLoggingHandle {
+    fn new() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(FileLoggingState {
+                writer: None,
+                guard: None,
+            })),
+        }
+    }
+
+    fn enable(&self, log_dir: &Path, file_name: &str) -> Result<(), io::Error> {
+        std::fs::create_dir_all(log_dir)?;
+        let file_appender = tracing_appender::rolling::never(log_dir, file_name);
+        let (writer, guard) = tracing_appender::non_blocking(file_appender);
+
+        if let Ok(mut state) = self.inner.lock() {
+            state.writer = Some(writer);
+            state.guard = Some(guard);
+        }
+
+        Ok(())
+    }
+
+    fn disable(&self) {
+        if let Ok(mut state) = self.inner.lock() {
+            state.writer = None;
+            state.guard = None;
+        }
+    }
+
+    fn current_writer(&self) -> Option<NonBlocking> {
+        self.inner.lock().ok()?.writer.clone()
+    }
+}
+
+#[derive(Clone)]
+struct SwitchableFileMakeWriter {
+    file_logging: FileLoggingHandle,
+}
+
+impl SwitchableFileMakeWriter {
+    fn new(file_logging: FileLoggingHandle) -> Self {
+        Self { file_logging }
+    }
+}
+
+struct SwitchableFileWriter {
+    file_logging: FileLoggingHandle,
+}
+
+impl<'a> MakeWriter<'a> for SwitchableFileMakeWriter {
+    type Writer = SwitchableFileWriter;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        SwitchableFileWriter {
+            file_logging: self.file_logging.clone(),
+        }
+    }
+}
+
+impl Write for SwitchableFileWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if let Some(mut writer) = self.file_logging.current_writer() {
+            writer.write(buf)
+        } else {
+            Ok(buf.len())
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        if let Some(mut writer) = self.file_logging.current_writer() {
+            writer.flush()
+        } else {
+            Ok(())
+        }
+    }
+}
+
 struct TracingState {
-    _file_guard: tracing_appender::non_blocking::WorkerGuard,
+    file_logging: FileLoggingHandle,
+}
+
+impl TracingState {
+    fn file_logging_handle(&self) -> FileLoggingHandle {
+        self.file_logging.clone()
+    }
 }
 
 fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, Box<dyn Error>> {
@@ -47,35 +145,26 @@ fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, 
         .with_filter(env_filter);
 
     // File layer — enabled in all builds
-    let log_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| -> Box<dyn Error> { Box::from(e.to_string()) })?
-        .join("logs");
-    fs::create_dir_all(&log_dir)?;
-
-    let startup_log_name = shards::log::LogShard::current_log_filename();
-    let file_appender = tracing_appender::rolling::never(&log_dir, startup_log_name);
+    let file_logging = FileLoggingHandle::new();
     let local_timer = tracing_subscriber::fmt::time::LocalTime::rfc_3339();
-    let (file_non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
     let file_layer = tracing_subscriber::fmt::layer()
         .with_timer(local_timer)
         .with_ansi(false)
         .with_file(true)
         .with_line_number(true)
         .with_target(true)
-        .with_writer(file_non_blocking)
-        .with_filter(tracing_subscriber::EnvFilter::new(
-            "league_jax_lib=info,lcu_ws_raw=debug,lcu_http=debug,sgp_http=debug",
-        ));
+        .with_writer(SwitchableFileMakeWriter::new(file_logging.clone()))
+        .with_filter(filter_fn(|metadata| {
+            metadata.target().starts_with("league_jax_lib")
+                || matches!(metadata.target(), "lcu_ws_raw" | "lcu_http" | "sgp_http")
+        }));
 
     tracing_subscriber::registry()
         .with(console_layer)
         .with(file_layer)
         .init();
-    Ok(TracingState {
-        _file_guard: file_guard,
-    })
+    let _ = app;
+    Ok(TracingState { file_logging })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

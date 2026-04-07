@@ -41,7 +41,7 @@ urlencoding = "2"
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "local-time"] }
-#time = { version = "0.3", features = ["local-offset"] }
+time = { version = "0.3", features = ["local-offset"] }
 maokai-runner = { git = "https://github.com/tarnishablec/maokai", branch = "main" }
 maokai-tree = { git = "https://github.com/tarnishablec/maokai", branch = "main" }
 windows-sys = { version = "0.61.2", features = ["Win32_System_Threading", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_WindowsProgramming", "Win32_System_LibraryLoader", "Wdk_System_Threading", "Win32_System_Memory"] }

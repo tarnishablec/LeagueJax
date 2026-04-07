@@ -49,15 +49,19 @@ export const settingsI18n: Resource = {
         },
       },
       logging: {
-        detailedMode: {
-          label: "Detailed Logging",
-          hint: "Enable debug-level file logging for troubleshooting.",
+        recordToFile: {
+          label: "Record Logs To File",
+          hint: "Write backend logs to local log files.",
+        },
+        retentionDays: {
+          label: "Log Retention Days",
+          hint: "Automatically remove log files older than this many days.",
         },
         openDir: {
           label: "Open Log Directory",
         },
         cleanLogs: {
-          label: "Clean Old Logs",
+          label: "Clear Logs Now",
         },
       },
       registry: {
@@ -150,15 +154,19 @@ export const settingsI18n: Resource = {
         },
       },
       logging: {
-        detailedMode: {
-          label: "详细日志",
-          hint: "启用 debug 级别的文件日志，用于排查问题。",
+        recordToFile: {
+          label: "记录日志到文件",
+          hint: "将后端日志写入本地日志文件。",
+        },
+        retentionDays: {
+          label: "日志保留天数",
+          hint: "自动删除早于该天数的日志文件。",
         },
         openDir: {
           label: "打开日志目录",
         },
         cleanLogs: {
-          label: "清理旧日志",
+          label: "立即清理日志",
         },
       },
       registry: {
@@ -252,15 +260,19 @@ export const settingsI18n: Resource = {
         },
       },
       logging: {
-        detailedMode: {
-          label: "詳細ログ",
-          hint: "トラブルシューティング用に debug レベルのファイルログを有効にします。",
+        recordToFile: {
+          label: "ログをファイルに記録",
+          hint: "バックエンドログをローカルのログファイルに書き込みます。",
+        },
+        retentionDays: {
+          label: "ログ保持日数",
+          hint: "この日数より古いログファイルを自動削除します。",
         },
         openDir: {
           label: "ログディレクトリを開く",
         },
         cleanLogs: {
-          label: "古いログを削除",
+          label: "今すぐログを整理",
         },
       },
       registry: {

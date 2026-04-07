@@ -9,12 +9,19 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::OnceLock;
+use time::{Duration, OffsetDateTime, UtcOffset};
 use tauri::Manager;
 use uuid::Uuid;
 
-const DETAILED_MODE_SETTING_ID: &str = "system.logging.detailedMode";
+const RECORD_TO_FILE_SETTING_ID: &str = "system.logging.recordToFile";
+const RETENTION_DAYS_SETTING_ID: &str = "system.logging.retentionDays";
 const OPEN_DIR_SETTING_ID: &str = "system.logging.openDir";
 const CLEAN_LOGS_SETTING_ID: &str = "system.logging.cleanLogs";
+const LOG_FILE_PREFIX: &str = "league-jax.";
+const LOG_FILE_SUFFIX: &str = ".log";
+const DEFAULT_RETENTION_DAYS: i64 = 7;
+const MIN_RETENTION_DAYS: i64 = 1;
+const MAX_RETENTION_DAYS: i64 = 7;
 static STARTUP_LOG_ID: OnceLock<Uuid> = OnceLock::new();
 
 pub struct LogShard;
@@ -31,6 +38,21 @@ impl LogShard {
     pub fn current_log_filename() -> String {
         format!("league-jax.{}.log", Self::current_log_id())
     }
+
+    pub fn default_record_to_file() -> bool {
+        cfg!(debug_assertions)
+    }
+
+    pub fn default_retention_days() -> i64 {
+        DEFAULT_RETENTION_DAYS
+    }
+
+    fn sanitize_retention_days(value: Option<&Value>) -> i64 {
+        value
+            .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|n| n.round() as i64)))
+            .unwrap_or_else(Self::default_retention_days)
+            .clamp(MIN_RETENTION_DAYS, MAX_RETENTION_DAYS)
+    }
 }
 
 #[async_trait]
@@ -41,19 +63,40 @@ impl Shard for LogShard {
         let settings = jax.get_shard::<SettingsShard>();
         let tauri_host = jax.get_shard::<TauriHost>();
 
-        settings.register_definition(SettingDefinitionDto {
-            id: DETAILED_MODE_SETTING_ID.to_string(),
-            label_key: "settings.logging.detailedMode.label".to_string(),
-            hint_key: Some("settings.logging.detailedMode.hint".to_string()),
+        let record_to_file_handle = settings.register_definition(SettingDefinitionDto {
+            id: RECORD_TO_FILE_SETTING_ID.to_string(),
+            label_key: "settings.logging.recordToFile.label".to_string(),
+            hint_key: Some("settings.logging.recordToFile.hint".to_string()),
             scope: SettingScopeDto::Backend,
             control: SettingControlDto::Toggle,
-            default_value: Value::Bool(false),
+            default_value: Value::Bool(Self::default_record_to_file()),
             order: Some(10),
             visible: Some(true),
             options: None,
         })?;
 
+        let retention_days_handle = settings.register_definition(SettingDefinitionDto {
+            id: RETENTION_DAYS_SETTING_ID.to_string(),
+            label_key: "settings.logging.retentionDays.label".to_string(),
+            hint_key: Some("settings.logging.retentionDays.hint".to_string()),
+            scope: SettingScopeDto::Backend,
+            control: SettingControlDto::Number {
+                placeholder_key: None,
+                min: Some(MIN_RETENTION_DAYS as f64),
+                max: Some(MAX_RETENTION_DAYS as f64),
+                step: Some(1.0),
+            },
+            default_value: Value::from(Self::default_retention_days()),
+            order: Some(15),
+            visible: Some(true),
+            options: None,
+        })?;
+
+        let file_logging = tauri_host.app.state::<crate::TracingState>().file_logging_handle();
+
         let app = tauri_host.app.clone();
+        let file_logging_for_action = file_logging.clone();
+        let settings_for_action = Arc::clone(&settings);
         settings.register_action(
             SettingDefinitionDto {
                 id: OPEN_DIR_SETTING_ID.to_string(),
@@ -110,18 +153,87 @@ impl Shard for LogShard {
                 }
 
                 let active_log_file = log_dir.join(LogShard::current_log_filename());
-                let removed = clean_log_dir(&log_dir, &active_log_file)?;
-                tracing::info!(removed, "Cleaned all log files");
+                let record_to_file = settings_for_action
+                    .get_value(RECORD_TO_FILE_SETTING_ID)?
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or_else(LogShard::default_record_to_file);
+
+                file_logging_for_action.disable();
+                let removed = clear_log_dir(&log_dir, &active_log_file)?;
+                if record_to_file {
+                    file_logging_for_action
+                        .enable(&log_dir, &LogShard::current_log_filename())
+                        .map_err(crate::error::AppError::from)?;
+                }
+
+                tracing::info!(removed, "Cleared log files");
                 Ok(Value::from(removed))
             },
         )?;
 
-        let detailed = settings
-            .get_value(DETAILED_MODE_SETTING_ID)?
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
+        let log_dir = tauri_host
+            .app
+            .path()
+            .app_data_dir()
+            .map_err(|e| crate::error::AppError::other(e.to_string()))?
+            .join("logs");
+        fs::create_dir_all(&log_dir)?;
 
-        tracing::info!(detailed_mode = detailed, "Log shard initialized");
+        let active_log_file = log_dir.join(Self::current_log_filename());
+        let retention_days = Self::sanitize_retention_days(Some(&retention_days_handle.get_value()?));
+        let removed_expired = clean_expired_logs(&log_dir, &active_log_file, retention_days)?;
+        if removed_expired > 0 {
+            tracing::info!(removed = removed_expired, retention_days, "Cleaned expired log files");
+        }
+
+        let record_to_file_setting = record_to_file_handle
+            .get_value()?
+            .as_bool()
+            .unwrap_or_else(Self::default_record_to_file);
+        if record_to_file_setting {
+            file_logging.enable(&log_dir, &Self::current_log_filename())?;
+        } else {
+            file_logging.disable();
+        }
+
+        let app_for_watch = tauri_host.app.clone();
+        let file_logging_for_watch = file_logging.clone();
+        record_to_file_handle.spawn_watch(false, move |value| {
+            let app = app_for_watch.clone();
+            let file_logging = file_logging_for_watch.clone();
+            async move {
+                let record_to_file = value
+                    .as_bool()
+                    .unwrap_or_else(LogShard::default_record_to_file);
+                let log_dir = match app.path().app_data_dir() {
+                    Ok(dir) => dir.join("logs"),
+                    Err(error) => {
+                        tracing::error!(error = %error, "Failed to resolve log directory");
+                        return;
+                    }
+                };
+
+                let result = if record_to_file {
+                    file_logging.enable(&log_dir, &LogShard::current_log_filename())
+                } else {
+                    file_logging.disable();
+                    Ok(())
+                };
+
+                if let Err(error) = result {
+                    tracing::error!(error = %error, record_to_file, "Failed to update file logging");
+                } else {
+                    tracing::info!(record_to_file, "Updated file logging");
+                }
+            }
+        })?;
+
+        tracing::info!(
+            record_to_file_setting,
+            record_to_file_effective = record_to_file_setting,
+            retention_days,
+            "Log shard initialized"
+        );
 
         Ok(())
     }
@@ -131,7 +243,7 @@ impl Shard for LogShard {
     }
 }
 
-fn clean_log_dir(dir: &Path, active_log_file: &Path) -> Result<u32, std::io::Error> {
+fn clear_log_dir(dir: &Path, active_log_file: &Path) -> Result<u32, std::io::Error> {
     let mut cleaned = 0u32;
 
     for entry in fs::read_dir(dir)? {
@@ -139,12 +251,14 @@ fn clean_log_dir(dir: &Path, active_log_file: &Path) -> Result<u32, std::io::Err
         let path = entry.path();
 
         if path.is_dir() {
-            cleaned += clean_log_dir(&path, active_log_file)?;
+            cleaned += clear_log_dir(&path, active_log_file)?;
             continue;
         }
 
         if path.is_file() {
             if path == active_log_file {
+                fs::write(&path, b"")?;
+                cleaned += 1;
                 continue;
             }
             if fs::remove_file(&path).is_err() {
@@ -156,4 +270,58 @@ fn clean_log_dir(dir: &Path, active_log_file: &Path) -> Result<u32, std::io::Err
     }
 
     Ok(cleaned)
+}
+
+fn clean_expired_logs(
+    dir: &Path,
+    active_log_file: &Path,
+    retention_days: i64,
+) -> Result<u32, std::io::Error> {
+    let now = OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc());
+    let local_offset = UtcOffset::current_local_offset().unwrap_or(UtcOffset::UTC);
+    let cutoff = now.to_offset(local_offset) - Duration::days(retention_days);
+    let mut cleaned = 0u32;
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            cleaned += clean_expired_logs(&path, active_log_file, retention_days)?;
+            continue;
+        }
+
+        if !path.is_file() || path == active_log_file {
+            continue;
+        }
+
+        let Some(created_at) = parse_log_created_at_from_filename(&path, local_offset) else {
+            continue;
+        };
+
+        if created_at >= cutoff {
+            continue;
+        }
+
+        if fs::remove_file(&path).is_err() {
+            fs::write(&path, b"")?;
+        }
+        cleaned += 1;
+    }
+
+    Ok(cleaned)
+}
+
+fn parse_log_created_at_from_filename(path: &Path, local_offset: UtcOffset) -> Option<OffsetDateTime> {
+    let file_name = path.file_name()?.to_str()?;
+    let uuid_str = file_name
+        .strip_prefix(LOG_FILE_PREFIX)?
+        .strip_suffix(LOG_FILE_SUFFIX)?;
+    let uuid = Uuid::parse_str(uuid_str).ok()?;
+    let timestamp = uuid.get_timestamp()?;
+    let (seconds, nanos) = timestamp.to_unix();
+    let seconds = i64::try_from(seconds).ok()?;
+    let created_at = OffsetDateTime::from_unix_timestamp(seconds).ok()?;
+    let created_at = created_at.replace_nanosecond(nanos).ok()?;
+    Some(created_at.to_offset(local_offset))
 }
