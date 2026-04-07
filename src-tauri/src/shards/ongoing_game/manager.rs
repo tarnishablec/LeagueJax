@@ -12,11 +12,11 @@ use crate::shards::lcu::events::champ_select_session::{
 use crate::shards::lcu::events::gameflow_phase::Phase as GameflowPhase;
 use crate::shards::lcu::events::gameflow_session::{GameflowSession, GameflowSessionData};
 use crate::shards::lcu::events::teambuilder_tbd_game::{
-    TeambuilderCell, TeambuilderTbdGame, TeambuilderTbdGameMessage, TeambuilderTbdGamePayload,
+    TeambuilderCell, TeambuilderTbdGamePayload,
 };
 use crate::shards::lcu::events::{
-    EventType, LanePosition, LcuWsEvent, URI_CHAMP_SELECT_SESSION, URI_GAMEFLOW_SESSION,
-    URI_RMS_TEAMBUILDER_TBD_GAME,
+    EventType, LanePosition, LcuWsEvent, URI_GAMEFLOW_SESSION,
+    URI_TEAM_BUILDER_CHAMP_SELECT_SESSION,
 };
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
@@ -146,14 +146,28 @@ impl OngoingGameManager {
                     payload.data.their_team.len()
                 );
 
-                // Hover intent: LCU only exposes unlocked hover picks through the
-                // `actions[]` list (`type == "pick"`, `!completed`) and through the
-                // `myTeam[]` / `theirTeam[]` `championPickIntent` field. Fold both
-                // back into `cached_team_members` so the frontend can surface the
-                // hovered champion before it is locked in.
+                // During cold start in ChampSelect we seed with
+                // `/lol-lobby-team-builder/champ-select/v1/session`. Treat this
+                // payload as the roster source.
                 if payload.event_type != EventType::Delete {
-                    let mut hover_by_cell: std::collections::HashMap<u64, u64> =
-                        std::collections::HashMap::new();
+                    if payload.uri == URI_TEAM_BUILDER_CHAMP_SELECT_SESSION {
+                        let next_members = extract_team_builder_champ_select_members(&payload.data);
+                        tracing::info!(
+                            "[ongoing_game] team snapshot source=team_builder_champ_select_session phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
+                            GameflowPhase::ChampSelect,
+                            payload.event_type,
+                            event_game_id,
+                            state.lifecycle_game_id,
+                            next_members.len()
+                        );
+                        members_changed =
+                            !team_members_equivalent(&state.cached_team_members, &next_members);
+                        state.cached_team_members = next_members;
+                    }
+
+                    // Hover intent: LCU only exposes unlocked hover picks through
+                    // `actions[]` (`type == "pick"`, `!completed`).
+                    let mut hover_by_cell: HashMap<u64, u64> = HashMap::new();
                     for action_group in &payload.data.actions {
                         for action in action_group {
                             if action.r#type == "pick"
@@ -179,22 +193,9 @@ impl OngoingGameManager {
                     }
                 }
             }
-            // Teambuilder is the authoritative roster source during ChampSelect
-            // and must not be replaced by `ChampSelectSession` data:
-            //
-            //   1. Hidden-name games (e.g. ranked pre-reveal) return obfuscated or
-            //      empty `puuid` / `summonerId` from `/lol-champ-select/v1/session`.
-            //      The teambuilder tbd payload is the ONLY LCU source that exposes
-            //      the real puuid + summonerId for those players, which we need to
-            //      fetch summoner info and match history.
-            //
-            //   2. Bot detection: teambuilder cells expose `summoner_id == 0` as a
-            //      reliable bot signal. A puuid-empty heuristic on ChampSelectSession
-            //      would misclassify hidden-name real players as bots.
-            //
-            // This payload is push-only (riot-messaging-service), not fetchable via
-            // REST, so cold-starting mid-ChampSelect means we must wait for the
-            // first tbd WS push before the full roster becomes visible.
+            // Teambuilder RMS payload is still cached for in-game merge logic, but
+            // cold-start ChampSelect roster now comes from
+            // `/lol-lobby-team-builder/champ-select/v1/session`.
             LcuWsEvent::TeambuilderTbdGame(payload) => {
                 let event_game_id = extract_teambuilder_game_id(&payload.data.payload);
                 state.sync_lifecycle_game_id(event_game_id, "teambuilder_tbd_game");
@@ -215,10 +216,9 @@ impl OngoingGameManager {
                         state.cached_team_members.len()
                     );
                 } else {
-                    let next_members = extract_teambuilder_allied_members(&payload.data.payload);
-                    if next_members.is_empty() && !state.cached_team_members.is_empty() {
+                    if !state.cached_team_members.is_empty() {
                         tracing::info!(
-                            "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_empty_teambuilder_replace",
+                            "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=prefer_champ_select_session_roster",
                             state.current_phase(),
                             payload.event_type,
                             event_game_id,
@@ -226,17 +226,30 @@ impl OngoingGameManager {
                             state.cached_team_members.len()
                         );
                     } else {
-                        tracing::info!(
-                            "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
-                            GameflowPhase::ChampSelect,
-                            payload.event_type,
-                            event_game_id,
-                            state.lifecycle_game_id,
-                            next_members.len()
-                        );
-                        members_changed =
-                            !team_members_equivalent(&state.cached_team_members, &next_members);
-                        state.cached_team_members = next_members;
+                        let next_members =
+                            extract_teambuilder_allied_members(&payload.data.payload);
+                        if next_members.is_empty() && !state.cached_team_members.is_empty() {
+                            tracing::info!(
+                                "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=skip_empty_teambuilder_replace",
+                                state.current_phase(),
+                                payload.event_type,
+                                event_game_id,
+                                state.lifecycle_game_id,
+                                state.cached_team_members.len()
+                            );
+                        } else {
+                            tracing::info!(
+                                "[ongoing_game] team snapshot source=teambuilder phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={}",
+                                GameflowPhase::ChampSelect,
+                                payload.event_type,
+                                event_game_id,
+                                state.lifecycle_game_id,
+                                next_members.len()
+                            );
+                            members_changed =
+                                !team_members_equivalent(&state.cached_team_members, &next_members);
+                            state.cached_team_members = next_members;
+                        }
                     }
                 }
             }
@@ -472,7 +485,7 @@ impl OngoingGameManager {
                 drop(state);
 
                 ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
-                    crate::shards::ongoing_game::types::OngoingGameMatchHistoriesUpdated {
+                    OngoingGameMatchHistoriesUpdated {
                         phase,
                         state: history_state,
                     },
@@ -724,7 +737,11 @@ impl ManagerState {
         let mut players = Vec::new();
 
         for member in &self.cached_team_members {
-            if is_bot_puuid(&member.puuid) || !seen.insert(member.puuid.clone()) {
+            if member.puuid.trim().is_empty()
+                || member.summoner_id == 0
+                || is_bot_puuid(&member.puuid)
+                || !seen.insert(member.puuid.clone())
+            {
                 continue;
             }
             players.push((member.puuid.clone(), member.team));
@@ -1155,15 +1172,17 @@ fn extract_teambuilder_allied_members(
         .cells
         .allied_team
         .iter()
-        .map(|cell| {
-            let member = teambuilder_cell_to_member(cell);
-            if cell.summoner_id == 0 {
-                mark_member_as_bot(member)
-            } else {
-                finalize_member_identity(member)
-            }
-        })
+        .map(teambuilder_cell_to_member)
         .collect()
+}
+
+fn extract_team_builder_champ_select_members(
+    session: &ChampSelectSessionData,
+) -> Vec<ChampSelectTeamMember> {
+    let mut members = Vec::with_capacity(session.my_team.len() + session.their_team.len());
+    members.extend(session.my_team.iter().cloned());
+    members.extend(session.their_team.iter().cloned());
+    members
 }
 
 fn extract_teambuilder_enemy_slots(
@@ -1282,11 +1301,11 @@ fn merge_locked_enemy_slots_with_gameflow_members(
             let gameflow_member = remaining_gameflow.remove(index);
             merged.push(overlay_member_from_gameflow(enemy_slot, gameflow_member));
         } else {
-            merged.push(mark_member_as_bot(enemy_slot));
+            merged.push(enemy_slot);
         }
     }
 
-    merged.extend(remaining_gameflow.into_iter().map(finalize_member_identity));
+    merged.extend(remaining_gameflow);
     merged
 }
 
@@ -1391,21 +1410,6 @@ fn has_resolved_puuid(raw: &str) -> bool {
 }
 
 fn finalize_member_identity(member: ChampSelectTeamMember) -> ChampSelectTeamMember {
-    if has_resolved_puuid(&member.puuid) {
-        member
-    } else {
-        mark_member_as_bot(member)
-    }
-}
-
-fn mark_member_as_bot(mut member: ChampSelectTeamMember) -> ChampSelectTeamMember {
-    member.game_name.clear();
-    member.tag_line.clear();
-    member.internal_name.clear();
-    member.name_visibility_type =
-        super::super::lcu::events::champ_select_session::NameVisibilityType::VISIBLE;
-    member.summoner_id = 0;
-    member.puuid = BOT_PUUID.to_string();
     member
 }
 
@@ -1415,7 +1419,7 @@ fn seed_to_ws_events(seed: &OngoingSessionSeed) -> Vec<LcuWsEvent> {
     if let Some(ref champ_select) = seed.champ_select_session {
         events.push(LcuWsEvent::ChampSelectSession(ChampSelectSession {
             event_type: EventType::Update,
-            uri: URI_CHAMP_SELECT_SESSION.to_string(),
+            uri: URI_TEAM_BUILDER_CHAMP_SELECT_SESSION.to_string(),
             data: champ_select.clone(),
         }));
     }
@@ -1435,20 +1439,6 @@ fn seed_to_ws_events(seed: &OngoingSessionSeed) -> Vec<LcuWsEvent> {
             event_type: EventType::Update,
             uri: URI_GAMEFLOW_SESSION.to_string(),
             data,
-        }));
-    }
-
-    // Teambuilder is the authoritative roster source during ChampSelect (it
-    // carries real puuid/summonerId for hidden-name games and reliable bot
-    // detection). Emit it last so it overrides anything seeded above.
-    if let Some(ref teambuilder) = seed.teambuilder_payload {
-        events.push(LcuWsEvent::TeambuilderTbdGame(TeambuilderTbdGame {
-            event_type: EventType::Update,
-            uri: URI_RMS_TEAMBUILDER_TBD_GAME.to_string(),
-            data: TeambuilderTbdGameMessage {
-                payload: teambuilder.clone(),
-                ..Default::default()
-            },
         }));
     }
 
@@ -1564,13 +1554,13 @@ mod tests {
     }
 
     #[test]
-    fn teambuilder_allied_members_mark_zero_summoner_as_bot() {
+    fn teambuilder_allied_members_keep_zero_summoner_identity() {
         let payload = single_member_teambuilder_payload(42, 5, "fake-bot-puuid", 0);
 
         let members = extract_teambuilder_allied_members(&payload);
 
         assert_eq!(members.len(), 1);
-        assert_eq!(members[0].puuid, "BOT");
+        assert_eq!(members[0].puuid, "fake-bot-puuid");
         assert_eq!(members[0].summoner_id, 0);
     }
 
@@ -1635,7 +1625,7 @@ mod tests {
         assert!(merged.iter().any(|member| member.puuid == "resolved-puuid"));
         assert!(merged
             .iter()
-            .any(|member| member.puuid == "BOT" && member.team == 200));
+            .any(|member| member.puuid == "fake-bot-puuid" && member.team == 200));
     }
 
     #[test]
@@ -1715,8 +1705,8 @@ mod tests {
             .iter()
             .any(|member| member.puuid == "enemy-human-puuid" && member.team == 200));
         assert!(merged.iter().any(|member| {
-            member.puuid == "BOT"
-                && member.team == 200
+            member.team == 200
+                && member.summoner_id == 0
                 && member.champion_id == 147
                 && member.name_visibility_type
                     == crate::shards::lcu::events::champ_select_session::NameVisibilityType::HIDDEN
@@ -1808,8 +1798,8 @@ mod tests {
         });
 
         assert!(merged.iter().any(|member| {
-            member.puuid == "BOT"
-                && member.team == 200
+            member.team == 200
+                && member.summoner_id == 0
                 && member.champion_id == 147
                 && member.champion_pick_intent == 147
         }));
@@ -1989,6 +1979,39 @@ mod tests {
         state.mark_histories_loading(&["ally-puuid".to_string()]);
 
         assert!(state.new_history_puuids().is_empty());
+    }
+
+    #[test]
+    fn team_players_skips_empty_puuid_and_zero_summoner_id() {
+        let mut state = ManagerState::new();
+        state.cached_team_members = vec![
+            TeamMember {
+                puuid: "ally-valid".to_string(),
+                summoner_id: 11,
+                team: 100,
+                ..Default::default()
+            },
+            TeamMember {
+                puuid: "".to_string(),
+                summoner_id: 22,
+                team: 100,
+                ..Default::default()
+            },
+            TeamMember {
+                puuid: "bot-assigned-uuid".to_string(),
+                summoner_id: 0,
+                team: 200,
+                ..Default::default()
+            },
+            TeamMember {
+                puuid: "ally-valid".to_string(),
+                summoner_id: 11,
+                team: 200,
+                ..Default::default()
+            },
+        ];
+
+        assert_eq!(state.team_players(), vec![("ally-valid".to_string(), 100)]);
     }
 
     #[test]
