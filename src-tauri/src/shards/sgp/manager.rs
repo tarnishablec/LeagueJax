@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::network_config::NetworkConfig;
 use super::session::SgpSession;
 use crate::error::AppError;
+use crate::network_config::NetworkConfig;
 use crate::shards::lcu::session::LcuSession;
 
 pub struct SgpManager {

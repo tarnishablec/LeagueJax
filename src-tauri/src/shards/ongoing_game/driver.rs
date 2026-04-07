@@ -303,8 +303,7 @@ async fn collect_player_fetch_snapshot(ctx: &Arc<OngoingGameContext>) -> PlayerF
 
 async fn refresh_players_from_current_state(ctx: Arc<OngoingGameContext>) {
     let snapshot = collect_player_fetch_snapshot(&ctx).await;
-    let has_new_work =
-        !snapshot.new_puuids.is_empty() || !snapshot.new_history_puuids.is_empty();
+    let has_new_work = !snapshot.new_puuids.is_empty() || !snapshot.new_history_puuids.is_empty();
     tracing::info!(
         "[ongoing_game] refresh snapshot phase={:?} generation={} lifecycle_game_id={:?} team_members={} missing_summoners={} missing_histories={} raw_tag={:?} effective_queue_id={:?} effective_tag={:?} history_count={}",
         snapshot.updated.phase,
@@ -634,10 +633,12 @@ async fn set_summoner_state(
         status
     );
 
-    ctx.broadcast(OngoingGameEvent::SummonersUpdated(OngoingGameSummonersUpdated {
-        phase,
-        state: summoner_state,
-    }));
+    ctx.broadcast(OngoingGameEvent::SummonersUpdated(
+        OngoingGameSummonersUpdated {
+            phase,
+            state: summoner_state,
+        },
+    ));
 }
 
 async fn set_history_state(
@@ -681,8 +682,10 @@ async fn set_history_state(
         status
     );
 
-    ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(OngoingGameMatchHistoriesUpdated {
+    ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
+        OngoingGameMatchHistoriesUpdated {
             phase,
             state: history_state,
-        }));
+        },
+    ));
 }

@@ -63,10 +63,9 @@ impl LeagueBridgeShard {
         lcu_manager.subscribe_ws_fn(move |ws_event| {
             let ongoing_manager = ongoing_manager.clone();
             async move {
-                #[cfg(debug_assertions)]
                 match serde_json::to_string_pretty(&ws_event) {
                     Ok(pretty_json) => {
-                        tracing::debug!(target: "lcu_ws_raw", "{pretty_json}");
+                        tracing::debug!(target: "lcu_ws_raw", "[lcu-ws-raw] {pretty_json}");
                     }
                     Err(error) => {
                         tracing::warn!(error = %error, "Failed to serialize LCU websocket event for raw logging");

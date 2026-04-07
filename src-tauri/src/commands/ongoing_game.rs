@@ -5,8 +5,8 @@ use serde_json::Value;
 use tauri::State;
 
 use crate::error::AppError;
-use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::ongoing_game::manager::MatchHistoryModeSetting;
+use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::settings::SettingsShard;
 
 const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.behavior.matchHistoryCount";
