@@ -2259,7 +2259,6 @@ checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 [[package]]
 name = "maokai-runner"
 version = "0.2.1"
-source = "git+https://github.com/tarnishablec/maokai?branch=main#f970b747fa30b860343a9d24fad771fa36830490"
 dependencies = [
  "maokai-tree",
 ]
@@ -2267,7 +2266,6 @@ dependencies = [
 [[package]]
 name = "maokai-tree"
 version = "0.2.1"
-source = "git+https://github.com/tarnishablec/maokai?branch=main#f970b747fa30b860343a9d24fad771fa36830490"
 dependencies = [
  "indextree",
 ]

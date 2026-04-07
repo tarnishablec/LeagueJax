@@ -3,7 +3,6 @@ import type {
   GameflowSessionData,
 } from "@/bindings/lcu_events";
 import type { OngoingGamePhase } from "@/bindings/ongoing_game";
-import type { SummonerInfo } from "@/bindings/summoner";
 import type { PlayerSlot } from "./ongoing-game.types";
 
 const MULTI_TEAM_QUEUE_IDS = new Set<number>([
@@ -13,51 +12,8 @@ const MULTI_TEAM_QUEUE_IDS = new Set<number>([
   3140, // Hextech ARAM variants
 ]);
 
-export function isBotPuuid(rawPuuid: string): boolean {
-  const puuid = rawPuuid.trim().toUpperCase();
-  return !puuid || puuid === "BOT" || puuid.startsWith("BOT_");
-}
-
 export function isBotSlot(slot: PlayerSlot): boolean {
-  if (slot.nameVisibilityType === "HIDDEN") {
-    return false;
-  }
-
-  const hasHumanIdentity =
-    slot.summonerId > 0 ||
-    (slot.gameName ?? "").trim().length > 0 ||
-    (slot.tagLine ?? "").trim().length > 0;
-
-  if (hasHumanIdentity) {
-    return false;
-  }
-
-  return isBotPuuid(slot.puuid);
-}
-
-export function formatSlotName(
-  slot: PlayerSlot,
-  summoner: SummonerInfo | undefined,
-): string {
-  const resolvedGameName =
-    summoner?.gameName?.trim() || slot.gameName?.trim() || "";
-  const resolvedTagLine =
-    summoner?.tagLine?.trim() || slot.tagLine?.trim() || "";
-
-  if (resolvedGameName && resolvedTagLine) {
-    return `${resolvedGameName}#${resolvedTagLine}`;
-  }
-
-  if (resolvedGameName) {
-    return resolvedGameName;
-  }
-
-  const fallbackName = summoner?.name?.trim() || slot.playerAlias?.trim() || "";
-  if (fallbackName) {
-    return fallbackName;
-  }
-
-  return isBotSlot(slot) ? "BOT" : "Unknown Summoner";
+  return slot.summonerId === 0 || slot.puuid.trim().length === 0;
 }
 
 export function groupTeamMembers(teamMembers: PlayerSlot[]): Array<{
