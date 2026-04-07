@@ -76,7 +76,10 @@
       "mcp__plugin_pixel-plugin_aseprite__add_layer",
       "mcp__plugin_pixel-plugin_aseprite__add_frame",
       "mcp__plugin_pixel-plugin_aseprite__draw_pixels",
-      "mcp__plugin_pixel-plugin_aseprite__link_cel"
+      "mcp__plugin_pixel-plugin_aseprite__link_cel",
+      "WebFetch(domain:www.mingweisamuel.com)",
+      "Read(//tmp/**)",
+      "Bash(python -c ':*)"
     ]
   }
 }
