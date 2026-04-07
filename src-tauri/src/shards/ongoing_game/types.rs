@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::shards::lcu::events::champ_select_session::{ChampSelectSessionData, TeamMember};
-use crate::shards::lcu::events::gameflow_session::GameflowSessionData;
-use crate::shards::lcu::summoner::SummonerInfo;
+use crate::shards::lcu::concepts::champ_select_session::{ChampSelectSessionData, TeamMember};
+use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
+use crate::shards::lcu::concepts::summoner::SummonerInfo;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
 
 // ---------------------------------------------------------------------------

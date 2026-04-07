@@ -6,20 +6,20 @@ use tokio::sync::{broadcast, Mutex, Semaphore};
 use tokio::task::JoinSet;
 
 use crate::shards::lcu::api::OngoingSessionSeed;
-use crate::shards::lcu::events::champ_select_session::{
+use crate::shards::lcu::concepts::champ_select_session::{
     ChampSelectSession, ChampSelectSessionData, TeamMember as ChampSelectTeamMember,
 };
-use crate::shards::lcu::events::gameflow_phase::Phase as GameflowPhase;
-use crate::shards::lcu::events::gameflow_session::{GameflowSession, GameflowSessionData};
-use crate::shards::lcu::events::teambuilder_tbd_game::{
+use crate::shards::lcu::concepts::gameflow_phase::Phase as GameflowPhase;
+use crate::shards::lcu::concepts::gameflow_session::{GameflowSession, GameflowSessionData};
+use crate::shards::lcu::concepts::teambuilder_tbd_game::{
     TeambuilderCell, TeambuilderTbdGamePayload,
 };
-use crate::shards::lcu::events::{
+use crate::shards::lcu::concepts::{
     EventType, LanePosition, LcuWsEvent, URI_GAMEFLOW_SESSION,
     URI_TEAM_BUILDER_CHAMP_SELECT_SESSION,
 };
 use crate::shards::lcu::session::LcuSession;
-use crate::shards::lcu::summoner::SummonerInfo;
+use crate::shards::lcu::concepts::summoner::SummonerInfo;
 use crate::shards::ongoing_game::types::{
     OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGameMatchHistoryState,
     OngoingGamePhase, OngoingGamePlayerLoadStatus, OngoingGameSummonerState,
@@ -1484,12 +1484,12 @@ fn parse_match_history_count(value: &Value) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::{extract_teambuilder_allied_members, ManagerState};
-    use crate::shards::lcu::events::champ_select_session::TeamMember;
-    use crate::shards::lcu::events::gameflow_phase::Phase;
-    use crate::shards::lcu::events::gameflow_session::{
+    use crate::shards::lcu::concepts::champ_select_session::TeamMember;
+    use crate::shards::lcu::concepts::gameflow_phase::Phase;
+    use crate::shards::lcu::concepts::gameflow_session::{
         GameData, GameflowSessionData, Queue, Team,
     };
-    use crate::shards::lcu::events::teambuilder_tbd_game::{
+    use crate::shards::lcu::concepts::teambuilder_tbd_game::{
         NameVisibilityType, TeambuilderCell, TeambuilderCells, TeambuilderChampionSelectState,
         TeambuilderTbdGamePayload,
     };
@@ -1598,7 +1598,7 @@ mod tests {
 
         let merged = state.merge_gameflow_with_locked_teambuilder_members(&GameflowSessionData {
             phase: Phase::InProgress,
-            map: crate::shards::lcu::events::gameflow_session::Map {
+            map: crate::shards::lcu::concepts::gameflow_session::Map {
                 game_mode: "PRACTICETOOL".to_string(),
                 ..Default::default()
             },
@@ -1670,7 +1670,7 @@ mod tests {
 
         let merged = state.merge_gameflow_with_locked_teambuilder_members(&GameflowSessionData {
             phase: Phase::InProgress,
-            map: crate::shards::lcu::events::gameflow_session::Map {
+            map: crate::shards::lcu::concepts::gameflow_session::Map {
                 game_mode: "PRACTICETOOL".to_string(),
                 ..Default::default()
             },
@@ -1709,7 +1709,7 @@ mod tests {
                 && member.summoner_id == 0
                 && member.champion_id == 147
                 && member.name_visibility_type
-                    == crate::shards::lcu::events::champ_select_session::NameVisibilityType::HIDDEN
+                    == crate::shards::lcu::concepts::champ_select_session::NameVisibilityType::HIDDEN
         }));
     }
 
@@ -1775,7 +1775,7 @@ mod tests {
 
         let merged = state.merge_gameflow_with_locked_teambuilder_members(&GameflowSessionData {
             phase: Phase::InProgress,
-            map: crate::shards::lcu::events::gameflow_session::Map {
+            map: crate::shards::lcu::concepts::gameflow_session::Map {
                 game_mode: "PRACTICETOOL".to_string(),
                 ..Default::default()
             },
@@ -1887,7 +1887,7 @@ mod tests {
 
         let merged = state.merge_gameflow_with_locked_teambuilder_members(&GameflowSessionData {
             phase: Phase::InProgress,
-            map: crate::shards::lcu::events::gameflow_session::Map {
+            map: crate::shards::lcu::concepts::gameflow_session::Map {
                 game_mode: "PRACTICETOOL".to_string(),
                 ..Default::default()
             },

@@ -3,8 +3,8 @@ use std::sync::{Arc, LazyLock};
 use maokai_runner::{Behavior, Behaviors, EventReply, Runner};
 use maokai_tree::{DataView, State, StateTree, TreeView};
 
-use crate::shards::lcu::events::gameflow_phase::Phase;
-use crate::shards::lcu::events::LcuWsEvent;
+use crate::shards::lcu::concepts::gameflow_phase::Phase;
+use crate::shards::lcu::concepts::LcuWsEvent;
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::ongoing_game::manager::{
     OngoingGameContext, MAX_MATCH_HISTORY_FETCH_CONCURRENCY,
@@ -601,7 +601,7 @@ async fn set_summoner_state(
     puuid: &str,
     generation: u64,
     status: OngoingGamePlayerLoadStatus,
-    summoner: Option<crate::shards::lcu::summoner::SummonerInfo>,
+    summoner: Option<crate::shards::lcu::concepts::summoner::SummonerInfo>,
 ) {
     let mut state = ctx.state.lock().await;
     if state.generation != generation {
