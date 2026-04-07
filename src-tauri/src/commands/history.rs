@@ -2,9 +2,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::error::AppError;
-use crate::shards::lcu::cherry::CherryAugment;
-use crate::shards::lcu::rank::RankStats;
-use crate::shards::lcu::summoner::{SummonerInfo, SummonerSearchResult};
+use crate::shards::lcu::concepts::cherry::CherryAugment;
+use crate::shards::lcu::concepts::rank::RankStats;
+use crate::shards::lcu::concepts::summoner::{SummonerInfo, SummonerSearchResult};
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
 use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};

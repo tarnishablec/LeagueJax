@@ -1,6 +1,6 @@
 use crate::error::AppError;
-use crate::shards::lcu::maps::LcuMap;
-use crate::shards::lcu::queues::LcuQueue;
+use crate::shards::lcu::concepts::maps::LcuMap;
+use crate::shards::lcu::concepts::queues::LcuQueue;
 use crate::shards::lcu::LcuShard;
 use crate::shards::static_cache::StaticCacheShard;
 use jax::Jax;
