@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use reqwest::Client;
-use serde_json::Value;
+use serde_json::{Map, Value};
+use std::time::Instant;
 use tokio::sync::RwLock;
 
 use crate::error::AppError;
@@ -9,8 +10,6 @@ use crate::network_config::NetworkConfig;
 use crate::shards::lcu::session::LcuSession;
 
 use super::session::SgpTokenContext;
-
-const MAX_ERROR_BODY_LOG_LEN: usize = 512;
 
 fn format_error_sources(error: &dyn std::error::Error) -> String {
     let mut sources = Vec::new();
@@ -25,6 +24,40 @@ fn format_error_sources(error: &dyn std::error::Error) -> String {
         "none".to_string()
     } else {
         sources.join(" | ")
+    }
+}
+
+fn pretty_json(value: &Value) -> String {
+    serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+}
+
+fn headers_to_json(headers: &reqwest::header::HeaderMap) -> Value {
+    let mut object = Map::new();
+
+    for (name, value) in headers {
+        let key = name.as_str().to_string();
+        let value_str = value.to_str().unwrap_or("<non-utf8>").to_string();
+
+        if let Some(existing) = object.get_mut(&key) {
+            match existing {
+                Value::Array(arr) => arr.push(Value::String(value_str)),
+                _ => {
+                    let first = existing.take();
+                    *existing = Value::Array(vec![first, Value::String(value_str)]);
+                }
+            }
+        } else {
+            object.insert(key, Value::String(value_str));
+        }
+    }
+
+    Value::Object(object)
+}
+
+fn parse_json_or_string(raw: &str) -> Value {
+    match serde_json::from_str::<Value>(raw) {
+        Ok(value) => value,
+        Err(_) => Value::String(raw.to_string()),
     }
 }
 
@@ -78,14 +111,6 @@ impl SgpHttpClient {
         &self.sgp_server_id
     }
 
-    fn truncate_body_for_log(body: &str) -> String {
-        if body.len() <= MAX_ERROR_BODY_LOG_LEN {
-            return body.to_string();
-        }
-
-        format!("{}...<truncated>", &body[..MAX_ERROR_BODY_LOG_LEN],)
-    }
-
     async fn get_token(&self, kind: SgpTokenKind) -> String {
         match kind {
             SgpTokenKind::Access => self.access_token.read().await.clone(),
@@ -101,7 +126,7 @@ impl SgpHttpClient {
         *self.access_token.write().await = new_access_token;
         *self.league_session_token.write().await = new_league_session_token;
 
-        tracing::debug!("[SGP] Tokens refreshed after 401");
+        tracing::debug!(target: "sgp_http", "[sgp-http] tokens refreshed after 401");
 
         Ok(())
     }
@@ -133,9 +158,15 @@ impl SgpHttpClient {
         {
             SgpResponse::Ok(json) => Ok(json),
             SgpResponse::Unauthorized => {
-                tracing::debug!("[SGP] Got 401, attempting token refresh and retry");
+                tracing::debug!(
+                    target: "sgp_http",
+                    "[sgp-http] got 401, attempting token refresh and retry"
+                );
                 if let Err(refresh_err) = self.refresh_tokens().await {
-                    tracing::debug!("[SGP] Token refresh failed: {refresh_err}");
+                    tracing::debug!(
+                        target: "sgp_http",
+                        "[sgp-http] token refresh failed: {refresh_err}"
+                    );
                     return Err(AppError::other(format!(
                         "SGP 401 Unauthorized and token refresh failed: {refresh_err}"
                     )));
@@ -163,6 +194,18 @@ impl SgpHttpClient {
         access_token: &str,
         body: Option<Value>,
     ) -> SgpResponse {
+        let request_headers = serde_json::json!({
+            "Authorization": format!("Bearer {access_token}"),
+            "Accept": "application/json",
+        });
+        let request_log = serde_json::json!({
+            "method": method.as_str(),
+            "url": request_url,
+            "headers": request_headers,
+            "body": body.clone().unwrap_or(Value::Null),
+        });
+        let started = Instant::now();
+
         let mut req = self
             .req_client
             .request(method.clone(), request_url)
@@ -177,69 +220,95 @@ impl SgpHttpClient {
         let resp = match req.send().await {
             Ok(resp) => resp,
             Err(error) => {
+                let log = serde_json::json!({
+                    "channel": "sgp-http",
+                    "kind": "http",
+                    "request": request_log,
+                    "response": {
+                        "status": Value::Null,
+                        "statusText": Value::Null,
+                        "durationMs": started.elapsed().as_millis(),
+                        "httpVersion": Value::Null,
+                        "headers": Value::Null,
+                        "body": Value::Null,
+                        "error": error.to_string(),
+                    }
+                });
+                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
                 return SgpResponse::Err(AppError::other(format!("SGP request failed: {error}")));
             }
         };
 
         let status = resp.status();
         let http_version = format!("{:?}", resp.version());
+        let response_headers = headers_to_json(resp.headers());
 
         if status == reqwest::StatusCode::UNAUTHORIZED {
             let body = resp.text().await.unwrap_or_else(|_| String::new());
-            tracing::debug!("[SGP] {method} {request_url} -> {status}: {body}");
+            let log = serde_json::json!({
+                "channel": "sgp-http",
+                "kind": "http",
+                "request": request_log,
+                "response": {
+                    "status": status.as_u16(),
+                    "statusText": status.to_string(),
+                    "durationMs": started.elapsed().as_millis(),
+                    "httpVersion": http_version,
+                    "headers": response_headers,
+                    "body": parse_json_or_string(&body),
+                    "error": "401 Unauthorized",
+                }
+            });
+            tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
             return SgpResponse::Unauthorized;
         }
 
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_else(|_| String::new());
-            tracing::debug!("[SGP] {method} {request_url} -> {status}: {body}");
+            let error_message = format!("HTTP {}", status.as_u16());
+            let log = serde_json::json!({
+                "channel": "sgp-http",
+                "kind": "http",
+                "request": request_log,
+                "response": {
+                    "status": status.as_u16(),
+                    "statusText": status.to_string(),
+                    "durationMs": started.elapsed().as_millis(),
+                    "httpVersion": http_version,
+                    "headers": response_headers,
+                    "body": parse_json_or_string(&body),
+                    "error": error_message,
+                }
+            });
+            tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
             return SgpResponse::Err(AppError::other(format!(
                 "SGP request failed with status {status}: {body}"
             )));
         }
 
-        let content_type = resp
-            .headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("")
-            .to_string();
-        let content_encoding = resp
-            .headers()
-            .get(reqwest::header::CONTENT_ENCODING)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("")
-            .to_string();
-        let content_length = resp
-            .headers()
-            .get(reqwest::header::CONTENT_LENGTH)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("")
-            .to_string();
-        let transfer_encoding = resp
-            .headers()
-            .get(reqwest::header::TRANSFER_ENCODING)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("")
-            .to_string();
-
         let body_bytes = match resp.bytes().await {
             Ok(bytes) => bytes,
             Err(error) => {
                 let error_sources = format_error_sources(&error);
-                tracing::error!(
-                    method = %method,
-                    request_url = %request_url,
-                    status = %status,
-                    http_version = %http_version,
-                    content_type = %content_type,
-                    content_encoding = %content_encoding,
-                    content_length = %content_length,
-                    transfer_encoding = %transfer_encoding,
-                    body_read_error = %error,
-                    body_read_error_sources = %error_sources,
-                    "Failed to read SGP response body bytes"
-                );
+                let log = serde_json::json!({
+                    "channel": "sgp-http",
+                    "kind": "http",
+                    "request": request_log,
+                    "response": {
+                        "status": status.as_u16(),
+                        "statusText": status.to_string(),
+                        "durationMs": started.elapsed().as_millis(),
+                        "httpVersion": http_version,
+                        "headers": response_headers,
+                        "body": Value::Null,
+                        "error": format!(
+                            "read body failed: {} (sources: {})",
+                            error,
+                            error_sources
+                        ),
+                    }
+                });
+                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
                 return SgpResponse::Err(AppError::other(format!(
                     "Failed to read SGP response body bytes: {error}"
                 )));
@@ -248,26 +317,40 @@ impl SgpHttpClient {
 
         match serde_json::from_slice::<Value>(&body_bytes) {
             Ok(json) => {
-                #[cfg(debug_assertions)]
-                {
-                    tracing::debug!(
-                        "[SGP] {method} {request_url} -> {status} http_version={http_version}"
-                    );
-                }
+                let log = serde_json::json!({
+                    "channel": "sgp-http",
+                    "kind": "http",
+                    "request": request_log,
+                    "response": {
+                        "status": status.as_u16(),
+                        "statusText": status.to_string(),
+                        "durationMs": started.elapsed().as_millis(),
+                        "httpVersion": http_version,
+                        "headers": response_headers,
+                        "body": json.clone(),
+                        "error": Value::Null,
+                    }
+                });
+                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
                 SgpResponse::Ok(json)
             }
             Err(error) => {
                 let body_text = String::from_utf8_lossy(&body_bytes);
-                tracing::error!(
-                    method = %method,
-                    request_url = %request_url,
-                    status = %status,
-                    http_version = %http_version,
-                    content_type = %content_type,
-                    parse_error = %error,
-                    response_body = %Self::truncate_body_for_log(body_text.as_ref()),
-                    "Failed to parse SGP response JSON"
-                );
+                let log = serde_json::json!({
+                    "channel": "sgp-http",
+                    "kind": "http",
+                    "request": request_log,
+                    "response": {
+                        "status": status.as_u16(),
+                        "statusText": status.to_string(),
+                        "durationMs": started.elapsed().as_millis(),
+                        "httpVersion": http_version,
+                        "headers": response_headers,
+                        "body": parse_json_or_string(body_text.as_ref()),
+                        "error": format!("parse json failed: {}", error),
+                    }
+                });
+                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
                 SgpResponse::Err(AppError::other(format!(
                     "Failed to parse SGP response JSON: {error}"
                 )))

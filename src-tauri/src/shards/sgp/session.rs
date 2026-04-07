@@ -3,8 +3,8 @@ use std::sync::Arc;
 use super::api::SgpApi;
 use super::config::sgp_servers_config;
 use super::http_client::SgpHttpClient;
-use crate::network_config::NetworkConfig;
 use crate::error::AppError;
+use crate::network_config::NetworkConfig;
 use crate::shards::lcu::http_client::LcuHttpClient;
 use crate::shards::lcu::session::LcuSession;
 

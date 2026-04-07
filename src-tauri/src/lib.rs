@@ -9,8 +9,6 @@ use std::error::Error;
 use std::fs;
 use std::sync::Arc;
 use tauri::{Emitter, Manager, RunEvent};
-#[cfg(debug_assertions)]
-use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
@@ -34,17 +32,15 @@ use jax_probes::TimingProbe;
 
 struct TracingState {
     _file_guard: tracing_appender::non_blocking::WorkerGuard,
-    #[cfg(debug_assertions)]
-    _lcu_ws_raw_guard: tracing_appender::non_blocking::WorkerGuard,
 }
 
-fn init_tracing<R: tauri::Runtime>(
-    app: &tauri::App<R>,
-) -> Result<TracingState, Box<dyn Error>> {
+fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, Box<dyn Error>> {
     let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| "league_jax_lib=debug".into());
 
+    let local_timer = tracing_subscriber::fmt::time::LocalTime::rfc_3339();
     let console_layer = tracing_subscriber::fmt::layer()
+        .with_timer(local_timer)
         .with_file(true)
         .with_line_number(true)
         .with_target(true)
@@ -58,57 +54,28 @@ fn init_tracing<R: tauri::Runtime>(
         .join("logs");
     fs::create_dir_all(&log_dir)?;
 
-    let file_appender = tracing_appender::rolling::daily(&log_dir, "league-jax.log");
+    let startup_log_name = shards::log::LogShard::current_log_filename();
+    let file_appender = tracing_appender::rolling::never(&log_dir, startup_log_name);
+    let local_timer = tracing_subscriber::fmt::time::LocalTime::rfc_3339();
     let (file_non_blocking, file_guard) = tracing_appender::non_blocking(file_appender);
     let file_layer = tracing_subscriber::fmt::layer()
+        .with_timer(local_timer)
         .with_ansi(false)
         .with_file(true)
         .with_line_number(true)
         .with_target(true)
         .with_writer(file_non_blocking)
-        .with_filter(
-            tracing_subscriber::EnvFilter::new("league_jax_lib=info"),
-        );
+        .with_filter(tracing_subscriber::EnvFilter::new(
+            "league_jax_lib=info,lcu_ws_raw=debug,lcu_http=debug,sgp_http=debug",
+        ));
 
-    #[cfg(debug_assertions)]
-    {
-        let ws_log_dir = log_dir.join("ws");
-        fs::create_dir_all(&ws_log_dir)?;
-
-        let ws_appender = tracing_appender::rolling::daily(ws_log_dir, "lcu-ws-raw.log");
-        let (ws_non_blocking, ws_guard) = tracing_appender::non_blocking(ws_appender);
-        let ws_file_layer = tracing_subscriber::fmt::layer()
-            .with_ansi(false)
-            .without_time()
-            .with_level(false)
-            .with_file(false)
-            .with_line_number(false)
-            .with_target(false)
-            .with_writer(ws_non_blocking)
-            .with_filter(filter_fn(|metadata| metadata.target() == "lcu_ws_raw"));
-
-        tracing_subscriber::registry()
-            .with(console_layer)
-            .with(file_layer)
-            .with(ws_file_layer)
-            .init();
-
-        Ok(TracingState {
-            _file_guard: file_guard,
-            _lcu_ws_raw_guard: ws_guard,
-        })
-    }
-
-    #[cfg(not(debug_assertions))]
-    {
-        tracing_subscriber::registry()
-            .with(console_layer)
-            .with(file_layer)
-            .init();
-        Ok(TracingState {
-            _file_guard: file_guard,
-        })
-    }
+    tracing_subscriber::registry()
+        .with(console_layer)
+        .with(file_layer)
+        .init();
+    Ok(TracingState {
+        _file_guard: file_guard,
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
