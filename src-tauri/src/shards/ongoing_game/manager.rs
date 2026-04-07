@@ -91,6 +91,7 @@ impl OngoingGameManager {
 
     pub async fn handle_ws_event(&self, event: LcuWsEvent) {
         let mut state = self.ctx.state.lock().await;
+        let mut members_changed = false;
 
         match &event {
             LcuWsEvent::GameflowSession(payload) => {
@@ -117,6 +118,8 @@ impl OngoingGameManager {
                         state.lifecycle_game_id,
                         next_members.len()
                     );
+                    members_changed =
+                        !team_members_equivalent(&state.cached_team_members, &next_members);
                     state.cached_team_members = next_members;
                 } else {
                     tracing::info!(
@@ -141,6 +144,39 @@ impl OngoingGameManager {
                     payload.data.my_team.len(),
                     payload.data.their_team.len()
                 );
+
+                // Hover intent: LCU only exposes unlocked hover picks through the
+                // `actions[]` list (`type == "pick"`, `!completed`) and through the
+                // `myTeam[]` / `theirTeam[]` `championPickIntent` field. Fold both
+                // back into `cached_team_members` so the frontend can surface the
+                // hovered champion before it is locked in.
+                if payload.event_type != EventType::Delete {
+                    let mut hover_by_cell: std::collections::HashMap<u64, u64> =
+                        std::collections::HashMap::new();
+                    for action_group in &payload.data.actions {
+                        for action in action_group {
+                            if action.r#type == "pick"
+                                && !action.completed
+                                && action.champion_id > 0
+                            {
+                                hover_by_cell.insert(action.actor_cell_id, action.champion_id);
+                            }
+                        }
+                    }
+                    if !hover_by_cell.is_empty() {
+                        for member in state.cached_team_members.iter_mut() {
+                            if member.champion_id > 0 {
+                                continue;
+                            }
+                            if let Some(&hovered) = hover_by_cell.get(&member.cell_id) {
+                                if member.champion_pick_intent != hovered {
+                                    member.champion_pick_intent = hovered;
+                                    members_changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
             LcuWsEvent::TeambuilderTbdGame(payload) => {
                 let event_game_id = extract_teambuilder_game_id(&payload.data.payload);
@@ -181,6 +217,8 @@ impl OngoingGameManager {
                             state.lifecycle_game_id,
                             next_members.len()
                         );
+                        members_changed =
+                            !team_members_equivalent(&state.cached_team_members, &next_members);
                         state.cached_team_members = next_members;
                     }
                 }
@@ -204,6 +242,10 @@ impl OngoingGameManager {
             if next_phase == OngoingGamePhase::Idle {
                 state.clear_caches_with_reason("phase_idle_transition");
             }
+            let updated = state.build_updated_payload(&self.ctx.settings);
+            drop(state);
+            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
+        } else if members_changed {
             let updated = state.build_updated_payload(&self.ctx.settings);
             drop(state);
             self.ctx.broadcast(OngoingGameEvent::Updated(updated));
@@ -1117,6 +1159,24 @@ fn extract_teambuilder_enemy_slots(
         .iter()
         .map(teambuilder_cell_to_member)
         .collect()
+}
+
+fn team_members_equivalent(a: &[ChampSelectTeamMember], b: &[ChampSelectTeamMember]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b.iter()).all(|(l, r)| {
+        l.cell_id == r.cell_id
+            && l.puuid == r.puuid
+            && l.summoner_id == r.summoner_id
+            && l.team == r.team
+            && l.champion_id == r.champion_id
+            && l.champion_pick_intent == r.champion_pick_intent
+            && l.spell1_id == r.spell1_id
+            && l.spell2_id == r.spell2_id
+            && l.assigned_position == r.assigned_position
+            && l.name_visibility_type == r.name_visibility_type
+    })
 }
 
 fn teambuilder_cell_to_member(cell: &TeambuilderCell) -> ChampSelectTeamMember {
