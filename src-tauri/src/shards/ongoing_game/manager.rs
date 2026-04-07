@@ -12,10 +12,11 @@ use crate::shards::lcu::events::champ_select_session::{
 use crate::shards::lcu::events::gameflow_phase::Phase as GameflowPhase;
 use crate::shards::lcu::events::gameflow_session::{GameflowSession, GameflowSessionData};
 use crate::shards::lcu::events::teambuilder_tbd_game::{
-    TeambuilderCell, TeambuilderTbdGamePayload,
+    TeambuilderCell, TeambuilderTbdGame, TeambuilderTbdGameMessage, TeambuilderTbdGamePayload,
 };
 use crate::shards::lcu::events::{
     EventType, LanePosition, LcuWsEvent, URI_CHAMP_SELECT_SESSION, URI_GAMEFLOW_SESSION,
+    URI_RMS_TEAMBUILDER_TBD_GAME,
 };
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::summoner::SummonerInfo;
@@ -178,6 +179,22 @@ impl OngoingGameManager {
                     }
                 }
             }
+            // Teambuilder is the authoritative roster source during ChampSelect
+            // and must not be replaced by `ChampSelectSession` data:
+            //
+            //   1. Hidden-name games (e.g. ranked pre-reveal) return obfuscated or
+            //      empty `puuid` / `summonerId` from `/lol-champ-select/v1/session`.
+            //      The teambuilder tbd payload is the ONLY LCU source that exposes
+            //      the real puuid + summonerId for those players, which we need to
+            //      fetch summoner info and match history.
+            //
+            //   2. Bot detection: teambuilder cells expose `summoner_id == 0` as a
+            //      reliable bot signal. A puuid-empty heuristic on ChampSelectSession
+            //      would misclassify hidden-name real players as bots.
+            //
+            // This payload is push-only (riot-messaging-service), not fetchable via
+            // REST, so cold-starting mid-ChampSelect means we must wait for the
+            // first tbd WS push before the full roster becomes visible.
             LcuWsEvent::TeambuilderTbdGame(payload) => {
                 let event_game_id = extract_teambuilder_game_id(&payload.data.payload);
                 state.sync_lifecycle_game_id(event_game_id, "teambuilder_tbd_game");
@@ -1418,6 +1435,20 @@ fn seed_to_ws_events(seed: &OngoingSessionSeed) -> Vec<LcuWsEvent> {
             event_type: EventType::Update,
             uri: URI_GAMEFLOW_SESSION.to_string(),
             data,
+        }));
+    }
+
+    // Teambuilder is the authoritative roster source during ChampSelect (it
+    // carries real puuid/summonerId for hidden-name games and reliable bot
+    // detection). Emit it last so it overrides anything seeded above.
+    if let Some(ref teambuilder) = seed.teambuilder_payload {
+        events.push(LcuWsEvent::TeambuilderTbdGame(TeambuilderTbdGame {
+            event_type: EventType::Update,
+            uri: URI_RMS_TEAMBUILDER_TBD_GAME.to_string(),
+            data: TeambuilderTbdGameMessage {
+                payload: teambuilder.clone(),
+                ..Default::default()
+            },
         }));
     }
 
