@@ -2,26 +2,27 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use serde_json::Value;
-use tokio::sync::{broadcast, Mutex, Semaphore};
+use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
+
+use super::context::{OngoingGameContext, MAX_MATCH_HISTORY_FETCH_CONCURRENCY};
 
 use crate::shards::lcu::api::OngoingSessionSeed;
 use crate::shards::lcu::concepts::champ_select_session::{
-    ChampSelectSession, ChampSelectSessionData, NameVisibilityType,
-    TeamMember as ChampSelectTeamMember,
+    ChampSelectSession, ChampSelectSessionData, TeamMember as ChampSelectTeamMember,
 };
-use crate::shards::lcu::concepts::champ_select_summoner::ChampSelectSummoner;
 use crate::shards::lcu::concepts::gameflow_phase::Phase as GameflowPhase;
 use crate::shards::lcu::concepts::gameflow_session::{GameflowSession, GameflowSessionData};
+use crate::shards::lcu::concepts::summoner::SummonerInfo;
 use crate::shards::lcu::concepts::teambuilder_tbd_game::{
-    TeambuilderCell, TeambuilderTbdGamePayload,
+    TeambuilderCell, TeambuilderTbdGame, TeambuilderTbdGameMessage, TeambuilderTbdGamePayload,
 };
 use crate::shards::lcu::concepts::{
-    EventType, LanePosition, LcuWsEvent, URI_GAMEFLOW_SESSION,
+    EventType, LanePosition, LcuWsEvent, URI_GAMEFLOW_SESSION, URI_RMS_TEAMBUILDER_TBD_GAME,
     URI_TEAM_BUILDER_CHAMP_SELECT_SESSION,
 };
-use crate::shards::lcu::session::LcuSession;
-use crate::shards::lcu::concepts::summoner::SummonerInfo;
+use crate::shards::lcu::manager::LcuManagerStateEvent;
+use crate::shards::lcu::LcuShard;
 use crate::shards::ongoing_game::types::{
     OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGameMatchHistoryState,
     OngoingGamePhase, OngoingGamePlayerLoadStatus, OngoingGameSummonerState,
@@ -35,7 +36,6 @@ use crate::shards::sgp::SgpShard;
 use super::driver::OngoingGameDriver;
 
 pub(crate) const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
-pub(crate) const MAX_MATCH_HISTORY_FETCH_CONCURRENCY: usize = 3;
 const BOT_PUUID: &str = "BOT";
 const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
@@ -65,11 +65,11 @@ impl MatchHistoryModeSetting {
 }
 
 #[derive(Clone)]
-pub struct OngoingGameManagerSettings {
+pub struct OngoingGameSettings {
     pub match_history_count: SettingHandle,
 }
 
-impl OngoingGameManagerSettings {
+impl OngoingGameSettings {
     pub fn match_history_count_value(&self) -> u32 {
         self.match_history_count
             .get_value()
@@ -86,9 +86,13 @@ pub struct OngoingGameManager {
 }
 
 impl OngoingGameManager {
-    pub(crate) fn new(settings: OngoingGameManagerSettings, sgp_shard: Arc<SgpShard>) -> Self {
+    pub(crate) fn new(
+        settings: OngoingGameSettings,
+        sgp_shard: Arc<SgpShard>,
+        lcu_shard: Arc<LcuShard>,
+    ) -> Self {
         Self {
-            ctx: Arc::new(OngoingGameContext::new(settings, sgp_shard)),
+            ctx: Arc::new(OngoingGameContext::new(settings, sgp_shard, lcu_shard)),
         }
     }
 
@@ -219,13 +223,49 @@ impl OngoingGameManager {
                     );
                 } else {
                     if !state.cached_team_members.is_empty() {
+                        // Champ-select session already populated the roster
+                        // (positions, champion ids, cell layout), but in
+                        // hidden-name ranked pre-reveal those entries lack the
+                        // real puuid / summoner id. Overlay the TBD allies
+                        // by cell_id to fill in the missing identity fields.
+                        let allies = &payload.data.payload.champion_select_state.cells.allied_team;
+                        let by_cell: HashMap<u64, &TeambuilderCell> =
+                            allies.iter().map(|c| (c.cell_id, c)).collect();
+
+                        let mut overlay_changed = false;
+                        for member in state.cached_team_members.iter_mut() {
+                            let Some(cell) = by_cell.get(&member.cell_id) else {
+                                continue;
+                            };
+                            if !cell.puuid.trim().is_empty() && member.puuid != cell.puuid {
+                                member.puuid = cell.puuid.clone();
+                                overlay_changed = true;
+                            }
+                            if cell.summoner_id > 0 && member.summoner_id != cell.summoner_id {
+                                member.summoner_id = cell.summoner_id;
+                                overlay_changed = true;
+                            }
+                            if !cell.game_name.trim().is_empty()
+                                && member.game_name != cell.game_name
+                            {
+                                member.game_name = cell.game_name.clone();
+                                overlay_changed = true;
+                            }
+                            if !cell.tag_line.trim().is_empty() && member.tag_line != cell.tag_line
+                            {
+                                member.tag_line = cell.tag_line.clone();
+                                overlay_changed = true;
+                            }
+                        }
+                        members_changed = overlay_changed;
                         tracing::info!(
-                            "[ongoing_game] team snapshot source=unchanged phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} existing_members={} reason=prefer_champ_select_session_roster",
+                            "[ongoing_game] team snapshot source=teambuilder_overlay phase={:?} event_type={:?} event_game_id={:?} lifecycle_game_id={:?} members={} changed={}",
                             state.current_phase(),
                             payload.event_type,
                             event_game_id,
                             state.lifecycle_game_id,
-                            state.cached_team_members.len()
+                            state.cached_team_members.len(),
+                            overlay_changed,
                         );
                     } else {
                         let next_members =
@@ -284,34 +324,51 @@ impl OngoingGameManager {
         }
     }
 
-    pub async fn handle_focus_changed(&self, lcu_session: Option<Arc<LcuSession>>) {
-        let expected_focus = lcu_focus_key(lcu_session.as_ref());
+    /// Subscribe to LCU focus changes via the LcuShard.  Must be called once
+    /// after `LcuShard::initialize` so that `lcu_shard.manager()` is `Some`.
+    pub fn start(self: &Arc<Self>) {
+        let Some(lcu_manager) = self.ctx.lcu_shard.manager() else {
+            tracing::error!(
+                "[ongoing_game] start: LcuShard manager not initialized — focus subscription skipped"
+            );
+            return;
+        };
+
+        let manager = self.clone();
+        lcu_manager.subscribe_state_fn(move |event| {
+            let manager = manager.clone();
+            async move {
+                if let LcuManagerStateEvent::FocusChanged(change) = event {
+                    manager.on_focus_changed(change.current).await;
+                }
+            }
+        });
+    }
+
+    async fn on_focus_changed(self: &Arc<Self>, pid: Option<u32>) {
+        // Dedup at the manager boundary so league_bridge doesn't have to.
         {
             let mut state = self.ctx.state.lock().await;
-            state.lcu_session = lcu_session.clone();
+            if state.last_focus_pid == pid {
+                return;
+            }
+            state.last_focus_pid = pid;
             state.driver = Some(OngoingGameDriver::new(self.ctx.clone()));
             state.clear_caches_with_reason("focus_changed");
         }
 
-        let Some(lcu_session) = lcu_session else {
+        if pid.is_none() {
             // Disconnected — broadcast Idle so the frontend clears the view.
             self.refresh_current().await;
             return;
-        };
+        }
 
-        // Connected — let seed_from_current_session handle the first broadcast
-        // to avoid an intermediate Idle flash on the frontend.
+        // Connected — let seed_from_current_session handle the first
+        // broadcast to avoid an intermediate Idle flash on the frontend.
         let manager = self.clone();
         tokio::spawn(async move {
-            manager
-                .seed_from_current_session(expected_focus, lcu_session)
-                .await;
+            manager.seed_from_current_session(pid).await;
         });
-    }
-
-    pub async fn has_same_lcu_focus(&self, lcu_session: Option<&Arc<LcuSession>>) -> bool {
-        let state = self.ctx.state.lock().await;
-        lcu_focus_key(state.lcu_session.as_ref()) == lcu_focus_key(lcu_session)
     }
 
     pub async fn refresh_current(&self) {
@@ -341,7 +398,6 @@ impl OngoingGameManager {
 
         let (
             puuids,
-            lcu,
             lifecycle_game_id,
             effective_queue_id,
             tag,
@@ -354,7 +410,6 @@ impl OngoingGameManager {
                 let updated = state.build_updated_payload(&self.ctx.settings);
                 (
                     Vec::new(),
-                    None,
                     state.lifecycle_game_id,
                     state.effective_queue_id(),
                     state.effective_mode_tag(&self.ctx.settings),
@@ -372,14 +427,12 @@ impl OngoingGameManager {
                 state.cached_match_histories.clear();
                 state.history_status_by_puuid.clear();
                 state.mark_histories_loading(&puuids);
-                let lcu = state.lcu_session.clone();
                 let lifecycle_game_id = state.lifecycle_game_id;
                 let effective_queue_id = state.effective_queue_id();
                 let tag = state.effective_mode_tag(&self.ctx.settings);
                 let updated = state.build_updated_payload(&self.ctx.settings);
                 (
                     puuids,
-                    lcu,
                     lifecycle_game_id,
                     effective_queue_id,
                     tag,
@@ -388,6 +441,14 @@ impl OngoingGameManager {
                     gen,
                 )
             }
+        };
+
+        // Resolve session AFTER dropping the state lock to avoid nested
+        // locking against `Lcu Manager`'s internal mutex.
+        let lcu = if should_start {
+            self.ctx.focused_session().await
+        } else {
+            None
         };
 
         if let Some(updated) = started_updated {
@@ -505,15 +566,16 @@ impl OngoingGameManager {
         });
     }
 
-    pub fn subscribe(&self) -> broadcast::Receiver<OngoingGameEvent> {
-        self.ctx.event_tx.subscribe()
+    pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<OngoingGameEvent> {
+        self.ctx.channels.subscribe()
     }
 
-    async fn seed_from_current_session(
-        &self,
-        expected_focus: Option<(u32, u16)>,
-        lcu_session: Arc<LcuSession>,
-    ) {
+    async fn seed_from_current_session(&self, expected_pid: Option<u32>) {
+        let Some(lcu_session) = self.ctx.focused_session().await else {
+            self.refresh_current().await;
+            return;
+        };
+
         let Ok(seed) = lcu_session.api().get_ongoing_session_seed().await else {
             // Seed fetch failed — broadcast current (Idle) state so the frontend
             // is not stuck on stale data.
@@ -529,136 +591,27 @@ impl OngoingGameManager {
         }
 
         for event in seed_events {
-            if !self.current_focus_matches(expected_focus).await {
+            if !self.current_focus_matches(expected_pid).await {
                 return;
             }
             self.handle_ws_event(event).await;
         }
 
-        if !self.current_focus_matches(expected_focus).await {
+        if !self.current_focus_matches(expected_pid).await {
             return;
-        }
-
-        // Backfill hidden puuid / summoner id using the per-cell summoner
-        // snapshots that were fetched alongside the seed.  This is a one-shot
-        // cold-start concern, so we apply it directly rather than round-trip
-        // through a synthesized WS event.
-        if !seed.champ_select_summoners.is_empty() {
-            self.apply_champ_select_summoners(&seed.champ_select_summoners)
-                .await;
         }
 
         self.refresh_current().await;
     }
 
-    /// Merge per-cell `ChampSelectSummoner` snapshots into
-    /// `cached_team_members` by `cell_id`, used during cold start to replace
-    /// obfuscated identity fields from `/lol-champ-select/v1/session`
-    /// (hidden-name ranked pre-reveal) with the real values returned by
-    /// `/lol-champ-select/v1/summoners/{cellId}`.
-    async fn apply_champ_select_summoners(&self, summoners: &[ChampSelectSummoner]) {
-        if summoners.is_empty() {
-            return;
-        }
-
-        let mut state = self.ctx.state.lock().await;
-        if state.cached_team_members.is_empty() {
-            return;
-        }
-
-        let by_cell: HashMap<u64, &ChampSelectSummoner> = summoners
-            .iter()
-            .filter(|s| s.cell_id >= 0)
-            .map(|s| (s.cell_id as u64, s))
-            .collect();
-
-        let mut changed = false;
-        for member in state.cached_team_members.iter_mut() {
-            let Some(summoner) = by_cell.get(&member.cell_id) else {
-                continue;
-            };
-
-            if !summoner.puuid.trim().is_empty() && member.puuid != summoner.puuid {
-                member.puuid = summoner.puuid.clone();
-                changed = true;
-            }
-            if summoner.summoner_id > 0 && member.summoner_id != summoner.summoner_id {
-                member.summoner_id = summoner.summoner_id;
-                changed = true;
-            }
-            if !summoner.game_name.trim().is_empty() && member.game_name != summoner.game_name {
-                member.game_name = summoner.game_name.clone();
-                changed = true;
-            }
-            if !summoner.tag_line.trim().is_empty() && member.tag_line != summoner.tag_line {
-                member.tag_line = summoner.tag_line.clone();
-                changed = true;
-            }
-            if !summoner.obfuscated_puuid.trim().is_empty()
-                && member.obfuscate_puuid != summoner.obfuscated_puuid
-            {
-                member.obfuscate_puuid = summoner.obfuscated_puuid.clone();
-                changed = true;
-            }
-            if summoner.obfuscated_summoner_id > 0
-                && member.obfuscate_summoner_id != summoner.obfuscated_summoner_id as u64
-            {
-                member.obfuscate_summoner_id = summoner.obfuscated_summoner_id as u64;
-                changed = true;
-            }
-            // If the per-cell endpoint reports a concrete visibility and the
-            // current entry is still the default (VISIBLE), overwrite it.
-            if matches!(summoner.name_visibility_type, NameVisibilityType::HIDDEN)
-                && member.name_visibility_type != NameVisibilityType::HIDDEN
-            {
-                member.name_visibility_type = NameVisibilityType::HIDDEN;
-                changed = true;
-            }
-        }
-
-        if changed {
-            tracing::info!(
-                "[ongoing_game] backfilled {} champ-select cells via per-cell summoner fetch",
-                state.cached_team_members.len()
-            );
-            let updated = state.build_updated_payload(&self.ctx.settings);
-            drop(state);
-            self.ctx.broadcast(OngoingGameEvent::Updated(updated));
-        }
-    }
-
-    async fn current_focus_matches(&self, expected_focus: Option<(u32, u16)>) -> bool {
-        let state = self.ctx.state.lock().await;
-        lcu_focus_key(state.lcu_session.as_ref()) == expected_focus
-    }
-}
-
-pub struct OngoingGameContext {
-    pub(crate) settings: OngoingGameManagerSettings,
-    pub(crate) sgp_shard: Arc<SgpShard>,
-    pub(crate) state: Mutex<ManagerState>,
-    pub(crate) event_tx: broadcast::Sender<OngoingGameEvent>,
-}
-
-impl OngoingGameContext {
-    fn new(settings: OngoingGameManagerSettings, sgp_shard: Arc<SgpShard>) -> Self {
-        let (event_tx, _) = broadcast::channel(64);
-        Self {
-            settings,
-            sgp_shard,
-            state: Mutex::new(ManagerState::new()),
-            event_tx,
-        }
-    }
-
-    pub(crate) fn broadcast(&self, event: OngoingGameEvent) {
-        let _ = self.event_tx.send(event);
+    async fn current_focus_matches(&self, expected_pid: Option<u32>) -> bool {
+        self.ctx.focused_pid().await == expected_pid
     }
 }
 
 pub(crate) struct ManagerState {
     pub(crate) driver: Option<OngoingGameDriver>,
-    pub(crate) lcu_session: Option<Arc<LcuSession>>,
+    pub(crate) last_focus_pid: Option<u32>,
     pub(crate) match_history_mode: MatchHistoryModeSetting,
     pub(crate) lifecycle_game_id: Option<u64>,
     pub(crate) cached_gameflow_session: Option<GameflowSessionData>,
@@ -675,10 +628,10 @@ pub(crate) struct ManagerState {
 }
 
 impl ManagerState {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             driver: None,
-            lcu_session: None,
+            last_focus_pid: None,
             match_history_mode: MatchHistoryModeSetting::CurrentMode,
             lifecycle_game_id: None,
             cached_gameflow_session: None,
@@ -758,7 +711,7 @@ impl ManagerState {
 
     pub(crate) fn build_updated_payload(
         &self,
-        _settings: &OngoingGameManagerSettings,
+        _settings: &OngoingGameSettings,
     ) -> OngoingGameUpdated {
         let phase = self.current_phase();
         let effective_queue_id = self.effective_queue_id();
@@ -811,10 +764,7 @@ impl ManagerState {
         }
     }
 
-    pub(crate) fn effective_mode_tag(
-        &self,
-        _settings: &OngoingGameManagerSettings,
-    ) -> Option<String> {
+    pub(crate) fn effective_mode_tag(&self, _settings: &OngoingGameSettings) -> Option<String> {
         self.match_history_mode
             .effective_tag(self.effective_queue_id())
     }
@@ -1214,10 +1164,6 @@ impl ManagerState {
     }
 }
 
-fn lcu_focus_key(session: Option<&Arc<LcuSession>>) -> Option<(u32, u16)> {
-    session.map(|entry| (entry.auth().pid, entry.auth().port))
-}
-
 fn extract_gameflow_game_id(session: &GameflowSessionData) -> Option<u64> {
     (session.game_data.game_id > 0).then_some(session.game_data.game_id)
 }
@@ -1508,6 +1454,21 @@ fn seed_to_ws_events(seed: &OngoingSessionSeed) -> Vec<LcuWsEvent> {
             event_type: EventType::Update,
             uri: URI_TEAM_BUILDER_CHAMP_SELECT_SESSION.to_string(),
             data: champ_select.clone(),
+        }));
+    }
+
+    // After ChampSelectSession (which provides cell layout / champion ids /
+    // positions), replay the cached TBD payload so the manager can backfill
+    // real puuid / summoner id for hidden-name allies.
+    if let Some(ref payload) = seed.teambuilder_payload {
+        events.push(LcuWsEvent::TeambuilderTbdGame(TeambuilderTbdGame {
+            event_type: EventType::Update,
+            uri: URI_RMS_TEAMBUILDER_TBD_GAME.to_string(),
+            data: TeambuilderTbdGameMessage {
+                payload: payload.clone(),
+                resource: "teambuilder/v1/tbdGameDtoV1".to_string(),
+                ..Default::default()
+            },
         }));
     }
 

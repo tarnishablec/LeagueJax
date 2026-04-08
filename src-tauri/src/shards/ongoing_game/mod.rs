@@ -1,12 +1,12 @@
 pub mod driver;
 pub mod manager;
 pub mod types;
+pub mod context;
 
 use std::error::Error;
 use std::sync::{Arc, OnceLock};
 
-use self::manager::{OngoingGameManager, OngoingGameManagerSettings};
-use crate::shards::lcu::session::LcuSession;
+use self::manager::{OngoingGameManager, OngoingGameSettings};
 use crate::shards::lcu::LcuShard;
 use crate::shards::settings::types::{SettingControlDto, SettingDefinitionDto, SettingScopeDto};
 use crate::shards::settings::SettingsShard;
@@ -36,28 +36,17 @@ impl OngoingGameShard {
 
     pub fn initialize(
         &self,
-        settings: OngoingGameManagerSettings,
+        settings: OngoingGameSettings,
         sgp_shard: Arc<SgpShard>,
+        lcu_shard: Arc<LcuShard>,
     ) -> Arc<OngoingGameManager> {
         if let Some(existing) = self.manager.get() {
             return existing.clone();
         }
 
-        let manager = Arc::new(OngoingGameManager::new(settings, sgp_shard));
+        let manager = Arc::new(OngoingGameManager::new(settings, sgp_shard, lcu_shard));
         let _ = self.manager.set(manager.clone());
         manager
-    }
-
-    pub async fn apply_focus(&self, lcu_session: Option<Arc<LcuSession>>) {
-        let Some(manager) = self.manager() else {
-            return;
-        };
-
-        if manager.has_same_lcu_focus(lcu_session.as_ref()).await {
-            return;
-        }
-
-        manager.handle_focus_changed(lcu_session).await;
     }
 }
 
@@ -68,6 +57,7 @@ impl Shard for OngoingGameShard {
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
         let sgp_shard = jax.get_shard::<SgpShard>();
+        let lcu_shard = jax.get_shard::<LcuShard>();
 
         let count_setting = settings.register_definition(SettingDefinitionDto {
             id: MATCH_HISTORY_COUNT_SETTING_ID.to_string(),
@@ -87,10 +77,11 @@ impl Shard for OngoingGameShard {
         })?;
 
         let manager = self.initialize(
-            OngoingGameManagerSettings {
+            OngoingGameSettings {
                 match_history_count: count_setting.clone(),
             },
             sgp_shard,
+            lcu_shard,
         );
 
         let count_manager = manager.clone();

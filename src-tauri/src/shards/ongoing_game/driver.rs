@@ -3,31 +3,20 @@ use std::sync::{Arc, LazyLock};
 use maokai_runner::{Behavior, Behaviors, EventReply, Runner};
 use maokai_tree::{DataView, State, StateTree, TreeView};
 
-use crate::shards::lcu::concepts::gameflow_phase::Phase;
-use crate::shards::lcu::concepts::LcuWsEvent;
-use crate::shards::lcu::session::LcuSession;
-use crate::shards::ongoing_game::manager::{
-    OngoingGameContext, MAX_MATCH_HISTORY_FETCH_CONCURRENCY,
-};
-use crate::shards::ongoing_game::types::{
+use super::context::{OngoingGameContext, MAX_MATCH_HISTORY_FETCH_CONCURRENCY};
+use super::types::{
     OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGamePhase,
     OngoingGamePlayerLoadStatus, OngoingGameSummonersUpdated, OngoingGameUpdated,
 };
+
+use crate::shards::lcu::concepts::gameflow_phase::Phase;
+use crate::shards::lcu::concepts::LcuWsEvent;
+use crate::shards::lcu::session::LcuSession;
 use crate::shards::sgp::session::SgpSession;
 use crate::shards::sgp::LcuSessionSgpExt;
 use tokio::sync::Semaphore;
 
 type DriverInput = LcuWsEvent;
-
-fn event_name(event: &DriverInput) -> &'static str {
-    match event {
-        LcuWsEvent::GameflowPhase(_) => "GameflowPhase",
-        LcuWsEvent::ChampSelectSession(_) => "ChampSelectSession",
-        LcuWsEvent::GameflowSession(_) => "GameflowSession",
-        LcuWsEvent::TeambuilderTbdGame(_) => "TeambuilderTbdGame",
-        _ => "Other",
-    }
-}
 
 struct PlayerFetchSnapshot {
     generation: u64,
@@ -203,7 +192,7 @@ impl Behavior<DriverInput> for ChampSelectBehavior {
                 let ctx = self.ctx.clone();
                 tracing::info!(
                     "[ongoing_game] ChampSelect refresh triggered by {}",
-                    event_name(event)
+                    event.as_ref()
                 );
                 tokio::spawn(refresh_players_from_current_state(ctx));
                 EventReply::Handled
@@ -212,7 +201,7 @@ impl Behavior<DriverInput> for ChampSelectBehavior {
                 let ctx = self.ctx.clone();
                 tracing::info!(
                     "[ongoing_game] ChampSelect refresh triggered by {}",
-                    event_name(event)
+                    event.as_ref()
                 );
                 tokio::spawn(refresh_players_from_current_state(ctx));
                 EventReply::Handled
@@ -252,7 +241,7 @@ impl Behavior<DriverInput> for InGameBehavior {
                     let ctx = self.ctx.clone();
                     tracing::info!(
                         "[ongoing_game] InGame refresh triggered by {}",
-                        event_name(event)
+                        event.as_ref()
                     );
                     tokio::spawn(refresh_players_from_current_state(ctx));
                     EventReply::Handled
@@ -272,28 +261,48 @@ fn spawn_fetch_for_missing_members(ctx: Arc<OngoingGameContext>) {
 }
 
 async fn collect_player_fetch_snapshot(ctx: &Arc<OngoingGameContext>) -> PlayerFetchSnapshot {
-    let mut state = ctx.state.lock().await;
-    let new_puuids = state.new_puuids();
-    let new_history_puuids = if state.match_histories_pending {
-        Vec::new()
-    } else {
-        state.new_history_puuids()
+    let (
+        generation,
+        lifecycle_game_id,
+        updated,
+        new_puuids,
+        new_history_puuids,
+        history_fetch_started,
+    ) = {
+        let mut state = ctx.state.lock().await;
+        let new_puuids = state.new_puuids();
+        let new_history_puuids = if state.match_histories_pending {
+            Vec::new()
+        } else {
+            state.new_history_puuids()
+        };
+        state.mark_summoners_loading(&new_puuids);
+        let history_fetch_started = !new_history_puuids.is_empty();
+        if history_fetch_started {
+            state.mark_histories_loading(&new_history_puuids);
+        }
+        let updated = state.build_updated_payload(&ctx.settings);
+        (
+            state.generation,
+            state.lifecycle_game_id,
+            updated,
+            new_puuids,
+            new_history_puuids,
+            history_fetch_started,
+        )
     };
-    state.mark_summoners_loading(&new_puuids);
-    let history_fetch_started = !new_history_puuids.is_empty();
-    if history_fetch_started {
-        state.mark_histories_loading(&new_history_puuids);
-    }
-    let updated = state.build_updated_payload(&ctx.settings);
+
+    // Resolve session AFTER releasing the state lock — `Lcu Manager` has its own internal lock and nesting them risks deadlock.
+    let lcu = ctx.focused_session().await;
 
     PlayerFetchSnapshot {
-        generation: state.generation,
-        lifecycle_game_id: state.lifecycle_game_id,
+        generation,
+        lifecycle_game_id,
         updated: updated.clone(),
         new_puuids,
         new_history_puuids,
         history_fetch_started,
-        lcu: state.lcu_session.clone(),
+        lcu,
         history_count: ctx.settings.match_history_count_value(),
         effective_queue_id: updated.effective_queue_id,
         raw_tag: updated.match_history_tag,

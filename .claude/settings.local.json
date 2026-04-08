@@ -81,7 +81,11 @@
       "Read(//tmp/**)",
       "Bash(python -c ':*)",
       "Bash(python -c \"import json; d=json.load\\(open\\('/tmp/lcu-openapi.json'\\)\\); s=d['components']['schemas']['LolChampSelectChampSelectSummoner']; print\\(json.dumps\\(s, indent=2\\)\\)\")",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(cp /tmp/lcu.json D:/Desktop/Web/LeagueJax/src-tauri/lcu.json.tmp)",
+      "Bash(rm D:/Desktop/Web/LeagueJax/src-tauri/lcu.json.tmp)",
+      "Bash(cp /tmp/lcu.json ./lcu.json.tmp)",
+      "Bash(rm ./lcu.json.tmp)"
     ]
   }
 }
