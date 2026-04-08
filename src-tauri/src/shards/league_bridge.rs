@@ -37,28 +37,9 @@ impl LeagueBridgeShard {
             manager_for_run.run().await;
         });
 
-        let jax_for_state = jax.clone();
-        let ongoing_shard_for_state = ongoing_shard.clone();
-        lcu_manager.clone().subscribe_state_fn(move |event| {
-            let jax = jax_for_state.clone();
-            let ongoing_shard = ongoing_shard_for_state.clone();
-            async move {
-                match event {
-                    LcuManagerStateEvent::FocusChanged(change) => {
-                        let lcu_session = match change.current {
-                            Some(pid) => {
-                                let lcu_shard = jax.get_shard::<LcuShard>();
-                                lcu_shard.manager().and_then(|m| m.session_for_pid(pid))
-                            }
-                            None => None,
-                        };
-
-                        ongoing_shard.apply_focus(lcu_session).await;
-                    }
-                    LcuManagerStateEvent::InstancesChanged(_) => {}
-                }
-            }
-        });
+        // OngoingGameManager subscribes to LCU focus changes itself — the
+        // bridge no longer translates them.
+        ongoing_manager.start();
 
         lcu_manager.subscribe_ws_fn(move |ws_event| {
             let ongoing_manager = ongoing_manager.clone();
