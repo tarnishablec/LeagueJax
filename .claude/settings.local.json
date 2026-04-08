@@ -85,7 +85,11 @@
       "Bash(cp /tmp/lcu.json D:/Desktop/Web/LeagueJax/src-tauri/lcu.json.tmp)",
       "Bash(rm D:/Desktop/Web/LeagueJax/src-tauri/lcu.json.tmp)",
       "Bash(cp /tmp/lcu.json ./lcu.json.tmp)",
-      "Bash(rm ./lcu.json.tmp)"
+      "Bash(rm ./lcu.json.tmp)",
+      "Bash(bun x:*)",
+      "Read(//d/Desktop/Rust/maokai/maokai-runner/src/**)",
+      "Read(//d/Rust/maokai/maokai-runner/**)",
+      "Read(//d//**)"
     ]
   }
 }

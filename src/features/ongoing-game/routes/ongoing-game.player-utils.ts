@@ -13,7 +13,11 @@ const MULTI_TEAM_QUEUE_IDS = new Set<number>([
 ]);
 
 export function isBotSlot(slot: PlayerSlot): boolean {
-  return slot.summonerId === 0 || slot.puuid.trim().length === 0;
+  // A slot is only a bot when it has no identity AND no champion selection.
+  // Hidden-identity allies during ranked pre-reveal champ-select have empty
+  // puuid / zero summonerId but a real championId — they must not be classified
+  // as bots.
+  return slot.summonerId === 0 && slot.puuid.trim().length === 0;
 }
 
 export function groupTeamMembers(teamMembers: PlayerSlot[]): Array<{
