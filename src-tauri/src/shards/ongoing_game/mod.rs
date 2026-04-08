@@ -1,7 +1,8 @@
+pub mod context;
 pub mod driver;
 pub mod manager;
+pub mod state;
 pub mod types;
-pub mod context;
 
 use std::error::Error;
 use std::sync::{Arc, OnceLock};
@@ -87,9 +88,7 @@ impl Shard for OngoingGameShard {
         let count_manager = manager.clone();
         count_setting.spawn_watch(false, move |_| {
             let count_manager = count_manager.clone();
-            async move {
-                count_manager.refresh_match_histories().await;
-            }
+            async move { todo!() }
         })?;
 
         Ok(())

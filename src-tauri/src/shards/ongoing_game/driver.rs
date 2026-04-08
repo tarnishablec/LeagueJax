@@ -1,36 +1,16 @@
 use std::sync::{Arc, LazyLock};
 
-use maokai_runner::{Behavior, Behaviors, EventReply, Runner};
+use maokai_runner::{Behavior, Behaviors, EventReply, Runner, Transition};
 use maokai_tree::{DataView, State, StateTree, TreeView};
 
-use super::context::{OngoingGameContext, MAX_MATCH_HISTORY_FETCH_CONCURRENCY};
-use super::types::{
-    OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGamePhase,
-    OngoingGamePlayerLoadStatus, OngoingGameSummonersUpdated, OngoingGameUpdated,
-};
+use super::context::OngoingGameContext;
+use super::types::OngoingGamePhase;
 
 use crate::shards::lcu::concepts::gameflow_phase::Phase;
 use crate::shards::lcu::concepts::LcuWsEvent;
-use crate::shards::lcu::session::LcuSession;
-use crate::shards::sgp::session::SgpSession;
-use crate::shards::sgp::LcuSessionSgpExt;
-use tokio::sync::Semaphore;
 
 type DriverInput = LcuWsEvent;
-
-struct PlayerFetchSnapshot {
-    generation: u64,
-    lifecycle_game_id: Option<u64>,
-    updated: OngoingGameUpdated,
-    new_puuids: Vec<String>,
-    new_history_puuids: Vec<String>,
-    history_fetch_started: bool,
-    lcu: Option<Arc<LcuSession>>,
-    history_count: u32,
-    effective_queue_id: Option<u64>,
-    raw_tag: Option<String>,
-    effective_tag: Option<String>,
-}
+type DriverCtx = Arc<OngoingGameContext>;
 
 // ---------------------------------------------------------------------------
 // State tree
@@ -52,17 +32,17 @@ static ONGOING_GAME_TREE: LazyLock<(StateTree<OngoingGamePhase>, State, State, S
 pub struct OngoingGameDriver {
     current: State,
     runner: Runner<'static, OngoingGamePhase>,
-    behaviors: Behaviors<'static, DriverInput>,
+    behaviors: Behaviors<'static, DriverInput, DriverCtx>,
 }
 
 impl OngoingGameDriver {
-    pub fn new(ctx: Arc<OngoingGameContext>) -> Self {
+    pub fn new() -> Self {
         let (tree, idle, champ_select, in_game) = &*ONGOING_GAME_TREE;
 
         let mut behaviors = Behaviors::default();
         behaviors.register(idle, IdleBehavior);
-        behaviors.register(champ_select, ChampSelectBehavior { ctx: ctx.clone() });
-        behaviors.register(in_game, InGameBehavior { ctx });
+        behaviors.register(champ_select, ChampSelectBehavior);
+        behaviors.register(in_game, InGameBehavior);
 
         Self {
             current: tree.root(),
@@ -71,14 +51,18 @@ impl OngoingGameDriver {
         }
     }
 
-    pub fn process(&mut self, event: &LcuWsEvent) -> Option<(OngoingGamePhase, OngoingGamePhase)> {
+    pub fn process(
+        &mut self,
+        event: &LcuWsEvent,
+        ctx: &mut DriverCtx,
+    ) -> Option<(OngoingGamePhase, OngoingGamePhase)> {
         let previous = self.current.clone();
-        self.current = self.runner.dispatch(&self.behaviors, &self.current, event);
+        self.current = self
+            .runner
+            .dispatch(&self.behaviors, &self.current, event, ctx);
 
         if self.current != previous {
-            let prev = Self::phase(&previous);
-            let next = Self::phase(&self.current);
-            Some((prev, next))
+            Some((Self::phase(&previous), Self::phase(&self.current)))
         } else {
             None
         }
@@ -97,6 +81,17 @@ impl OngoingGameDriver {
     }
 }
 
+impl Default for OngoingGameDriver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Transition helpers (retained for future use)
+// ---------------------------------------------------------------------------
+
+#[allow(dead_code)]
 fn handle_for_phase(phase: OngoingGamePhase) -> State {
     let (_, _, champ_select, in_game) = &*ONGOING_GAME_TREE;
     match phase {
@@ -106,10 +101,12 @@ fn handle_for_phase(phase: OngoingGamePhase) -> State {
     }
 }
 
+#[allow(dead_code)]
 fn transition_to(target: OngoingGamePhase) -> EventReply {
     EventReply::Transition(handle_for_phase(target))
 }
 
+#[allow(dead_code)]
 fn transition_from_phase_in_idle(phase: Phase) -> EventReply {
     match phase {
         Phase::ChampSelect => transition_to(OngoingGamePhase::ChampSelect),
@@ -120,6 +117,7 @@ fn transition_from_phase_in_idle(phase: Phase) -> EventReply {
     }
 }
 
+#[allow(dead_code)]
 fn transition_from_phase_in_champ_select(phase: Phase) -> EventReply {
     match phase {
         Phase::InProgress | Phase::GameStart | Phase::InGame => {
@@ -134,6 +132,7 @@ fn transition_from_phase_in_champ_select(phase: Phase) -> EventReply {
     }
 }
 
+#[allow(dead_code)]
 fn transition_from_phase_in_game(phase: Phase) -> EventReply {
     match phase {
         Phase::ChampSelect => transition_to(OngoingGamePhase::ChampSelect),
@@ -147,554 +146,74 @@ fn transition_from_phase_in_game(phase: Phase) -> EventReply {
 }
 
 // ---------------------------------------------------------------------------
-// Idle
+// Behaviors (skeleton — WS handling intentionally omitted)
 // ---------------------------------------------------------------------------
 
 struct IdleBehavior;
 
-impl Behavior<DriverInput> for IdleBehavior {
-    fn on_enter(&self, _state: &State) {
+impl Behavior<DriverInput, DriverCtx> for IdleBehavior {
+    fn on_enter(&self, _transition: &Transition, _ctx: &mut DriverCtx) {
         tracing::info!("[ongoing_game] entered Idle");
+        // TODO: reset ongoing state snapshot
     }
 
-    fn on_event(&self, event: &DriverInput, _current: &State, _tree: &dyn TreeView) -> EventReply {
-        match event {
-            LcuWsEvent::GameflowPhase(payload) => transition_from_phase_in_idle(payload.data),
-            LcuWsEvent::ChampSelectSession(_) => transition_to(OngoingGamePhase::ChampSelect),
-            LcuWsEvent::GameflowSession(payload) => {
-                transition_from_phase_in_idle(payload.data.phase)
-            }
-            _ => EventReply::Ignored,
-        }
+    fn on_event(
+        &self,
+        _event: &DriverInput,
+        _current: &State,
+        _ctx: &mut DriverCtx,
+        _tree: &dyn TreeView,
+    ) -> EventReply {
+        // TODO: dispatch by event kind; previously:
+        //   LcuWsEvent::GameflowPhase(p) => transition_from_phase_in_idle(p.data),
+        //   LcuWsEvent::ChampSelectSession(_) => transition_to(OngoingGamePhase::ChampSelect),
+        //   LcuWsEvent::GameflowSession(p) => transition_from_phase_in_idle(p.data.phase),
+        EventReply::Ignored
     }
 }
 
-// ---------------------------------------------------------------------------
-// ChampSelect
-// ---------------------------------------------------------------------------
+struct ChampSelectBehavior;
 
-struct ChampSelectBehavior {
-    ctx: Arc<OngoingGameContext>,
-}
-
-impl Behavior<DriverInput> for ChampSelectBehavior {
-    fn on_enter(&self, _state: &State) {
+impl Behavior<DriverInput, DriverCtx> for ChampSelectBehavior {
+    fn on_enter(&self, _transition: &Transition, _ctx: &mut DriverCtx) {
         tracing::info!("[ongoing_game] entered ChampSelect");
-        spawn_fetch_for_missing_members(self.ctx.clone());
+        // TODO: spawn player fetch via ctx.clone()
     }
 
-    fn on_event(&self, event: &DriverInput, _current: &State, _tree: &dyn TreeView) -> EventReply {
-        match event {
-            LcuWsEvent::GameflowPhase(payload) => {
-                transition_from_phase_in_champ_select(payload.data)
-            }
-            LcuWsEvent::ChampSelectSession(_) => {
-                let ctx = self.ctx.clone();
-                tracing::info!(
-                    "[ongoing_game] ChampSelect refresh triggered by {}",
-                    event.as_ref()
-                );
-                tokio::spawn(refresh_players_from_current_state(ctx));
-                EventReply::Handled
-            }
-            LcuWsEvent::TeambuilderTbdGame(_) => {
-                let ctx = self.ctx.clone();
-                tracing::info!(
-                    "[ongoing_game] ChampSelect refresh triggered by {}",
-                    event.as_ref()
-                );
-                tokio::spawn(refresh_players_from_current_state(ctx));
-                EventReply::Handled
-            }
-            LcuWsEvent::GameflowSession(payload) => {
-                transition_from_phase_in_champ_select(payload.data.phase)
-            }
-            _ => EventReply::Handled,
-        }
+    fn on_event(
+        &self,
+        _event: &DriverInput,
+        _current: &State,
+        _ctx: &mut DriverCtx,
+        _tree: &dyn TreeView,
+    ) -> EventReply {
+        // TODO: dispatch by event kind; previously:
+        //   LcuWsEvent::GameflowPhase(p)      => transition_from_phase_in_champ_select(p.data),
+        //   LcuWsEvent::GameflowSession(p)    => transition_from_phase_in_champ_select(p.data.phase),
+        //   LcuWsEvent::ChampSelectSession(_) => refresh players,
+        //   LcuWsEvent::TeambuilderTbdGame(_) => refresh players,
+        EventReply::Handled
     }
 }
 
-// ---------------------------------------------------------------------------
-// InGame
-// ---------------------------------------------------------------------------
+struct InGameBehavior;
 
-struct InGameBehavior {
-    ctx: Arc<OngoingGameContext>,
-}
-
-impl Behavior<DriverInput> for InGameBehavior {
-    fn on_enter(&self, _state: &State) {
+impl Behavior<DriverInput, DriverCtx> for InGameBehavior {
+    fn on_enter(&self, _transition: &Transition, _ctx: &mut DriverCtx) {
         tracing::info!("[ongoing_game] entered InGame");
-        spawn_fetch_for_missing_members(self.ctx.clone());
+        // TODO: spawn player fetch via ctx.clone()
     }
 
-    fn on_event(&self, event: &DriverInput, _current: &State, _tree: &dyn TreeView) -> EventReply {
-        match event {
-            LcuWsEvent::GameflowPhase(payload) => transition_from_phase_in_game(payload.data),
-            LcuWsEvent::GameflowSession(payload) => match payload.data.phase {
-                Phase::EndOfGame
-                | Phase::None
-                | Phase::Lobby
-                | Phase::WaitingForStats
-                | Phase::TerminatedInError => transition_to(OngoingGamePhase::Idle),
-                _ => {
-                    let ctx = self.ctx.clone();
-                    tracing::info!(
-                        "[ongoing_game] InGame refresh triggered by {}",
-                        event.as_ref()
-                    );
-                    tokio::spawn(refresh_players_from_current_state(ctx));
-                    EventReply::Handled
-                }
-            },
-            _ => EventReply::Handled,
-        }
+    fn on_event(
+        &self,
+        _event: &DriverInput,
+        _current: &State,
+        _ctx: &mut DriverCtx,
+        _tree: &dyn TreeView,
+    ) -> EventReply {
+        // TODO: dispatch by event kind; previously:
+        //   LcuWsEvent::GameflowPhase(p)   => transition_from_phase_in_game(p.data),
+        //   LcuWsEvent::GameflowSession(p) => match end-phases -> Idle else refresh,
+        EventReply::Handled
     }
-}
-
-// ---------------------------------------------------------------------------
-// Per-player parallel fetch
-// ---------------------------------------------------------------------------
-
-fn spawn_fetch_for_missing_members(ctx: Arc<OngoingGameContext>) {
-    tokio::spawn(refresh_players_from_current_state(ctx));
-}
-
-async fn collect_player_fetch_snapshot(ctx: &Arc<OngoingGameContext>) -> PlayerFetchSnapshot {
-    let (
-        generation,
-        lifecycle_game_id,
-        updated,
-        new_puuids,
-        new_history_puuids,
-        history_fetch_started,
-    ) = {
-        let mut state = ctx.state.lock().await;
-        let new_puuids = state.new_puuids();
-        let new_history_puuids = if state.match_histories_pending {
-            Vec::new()
-        } else {
-            state.new_history_puuids()
-        };
-        state.mark_summoners_loading(&new_puuids);
-        let history_fetch_started = !new_history_puuids.is_empty();
-        if history_fetch_started {
-            state.mark_histories_loading(&new_history_puuids);
-        }
-        let updated = state.build_updated_payload(&ctx.settings);
-        (
-            state.generation,
-            state.lifecycle_game_id,
-            updated,
-            new_puuids,
-            new_history_puuids,
-            history_fetch_started,
-        )
-    };
-
-    // Resolve session AFTER releasing the state lock — `Lcu Manager` has its own internal lock and nesting them risks deadlock.
-    let lcu = ctx.focused_session().await;
-
-    PlayerFetchSnapshot {
-        generation,
-        lifecycle_game_id,
-        updated: updated.clone(),
-        new_puuids,
-        new_history_puuids,
-        history_fetch_started,
-        lcu,
-        history_count: ctx.settings.match_history_count_value(),
-        effective_queue_id: updated.effective_queue_id,
-        raw_tag: updated.match_history_tag,
-        effective_tag: updated.effective_mode_tag,
-    }
-}
-
-async fn refresh_players_from_current_state(ctx: Arc<OngoingGameContext>) {
-    let snapshot = collect_player_fetch_snapshot(&ctx).await;
-    let has_new_work = !snapshot.new_puuids.is_empty() || !snapshot.new_history_puuids.is_empty();
-    tracing::info!(
-        "[ongoing_game] refresh snapshot phase={:?} generation={} lifecycle_game_id={:?} team_members={} missing_summoners={} missing_histories={} raw_tag={:?} effective_queue_id={:?} effective_tag={:?} history_count={}",
-        snapshot.updated.phase,
-        snapshot.generation,
-        snapshot.lifecycle_game_id,
-        snapshot.updated.team_members.len(),
-        snapshot.new_puuids.len(),
-        snapshot.new_history_puuids.len(),
-        snapshot.raw_tag,
-        snapshot.effective_queue_id,
-        snapshot.effective_tag,
-        snapshot.history_count
-    );
-    tracing::debug!(
-        "[ongoing_game] refresh snapshot missing_summoner_puuids={:?} missing_history_puuids={:?}",
-        snapshot.new_puuids,
-        snapshot.new_history_puuids
-    );
-
-    // Only broadcast when there are new players to fetch — avoids redundant
-    // Updated events that can race with individual SummonersUpdated /
-    // MatchHistoriesUpdated events and cause frontend flickering.
-    if has_new_work {
-        ctx.broadcast(OngoingGameEvent::Updated(snapshot.updated));
-    }
-
-    spawn_per_player_fetches(
-        &ctx,
-        &snapshot.lcu,
-        &snapshot.new_puuids,
-        &snapshot.new_history_puuids,
-        snapshot.history_count,
-        snapshot.effective_tag.as_deref(),
-        snapshot.generation,
-    )
-    .await;
-
-    if snapshot.history_fetch_started {
-        let updated = {
-            let mut state = ctx.state.lock().await;
-            if state.generation == snapshot.generation {
-                state.match_histories_pending = false;
-            }
-            state.build_updated_payload(&ctx.settings)
-        };
-        tracing::info!(
-            "[ongoing_game] history fetch batch completed generation={} lifecycle_game_id={:?} missing_histories_started={}",
-            snapshot.generation,
-            snapshot.lifecycle_game_id,
-            snapshot.new_history_puuids.len()
-        );
-        ctx.broadcast(OngoingGameEvent::Updated(updated));
-    }
-}
-
-/// Spawns one task per player (summoner and history in parallel per player).
-async fn spawn_per_player_fetches(
-    ctx: &Arc<OngoingGameContext>,
-    lcu: &Option<Arc<LcuSession>>,
-    summoner_puuids: &[String],
-    history_puuids: &[String],
-    history_count: u32,
-    tag: Option<&str>,
-    generation: u64,
-) {
-    let all_puuids: std::collections::HashSet<&String> = summoner_puuids
-        .iter()
-        .chain(history_puuids.iter())
-        .collect();
-
-    if all_puuids.is_empty() {
-        tracing::info!(
-            "[ongoing_game] no missing puuids for generation={}, nothing to fetch",
-            generation
-        );
-        return;
-    }
-
-    let sgp = match lcu {
-        Some(lcu_session) => match lcu_session.to_sgp(&ctx.sgp_shard).await {
-            Ok(sgp) => Some(sgp),
-            Err(error) => {
-                tracing::warn!(
-                    "[ongoing_game] history fetch setup failed generation={} pid={} error={}",
-                    generation,
-                    lcu_session.auth().pid,
-                    error
-                );
-                None
-            }
-        },
-        None => None,
-    };
-
-    let mut join_set = tokio::task::JoinSet::new();
-    let history_semaphore = Arc::new(Semaphore::new(MAX_MATCH_HISTORY_FETCH_CONCURRENCY));
-    for puuid in all_puuids {
-        let ctx = ctx.clone();
-        let puuid = puuid.clone();
-        let lcu = lcu.clone();
-        let sgp = sgp.clone();
-        let history_semaphore = history_semaphore.clone();
-        let needs_summoner = summoner_puuids.contains(&puuid);
-        let needs_history = history_puuids.contains(&puuid);
-        let tag = tag.map(|t| t.to_owned());
-
-        join_set.spawn(async move {
-            let summoner_fut = async {
-                if !needs_summoner {
-                    return;
-                }
-                tracing::info!(
-                    "[ongoing_game] summoner fetch start puuid={} generation={}",
-                    puuid,
-                    generation
-                );
-                let Some(ref lcu) = lcu else {
-                    tracing::warn!(
-                        "[ongoing_game] summoner fetch skipped puuid={} generation={} reason=no_lcu_session",
-                        puuid,
-                        generation
-                    );
-                    set_summoner_state(
-                        &ctx,
-                        &puuid,
-                        generation,
-                        OngoingGamePlayerLoadStatus::Failed,
-                        None,
-                    )
-                    .await;
-                    return;
-                };
-                let summoner = match lcu.api().get_summoner_by_puuid_optional(&puuid).await {
-                    Ok(Some(summoner)) => summoner,
-                    Ok(None) => {
-                        tracing::info!(
-                            "[ongoing_game] summoner fetch unavailable puuid={} generation={} reason=not_found",
-                            puuid,
-                            generation
-                        );
-
-                        set_summoner_state(
-                            &ctx,
-                            &puuid,
-                            generation,
-                            OngoingGamePlayerLoadStatus::Failed,
-                            None,
-                        )
-                        .await;
-                        return;
-                    }
-                    Err(error) => {
-                        tracing::warn!(
-                            "[ongoing_game] summoner fetch failed puuid={} generation={} error={}",
-                            puuid,
-                            generation,
-                            error
-                        );
-                        set_summoner_state(
-                            &ctx,
-                            &puuid,
-                            generation,
-                            OngoingGamePlayerLoadStatus::Failed,
-                            None,
-                        )
-                        .await;
-                        return;
-                    }
-                };
-
-                set_summoner_state(
-                    &ctx,
-                    &puuid,
-                    generation,
-                    OngoingGamePlayerLoadStatus::Ready,
-                    Some(summoner),
-                )
-                .await;
-            };
-
-            let history_fut = async {
-                if !needs_history {
-                    return;
-                }
-                tracing::info!(
-                    "[ongoing_game] history fetch start puuid={} generation={} tag={:?} count={}",
-                    puuid,
-                    generation,
-                    tag,
-                    history_count
-                );
-                let permit = match history_semaphore.acquire_owned().await {
-                    Ok(permit) => permit,
-                    Err(_) => return,
-                };
-                let _permit = permit;
-                fetch_single_history(
-                    &ctx,
-                    &sgp,
-                    &puuid,
-                    history_count,
-                    tag.as_deref(),
-                    generation,
-                )
-                .await;
-            };
-
-            tokio::join!(summoner_fut, history_fut);
-        });
-    }
-
-    while let Some(joined) = join_set.join_next().await {
-        if let Err(error) = joined {
-            tracing::warn!(
-                "[ongoing_game] per-player fetch task join failed generation={} error={}",
-                generation,
-                error
-            );
-        }
-    }
-}
-
-async fn fetch_single_history(
-    ctx: &Arc<OngoingGameContext>,
-    sgp: &Option<Arc<SgpSession>>,
-    puuid: &str,
-    count: u32,
-    tag: Option<&str>,
-    generation: u64,
-) {
-    let Some(ref sgp) = sgp else {
-        tracing::warn!(
-            "[ongoing_game] history fetch skipped puuid={} generation={} reason=no_sgp_session",
-            puuid,
-            generation
-        );
-        set_history_state(
-            ctx,
-            puuid,
-            generation,
-            OngoingGamePlayerLoadStatus::Failed,
-            None,
-            "skipped",
-        )
-        .await;
-        return;
-    };
-    let resp = match sgp
-        .api()
-        .get_match_summaries(puuid, 0, count, tag, None)
-        .await
-    {
-        Ok(resp) => resp,
-        Err(error) => {
-            tracing::warn!(
-                "[ongoing_game] history fetch failed puuid={} generation={} tag={:?} count={} error={}",
-                puuid,
-                generation,
-                tag,
-                count,
-                error
-            );
-            set_history_state(
-                ctx,
-                puuid,
-                generation,
-                OngoingGamePlayerLoadStatus::Failed,
-                None,
-                "failed",
-            )
-            .await;
-            return;
-        }
-    };
-
-    tracing::info!(
-        "[ongoing_game] history fetch success puuid={} generation={} games={}",
-        puuid,
-        generation,
-        resp.games.len()
-    );
-    set_history_state(
-        ctx,
-        puuid,
-        generation,
-        OngoingGamePlayerLoadStatus::Ready,
-        Some(resp.games),
-        "success",
-    )
-    .await;
-}
-
-async fn set_summoner_state(
-    ctx: &Arc<OngoingGameContext>,
-    puuid: &str,
-    generation: u64,
-    status: OngoingGamePlayerLoadStatus,
-    summoner: Option<crate::shards::lcu::concepts::summoner::SummonerInfo>,
-) {
-    let mut state = ctx.state.lock().await;
-    if state.generation != generation {
-        tracing::warn!(
-            "[ongoing_game] summoner fetch dropped puuid={} request_generation={} current_generation={} status={:?}",
-            puuid,
-            generation,
-            state.generation,
-            status
-        );
-        return;
-    }
-
-    state.set_summoner_status(puuid, status, summoner);
-    let phase = state
-        .driver
-        .as_ref()
-        .map(|d| d.current_phase())
-        .unwrap_or(OngoingGamePhase::Idle);
-    let summoner_state = state.summoner_state_for_puuid(puuid);
-    let cached_summoners = state.cached_summoners_by_puuid.len();
-    drop(state);
-
-    tracing::info!(
-        "[ongoing_game] summoner fetch state puuid={} generation={} cached_summoners={} status={:?}",
-        puuid,
-        generation,
-        cached_summoners,
-        status
-    );
-
-    ctx.broadcast(OngoingGameEvent::SummonersUpdated(
-        OngoingGameSummonersUpdated {
-            phase,
-            state: summoner_state,
-        },
-    ));
-}
-
-async fn set_history_state(
-    ctx: &Arc<OngoingGameContext>,
-    puuid: &str,
-    generation: u64,
-    status: OngoingGamePlayerLoadStatus,
-    games: Option<Vec<crate::shards::sgp::matches::RawMatchSummaryGame>>,
-    outcome: &str,
-) {
-    let game_count = games.as_ref().map_or(0, Vec::len);
-    let mut state = ctx.state.lock().await;
-    if state.generation != generation {
-        tracing::warn!(
-            "[ongoing_game] history fetch dropped puuid={} request_generation={} current_generation={} outcome={}",
-            puuid,
-            generation,
-            state.generation,
-            outcome
-        );
-        return;
-    }
-
-    state.set_history_status(puuid, status, games);
-    let phase = state
-        .driver
-        .as_ref()
-        .map(|d| d.current_phase())
-        .unwrap_or(OngoingGamePhase::Idle);
-    let history_state = state.history_state_for_puuid(puuid);
-    let cached_histories = state.cached_match_histories.len();
-    drop(state);
-
-    tracing::info!(
-        "[ongoing_game] broadcasting MatchHistoriesUpdated puuid={} generation={} cached_history_puuids={} latest_games={} outcome={} status={:?}",
-        puuid,
-        generation,
-        cached_histories,
-        game_count,
-        outcome,
-        status
-    );
-
-    ctx.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
-        OngoingGameMatchHistoriesUpdated {
-            phase,
-            state: history_state,
-        },
-    ));
 }

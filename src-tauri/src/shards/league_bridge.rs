@@ -26,23 +26,12 @@ impl LeagueBridgeShard {
         let lcu_shard = jax.get_shard::<LcuShard>();
         let lcu_manager = lcu_shard.initialize(cancel_token.clone());
 
-        let ongoing_shard = jax.get_shard::<OngoingGameShard>();
-        let Some(ongoing_manager) = ongoing_shard.manager() else {
-            tracing::error!("OngoingGame manager is not initialized");
-            return;
-        };
-
         let manager_for_run = lcu_manager.clone();
         tauri_host.spawn(async move {
             manager_for_run.run().await;
         });
 
-        // OngoingGameManager subscribes to LCU focus changes itself — the
-        // bridge no longer translates them.
-        ongoing_manager.start();
-
         lcu_manager.subscribe_ws_fn(move |ws_event| {
-            let ongoing_manager = ongoing_manager.clone();
             async move {
                 match serde_json::to_string_pretty(&ws_event) {
                     Ok(pretty_json) => {
@@ -52,7 +41,6 @@ impl LeagueBridgeShard {
                         tracing::warn!(error = %error, "Failed to serialize LCU websocket event for raw logging");
                     }
                 }
-                ongoing_manager.handle_ws_event(ws_event).await;
             }
         });
     }
@@ -88,8 +76,6 @@ impl LeagueBridgeShard {
             let ongoing_manager_for_bootstrap = ongoing_manager.clone();
 
             tokio::spawn(async move {
-                ongoing_manager_for_bootstrap.refresh_current().await;
-
                 loop {
                     let event = tokio::select! {
                         _ = token.cancelled() => break,
@@ -97,11 +83,8 @@ impl LeagueBridgeShard {
                             match result {
                                 Ok(ev) => ev,
                                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                                    tracing::warn!("OngoingGame event bridge lagged, skipped {n}");
-                                    ongoing_manager_for_bootstrap.refresh_current().await;
-                                    ongoing_manager_for_bootstrap.refresh_match_histories().await;
-                                    continue;
-                                }
+                                    todo!()
+                                },
                                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                             }
                         }

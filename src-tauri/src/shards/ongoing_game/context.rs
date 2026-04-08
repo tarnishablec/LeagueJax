@@ -4,10 +4,11 @@ use tokio::sync::{broadcast, Mutex};
 
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::LcuShard;
+use crate::shards::ongoing_game::state::OngoingState;
 use crate::shards::ongoing_game::types::OngoingGameEvent;
 use crate::shards::sgp::SgpShard;
 
-use super::manager::{ManagerState, OngoingGameSettings};
+use super::manager::OngoingGameSettings;
 
 pub(crate) const MAX_MATCH_HISTORY_FETCH_CONCURRENCY: usize = 3;
 
@@ -34,7 +35,7 @@ pub struct OngoingGameContext {
     pub(crate) settings: OngoingGameSettings,
     pub(crate) sgp_shard: Arc<SgpShard>,
     pub(crate) lcu_shard: Arc<LcuShard>,
-    pub(crate) state: Mutex<ManagerState>,
+    pub(crate) state: Mutex<OngoingState>,
     pub(crate) channels: Channels,
 }
 
@@ -48,7 +49,7 @@ impl OngoingGameContext {
             settings,
             sgp_shard,
             lcu_shard,
-            state: Mutex::new(ManagerState::new()),
+            state: Mutex::new(OngoingState::new()),
             channels: Channels::new(),
         }
     }

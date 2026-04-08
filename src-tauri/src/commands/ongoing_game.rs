@@ -17,7 +17,7 @@ pub async fn ongoing_game_refresh(jax: State<'_, Arc<Jax>>) -> Result<(), AppErr
     let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
         return Ok(());
     };
-    manager.refresh_current().await;
+    // manager.refresh_current().await;
     Ok(())
 }
 
@@ -28,7 +28,7 @@ pub async fn ongoing_game_refresh_match_histories(
     let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
         return Ok(());
     };
-    manager.refresh_match_histories().await;
+    // manager.refresh_match_histories().await;
     Ok(())
 }
 
@@ -47,7 +47,7 @@ pub async fn ongoing_game_set_match_history_tag(
         Some(value) => MatchHistoryModeSetting::FixedTag(value.to_string()),
     };
 
-    manager.set_match_history_mode(mode).await;
+    // manager.set_match_history_mode(mode).await;
     Ok(())
 }
 
