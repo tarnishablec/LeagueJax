@@ -1,7 +1,6 @@
 pub mod context;
 pub mod driver;
 pub mod manager;
-pub mod state;
 pub mod types;
 
 use std::error::Error;
