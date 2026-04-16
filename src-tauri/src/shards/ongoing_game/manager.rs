@@ -31,8 +31,6 @@ use crate::shards::sgp::matches::RawMatchSummaryGame;
 use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::SgpShard;
 
-use super::driver::OngoingGameDriver;
-
 pub(crate) const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
 const BOT_PUUID: &str = "BOT";
 const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
@@ -95,8 +93,6 @@ impl OngoingGameManager {
     }
 
     pub async fn handle_ws_event(&self, event: LcuWsEvent) {
-        let mut state = self.ctx.state.lock().await;
-
         match &event {
             LcuWsEvent::GameflowSession(payload) => {
                 let phase = &payload.data.phase;
