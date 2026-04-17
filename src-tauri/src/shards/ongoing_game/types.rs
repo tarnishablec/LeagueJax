@@ -134,12 +134,19 @@ pub enum OngoingGameInput {
 
     // Task Results
     Seeded(Box<OngoingSessionSeed>),
+    /// Summoner data loaded from LCU. `game_id` is the `ctx.lifecycle_game_id`
+    /// captured when the task was spawned — the handler drops the result if
+    /// the lifecycle has moved on, which prevents stale late-firing tasks from
+    /// writing back after a game transition or an explicit refresh.
     SummonerLoaded {
         puuid: String,
         info: Option<Box<SummonerInfo>>,
+        game_id: Option<u64>,
     },
+    /// Match history loaded from SGP. See `SummonerLoaded` for `game_id` semantics.
     MatchHistoryLoaded {
         puuid: String,
         games: Option<Vec<RawMatchSummaryGame>>,
+        game_id: Option<u64>,
     },
 }
