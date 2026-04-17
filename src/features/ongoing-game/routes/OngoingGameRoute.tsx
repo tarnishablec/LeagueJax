@@ -63,7 +63,7 @@ export function OngoingGameRoute() {
   }
 
   const shouldOffsetSingleRedTeam =
-    phase === "ChampSelect" &&
+    phase !== "Idle" &&
     teamGroups.length === 1 &&
     normalizeTeamId(teamGroups[0]?.teamId ?? 0) === 2;
 

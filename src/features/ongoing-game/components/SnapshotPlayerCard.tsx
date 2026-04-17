@@ -43,6 +43,7 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
         historyLoadFailedText={cardState.historyLoadFailedText}
         isBot={cardState.isBot}
         isHistoryLoading={cardState.isHistoryLoading}
+        noHistoryText={cardState.noHistoryText}
         recentGames={cardState.recentGames}
       />
     </article>
