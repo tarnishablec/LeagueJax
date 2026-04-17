@@ -96,13 +96,13 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
     },
     {
       id: "get-match-summaries-active-tab",
-      label: "get_match_summaries(active tab, 0-20)",
+      label: "get_match_summaries(active tab, 1 page)",
       run: async () => {
         const tab = requireActiveTab(activeTab);
         return invoke<RawMatchSummariesResponse>("get_match_summaries", {
           puuid: tab.puuid,
           beginIndex: 0,
-          endIndex: 20,
+          endIndex: 1,
           tag: null,
           sgpServerId: tab.sgpServerId,
         });

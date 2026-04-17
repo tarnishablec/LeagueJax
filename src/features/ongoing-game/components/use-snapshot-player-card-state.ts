@@ -11,6 +11,7 @@ import {
   getBestRankEntry,
   resolveRankTierForIcon,
 } from "@/utils/rank-display";
+import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
@@ -18,6 +19,35 @@ import { useOngoingGameStore } from "../store";
 export type EnrichedMatch = RawMatchSummaryGame & {
   me: RawMatchSummaryParticipant;
 };
+
+export type WinRateTone = "win" | "lose" | "neutral";
+
+export type WinRateStat = {
+  text: string;
+  tone: WinRateTone;
+};
+
+function computeWinRateStat(games: EnrichedMatch[]): WinRateStat {
+  let wins = 0;
+  let losses = 0;
+  for (const game of games) {
+    const result = resolveRecentGameResult(game);
+    if (result === "Win") {
+      wins += 1;
+    } else if (result === "Lose") {
+      losses += 1;
+    }
+  }
+
+  const decided = wins + losses;
+  if (decided === 0) {
+    return { text: "-- %", tone: "neutral" };
+  }
+
+  const percentage = Math.round((wins / decided) * 100);
+  const tone: WinRateTone = percentage >= 50 ? "win" : "lose";
+  return { text: `${percentage}%`, tone };
+}
 
 function normalizeChampionId(slot: PlayerSlot): number | null {
   const championId =
@@ -91,6 +121,11 @@ export function useSnapshotPlayerCardState(
   const rankEntry = getBestRankEntry(rankedQuery.data);
   const rankIcon = useRankIcon(resolveRankTierForIcon(rankEntry), true);
 
+  const winRateStat = useMemo(
+    () => computeWinRateStat(recentGames),
+    [recentGames],
+  );
+
   return {
     championId: normalizeChampionId(slot),
     hasHistoryLoadFailed,
@@ -107,5 +142,6 @@ export function useSnapshotPlayerCardState(
     rankText: formatRankEntryLabel(t, rankEntry),
     recentGames,
     summoner,
+    winRateStat,
   };
 }

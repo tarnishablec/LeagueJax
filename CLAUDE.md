@@ -12,6 +12,7 @@ The rules below are extracted from AGENTS.md because they are frequently violate
 - This applies to the top-level agent AND all subagents.
 - The ONLY exception: the user explicitly says "commit", "push", etc.
 - Read-only git commands (`git status`, `git diff`, `git log`) are allowed ONLY when needed to prepare a plan or generate a commit message.
+- **NEVER create new branches or worktrees** (`git branch`, `git checkout -b`, `git switch -c`, `git worktree add`, etc.). All code changes must be made directly on the `master` branch. If the user mentions a branch, confirm before creating one — the default is to stay on `master`.
 
 ## 2. ALWAYS Present a Plan Before Making Changes
 
@@ -28,7 +29,17 @@ The rules below are extracted from AGENTS.md because they are frequently violate
 - Return commit messages in a **Markdown code block**.
 - **NEVER add `Co-Authored-By` lines or any AI/agent attribution.**
 
-## 4. All Other Rules in AGENTS.md
+## 4. Respond in Chinese to the User
+
+- **All user-facing agent responses must be written in Chinese (中文).** This covers summaries, clarifying questions, proposed plans, status updates, and error explanations — anything the user reads from the agent.
+- Exceptions (do NOT translate — leave in original form):
+  - Source-code identifiers, code comments, and file contents.
+  - Commit messages (still `type(module): description` in English per rule 3).
+  - `aria-label` values (still English per AGENTS.md).
+  - Strings inside i18n resource files (native language per AGENTS.md).
+  - Verbatim quotes from tool output, logs, stack traces, or error messages.
+
+## 5. All Other Rules in AGENTS.md
 
 Every rule in AGENTS.md is mandatory. This includes but is not limited to:
 
