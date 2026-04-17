@@ -6,6 +6,7 @@ import { formatStartTime } from "@/features/history/components/match-card";
 import { useLcuMapQuery } from "@/hooks/use-lcu-maps.ts";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { useParticipantBrief } from "./use-participant-brief.ts";
+import { useRoleQuestSlot } from "./use-role-quest-slot.ts";
 
 export type MatchOutcome = "victory" | "defeat" | "remake" | "terminated";
 
@@ -239,6 +240,7 @@ export function useMatchCardViewModel({
   const queueName = useLcuQueueName(queueId);
   const startedAt = formatStartTime(gameCreation);
   const { items, augments, outcome } = useParticipantBrief(me);
+  const roleQuest = useRoleQuestSlot({ participant: me, match });
 
   const gameResult: MatchOutcome = endOfGameResult.startsWith("Abort_")
     ? "terminated"
@@ -251,7 +253,8 @@ export function useMatchCardViewModel({
   const { primaryRuneId, subStyleId } = getPerkIds(me);
   const damageShare = computeDamageShare(me, participants);
   const position = supportsPosition
-    ? (normalizeHistoryPosition(me.teamPosition) ??
+    ? (roleQuest.inferredPosition ??
+      normalizeHistoryPosition(me.teamPosition) ??
       normalizeHistoryPosition(me.individualPosition) ??
       normalizeHistoryPosition(me.lane) ??
       "FILL")
@@ -279,5 +282,6 @@ export function useMatchCardViewModel({
     goldRank,
     position,
     tags,
+    roleQuestSlot: roleQuest.slot,
   };
 }

@@ -26,3 +26,5 @@ dist-ssr
 target
 
 docs
+
+.claude/worktrees
