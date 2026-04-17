@@ -2,9 +2,9 @@
 members = ["src-tauri"]
 resolver = "3"
 
-[patch."https://github.com/tarnishablec/maokai"]
-maokai-runner = { path = "../../Rust/maokai/maokai-runner" }
-maokai-tree = { path = "../../Rust/maokai/maokai-tree" }
+#[patch."https://github.com/tarnishablec/maokai"]
+#maokai-runner = { path = "../../Rust/maokai/maokai-runner" }
+#maokai-tree = { path = "../../Rust/maokai/maokai-tree" }
 
 
 [profile.dev]
