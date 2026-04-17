@@ -1,4 +1,5 @@
 import { createVar, globalStyle, style } from "@vanilla-extract/css";
+import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
@@ -135,8 +136,30 @@ export const playerStats = style({
   fontSize: "0.78rem",
   color: vars.color.foreground,
   display: "grid",
-  justifyContent: "end",
+  gridTemplateColumns: "1fr auto",
+  alignItems: "center",
+  gap: 6,
   minHeight: 16,
+});
+
+export const winRateText = recipe({
+  base: {
+    fontSize: "0.72rem",
+    fontWeight: 600,
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+    justifySelf: "start",
+  },
+  variants: {
+    tone: {
+      win: { color: vars.color.success },
+      lose: { color: vars.color.error },
+      neutral: { color: vars.color.mutedForeground },
+    },
+  },
+  defaultVariants: {
+    tone: "neutral",
+  },
 });
 
 export const rankRow = style({

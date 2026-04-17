@@ -2,10 +2,21 @@
 
 This file provides guidance to Ai agents (Codex/claude code etc.) when working with code in this repository.
 
+## Response Language
+
+- **All agent responses directed at the user must be written in Chinese (中文).** This covers summaries, clarifying questions, proposed plans, status updates, and explanations of errors — anything the user reads from the agent in chat.
+- Exceptions (keep the original language, do not translate):
+  - Source-code identifiers, code comments, and file contents — leave as whatever language they are written in.
+  - Commit messages — continue to follow the Conventional Commits format (`type(module): description`) in English as specified below.
+  - `aria-label` values — still English (see Accessibility).
+  - Strings inside i18n resource files — written in their native language per I18n Text Encoding.
+  - Verbatim quotes from tool output, stack traces, logs, or error messages — pass through as-is.
+
 ## Git Policy
 
 - **Do NOT run any git commands** (commit, push, branch, etc.) unless the user explicitly asks.
 - **Subagents are also forbidden from running git commands** — this rule applies to all agents, not just the top-level conversation.
+- **No new branches or worktrees.** Never run `git branch`, `git checkout -b`, `git switch -c`, `git worktree add`, or any equivalent. All code changes must be made directly on the `master` branch. If the user mentions a branch, confirm with them before creating one instead of assuming — the default is to stay on `master`.
 
 ## Commit Message Guideline
 

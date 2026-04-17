@@ -105,16 +105,14 @@ export function LeaguePositionPair({
 
   const prefs: Array<{ key: "primary" | "secondary"; value: LeaguePosition }> =
     [];
-  if (primaryIcon) {
+  if (primaryIcon && primaryIcon !== "none") {
     prefs.push({ key: "primary", value: primaryIcon });
   }
-  if (secondaryIcon) {
+  if (secondaryIcon && secondaryIcon !== "none") {
     prefs.push({ key: "secondary", value: secondaryIcon });
   }
 
-  if (!assignedIcon && prefs.length === 0) {
-    return null;
-  }
+  const hasAssignedIcon = assignedIcon !== null && assignedIcon !== "none";
 
   return (
     <div
@@ -123,7 +121,7 @@ export function LeaguePositionPair({
         [s.pairMinHeightVar]: `${assignedHeight}px`,
       })}
     >
-      {assignedIcon ? (
+      {hasAssignedIcon && assignedIcon ? (
         <img
           className={s.icon({ emphasis: "strong" })}
           style={assignInlineVars({
