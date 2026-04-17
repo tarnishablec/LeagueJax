@@ -119,9 +119,13 @@ fn init_history_state(envo: &Envo, puuid: &str) {
 fn spawn_summoner_task(envo: &Envo, puuid: &str) {
     let puuid_owned = puuid.to_owned();
     let handle = envo.send().start_task(move |envo| async move {
-        let (lcu, input_tx) = {
+        let (lcu, input_tx, game_id) = {
             let ctx = envo.context();
-            (ctx.lcu_shard.clone(), ctx.input_tx.clone())
+            (
+                ctx.lcu_shard.clone(),
+                ctx.input_tx.clone(),
+                ctx.lifecycle_game_id,
+            )
         };
 
         let info: Option<SummonerInfoSlot> = async {
@@ -140,6 +144,7 @@ fn spawn_summoner_task(envo: &Envo, puuid: &str) {
         let _ = input_tx.send(OngoingGameInput::SummonerLoaded {
             puuid: puuid_owned,
             info: info.map(|slot| Box::new(slot.0)),
+            game_id,
         });
     });
     envo.context_mut()
@@ -150,7 +155,7 @@ fn spawn_summoner_task(envo: &Envo, puuid: &str) {
 fn spawn_history_task(envo: &Envo, puuid: &str) {
     let puuid_owned = puuid.to_owned();
     let handle = envo.send().start_task(move |envo| async move {
-        let (lcu, sgp, count, tag, input_tx) = {
+        let (lcu, sgp, count, tag, input_tx, game_id) = {
             let ctx = envo.context();
             (
                 ctx.lcu_shard.clone(),
@@ -158,6 +163,7 @@ fn spawn_history_task(envo: &Envo, puuid: &str) {
                 ctx.settings.match_history_count_value(),
                 ctx.match_history_mode.effective_tag(ctx.effective_queue_id),
                 ctx.input_tx.clone(),
+                ctx.lifecycle_game_id,
             )
         };
 
@@ -177,6 +183,7 @@ fn spawn_history_task(envo: &Envo, puuid: &str) {
         let _ = input_tx.send(OngoingGameInput::MatchHistoryLoaded {
             puuid: puuid_owned,
             games,
+            game_id,
         });
     });
     envo.context_mut()
@@ -351,7 +358,17 @@ fn handle_summoner_loaded(
     phase: OngoingGamePhase,
     puuid: &str,
     info: &Option<Box<SummonerInfo>>,
+    game_id: Option<u64>,
 ) -> EventReply {
+    // Stale-result guard: if the game id captured at spawn time no longer
+    // matches the current lifecycle, the result belongs to a prior game
+    // (or to a pre-game Idle slot that has since been cleared). Drop it
+    // silently so late-firing tasks can't pollute fresh state.
+    if envo.context().lifecycle_game_id != game_id {
+        envo.context_mut().summoner_tasks.remove(puuid);
+        return EventReply::Handled;
+    }
+
     {
         let mut ctx = envo.context_mut();
         ctx.summoner_tasks.remove(puuid);
@@ -384,7 +401,14 @@ fn handle_match_history_loaded(
     phase: OngoingGamePhase,
     puuid: &str,
     games: &Option<Vec<RawMatchSummaryGame>>,
+    game_id: Option<u64>,
 ) -> EventReply {
+    // Stale-result guard — see `handle_summoner_loaded` for rationale.
+    if envo.context().lifecycle_game_id != game_id {
+        envo.context_mut().history_tasks.remove(puuid);
+        return EventReply::Handled;
+    }
+
     {
         let mut ctx = envo.context_mut();
         ctx.history_tasks.remove(puuid);
@@ -418,12 +442,18 @@ fn try_handle_common_event(
     event: &OngoingGameInput,
 ) -> Option<EventReply> {
     match event {
-        OngoingGameInput::SummonerLoaded { puuid, info } => {
-            Some(handle_summoner_loaded(envo, phase, puuid, info))
-        }
-        OngoingGameInput::MatchHistoryLoaded { puuid, games } => {
-            Some(handle_match_history_loaded(envo, phase, puuid, games))
-        }
+        OngoingGameInput::SummonerLoaded {
+            puuid,
+            info,
+            game_id,
+        } => Some(handle_summoner_loaded(envo, phase, puuid, info, *game_id)),
+        OngoingGameInput::MatchHistoryLoaded {
+            puuid,
+            games,
+            game_id,
+        } => Some(handle_match_history_loaded(
+            envo, phase, puuid, games, *game_id,
+        )),
         OngoingGameInput::RefreshMatchHistories => {
             stop_history_tasks(envo);
             restart_history_tasks(envo);
