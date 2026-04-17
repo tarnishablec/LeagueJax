@@ -33,10 +33,13 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
   const result = resolveRecentGameResult(game);
   const queueName = useLcuQueueName(game.json.queueId);
   const championId = game.me.championId > 0 ? game.me.championId : null;
-  const position =
-    normalizeHistoryPosition(game.me.teamPosition) ??
-    normalizeHistoryPosition(game.me.individualPosition) ??
-    normalizeHistoryPosition(game.me.lane);
+  const { mapId, gameMode } = game.json;
+  const supportsPosition = mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
+  const position = supportsPosition
+    ? (normalizeHistoryPosition(game.me.teamPosition) ??
+      normalizeHistoryPosition(game.me.individualPosition) ??
+      normalizeHistoryPosition(game.me.lane))
+    : null;
 
   return (
     <Dialog.Root lazyMount unmountOnExit closeOnEscape>
@@ -83,11 +86,17 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
             <span className={s.kdaText}>
               {game.me.kills ?? 0}/{game.me.deaths ?? 0}/{game.me.assists ?? 0}
             </span>
-            {position ? (
-              <LeaguePositionIcon position={position} width={14} height={14} />
-            ) : (
-              <span className={s.positionText}>-</span>
-            )}
+            {supportsPosition ? (
+              position ? (
+                <LeaguePositionIcon
+                  position={position}
+                  width={14}
+                  height={14}
+                />
+              ) : (
+                <span className={s.positionText}>-</span>
+              )
+            ) : null}
           </div>
         </button>
       </Dialog.Trigger>

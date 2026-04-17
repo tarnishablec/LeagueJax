@@ -31,6 +31,10 @@ impl LeagueBridgeShard {
             manager_for_run.run().await;
         });
 
+        if let Some(ongoing_manager) = jax.get_shard::<OngoingGameShard>().manager() {
+            ongoing_manager.start(&lcu_shard);
+        }
+
         lcu_manager.subscribe_ws_fn(move |ws_event| {
             async move {
                 match serde_json::to_string_pretty(&ws_event) {
@@ -73,7 +77,6 @@ impl LeagueBridgeShard {
             let mut ongoing_rx = ongoing_manager.subscribe();
             let ongoing_app = app;
             let token = cancel_token;
-            let ongoing_manager_for_bootstrap = ongoing_manager.clone();
 
             tokio::spawn(async move {
                 loop {
@@ -83,7 +86,10 @@ impl LeagueBridgeShard {
                             match result {
                                 Ok(ev) => ev,
                                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                                    todo!()
+                                    tracing::warn!(
+                                        "[league_bridge] ongoing-game broadcast lagged, skipped {n} events"
+                                    );
+                                    continue;
                                 },
                                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                             }

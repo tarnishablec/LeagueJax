@@ -1,12 +1,15 @@
+pub mod behaviors;
 pub mod context;
-pub mod driver;
 pub mod manager;
+pub mod runtime;
+pub mod tree;
 pub mod types;
 
 use std::error::Error;
 use std::sync::{Arc, OnceLock};
 
 use self::manager::{OngoingGameManager, OngoingGameSettings};
+use self::types::OngoingGameInput;
 use crate::shards::lcu::LcuShard;
 use crate::shards::settings::types::{SettingControlDto, SettingDefinitionDto, SettingScopeDto};
 use crate::shards::settings::SettingsShard;
@@ -20,7 +23,7 @@ const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.behavior.matchHistoryCount
 const MATCH_HISTORY_COUNT_DEFAULT: u32 = 50;
 
 pub struct OngoingGameShard {
-    manager: OnceLock<Arc<OngoingGameManager>>,
+    manager: OnceLock<OngoingGameManager>,
 }
 
 impl OngoingGameShard {
@@ -30,23 +33,8 @@ impl OngoingGameShard {
         }
     }
 
-    pub fn manager(&self) -> Option<Arc<OngoingGameManager>> {
+    pub fn manager(&self) -> Option<OngoingGameManager> {
         self.manager.get().cloned()
-    }
-
-    pub fn initialize(
-        &self,
-        settings: OngoingGameSettings,
-        sgp_shard: Arc<SgpShard>,
-        lcu_shard: Arc<LcuShard>,
-    ) -> Arc<OngoingGameManager> {
-        if let Some(existing) = self.manager.get() {
-            return existing.clone();
-        }
-
-        let manager = Arc::new(OngoingGameManager::new(settings, sgp_shard, lcu_shard));
-        let _ = self.manager.set(manager.clone());
-        manager
     }
 }
 
@@ -55,11 +43,11 @@ impl Shard for OngoingGameShard {
     shard_id!("38121643-b79d-4382-9592-c647da511c1b");
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        let settings = jax.get_shard::<SettingsShard>();
+        let settings_shard = jax.get_shard::<SettingsShard>();
         let sgp_shard = jax.get_shard::<SgpShard>();
         let lcu_shard = jax.get_shard::<LcuShard>();
 
-        let count_setting = settings.register_definition(SettingDefinitionDto {
+        let count_setting = settings_shard.register_definition(SettingDefinitionDto {
             id: MATCH_HISTORY_COUNT_SETTING_ID.to_string(),
             label_key: "settings.ongoing.matchHistoryCount.label".to_string(),
             hint_key: None,
@@ -76,19 +64,21 @@ impl Shard for OngoingGameShard {
             options: None,
         })?;
 
-        let manager = self.initialize(
-            OngoingGameSettings {
-                match_history_count: count_setting.clone(),
-            },
-            sgp_shard,
-            lcu_shard,
-        );
+        let og_settings = OngoingGameSettings {
+            match_history_count: count_setting.clone(),
+        };
 
-        let count_manager = manager.clone();
+        let manager = OngoingGameManager::new(og_settings, sgp_shard, lcu_shard.clone());
+
+        let manager_for_watch = manager.clone();
         count_setting.spawn_watch(false, move |_| {
-            let count_manager = count_manager.clone();
-            async move { todo!() }
+            let mgr = manager_for_watch.clone();
+            async move {
+                mgr.post(OngoingGameInput::RefreshMatchHistories);
+            }
         })?;
+
+        let _ = self.manager.set(manager);
 
         Ok(())
     }

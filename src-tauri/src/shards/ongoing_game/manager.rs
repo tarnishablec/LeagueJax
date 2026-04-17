@@ -1,38 +1,16 @@
-use serde::Deserializer;
-use serde_json::Value;
-use std::cmp::PartialEq;
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio::sync::Semaphore;
-use tokio::task::JoinSet;
 
-use super::context::{OngoingGameContext, MAX_MATCH_HISTORY_FETCH_CONCURRENCY};
+use tokio::sync::{broadcast, mpsc};
 
-use crate::shards::lcu::api::OngoingSessionSeed;
-use crate::shards::lcu::concepts::champ_select_session::{
-    ChampSelectSessionData, TeamMember as ChampSelectTeamMember,
-};
-use crate::shards::lcu::concepts::gameflow_phase::Phase as GameflowPhase;
-use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
-use crate::shards::lcu::concepts::summoner::SummonerInfo;
-use crate::shards::lcu::concepts::teambuilder_tbd_game::{
-    PhaseName, TeambuilderCell, TeambuilderTbdGamePayload,
-};
-use crate::shards::lcu::concepts::{EventType, LanePosition, LcuWsEvent};
-use crate::shards::lcu::manager::{FocusChange, LcuManagerStateEvent};
 use crate::shards::lcu::LcuShard;
-use crate::shards::ongoing_game::types::{
-    OngoingGameEvent, OngoingGameMatchHistoriesUpdated, OngoingGameMatchHistoryState,
-    OngoingGamePhase, OngoingGamePlayerLoadStatus, OngoingGameSummonerState,
-    OngoingGameSummonersUpdated, OngoingGameUpdated,
-};
 use crate::shards::settings::SettingHandle;
-use crate::shards::sgp::matches::RawMatchSummaryGame;
-use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::SgpShard;
 
+use super::context::{Channels, OngoingGameCtx};
+use super::runtime::machine_loop;
+use super::types::{OngoingGameEvent, OngoingGameInput};
+
 pub(crate) const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
-const BOT_PUUID: &str = "BOT";
 const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,7 +21,7 @@ pub enum MatchHistoryModeSetting {
 }
 
 impl MatchHistoryModeSetting {
-    fn payload_value(&self) -> Option<String> {
+    pub fn payload_value(&self) -> Option<String> {
         match self {
             Self::All => None,
             Self::CurrentMode => Some(QUEUE_MODE_CURRENT_VALUE.to_string()),
@@ -51,7 +29,7 @@ impl MatchHistoryModeSetting {
         }
     }
 
-    fn effective_tag(&self, effective_queue_id: Option<u64>) -> Option<String> {
+    pub fn effective_tag(&self, effective_queue_id: Option<u64>) -> Option<String> {
         match self {
             Self::All => None,
             Self::CurrentMode => effective_queue_id.map(|queue_id| format!("q_{queue_id}")),
@@ -78,84 +56,85 @@ impl OngoingGameSettings {
 
 #[derive(Clone)]
 pub struct OngoingGameManager {
-    pub(crate) ctx: Arc<OngoingGameContext>,
+    input_tx: mpsc::UnboundedSender<OngoingGameInput>,
+    channels: Arc<Channels>,
 }
 
 impl OngoingGameManager {
-    pub(crate) fn new(
+    pub fn new(
         settings: OngoingGameSettings,
         sgp_shard: Arc<SgpShard>,
         lcu_shard: Arc<LcuShard>,
     ) -> Self {
-        Self {
-            ctx: Arc::new(OngoingGameContext::new(settings, sgp_shard, lcu_shard)),
-        }
+        let (input_tx, input_rx) = mpsc::unbounded_channel();
+        let ctx = OngoingGameCtx::new(lcu_shard.clone(), sgp_shard, settings, input_tx.clone());
+        let channels = ctx.channels.clone();
+
+        std::thread::Builder::new()
+            .name("ongoing-game-machine".into())
+            .spawn(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap_or_else(|err| panic!("build ongoing-game tokio runtime: {err}"));
+                rt.block_on(machine_loop(input_rx, ctx));
+            })
+            .unwrap_or_else(|err| panic!("spawn ongoing-game-machine thread: {err}"));
+
+        Self { input_tx, channels }
     }
 
-    pub async fn handle_ws_event(&self, event: LcuWsEvent) {
-        match &event {
-            LcuWsEvent::GameflowSession(payload) => {
-                let phase = &payload.data.phase;
-                match phase {
-                    GameflowPhase::InGame => {}
-                    GameflowPhase::ChampSelect => {}
-                    _ => {}
-                }
-            }
-            LcuWsEvent::ChampSelectSession(payload) => {}
-            LcuWsEvent::TeambuilderTbdGame(payload) => {
-                let phase = &payload.data.payload.phase_name;
-                match phase {
-                    PhaseName::CHAMPION_SELECT => {
-                        let allied_team =
-                            &payload.data.payload.champion_select_state.cells.allied_team;
-                    }
-                }
-            }
-            _ => {}
-        }
+    pub fn post(&self, input: OngoingGameInput) {
+        let _ = self.input_tx.send(input);
     }
 
-    /// Subscribe to LCU focus changes via the LcuShard.  Must be called once
-    /// after `LcuShard::initialize` so that `lcu_shard.manager()` is `Some`.
-    pub fn start(self: &Arc<Self>) {
-        let Some(lcu_manager) = self.ctx.lcu_shard.manager() else {
-            tracing::error!(
-                "[ongoing_game] start: LcuShard manager not initialized — focus subscription skipped"
-            );
+    pub fn subscribe(&self) -> broadcast::Receiver<OngoingGameEvent> {
+        self.channels.subscribe()
+    }
+
+    /// Subscribe to LCU focus and WS events. Must be called after LcuShard is initialized.
+    pub fn start(&self, lcu_shard: &Arc<LcuShard>) {
+        let Some(lcu_manager) = lcu_shard.manager() else {
+            tracing::error!("[ongoing_game] LcuShard manager not initialized");
             return;
         };
 
-        let manager = self.clone();
+        let tx = self.input_tx.clone();
         lcu_manager.clone().subscribe_state_fn(move |event| {
-            let manager = manager.clone();
+            let tx = tx.clone();
             async move {
-                if let LcuManagerStateEvent::FocusChanged(change) = event {
-                    manager.on_focus_changed(change).await;
+                if let crate::shards::lcu::manager::LcuManagerStateEvent::FocusChanged(change) =
+                    event
+                {
+                    let _ = tx.send(OngoingGameInput::FocusChanged(change));
                 }
             }
         });
 
-        let manager = self.clone();
+        let tx = self.input_tx.clone();
         lcu_manager.subscribe_ws_fn(move |ws_event| {
-            let manager = manager.clone();
+            let tx = tx.clone();
             async move {
-                manager.handle_ws_event(ws_event).await;
+                use crate::shards::lcu::concepts::LcuWsEvent;
+                match ws_event {
+                    LcuWsEvent::GameflowSession(payload) => {
+                        let _ = tx.send(OngoingGameInput::GameflowSessionUpdated(Box::new(
+                            payload.data,
+                        )));
+                    }
+                    LcuWsEvent::ChampSelectSession(payload) => {
+                        let _ = tx.send(OngoingGameInput::ChampSelectSessionUpdated(Box::new(
+                            payload.data,
+                        )));
+                    }
+                    LcuWsEvent::TeambuilderTbdGame(payload) => {
+                        let _ = tx.send(OngoingGameInput::TeambuilderTbdGameUpdated(Box::new(
+                            payload.data.payload,
+                        )));
+                    }
+                    _ => {}
+                }
             }
         });
-    }
-
-    async fn on_focus_changed(self: &Arc<Self>, change: FocusChange) {}
-
-    pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<OngoingGameEvent> {
-        self.ctx.channels.subscribe()
-    }
-
-    async fn seed_from_current_session(&self, expected_pid: Option<u32>) {
-        todo!()
-    }
-
-    async fn current_focus_matches(&self, expected_pid: Option<u32>) -> bool {
-        self.ctx.focused_pid().await == expected_pid
     }
 }
