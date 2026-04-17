@@ -158,6 +158,7 @@ type SnapshotPlayerCardHistoryProps = {
   historyLoadFailedText: string;
   isBot: boolean;
   isHistoryLoading: boolean;
+  noHistoryText: string;
   recentGames: EnrichedMatch[];
 };
 
@@ -168,6 +169,7 @@ export const SnapshotPlayerCardHistory = memo(
       historyLoadFailedText,
       isBot,
       isHistoryLoading,
+      noHistoryText,
       recentGames,
     } = props;
 
@@ -194,7 +196,11 @@ export const SnapshotPlayerCardHistory = memo(
     }
 
     if (recentGames.length === 0) {
-      return <div className={s.historyBlank} />;
+      return (
+        <div className={s.historyCenteredState}>
+          <div>{noHistoryText}</div>
+        </div>
+      );
     }
 
     return <SnapshotPlayerCardHistoryList recentGames={recentGames} />;

@@ -100,6 +100,9 @@ export function useSnapshotPlayerCardState(
     isBot,
     isHistoryLoading,
     level: summoner?.summonerLevel || 0,
+    noHistoryText: t("ongoingGame.noHistory", {
+      defaultValue: "No match history",
+    }),
     rankIcon,
     rankText: formatRankEntryLabel(t, rankEntry),
     recentGames,

@@ -275,10 +275,6 @@ export const historyCenteredState = style({
   textAlign: "center",
 });
 
-export const historyBlank = style({
-  height: "100%",
-});
-
 export const winText = style({
   color: vars.color.success,
   fontWeight: 700,

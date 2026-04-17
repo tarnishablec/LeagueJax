@@ -195,27 +195,37 @@ fn spawn_seed_task(envo: &Envo) {
             let manager = lcu.manager()?;
             let session = manager.focused().await?;
             let api = session.api();
-            let phase = api.get_gameflow_phase_typed().await.ok()?;
+
+            // Fire all four LCU GETs concurrently — phase decides which
+            // results we keep; the others simply get discarded. Paying for
+            // one round-trip instead of up to four sequential ones takes the
+            // cold-start champ-select delay from ~300–1500 ms to ~100–400 ms.
+            let (phase, gameflow_session, champ_select_session, teambuilder_message) = tokio::join!(
+                api.get_gameflow_phase_typed(),
+                api.get_gameflow_session_typed(),
+                api.get_champ_select_session_typed(),
+                api.get_teambuilder_tbd_game_message(),
+            );
+
+            let phase = phase.ok()?;
 
             let gameflow_session = match phase {
-                GameflowPhase::ChampSelect | GameflowPhase::InProgress | GameflowPhase::InGame => {
-                    api.get_gameflow_session_typed().await.ok()
-                }
+                GameflowPhase::ChampSelect
+                | GameflowPhase::GameStart
+                | GameflowPhase::InProgress
+                | GameflowPhase::InGame => gameflow_session.ok(),
                 _ => None,
             };
 
-            // No direct GET for champ-select session exists in `lcu::api`; rely on WS push.
-            let champ_select_session = None;
-
-            let teambuilder_payload = if matches!(phase, GameflowPhase::ChampSelect) {
-                api.get_teambuilder_tbd_game_message()
-                    .await
-                    .ok()
-                    .flatten()
-                    .map(|msg| msg.payload)
-            } else {
-                None
-            };
+            let (champ_select_session, teambuilder_payload) =
+                if matches!(phase, GameflowPhase::ChampSelect) {
+                    (
+                        champ_select_session.ok().flatten(),
+                        teambuilder_message.ok().flatten().map(|msg| msg.payload),
+                    )
+                } else {
+                    (None, None)
+                };
 
             Some(OngoingSessionSeed {
                 phase,
@@ -479,7 +489,9 @@ impl Behavior<OngoingGameInput, Envo> for IdleBehavior {
                     GameflowPhase::ChampSelect => {
                         envo.machine.request_transition(t.champ_select, None);
                     }
-                    GameflowPhase::InProgress | GameflowPhase::InGame => {
+                    GameflowPhase::GameStart
+                    | GameflowPhase::InProgress
+                    | GameflowPhase::InGame => {
                         envo.machine.request_transition(t.in_game, None);
                     }
                     _ => {}
@@ -492,12 +504,30 @@ impl Behavior<OngoingGameInput, Envo> for IdleBehavior {
                         envo.context_mut().gameflow_session = Some((**data).clone());
                         envo.machine.request_transition(t.champ_select, None);
                     }
-                    GameflowPhase::InProgress | GameflowPhase::InGame => {
+                    GameflowPhase::GameStart
+                    | GameflowPhase::InProgress
+                    | GameflowPhase::InGame => {
                         envo.context_mut().gameflow_session = Some((**data).clone());
                         envo.machine.request_transition(t.in_game, None);
                     }
                     _ => {}
                 }
+                EventReply::Handled
+            }
+            // Defensive: LCU isn't guaranteed to push gameflow-session
+            // *before* champ-select / teambuilder. If either arrives while
+            // we're still Idle, cache it and transition — `ChampSelect::on_enter`
+            // will then find the data already there and `build_roster` paints
+            // cards on the first broadcast instead of waiting for a seed
+            // round-trip.
+            OngoingGameInput::ChampSelectSessionUpdated(data) => {
+                envo.context_mut().champ_select_session = Some((**data).clone());
+                envo.machine.request_transition(t.champ_select, None);
+                EventReply::Handled
+            }
+            OngoingGameInput::TeambuilderTbdGameUpdated(data) => {
+                envo.context_mut().teambuilder_payload = Some((**data).clone());
+                envo.machine.request_transition(t.champ_select, None);
                 EventReply::Handled
             }
             OngoingGameInput::SetMatchHistoryMode(mode) => {
@@ -615,7 +645,9 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
             OngoingGameInput::GameflowSessionUpdated(data) => {
                 envo.context_mut().gameflow_session = Some((**data).clone());
                 match data.phase {
-                    GameflowPhase::InProgress | GameflowPhase::InGame => {
+                    GameflowPhase::GameStart
+                    | GameflowPhase::InProgress
+                    | GameflowPhase::InGame => {
                         envo.machine.request_transition(t.in_game, None);
                     }
                     GameflowPhase::ChampSelect => {}
@@ -664,13 +696,51 @@ impl InGameBehavior {
                 return;
             };
 
+            let preserved = ctx.team_members.clone();
+
+            // The gameflow payload identifies players by array position
+            // (`team_one` / `team_two`) but carries no explicit side id, so
+            // assuming `team_one == blue` breaks in practice-tool / custom
+            // lobbies where LCU places the local player in whichever array it
+            // likes regardless of picked side. Preserve the side that
+            // champ-select already gave us by probing the in-memory roster.
+            let (team_one_side, team_two_side) = resolve_gameflow_team_sides(
+                &preserved,
+                &gs.game_data.team_one,
+                &gs.game_data.team_two,
+            );
+
             let mut members: Vec<TeamMember> = Vec::new();
             for player in &gs.game_data.team_one {
-                members.push(build_team_member_from_gameflow(player, 1));
+                members.push(build_team_member_from_gameflow(player, team_one_side));
             }
             for player in &gs.game_data.team_two {
-                members.push(build_team_member_from_gameflow(player, 2));
+                members.push(build_team_member_from_gameflow(player, team_two_side));
             }
+
+            // Practice-tool / custom games: LCU's gameflow payload only lists
+            // real players in `team_one` / `team_two` — ally's bots that we
+            // populated from champ-select's `my_team` are absent and would
+            // vanish the moment we overwrite `ctx.team_members`. Merge them
+            // back so the UI keeps rendering ally's cards. `cs.my_team` only
+            // ever contains allies, so construction allies every preserved entry
+            // , and `ally_side` is simply whatever team value the
+            // preserved roster was tagged with.
+            let ally_side = preserved
+                .first()
+                .map(|m| m.team)
+                .unwrap_or(team_two_side);
+            for entry in &preserved {
+                let already_present = !entry.puuid.is_empty()
+                    && members.iter().any(|m| m.puuid == entry.puuid);
+                if already_present {
+                    continue;
+                }
+                let mut clone = entry.clone();
+                clone.team = ally_side;
+                members.push(clone);
+            }
+
             members
         };
 
@@ -724,6 +794,57 @@ fn build_team_member_from_teambuilder_cell(cell: &TeambuilderCell) -> TeamMember
         team: if cell.team_id == 0 { 1 } else { cell.team_id },
         ward_skin_id: 0,
     }
+}
+
+/// For a recognised team id, return `(same_side, opposite_side)` so the
+/// caller can assign the opposite side to the complementary array.
+/// The numeric flavour is preserved — a preserved value of `200` yields
+/// `(200, 100)`, while `2` yields `(2, 1)` — so the in-game roster echoes
+/// whatever scheme champ-select was using.
+fn side_pair(team: u64) -> Option<(u64, u64)> {
+    match team {
+        1 => Some((1, 2)),
+        2 => Some((2, 1)),
+        100 => Some((100, 200)),
+        200 => Some((200, 100)),
+        _ => None,
+    }
+}
+
+fn lookup_preserved_team(preserved: &[TeamMember], puuid: &str) -> Option<u64> {
+    if puuid.is_empty() {
+        return None;
+    }
+    preserved.iter().find(|m| m.puuid == puuid).map(|m| m.team)
+}
+
+/// Resolve `(team_one_side, team_two_side)` for an in-game roster by
+/// probing the champ-select-era roster for any known puuid. Falls back to
+/// the LCU in-game convention `(100, 200)` when nothing can be matched
+/// (e.g. cold-start straight into `InProgress`).
+fn resolve_gameflow_team_sides(
+    preserved: &[TeamMember],
+    team_one: &[crate::shards::lcu::concepts::gameflow_session::Team],
+    team_two: &[crate::shards::lcu::concepts::gameflow_session::Team],
+) -> (u64, u64) {
+    for player in team_one {
+        if let Some(team) = lookup_preserved_team(preserved, &player.puuid) {
+            if let Some(pair) = side_pair(team) {
+                return pair;
+            }
+        }
+    }
+
+    for player in team_two {
+        if let Some(team) = lookup_preserved_team(preserved, &player.puuid) {
+            if let Some((self_side, other_side)) = side_pair(team) {
+                // Match landed in `team_two`, so `team_one` gets the opposite.
+                return (other_side, self_side);
+            }
+        }
+    }
+
+    (100, 200)
 }
 
 fn build_team_member_from_gameflow(
@@ -786,7 +907,9 @@ impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
             OngoingGameInput::GameflowSessionUpdated(data) => {
                 envo.context_mut().gameflow_session = Some((**data).clone());
                 match data.phase {
-                    GameflowPhase::InProgress | GameflowPhase::InGame => {}
+                    GameflowPhase::GameStart
+                    | GameflowPhase::InProgress
+                    | GameflowPhase::InGame => {}
                     _ => {
                         envo.machine.request_transition(t.idle, None);
                     }
