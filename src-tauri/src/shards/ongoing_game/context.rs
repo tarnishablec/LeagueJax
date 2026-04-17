@@ -83,7 +83,7 @@ impl OngoingGameCtx {
             champ_select_session: None,
             teambuilder_payload: None,
             effective_queue_id: None,
-            match_history_mode: MatchHistoryModeSetting::All,
+            match_history_mode: MatchHistoryModeSetting::CurrentMode,
             summoner_states: HashMap::new(),
             history_states: HashMap::new(),
             summoner_tasks: HashMap::new(),
