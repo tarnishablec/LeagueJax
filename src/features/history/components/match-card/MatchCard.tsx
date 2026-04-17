@@ -83,6 +83,7 @@ export function MatchCard({
               subStyleId={vm.subStyleId}
               gameId={vm.gameId}
               items={vm.items}
+              questSlot={vm.roleQuestSlot}
             />
           </div>
           <MatchCardPills tags={vm.tags} className={s.pillsSlot} />

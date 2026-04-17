@@ -1,0 +1,92 @@
+import { useMemo } from "react";
+import type {
+  RawMatchSummaryGame,
+  RawMatchSummaryParticipant,
+} from "@/bindings/matches.ts";
+import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+
+export type RoleQuestLane = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY";
+
+export type RoleQuestSlot =
+  | { kind: "quest"; iconUrl: string }
+  | { kind: "item"; itemId: number; iconUrl: string | null };
+
+export type RoleQuestResult = {
+  inferredPosition: RoleQuestLane | null;
+  slot: RoleQuestSlot | null;
+};
+
+const ROLE_QUEST_ITEM_MAP: Record<
+  number,
+  { lane: RoleQuestLane; iconBase: string }
+> = {
+  1202: { lane: "BOTTOM", iconBase: "rolequest_botreward" },
+  1207: { lane: "BOTTOM", iconBase: "rolequest_botreward" },
+  1206: { lane: "MIDDLE", iconBase: "rolequest_midreward" },
+  1208: { lane: "UTILITY", iconBase: "rolequest_supportreward" },
+  1209: { lane: "JUNGLE", iconBase: "rolequest_junglereward" },
+  1220: { lane: "TOP", iconBase: "rolequest_topreward2" },
+  1221: { lane: "TOP", iconBase: "rolequest_topreward1" },
+};
+
+const ICON_HOST =
+  "https://raw.communitydragon.org/latest/game/assets/items/icons2d";
+
+const ROLE_QUEST_COMPLETE_KEY = "2026_S1A1_SR_RoleQuestComplete" as const;
+
+const SUMMONERS_RIFT_MAP_ID = 11;
+const CLASSIC_GAME_MODE = "CLASSIC";
+
+function buildQuestIconUrl(iconBase: string, completed: boolean): string {
+  const state = completed ? "complete" : "inprogress";
+  return `${ICON_HOST}/${iconBase}_${state}.png`;
+}
+
+export function useRoleQuestSlot({
+  participant,
+  match,
+}: {
+  participant: RawMatchSummaryParticipant;
+  match: RawMatchSummaryGame;
+}): RoleQuestResult {
+  const roleBoundItem = participant.roleBoundItem;
+  const { mapId, gameMode } = match.json;
+  const supportsPosition =
+    mapId === SUMMONERS_RIFT_MAP_ID ||
+    gameMode.toUpperCase() === CLASSIC_GAME_MODE;
+
+  const itemQueryParams = useMemo(
+    () => [{ type: "item" as const, itemId: roleBoundItem }],
+    [roleBoundItem],
+  );
+  const [itemAsset] = useDragonStaticData(itemQueryParams);
+  const iconSrc = itemAsset?.src ?? null;
+  const completed = participant.missions?.[ROLE_QUEST_COMPLETE_KEY] === 1;
+
+  return useMemo<RoleQuestResult>(() => {
+    if (!supportsPosition || !roleBoundItem) {
+      return { inferredPosition: null, slot: null };
+    }
+
+    const mapping = ROLE_QUEST_ITEM_MAP[roleBoundItem];
+
+    if (mapping) {
+      return {
+        inferredPosition: mapping.lane,
+        slot: {
+          kind: "quest",
+          iconUrl: buildQuestIconUrl(mapping.iconBase, completed),
+        },
+      };
+    }
+
+    return {
+      inferredPosition: null,
+      slot: {
+        kind: "item",
+        itemId: roleBoundItem,
+        iconUrl: iconSrc,
+      },
+    };
+  }, [supportsPosition, roleBoundItem, completed, iconSrc]);
+}

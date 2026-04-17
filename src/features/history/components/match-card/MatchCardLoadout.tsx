@@ -1,6 +1,9 @@
+import { useTranslation } from "react-i18next";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
+import type { RoleQuestSlot } from "../../hooks/use-role-quest-slot.ts";
 import * as s from "./MatchCard.css";
+import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { MatchCardAugments } from "./MatchCardAugments";
 import { MatchCardItems } from "./MatchCardItems";
 import { MatchCardRunes } from "./MatchCardRunes";
@@ -15,6 +18,7 @@ export function MatchCardLoadout({
   subStyleId,
   gameId,
   items,
+  questSlot,
 }: {
   position: string | null;
   me: RawMatchSummaryParticipant;
@@ -39,7 +43,9 @@ export function MatchCardLoadout({
     number | null,
     number | null,
   ];
+  questSlot: RoleQuestSlot | null;
 }) {
+  const { t } = useTranslation();
   return (
     <div className={s.loadoutRow}>
       {position ? (
@@ -60,6 +66,26 @@ export function MatchCardLoadout({
         />
       )}
       <MatchCardItems gameId={gameId} items={items} />
+      {questSlot !== null ? (
+        questSlot.kind === "quest" ? (
+          <MatchCardAssetIcon
+            src={questSlot.iconUrl}
+            alt=""
+            className={s.itemIcon}
+            fallbackClassName={s.itemIconFallback}
+          />
+        ) : (
+          <MatchCardAssetIcon
+            src={questSlot.iconUrl}
+            alt={t("history.match.itemAlt", {
+              id: questSlot.itemId,
+              defaultValue: `Item ${questSlot.itemId}`,
+            })}
+            className={s.itemIcon}
+            fallbackClassName={s.itemIconFallback}
+          />
+        )
+      ) : null}
     </div>
   );
 }

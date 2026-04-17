@@ -13,6 +13,8 @@ The rules below are extracted from AGENTS.md because they are frequently violate
 - The ONLY exception: the user explicitly says "commit", "push", etc.
 - Read-only git commands (`git status`, `git diff`, `git log`) are allowed ONLY when needed to prepare a plan or generate a commit message.
 - **NEVER create new branches or worktrees** (`git branch`, `git checkout -b`, `git switch -c`, `git worktree add`, etc.). All code changes must be made directly on the `master` branch. If the user mentions a branch, confirm before creating one — the default is to stay on `master`.
+- **NEVER use Claude Code worktrees.** This includes the `EnterWorktree` / `ExitWorktree` tools, any `/worktree` slash commands, the `isolation: "worktree"` parameter when dispatching subagents, and creating new directories under `.claude/worktrees/`. All code changes must happen directly on the `master` (or `main`) branch in the main working directory.
+- **If Claude detects it is currently running inside a `.claude/worktrees/` path**, it must immediately inform the user, stop making changes, and ask the user to switch back to the main working directory before proceeding. Do NOT attempt to self-migrate, merge, or clean up the worktree.
 
 ## 2. ALWAYS Present a Plan Before Making Changes
 
