@@ -643,6 +643,7 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                 EventReply::Handled
             }
             OngoingGameInput::GameflowSessionUpdated(data) => {
+                let prev_queue_id = envo.context().effective_queue_id;
                 envo.context_mut().gameflow_session = Some((**data).clone());
                 match data.phase {
                     GameflowPhase::GameStart
@@ -650,7 +651,21 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                     | GameflowPhase::InGame => {
                         envo.machine.request_transition(t.in_game, None);
                     }
-                    GameflowPhase::ChampSelect => {}
+                    GameflowPhase::ChampSelect => {
+                        // When we entered ChampSelect via a ChampSelectSessionUpdated
+                        // push ahead of the gameflow push, `effective_queue_id`
+                        // stays `None` and any history tasks we already spawned
+                        // went out with `tag=None` — SGP then returns every
+                        // mode instead of the current queue. Pick the queue id
+                        // up from the freshly-arrived gameflow and restart the
+                        // history fetches so they carry the right SGP tag.
+                        sync_lifecycle_ids_from_gameflow(envo);
+                        if envo.context().effective_queue_id != prev_queue_id {
+                            stop_history_tasks(envo);
+                            restart_history_tasks(envo);
+                            broadcast_updated(envo, phase);
+                        }
+                    }
                     _ => {
                         envo.machine.request_transition(t.idle, None);
                     }

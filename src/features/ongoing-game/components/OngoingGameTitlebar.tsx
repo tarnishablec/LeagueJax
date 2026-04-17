@@ -86,10 +86,24 @@ export function OngoingGameTitlebar() {
     );
     return selectedPath ?? null;
   });
-  const queueDetailedDescription = useOngoingGameStore(
-    (state) =>
-      state.gameflowSession?.gameData.queue.detailedDescription ?? null,
-  );
+  const queueDetailedDescription = useOngoingGameStore((state) => {
+    const session = state.gameflowSession;
+    if (!session) return null;
+    // Some queues (e.g., Hextech ARAM, queue 2400) leave `detailedDescription`
+    // as an empty string. Walk the queue → map chain until we find something
+    // non-empty, so the titlebar always shows a recognizable mode label.
+    const candidates = [
+      session.gameData.queue.detailedDescription,
+      session.gameData.queue.description,
+      session.gameData.queue.name,
+      session.map.gameModeName,
+    ];
+    for (const candidate of candidates) {
+      const trimmed = candidate.trim();
+      if (trimmed.length > 0) return trimmed;
+    }
+    return null;
+  });
 
   const setModeTag = useOngoingGameStore((state) => state.setModeTag);
 

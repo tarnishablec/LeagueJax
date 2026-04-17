@@ -89,7 +89,23 @@
       "Bash(bun x:*)",
       "Read(//d/Desktop/Rust/maokai/maokai-runner/src/**)",
       "Read(//d/Rust/maokai/maokai-runner/**)",
-      "Read(//d//**)"
+      "Read(//d//**)",
+      "Bash(awk 'NR>=1398200 && NR<=1399100' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bf2-e6c6-79c2-9d7d-ec2d0f67f486.log\")",
+      "Bash(awk 'NR>=1399300 && NR<=1399500' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bf2-e6c6-79c2-9d7d-ec2d0f67f486.log\")",
+      "Bash(awk 'NR>=1200000 && NR<=1401000 && /\"phase\": \"\\(ChampSelect|GameStart|InProgress|EndOfGame|PreEndOfGame|WaitingForStats|None|Lobby|ReadyCheck|Matchmaking\\)\"/' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bf2-e6c6-79c2-9d7d-ec2d0f67f486.log\")",
+      "Bash(awk 'NR>=1198500 && NR<=1199300' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bfc-521b-7eb3-89ca-b8697fcbe5c3.log\")",
+      "Bash(awk 'NR>=1198700 && NR<=1199200' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bfc-521b-7eb3-89ca-b8697fcbe5c3.log\")",
+      "Bash(awk 'NR>=1199144 && NR<=1199170' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bfc-521b-7eb3-89ca-b8697fcbe5c3.log\")",
+      "Bash(awk 'NR>=1199050 && NR<=1199170' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bfc-521b-7eb3-89ca-b8697fcbe5c3.log\")",
+      "Bash(awk 'NR>=1198700 && NR<=1199100' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9bfc-521b-7eb3-89ca-b8697fcbe5c3.log\")",
+      "Bash(awk 'NR>=9060 && NR<=9400' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0d-e220-7431-bee3-a56bbf648f87.log\")",
+      "Bash(awk 'NR>=9400 && NR<=11000' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0d-e220-7431-bee3-a56bbf648f87.log\")",
+      "Bash(awk 'NR>=14080 && NR<=14200' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0d-e220-7431-bee3-a56bbf648f87.log\")",
+      "Bash(awk 'NR>=1081700 && NR<=1083000' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0b-b7d7-7cb0-b6f4-180a6978af2e.log\")",
+      "Bash(awk 'NR>=1081700 && NR<=1081900' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0b-b7d7-7cb0-b6f4-180a6978af2e.log\")",
+      "Bash(awk 'NR>=1081600 && NR<=1081750' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0b-b7d7-7cb0-b6f4-180a6978af2e.log\")",
+      "Bash(awk 'NR>=1081800 && NR<=5870000 && /match-history-query.*SUMMARY/' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0b-b7d7-7cb0-b6f4-180a6978af2e.log\")",
+      "Bash(awk 'NR>=1078000 && NR<=1085000' \"/c/Users/tarni/AppData/Roaming/com.tarnishablec.league-jax/logs/league-jax.019d9c0b-b7d7-7cb0-b6f4-180a6978af2e.log\")"
     ]
   }
 }
