@@ -65,8 +65,10 @@ export function OngoingGameTitlebar() {
   const phase = useOngoingGameStore((state) => state.phase);
 
   const modeTag = useOngoingGameStore((state) => state.modeTag);
-  const matchHistoriesPending = useOngoingGameStore(
-    (state) => state.matchHistoriesPending,
+  const matchHistoriesPending = useOngoingGameStore((state) =>
+    Object.values(state.historyStatesByPuuid).some(
+      (s) => s.status === "loading",
+    ),
   );
   const queueIconAssetPath = useOngoingGameStore((state) => {
     const assets = state.gameflowSession?.map.assets;

@@ -1,22 +1,26 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::{broadcast, Mutex};
+use maokai_gears::ops::task::TaskHandle;
+use tokio::sync::{broadcast, mpsc};
 
-use crate::shards::lcu::session::LcuSession;
+use crate::shards::lcu::concepts::champ_select_session::{ChampSelectSessionData, TeamMember};
+use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
+use crate::shards::lcu::concepts::teambuilder_tbd_game::TeambuilderTbdGamePayload;
 use crate::shards::lcu::LcuShard;
-use crate::shards::ongoing_game::types::OngoingGameEvent;
 use crate::shards::sgp::SgpShard;
 
-use super::manager::OngoingGameSettings;
+use super::manager::{MatchHistoryModeSetting, OngoingGameSettings};
+use super::types::{OngoingGameEvent, OngoingGameInput, OngoingGameMatchHistoryState, OngoingGameSummonerState};
 
-pub(crate) const MAX_MATCH_HISTORY_FETCH_CONCURRENCY: usize = 5;
+// ── Broadcast channels ──────────────────────────────────────────────────
 
 pub(crate) struct Channels {
     pub(crate) ongoing_tx: broadcast::Sender<OngoingGameEvent>,
 }
 
 impl Channels {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let (ongoing_tx, _) = broadcast::channel(64);
         Self { ongoing_tx }
     }
@@ -30,39 +34,65 @@ impl Channels {
     }
 }
 
-pub struct OngoingGameContext {
-    pub(crate) settings: OngoingGameSettings,
-    pub(crate) sgp_shard: Arc<SgpShard>,
-    pub(crate) lcu_shard: Arc<LcuShard>,
-    pub(crate) channels: Channels,
+// ── Machine context ─────────────────────────────────────────────────────
+
+#[derive(Clone)]
+pub struct OngoingGameCtx {
+    // Lifecycle
+    pub lifecycle_game_id: Option<u64>,
+
+    // Roster
+    pub team_members: Vec<TeamMember>,
+    pub gameflow_session: Option<GameflowSessionData>,
+    pub champ_select_session: Option<ChampSelectSessionData>,
+    pub teambuilder_payload: Option<TeambuilderTbdGamePayload>,
+    pub effective_queue_id: Option<u64>,
+
+    // Match-history filter
+    pub match_history_mode: MatchHistoryModeSetting,
+
+    // Per-player state
+    pub summoner_states: HashMap<String, OngoingGameSummonerState>,
+    pub history_states: HashMap<String, OngoingGameMatchHistoryState>,
+
+    // Task tracking
+    pub summoner_tasks: HashMap<String, TaskHandle>,
+    pub history_tasks: HashMap<String, TaskHandle>,
+
+    // Services
+    pub lcu_shard: Arc<LcuShard>,
+    pub sgp_shard: Arc<SgpShard>,
+    pub settings: OngoingGameSettings,
+
+    // Infrastructure
+    pub channels: Arc<Channels>,
+    pub input_tx: mpsc::UnboundedSender<OngoingGameInput>,
 }
 
-impl OngoingGameContext {
-    pub(crate) fn new(
-        settings: OngoingGameSettings,
-        sgp_shard: Arc<SgpShard>,
+impl OngoingGameCtx {
+    pub fn new(
         lcu_shard: Arc<LcuShard>,
+        sgp_shard: Arc<SgpShard>,
+        settings: OngoingGameSettings,
+        input_tx: mpsc::UnboundedSender<OngoingGameInput>,
     ) -> Self {
         Self {
-            settings,
-            sgp_shard,
+            lifecycle_game_id: None,
+            team_members: Vec::new(),
+            gameflow_session: None,
+            champ_select_session: None,
+            teambuilder_payload: None,
+            effective_queue_id: None,
+            match_history_mode: MatchHistoryModeSetting::All,
+            summoner_states: HashMap::new(),
+            history_states: HashMap::new(),
+            summoner_tasks: HashMap::new(),
+            history_tasks: HashMap::new(),
             lcu_shard,
-            channels: Channels::new(),
+            sgp_shard,
+            settings,
+            channels: Arc::new(Channels::new()),
+            input_tx,
         }
-    }
-
-    pub(crate) fn broadcast(&self, event: OngoingGameEvent) {
-        self.channels.broadcast(event);
-    }
-
-    /// Resolve the currently focused LCU session via the LcuShard.  Must NOT
-    /// be called while holding the manager state lock — `lcu::LcuManager::focused`
-    /// awaits its own internal lock and would otherwise risk deadlock.
-    pub(crate) async fn focused_session(&self) -> Option<Arc<LcuSession>> {
-        self.lcu_shard.manager()?.focused().await
-    }
-
-    pub(crate) async fn focused_pid(&self) -> Option<u32> {
-        self.lcu_shard.manager()?.focused_pid().await
     }
 }

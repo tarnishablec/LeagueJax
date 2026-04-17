@@ -863,6 +863,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "downcast"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1435fa1053d8b2fbbe9be7e97eca7f33d37b28409959813daefc1446a14247f1"
+
+[[package]]
 name = "downcast-rs"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2126,6 +2132,8 @@ dependencies = [
  "futures-util",
  "jax",
  "jax-probes",
+ "maokai-gears",
+ "maokai-machine",
  "maokai-runner",
  "maokai-tree",
  "ntapi",
@@ -2257,6 +2265,37 @@ name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
+
+[[package]]
+name = "maokai-gears"
+version = "0.1.0"
+source = "git+https://github.com/tarnishablec/maokai?branch=main#54ef10e6c05667b01964693ab15e514573454dfb"
+dependencies = [
+ "downcast",
+ "maokai-reconciler",
+ "tokio",
+]
+
+[[package]]
+name = "maokai-machine"
+version = "0.1.0"
+source = "git+https://github.com/tarnishablec/maokai?branch=main#54ef10e6c05667b01964693ab15e514573454dfb"
+dependencies = [
+ "downcast",
+ "maokai-gears",
+ "maokai-reconciler",
+ "maokai-runner",
+ "maokai-tree",
+ "tokio",
+]
+
+[[package]]
+name = "maokai-reconciler"
+version = "0.1.0"
+source = "git+https://github.com/tarnishablec/maokai?branch=main#54ef10e6c05667b01964693ab15e514573454dfb"
+dependencies = [
+ "downcast",
+]
 
 [[package]]
 name = "maokai-runner"

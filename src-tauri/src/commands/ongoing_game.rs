@@ -6,6 +6,7 @@ use tauri::State;
 
 use crate::error::AppError;
 use crate::shards::ongoing_game::manager::MatchHistoryModeSetting;
+use crate::shards::ongoing_game::types::OngoingGameInput;
 use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::settings::SettingsShard;
 
@@ -14,10 +15,9 @@ const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
 #[tauri::command]
 pub async fn ongoing_game_refresh(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
-    let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
-        return Ok(());
-    };
-    // manager.refresh_current().await;
+    if let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() {
+        manager.post(OngoingGameInput::Refresh);
+    }
     Ok(())
 }
 
@@ -25,10 +25,9 @@ pub async fn ongoing_game_refresh(jax: State<'_, Arc<Jax>>) -> Result<(), AppErr
 pub async fn ongoing_game_refresh_match_histories(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<(), AppError> {
-    let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
-        return Ok(());
-    };
-    // manager.refresh_match_histories().await;
+    if let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() {
+        manager.post(OngoingGameInput::RefreshMatchHistories);
+    }
     Ok(())
 }
 
@@ -37,17 +36,15 @@ pub async fn ongoing_game_set_match_history_tag(
     tag: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<(), AppError> {
-    let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() else {
-        return Ok(());
-    };
-
     let mode = match tag.as_deref().map(str::trim) {
         None | Some("") | Some("all") => MatchHistoryModeSetting::All,
         Some(QUEUE_MODE_CURRENT_VALUE) => MatchHistoryModeSetting::CurrentMode,
         Some(value) => MatchHistoryModeSetting::FixedTag(value.to_string()),
     };
 
-    // manager.set_match_history_mode(mode).await;
+    if let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() {
+        manager.post(OngoingGameInput::SetMatchHistoryMode(mode));
+    }
     Ok(())
 }
 

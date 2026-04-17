@@ -139,7 +139,6 @@ export type OngoingGameUiState = {
   matchHistoryTag: string | null;
   effectiveQueueId: number | null;
   effectiveModeTag: string | null;
-  matchHistoriesPending: boolean;
   modeTag: MatchModeTag | null;
   gameflowSession: OngoingGameUpdated["gameflow_session"];
   champSelectSession: OngoingGameUpdated["champ_select_session"];
@@ -156,7 +155,6 @@ const initialState: OngoingGameUiState = {
   matchHistoryTag: null,
   effectiveQueueId: null,
   effectiveModeTag: null,
-  matchHistoriesPending: false,
   modeTag: null,
   gameflowSession: null,
   champSelectSession: null,
@@ -187,7 +185,6 @@ function commonFields(payload: OngoingGameUpdated) {
     matchHistoryTag: payload.match_history_tag,
     effectiveQueueId: payload.effective_queue_id,
     effectiveModeTag: payload.effective_mode_tag,
-    matchHistoriesPending: payload.match_histories_pending,
     modeTag: toModeTag(payload.match_history_tag),
     gameflowSession: payload.gameflow_session,
     champSelectSession: payload.champ_select_session,

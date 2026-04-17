@@ -1,9 +1,12 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::shards::lcu::api::OngoingSessionSeed;
 use crate::shards::lcu::concepts::champ_select_session::{ChampSelectSessionData, TeamMember};
 use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
 use crate::shards::lcu::concepts::summoner::SummonerInfo;
+use crate::shards::lcu::concepts::teambuilder_tbd_game::TeambuilderTbdGamePayload;
+use crate::shards::lcu::manager::FocusChange;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
 
 // ---------------------------------------------------------------------------
@@ -106,4 +109,37 @@ pub enum OngoingGameEvent {
     Updated(OngoingGameUpdated),
     SummonersUpdated(OngoingGameSummonersUpdated),
     MatchHistoriesUpdated(OngoingGameMatchHistoriesUpdated),
+}
+
+// ---------------------------------------------------------------------------
+// Machine input events
+// ---------------------------------------------------------------------------
+
+use super::manager::MatchHistoryModeSetting;
+
+#[derive(Debug)]
+pub enum OngoingGameInput {
+    // LCU Manager
+    FocusChanged(FocusChange),
+
+    // LCU WebSocket
+    GameflowSessionUpdated(Box<GameflowSessionData>),
+    ChampSelectSessionUpdated(Box<ChampSelectSessionData>),
+    TeambuilderTbdGameUpdated(Box<TeambuilderTbdGamePayload>),
+
+    // Commands
+    Refresh,
+    RefreshMatchHistories,
+    SetMatchHistoryMode(MatchHistoryModeSetting),
+
+    // Task Results
+    Seeded(Box<OngoingSessionSeed>),
+    SummonerLoaded {
+        puuid: String,
+        info: Option<Box<SummonerInfo>>,
+    },
+    MatchHistoryLoaded {
+        puuid: String,
+        games: Option<Vec<RawMatchSummaryGame>>,
+    },
 }
