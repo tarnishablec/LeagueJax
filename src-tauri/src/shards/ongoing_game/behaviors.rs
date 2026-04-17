@@ -6,8 +6,10 @@ use maokai_tree::{State, TreeView};
 use crate::shards::lcu::api::OngoingSessionSeed;
 use crate::shards::lcu::concepts::champ_select_session::{NameVisibilityType, TeamMember};
 use crate::shards::lcu::concepts::gameflow_phase::Phase as GameflowPhase;
+use crate::shards::lcu::concepts::summoner::SummonerInfo;
 use crate::shards::lcu::concepts::teambuilder_tbd_game::TeambuilderCell;
 use crate::shards::lcu::concepts::LanePosition;
+use crate::shards::sgp::matches::RawMatchSummaryGame;
 use crate::shards::sgp::LcuSessionSgpExt;
 
 use super::context::OngoingGameCtx;
@@ -57,9 +59,7 @@ fn broadcast_updated(envo: &Envo, phase: OngoingGamePhase) {
         lifecycle_game_id: ctx.lifecycle_game_id,
         match_history_tag: ctx.match_history_mode.payload_value(),
         effective_queue_id: ctx.effective_queue_id,
-        effective_mode_tag: ctx
-            .match_history_mode
-            .effective_tag(ctx.effective_queue_id),
+        effective_mode_tag: ctx.match_history_mode.effective_tag(ctx.effective_queue_id),
         match_histories_pending: ctx
             .history_states
             .values()
@@ -75,17 +75,21 @@ fn broadcast_updated(envo: &Envo, phase: OngoingGamePhase) {
     channels.broadcast(OngoingGameEvent::Updated(payload));
 }
 
+/// Look up the roster team id and the lifecycle game id for a puuid.
+/// Returns `(0, ctx.lifecycle_game_id)` when the puuid isn't on the roster.
+fn player_lifecycle_fields(envo: &Envo, puuid: &str) -> (u64, Option<u64>) {
+    let ctx = envo.context();
+    let team = ctx
+        .team_members
+        .iter()
+        .find(|m| m.puuid == puuid)
+        .map(|m| m.team)
+        .unwrap_or(0);
+    (team, ctx.lifecycle_game_id)
+}
+
 fn init_summoner_state(envo: &Envo, puuid: &str) {
-    let (team_id, game_id) = {
-        let ctx = envo.context();
-        let team = ctx
-            .team_members
-            .iter()
-            .find(|m| m.puuid == puuid)
-            .map(|m| m.team)
-            .unwrap_or(0);
-        (team, ctx.lifecycle_game_id)
-    };
+    let (team_id, game_id) = player_lifecycle_fields(envo, puuid);
     envo.context_mut().summoner_states.insert(
         puuid.to_owned(),
         OngoingGameSummonerState {
@@ -99,16 +103,7 @@ fn init_summoner_state(envo: &Envo, puuid: &str) {
 }
 
 fn init_history_state(envo: &Envo, puuid: &str) {
-    let (team_id, game_id) = {
-        let ctx = envo.context();
-        let team = ctx
-            .team_members
-            .iter()
-            .find(|m| m.puuid == puuid)
-            .map(|m| m.team)
-            .unwrap_or(0);
-        (team, ctx.lifecycle_game_id)
-    };
+    let (team_id, game_id) = player_lifecycle_fields(envo, puuid);
     envo.context_mut().history_states.insert(
         puuid.to_owned(),
         OngoingGameMatchHistoryState {
@@ -203,13 +198,13 @@ fn spawn_seed_task(envo: &Envo) {
             let phase = api.get_gameflow_phase_typed().await.ok()?;
 
             let gameflow_session = match phase {
-                GameflowPhase::ChampSelect
-                | GameflowPhase::InProgress
-                | GameflowPhase::InGame => api.get_gameflow_session_typed().await.ok(),
+                GameflowPhase::ChampSelect | GameflowPhase::InProgress | GameflowPhase::InGame => {
+                    api.get_gameflow_session_typed().await.ok()
+                }
                 _ => None,
             };
 
-            // No direct GET for champ-select session exists in LcuApi; rely on WS push.
+            // No direct GET for champ-select session exists in `lcu::api`; rely on WS push.
             let champ_select_session = None;
 
             let teambuilder_payload = if matches!(phase, GameflowPhase::ChampSelect) {
@@ -237,14 +232,38 @@ fn spawn_seed_task(envo: &Envo) {
     });
 }
 
-fn spawn_all_fetch_tasks(envo: &Envo) {
-    let puuids: Vec<String> = envo
-        .context()
+/// Collect non-bot puuids from the current roster — the set we actually
+/// spawn summoner / match-history fetch tasks for.
+fn team_puuids(envo: &Envo) -> Vec<String> {
+    envo.context()
         .team_members
         .iter()
         .map(|m| m.puuid.clone())
         .filter(|p| !is_bot(p))
-        .collect();
+        .collect()
+}
+
+/// Pull `game_id` and `queue_id` off the latest gameflow session and
+/// copy them into the ctx's lifecycle fields. No-op when either side is
+/// absent — we never overwrite with `None`.
+fn sync_lifecycle_ids_from_gameflow(envo: &Envo) {
+    let (game_id, queue_id) = {
+        let ctx = envo.context();
+        match ctx.gameflow_session.as_ref() {
+            Some(gs) => (Some(gs.game_data.game_id), Some(gs.game_data.queue.id)),
+            None => (None, None),
+        }
+    };
+    if game_id.is_some() {
+        envo.context_mut().lifecycle_game_id = game_id;
+    }
+    if queue_id.is_some() {
+        envo.context_mut().effective_queue_id = queue_id;
+    }
+}
+
+fn spawn_all_fetch_tasks(envo: &Envo) {
+    let puuids = team_puuids(envo);
 
     for puuid in &puuids {
         let should_spawn = {
@@ -300,15 +319,7 @@ fn stop_history_tasks(envo: &Envo) {
 }
 
 fn restart_history_tasks(envo: &Envo) {
-    let puuids: Vec<String> = envo
-        .context()
-        .team_members
-        .iter()
-        .map(|m| m.puuid.clone())
-        .filter(|p| !is_bot(p))
-        .collect();
-
-    for puuid in &puuids {
+    for puuid in &team_puuids(envo) {
         init_history_state(envo, puuid);
         spawn_history_task(envo, puuid);
     }
@@ -316,7 +327,111 @@ fn restart_history_tasks(envo: &Envo) {
 
 // Tiny wrapper so we can propagate Option<SummonerInfo> through the async `?` chain
 // without confusing nested Option types. The value we actually forward is `slot.0`.
-struct SummonerInfoSlot(crate::shards::lcu::concepts::summoner::SummonerInfo);
+struct SummonerInfoSlot(SummonerInfo);
+
+// ── Shared event handlers ────────────────────────────────────────────────
+//
+// `ChampSelectBehavior` and `InGameBehavior` respond identically to a
+// handful of inputs (per-player load results + user-initiated refresh
+// commands). The helpers below centralize that logic, so each behavior's
+// `on_event` only needs to describe its phase-specific branches.
+
+fn handle_summoner_loaded(
+    envo: &Envo,
+    phase: OngoingGamePhase,
+    puuid: &str,
+    info: &Option<Box<SummonerInfo>>,
+) -> EventReply {
+    {
+        let mut ctx = envo.context_mut();
+        ctx.summoner_tasks.remove(puuid);
+        if let Some(state) = ctx.summoner_states.get_mut(puuid) {
+            state.status = if info.is_some() {
+                OngoingGamePlayerLoadStatus::Ready
+            } else {
+                OngoingGamePlayerLoadStatus::Failed
+            };
+            state.summoner = info.as_deref().cloned();
+        }
+    }
+    let (channels, state_opt) = {
+        let ctx = envo.context();
+        (
+            ctx.channels.clone(),
+            ctx.summoner_states.get(puuid).cloned(),
+        )
+    };
+    if let Some(state) = state_opt {
+        channels.broadcast(OngoingGameEvent::SummonersUpdated(
+            OngoingGameSummonersUpdated { phase, state },
+        ));
+    }
+    EventReply::Handled
+}
+
+fn handle_match_history_loaded(
+    envo: &Envo,
+    phase: OngoingGamePhase,
+    puuid: &str,
+    games: &Option<Vec<RawMatchSummaryGame>>,
+) -> EventReply {
+    {
+        let mut ctx = envo.context_mut();
+        ctx.history_tasks.remove(puuid);
+        if let Some(state) = ctx.history_states.get_mut(puuid) {
+            state.status = if games.is_some() {
+                OngoingGamePlayerLoadStatus::Ready
+            } else {
+                OngoingGamePlayerLoadStatus::Failed
+            };
+            state.games = games.clone();
+        }
+    }
+    let (channels, state_opt) = {
+        let ctx = envo.context();
+        (ctx.channels.clone(), ctx.history_states.get(puuid).cloned())
+    };
+    if let Some(state) = state_opt {
+        channels.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
+            OngoingGameMatchHistoriesUpdated { phase, state },
+        ));
+    }
+    EventReply::Handled
+}
+
+/// Try to handle inputs whose semantics don't depend on the current phase.
+/// Returns `None` when the event is phase-specific and the caller must
+/// dispatch it themselves.
+fn try_handle_common_event(
+    envo: &Envo,
+    phase: OngoingGamePhase,
+    event: &OngoingGameInput,
+) -> Option<EventReply> {
+    match event {
+        OngoingGameInput::SummonerLoaded { puuid, info } => {
+            Some(handle_summoner_loaded(envo, phase, puuid, info))
+        }
+        OngoingGameInput::MatchHistoryLoaded { puuid, games } => {
+            Some(handle_match_history_loaded(envo, phase, puuid, games))
+        }
+        OngoingGameInput::RefreshMatchHistories => {
+            stop_history_tasks(envo);
+            restart_history_tasks(envo);
+            broadcast_updated(envo, phase);
+            Some(EventReply::Handled)
+        }
+        OngoingGameInput::SetMatchHistoryMode(mode) => {
+            envo.context_mut().match_history_mode = mode.clone();
+            broadcast_updated(envo, phase);
+            Some(EventReply::Handled)
+        }
+        OngoingGameInput::Refresh => {
+            spawn_seed_task(envo);
+            Some(EventReply::Handled)
+        }
+        _ => None,
+    }
+}
 
 // ── IdleBehavior ─────────────────────────────────────────────────────────
 
@@ -432,7 +547,7 @@ impl ChampSelectBehavior {
             } else if let Some(tb) = ctx.teambuilder_payload.as_ref() {
                 // Fallback — champ-select session hasn't been pushed yet.
                 // Teambuilder's allied cells carry everything we need for
-                // the ally roster, so the UI can paint cards immediately
+                // the ally's roster, so the UI can paint cards immediately
                 // instead of waiting on the WS tick.
                 tb.champion_select_state
                     .cells
@@ -446,20 +561,7 @@ impl ChampSelectBehavior {
         };
 
         envo.context_mut().team_members = members;
-
-        let (game_id, queue_id) = {
-            let ctx = envo.context();
-            match ctx.gameflow_session.as_ref() {
-                Some(gs) => (Some(gs.game_data.game_id), Some(gs.game_data.queue.id)),
-                None => (None, None),
-            }
-        };
-        if game_id.is_some() {
-            envo.context_mut().lifecycle_game_id = game_id;
-        }
-        if queue_id.is_some() {
-            envo.context_mut().effective_queue_id = queue_id;
-        }
+        sync_lifecycle_ids_from_gameflow(envo);
     }
 }
 
@@ -470,7 +572,7 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
         if envo.context().champ_select_session.is_some() {
             spawn_all_fetch_tasks(envo);
         } else {
-            // Cold start — rely on WS push for champ-select, but seed other state.
+            // Cold start — rely on WS push for champ-select, but seed another state.
             spawn_seed_task(envo);
         }
 
@@ -490,6 +592,10 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
     ) -> EventReply {
         let t = &*ONGOING_TREE;
         let phase = phase_of(current);
+
+        if let Some(reply) = try_handle_common_event(envo, phase, event) {
+            return reply;
+        }
 
         match event {
             OngoingGameInput::ChampSelectSessionUpdated(data) => {
@@ -525,69 +631,6 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                 }
                 EventReply::Handled
             }
-            OngoingGameInput::SummonerLoaded { puuid, info } => {
-                {
-                    let mut ctx = envo.context_mut();
-                    ctx.summoner_tasks.remove(puuid);
-                    if let Some(state) = ctx.summoner_states.get_mut(puuid) {
-                        state.status = if info.is_some() {
-                            OngoingGamePlayerLoadStatus::Ready
-                        } else {
-                            OngoingGamePlayerLoadStatus::Failed
-                        };
-                        state.summoner = info.as_deref().cloned();
-                    }
-                }
-                let (channels, state_opt) = {
-                    let ctx = envo.context();
-                    (ctx.channels.clone(), ctx.summoner_states.get(puuid).cloned())
-                };
-                if let Some(state) = state_opt {
-                    channels.broadcast(OngoingGameEvent::SummonersUpdated(
-                        OngoingGameSummonersUpdated { phase, state },
-                    ));
-                }
-                EventReply::Handled
-            }
-            OngoingGameInput::MatchHistoryLoaded { puuid, games } => {
-                {
-                    let mut ctx = envo.context_mut();
-                    ctx.history_tasks.remove(puuid);
-                    if let Some(state) = ctx.history_states.get_mut(puuid) {
-                        state.status = if games.is_some() {
-                            OngoingGamePlayerLoadStatus::Ready
-                        } else {
-                            OngoingGamePlayerLoadStatus::Failed
-                        };
-                        state.games = games.clone();
-                    }
-                }
-                let (channels, state_opt) = {
-                    let ctx = envo.context();
-                    (ctx.channels.clone(), ctx.history_states.get(puuid).cloned())
-                };
-                if let Some(state) = state_opt {
-                    channels.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
-                        OngoingGameMatchHistoriesUpdated { phase, state },
-                    ));
-                }
-                EventReply::Handled
-            }
-            OngoingGameInput::RefreshMatchHistories => {
-                stop_history_tasks(envo);
-                restart_history_tasks(envo);
-                broadcast_updated(envo, phase);
-                EventReply::Handled
-            }
-            OngoingGameInput::SetMatchHistoryMode(mode) => {
-                envo.context_mut().match_history_mode = mode.clone();
-                broadcast_updated(envo, phase);
-                EventReply::Handled
-            }
-            OngoingGameInput::Refresh => {
-                spawn_seed_task(envo);
-                EventReply::Handled
-            }
             OngoingGameInput::Seeded(seed) => {
                 {
                     let mut ctx = envo.context_mut();
@@ -604,6 +647,7 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                 broadcast_updated(envo, phase);
                 EventReply::Handled
             }
+            _ => EventReply::Ignored,
         }
     }
 }
@@ -636,20 +680,7 @@ impl InGameBehavior {
             ctx.champ_select_session = None;
             ctx.teambuilder_payload = None;
         }
-
-        let (game_id, queue_id) = {
-            let ctx = envo.context();
-            match ctx.gameflow_session.as_ref() {
-                Some(gs) => (Some(gs.game_data.game_id), Some(gs.game_data.queue.id)),
-                None => (None, None),
-            }
-        };
-        if game_id.is_some() {
-            envo.context_mut().lifecycle_game_id = game_id;
-        }
-        if queue_id.is_some() {
-            envo.context_mut().effective_queue_id = queue_id;
-        }
+        sync_lifecycle_ids_from_gameflow(envo);
     }
 }
 
@@ -747,6 +778,10 @@ impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
         let t = &*ONGOING_TREE;
         let phase = phase_of(current);
 
+        if let Some(reply) = try_handle_common_event(envo, phase, event) {
+            return reply;
+        }
+
         match event {
             OngoingGameInput::GameflowSessionUpdated(data) => {
                 envo.context_mut().gameflow_session = Some((**data).clone());
@@ -762,69 +797,6 @@ impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
                 if change.current.is_none() {
                     envo.machine.request_transition(t.idle, None);
                 }
-                EventReply::Handled
-            }
-            OngoingGameInput::SummonerLoaded { puuid, info } => {
-                {
-                    let mut ctx = envo.context_mut();
-                    ctx.summoner_tasks.remove(puuid);
-                    if let Some(state) = ctx.summoner_states.get_mut(puuid) {
-                        state.status = if info.is_some() {
-                            OngoingGamePlayerLoadStatus::Ready
-                        } else {
-                            OngoingGamePlayerLoadStatus::Failed
-                        };
-                        state.summoner = info.as_deref().cloned();
-                    }
-                }
-                let (channels, state_opt) = {
-                    let ctx = envo.context();
-                    (ctx.channels.clone(), ctx.summoner_states.get(puuid).cloned())
-                };
-                if let Some(state) = state_opt {
-                    channels.broadcast(OngoingGameEvent::SummonersUpdated(
-                        OngoingGameSummonersUpdated { phase, state },
-                    ));
-                }
-                EventReply::Handled
-            }
-            OngoingGameInput::MatchHistoryLoaded { puuid, games } => {
-                {
-                    let mut ctx = envo.context_mut();
-                    ctx.history_tasks.remove(puuid);
-                    if let Some(state) = ctx.history_states.get_mut(puuid) {
-                        state.status = if games.is_some() {
-                            OngoingGamePlayerLoadStatus::Ready
-                        } else {
-                            OngoingGamePlayerLoadStatus::Failed
-                        };
-                        state.games = games.clone();
-                    }
-                }
-                let (channels, state_opt) = {
-                    let ctx = envo.context();
-                    (ctx.channels.clone(), ctx.history_states.get(puuid).cloned())
-                };
-                if let Some(state) = state_opt {
-                    channels.broadcast(OngoingGameEvent::MatchHistoriesUpdated(
-                        OngoingGameMatchHistoriesUpdated { phase, state },
-                    ));
-                }
-                EventReply::Handled
-            }
-            OngoingGameInput::RefreshMatchHistories => {
-                stop_history_tasks(envo);
-                restart_history_tasks(envo);
-                broadcast_updated(envo, phase);
-                EventReply::Handled
-            }
-            OngoingGameInput::SetMatchHistoryMode(mode) => {
-                envo.context_mut().match_history_mode = mode.clone();
-                broadcast_updated(envo, phase);
-                EventReply::Handled
-            }
-            OngoingGameInput::Refresh => {
-                spawn_seed_task(envo);
                 EventReply::Handled
             }
             OngoingGameInput::Seeded(seed) => {
