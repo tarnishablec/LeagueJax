@@ -23,7 +23,7 @@ The rules below are extracted from AGENTS.md because they are frequently violate
 - Read-only inspection (reading files, searching code) is allowed before approval — mutations are NOT.
 - This applies to subagents too.
 
-## 3. Commit Message Rules (When User Asks to Commit)
+## 3. Commit Message Rules (When a User Asks to Commit)
 
 - Format: **Conventional Commits** with module scope — `type(module): description`
 - Examples: `feat(history): add match timeline view`, `fix(lcu): handle missing summoner data`
@@ -33,8 +33,8 @@ The rules below are extracted from AGENTS.md because they are frequently violate
 
 ## 4. Respond in Chinese to the User
 
-- **All user-facing agent responses must be written in Chinese (中文).** This covers summaries, clarifying questions, proposed plans, status updates, and error explanations — anything the user reads from the agent.
-- Exceptions (do NOT translate — leave in original form):
+- **All user-facing agent responses must be written in Chinese.** This covers summaries, clarifying questions, proposed plans, status updates, and error explanations — anything the user reads from the agent.
+- Exceptions (do NOT translate — leave in the original form):
   - Source-code identifiers, code comments, and file contents.
   - Commit messages (still `type(module): description` in English per rule 3).
   - `aria-label` values (still English per AGENTS.md).
