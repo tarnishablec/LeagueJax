@@ -215,6 +215,18 @@ fn spawn_seed_task(envo: &Envo) {
             );
 
             let phase = phase.ok()?;
+            if !matches!(
+                phase,
+                GameflowPhase::ChampSelect
+                    | GameflowPhase::GameStart
+                    | GameflowPhase::InProgress
+                    | GameflowPhase::InGame
+            ) {
+                tracing::info!(
+                    phase = ?phase,
+                    "No active match detected during ongoing-game seed probe"
+                );
+            }
 
             let gameflow_session = match phase {
                 GameflowPhase::ChampSelect
@@ -245,6 +257,8 @@ fn spawn_seed_task(envo: &Envo) {
 
         if let Some(seed) = seed {
             let _ = input_tx.send(OngoingGameInput::Seeded(Box::new(seed)));
+        } else {
+            tracing::info!("No ongoing-game seed produced in this probe");
         }
     });
 }
