@@ -71,7 +71,7 @@ jobs:
           path: artifacts
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           repository: tarnishablec/league-jax-releases
           token: ${{ secrets.RELEASES_TOKEN }}
@@ -92,6 +92,16 @@ jobs:
         with:
           name: tauri-build-${{ needs.build.outputs.tag }}
           path: artifacts
+
+      - name: Delete Existing Gitee Release
+        uses: nICEnnnnnnnLee/action-gitee-release@master
+        continue-on-error: true
+        with:
+          gitee_action: delete_release
+          gitee_owner: tarnishablec
+          gitee_repo: league-jax-releases
+          gitee_token: ${{ secrets.GITEE_TOKEN }}
+          gitee_tag_name: ${{ needs.build.outputs.tag }}
 
       - name: Release to Gitee
         uses: nICEnnnnnnnLee/action-gitee-release@master
