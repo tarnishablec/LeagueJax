@@ -173,9 +173,9 @@ export const metaPill = style({
 });
 
 export const loadoutRow = style({
-  display: "grid",
-  gridAutoFlow: "column",
-  justifyContent: "start",
+  display: "flex",
+  flexWrap: "wrap",
+  rowGap: 6,
   gap: 10,
   alignItems: "center",
   minWidth: 0,
@@ -318,6 +318,7 @@ export const itemIcon = style({
   height: 22,
   borderRadius: 5,
   objectFit: "cover",
+  display: "block",
   border: `1px solid ${vars.color.border}`,
 });
 
