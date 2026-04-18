@@ -271,13 +271,16 @@ export function useMatchCardViewModel({
 
   const { primaryRuneId, subStyleId } = getPerkIds(me);
   const damageShare = computeDamageShare(me, participants);
-  const position = supportsPosition
-    ? (roleQuest.inferredPosition ??
-      normalizeHistoryPosition(me.teamPosition) ??
+  const fallbackPosition = supportsPosition
+    ? (normalizeHistoryPosition(me.teamPosition) ??
       normalizeHistoryPosition(me.individualPosition) ??
       normalizeHistoryPosition(me.lane) ??
       "FILL")
     : null;
+
+  // console.log("inferredPosition", roleQuest.inferredPosition);
+
+  const position = roleQuest.inferredPosition ?? fallbackPosition;
   const pills = computeMatchPills(me, participants, gameResult === "victory");
   const myGold = me.goldEarned ?? 0;
   const goldRank =

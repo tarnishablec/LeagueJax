@@ -37,7 +37,14 @@ const SUMMONERS_RIFT_MAP_ID = 11;
 const CLASSIC_GAME_MODE = "CLASSIC";
 
 function buildQuestIconUrl(iconBase: string, completed: boolean): string {
-  const state = completed ? "complete" : "inprogress";
+  const state =
+    iconBase === "rolequest_supportreward"
+      ? completed
+        ? "empty"
+        : "inprogress"
+      : completed
+        ? "complete"
+        : "inprogress";
   return `${ICON_HOST}/${iconBase}_${state}.png`;
 }
 
@@ -53,6 +60,7 @@ export function useRoleQuestSlot({
   const supportsPosition =
     mapId === SUMMONERS_RIFT_MAP_ID ||
     gameMode.toUpperCase() === CLASSIC_GAME_MODE;
+  const completed = participant.missions?.[ROLE_QUEST_COMPLETE_KEY] === 1;
 
   const itemQueryParams = useMemo(
     () => [{ type: "item" as const, itemId: roleBoundItem }],
@@ -60,10 +68,9 @@ export function useRoleQuestSlot({
   );
   const [itemAsset] = useDragonStaticData(itemQueryParams);
   const iconSrc = itemAsset?.src ?? null;
-  const completed = participant.missions?.[ROLE_QUEST_COMPLETE_KEY] === 1;
 
   return useMemo<RoleQuestResult>(() => {
-    if (!supportsPosition || !roleBoundItem) {
+    if (!roleBoundItem) {
       return { inferredPosition: null, slot: null };
     }
 
@@ -72,20 +79,24 @@ export function useRoleQuestSlot({
     if (mapping) {
       return {
         inferredPosition: mapping.lane,
-        slot: {
-          kind: "quest",
-          iconUrl: buildQuestIconUrl(mapping.iconBase, completed),
-        },
+        slot: supportsPosition
+          ? {
+              kind: "quest",
+              iconUrl: buildQuestIconUrl(mapping.iconBase, completed),
+            }
+          : null,
       };
     }
 
     return {
       inferredPosition: null,
-      slot: {
-        kind: "item",
-        itemId: roleBoundItem,
-        iconUrl: iconSrc,
-      },
+      slot: supportsPosition
+        ? {
+            kind: "item",
+            itemId: roleBoundItem,
+            iconUrl: iconSrc,
+          }
+        : null,
     };
   }, [supportsPosition, roleBoundItem, completed, iconSrc]);
 }
