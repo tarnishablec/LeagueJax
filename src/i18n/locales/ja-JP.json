@@ -102,6 +102,9 @@
       "bestDamageEfficiency.desc": "試合で最も高いダメージ対ゴールド比率",
       "mvp": "★ MVP",
       "mvp.desc": "勝利チームで最も高いKDA",
+      "soloKill": "ソロキル ×{{count}}",
+      "soloKill.label": "ソロキル",
+      "soloKill.desc": "この試合で {{count}} 回のソロキルを記録",
       "ace": "★ ACE",
       "ace.desc": "敗北チームで最も高いKDA"
     },

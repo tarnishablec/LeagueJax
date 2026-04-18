@@ -86,7 +86,7 @@ export function MatchCard({
               questSlot={vm.roleQuestSlot}
             />
           </div>
-          <MatchCardPills tags={vm.tags} className={s.pillsSlot} />
+          <MatchCardPills pills={vm.pills} className={s.pillsSlot} />
         </button>
 
         <MatchCardPlayers

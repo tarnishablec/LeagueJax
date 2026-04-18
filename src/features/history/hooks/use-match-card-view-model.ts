@@ -62,24 +62,33 @@ export type MatchTag =
   | "mvp"
   | "ace";
 
+export type MatchPill =
+  | { type: "tag"; tag: MatchTag }
+  | { type: "soloKill"; count: number };
+
 const TAG_PRIORITY: Record<MatchTag, number> = {
   mvp: 0,
   ace: 1,
-  penta: 2,
-  quadra: 3,
-  triple: 4,
-  highestDamage: 5,
-  mostTurretDamage: 6,
-  mostDamageTaken: 7,
-  mostHealing: 8,
-  bestVision: 9,
-  mostCC: 10,
-  mostCS: 11,
-  highestKP: 12,
-  mostGold: 13,
-  bestDamageEfficiency: 14,
-  firstBlood: 15,
+  penta: 3,
+  quadra: 4,
+  triple: 5,
+  highestDamage: 6,
+  mostTurretDamage: 7,
+  mostDamageTaken: 8,
+  mostHealing: 9,
+  bestVision: 10,
+  mostCC: 11,
+  mostCS: 12,
+  highestKP: 13,
+  mostGold: 14,
+  bestDamageEfficiency: 15,
+  firstBlood: 16,
 };
+
+function getPillPriority(pill: MatchPill): number {
+  if (pill.type === "soloKill") return 2;
+  return TAG_PRIORITY[pill.tag];
+}
 
 type StatTagRule = {
   tag: MatchTag;
@@ -177,26 +186,36 @@ function collectStatTags(
   return result;
 }
 
-function computeMatchTags(
+function computeMatchPills(
   me: RawMatchSummaryParticipant,
   participants: RawMatchSummaryParticipant[],
   isVictory: boolean,
-): MatchTag[] {
+): MatchPill[] {
   const teammates = participants.filter((p) => p.teamId === me.teamId);
-  const tags: MatchTag[] = [];
-
-  const multiKill = getMultiKillTag(me);
-  if (multiKill) tags.push(multiKill);
-
-  if (me.firstBloodKill) tags.push("firstBlood");
-
-  tags.push(...collectStatTags(me, participants, teammates));
+  const pills: MatchPill[] = [];
 
   const teamTag = getTeamTag(me, teammates, isVictory);
-  if (teamTag) tags.push(teamTag);
+  if (teamTag) pills.push({ type: "tag", tag: teamTag });
 
-  tags.sort((a, b) => TAG_PRIORITY[a] - TAG_PRIORITY[b]);
-  return tags;
+  const soloKillCount = me.challenges?.soloKills ?? 0;
+  if (soloKillCount > 0) {
+    pills.push({ type: "soloKill", count: soloKillCount });
+  }
+
+  const multiKill = getMultiKillTag(me);
+  if (multiKill) pills.push({ type: "tag", tag: multiKill });
+
+  if (me.firstBloodKill) pills.push({ type: "tag", tag: "firstBlood" });
+
+  pills.push(
+    ...collectStatTags(me, participants, teammates).map((tag) => ({
+      type: "tag" as const,
+      tag,
+    })),
+  );
+
+  pills.sort((a, b) => getPillPriority(a) - getPillPriority(b));
+  return pills;
 }
 
 export function normalizeHistoryPosition(
@@ -259,7 +278,7 @@ export function useMatchCardViewModel({
       normalizeHistoryPosition(me.lane) ??
       "FILL")
     : null;
-  const tags = computeMatchTags(me, participants, gameResult === "victory");
+  const pills = computeMatchPills(me, participants, gameResult === "victory");
   const myGold = me.goldEarned ?? 0;
   const goldRank =
     participants.filter((p) => (p.goldEarned ?? 0) > myGold).length + 1;
@@ -281,7 +300,7 @@ export function useMatchCardViewModel({
     damageShare,
     goldRank,
     position,
-    tags,
+    pills,
     roleQuestSlot: roleQuest.slot,
   };
 }
