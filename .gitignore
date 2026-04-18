@@ -28,3 +28,4 @@ target
 docs
 
 .claude/worktrees
+.claude/settings.local.json
