@@ -11,6 +11,9 @@ export const root = style({
 
 export const tagPill = recipe({
   base: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     fontSize: "0.6875rem",
     fontWeight: 700,
     lineHeight: 1,
@@ -103,8 +106,35 @@ export const tagPill = recipe({
         background: "oklch(0.7 0.18 280 / 0.12)",
         border: "1px solid oklch(0.7 0.18 280 / 0.4)",
       },
+      soloKill: {
+        color: "oklch(0.78 0.17 35)",
+        background: "oklch(0.78 0.17 35 / 0.12)",
+        border: "1px solid oklch(0.78 0.17 35 / 0.4)",
+      },
     },
   },
+});
+
+export const soloKillContent = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+});
+
+export const soloKillCount = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 1,
+});
+
+export const soloKillMultiply = style({
+  lineHeight: 1,
+});
+
+export const soloKillNumber = style({
+  display: "inline-block",
+  lineHeight: 1,
+  transform: "translateY(-0.02em)",
 });
 
 export const tooltipPositioner = style({

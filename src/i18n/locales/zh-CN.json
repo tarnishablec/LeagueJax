@@ -102,6 +102,9 @@
       "bestDamageEfficiency.desc": "全场伤害转化率最高",
       "mvp": "★ MVP",
       "mvp.desc": "胜方队伍中 KDA 最高",
+      "soloKill": "单杀 ×{{count}}",
+      "soloKill.label": "单杀",
+      "soloKill.desc": "本局完成了 {{count}} 次单杀",
       "ace": "★ ACE",
       "ace.desc": "败方队伍中 KDA 最高"
     },

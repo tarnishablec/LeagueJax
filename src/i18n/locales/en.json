@@ -102,6 +102,9 @@
       "bestDamageEfficiency.desc": "Highest damage-to-gold ratio in the game",
       "mvp": "★ MVP",
       "mvp.desc": "Highest KDA on the winning team",
+      "soloKill": "SoloKill ×{{count}}",
+      "soloKill.label": "SoloKill",
+      "soloKill.desc": "Recorded {{count}} solo kills this game",
       "ace": "★ ACE",
       "ace.desc": "Highest KDA on the losing team"
     },
