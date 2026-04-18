@@ -37,23 +37,25 @@ export function MatchCardItems({
   const itemAssets = useDragonStaticData(itemParams);
 
   return (
-    <div className={s.itemsGrid}>
-      {ITEM_SLOT_KEYS.map((slotKey, slotIndex) => {
-        const itemId = items[slotIndex] ?? 0;
-        const itemAsset = itemAssets[slotIndex];
-        return (
-          <MatchCardAssetIcon
-            key={`${gameId}-${slotKey}`}
-            src={itemAsset?.src ?? null}
-            alt={t("history.match.itemAlt", {
-              id: itemId,
-              defaultValue: `Item ${itemId}`,
-            })}
-            className={s.itemIcon}
-            fallbackClassName={s.itemIconFallback}
-          />
-        );
-      })}
+    <div className={s.loadoutGroup}>
+      <div className={s.itemsGrid}>
+        {ITEM_SLOT_KEYS.map((slotKey, slotIndex) => {
+          const itemId = items[slotIndex] ?? 0;
+          const itemAsset = itemAssets[slotIndex];
+          return (
+            <MatchCardAssetIcon
+              key={`${gameId}-${slotKey}`}
+              src={itemAsset?.src ?? null}
+              alt={t("history.match.itemAlt", {
+                id: itemId,
+                defaultValue: `Item ${itemId}`,
+              })}
+              className={s.itemIcon}
+              fallbackClassName={s.itemIconFallback}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

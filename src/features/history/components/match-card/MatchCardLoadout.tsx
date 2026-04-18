@@ -67,24 +67,26 @@ export function MatchCardLoadout({
       )}
       <MatchCardItems gameId={gameId} items={items} />
       {questSlot !== null ? (
-        questSlot.kind === "quest" ? (
-          <MatchCardAssetIcon
-            src={questSlot.iconUrl}
-            alt=""
-            className={s.itemIcon}
-            fallbackClassName={s.itemIconFallback}
-          />
-        ) : (
-          <MatchCardAssetIcon
-            src={questSlot.iconUrl}
-            alt={t("history.match.itemAlt", {
-              id: questSlot.itemId,
-              defaultValue: `Item ${questSlot.itemId}`,
-            })}
-            className={s.itemIcon}
-            fallbackClassName={s.itemIconFallback}
-          />
-        )
+        <div className={s.loadoutGroup}>
+          {questSlot.kind === "quest" ? (
+            <MatchCardAssetIcon
+              src={questSlot.iconUrl}
+              alt=""
+              className={s.itemIcon}
+              fallbackClassName={s.itemIconFallback}
+            />
+          ) : (
+            <MatchCardAssetIcon
+              src={questSlot.iconUrl}
+              alt={t("history.match.itemAlt", {
+                id: questSlot.itemId,
+                defaultValue: `Item ${questSlot.itemId}`,
+              })}
+              className={s.itemIcon}
+              fallbackClassName={s.itemIconFallback}
+            />
+          )}
+        </div>
       ) : null}
     </div>
   );
