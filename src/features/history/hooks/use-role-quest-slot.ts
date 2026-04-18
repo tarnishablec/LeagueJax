@@ -19,13 +19,18 @@ const ROLE_QUEST_ITEM_MAP: Record<
   number,
   { lane: LanePosition; iconBase: string }
 > = {
+  1200: { lane: "top", iconBase: "rolequest_topreward1" },
+  1201: { lane: "middle", iconBase: "rolequest_midreward" },
   1202: { lane: "bottom", iconBase: "rolequest_botreward" },
+  1203: { lane: "utility", iconBase: "rolequest_supportreward" },
+  1204: { lane: "jungle", iconBase: "rolequest_junglereward" },
   1207: { lane: "bottom", iconBase: "rolequest_botreward" },
   1206: { lane: "middle", iconBase: "rolequest_midreward" },
   1208: { lane: "utility", iconBase: "rolequest_supportreward" },
   1209: { lane: "jungle", iconBase: "rolequest_junglereward" },
   1220: { lane: "top", iconBase: "rolequest_topreward2" },
   1221: { lane: "top", iconBase: "rolequest_topreward1" },
+  1222: { lane: "top", iconBase: "rolequest_topreward1" },
 };
 
 const ICON_HOST =
