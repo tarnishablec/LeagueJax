@@ -113,21 +113,26 @@ impl Shard for LogShard {
                 options: None,
             },
             move || {
-                let log_dir = app
-                    .path()
-                    .app_data_dir()
-                    .map_err(|e| crate::error::AppError::other(e.to_string()))?
-                    .join("logs");
+                let app = app.clone();
+                async move {
+                    let log_dir = app
+                        .path()
+                        .app_data_dir()
+                        .map_err(|e| crate::error::AppError::other(e.to_string()))?
+                        .join("logs");
 
-                if !log_dir.exists() {
-                    fs::create_dir_all(&log_dir)?;
+                    if !log_dir.exists() {
+                        fs::create_dir_all(&log_dir)?;
+                    }
+
+                    tauri_plugin_opener::reveal_item_in_dir(&log_dir).map_err(|e| {
+                        crate::error::AppError::other(format!(
+                            "Failed to open log directory: {e}"
+                        ))
+                    })?;
+
+                    Ok(Value::Null)
                 }
-
-                tauri_plugin_opener::reveal_item_in_dir(&log_dir).map_err(|e| {
-                    crate::error::AppError::other(format!("Failed to open log directory: {e}"))
-                })?;
-
-                Ok(Value::Null)
             },
         )?;
 
@@ -145,32 +150,37 @@ impl Shard for LogShard {
                 options: None,
             },
             move || {
-                let log_dir = app
-                    .path()
-                    .app_data_dir()
-                    .map_err(|e| crate::error::AppError::other(e.to_string()))?
-                    .join("logs");
+                let app = app.clone();
+                let file_logging_for_action = file_logging_for_action.clone();
+                let settings_for_action = Arc::clone(&settings_for_action);
+                async move {
+                    let log_dir = app
+                        .path()
+                        .app_data_dir()
+                        .map_err(|e| crate::error::AppError::other(e.to_string()))?
+                        .join("logs");
 
-                if !log_dir.exists() {
-                    return Ok(Value::from(0u32));
+                    if !log_dir.exists() {
+                        return Ok(Value::from(0u32));
+                    }
+
+                    let active_log_file = log_dir.join(LogShard::current_log_filename());
+                    let record_to_file = settings_for_action
+                        .get_value(RECORD_TO_FILE_SETTING_ID)?
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or_else(LogShard::default_record_to_file);
+
+                    file_logging_for_action.disable();
+                    let removed = clear_log_dir(&log_dir, &active_log_file)?;
+                    if record_to_file {
+                        file_logging_for_action
+                            .enable(&log_dir, &LogShard::current_log_filename())
+                            .map_err(crate::error::AppError::from)?;
+                    }
+
+                    tracing::info!(removed, "Cleared log files");
+                    Ok(Value::from(removed))
                 }
-
-                let active_log_file = log_dir.join(LogShard::current_log_filename());
-                let record_to_file = settings_for_action
-                    .get_value(RECORD_TO_FILE_SETTING_ID)?
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or_else(LogShard::default_record_to_file);
-
-                file_logging_for_action.disable();
-                let removed = clear_log_dir(&log_dir, &active_log_file)?;
-                if record_to_file {
-                    file_logging_for_action
-                        .enable(&log_dir, &LogShard::current_log_filename())
-                        .map_err(crate::error::AppError::from)?;
-                }
-
-                tracing::info!(removed, "Cleared log files");
-                Ok(Value::from(removed))
             },
         )?;
 

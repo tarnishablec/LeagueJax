@@ -433,8 +433,8 @@ class SettingsStore {
         mapped = {
           ...shared,
           control: { kind: "action" },
-          onAction: () => {
-            void invoke("execute_setting_action", { id: definition.id });
+          onAction: async () => {
+            await invoke("execute_setting_action", { id: definition.id });
           },
         };
         break;

@@ -15,7 +15,7 @@ pub async fn execute_setting_action(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Value, AppError> {
     let settings = jax.get_shard::<SettingsShard>();
-    settings.invoke_action(&id)
+    settings.invoke_action(&id).await
 }
 
 #[tauri::command]

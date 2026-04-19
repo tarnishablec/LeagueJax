@@ -14,6 +14,7 @@ import type {
   SettingId,
   SettingScope,
 } from "@/features/settings/types";
+import { createLogger } from "@/infra/logger";
 
 type RegisteredSelectSetting = Extract<
   RegisteredSetting,
@@ -27,6 +28,8 @@ type RegisteredActionSetting = Extract<
   RegisteredSetting,
   { control: { kind: "action" } }
 >;
+
+const logger = createLogger("settings-field-renderer");
 
 const useSettingValue = (id: SettingId): unknown => {
   const settings = useSettings();
@@ -150,6 +153,9 @@ const ActionField = ({ field }: { field: RegisteredActionSetting }) => {
       ariaLabel={`Action ${field.id}`}
       label={label}
       onClick={field.onAction}
+      onError={(error) => {
+        logger.error({ error, id: field.id }, "Setting action failed");
+      }}
     />
   );
 };
