@@ -4,7 +4,7 @@ import type { RankEntry } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { CopyButton } from "@/components/CopyButton";
 import { LazyImage } from "@/components/LazyImage.tsx";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { formatRankTierLabel } from "@/utils/rank-display";
 import { useRankedSummary } from "../hooks/use-ranked-summary";
@@ -50,7 +50,7 @@ export function SummaryBar({
   autoRefresh?: boolean;
 }) {
   const { t } = useTranslation();
-  const { src: avatarUrl } = useDragonStaticData({
+  const { src: avatarUrl } = useCdragonStaticData({
     type: "profile-icon",
     profileIconId: summoner.profileIconId,
   });

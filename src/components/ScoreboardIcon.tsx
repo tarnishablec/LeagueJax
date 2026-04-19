@@ -1,9 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
-import { useSettings } from "@/features/settings/context.tsx";
-import {
-  type AssetSource,
-  SYSTEM_ASSET_SOURCE_SETTING_ID,
-} from "@/features/settings/store/general.ts";
+import { useState } from "react";
 
 export const SCOREBOARD_ICON_TYPES = [
   "record",
@@ -23,33 +18,7 @@ const CDRAGON_SCOREBOARD_ICON_BY_TYPE: Record<ScoreboardIconType, string> = {
   damage: `${CDRAGON_POSTGAME_BASE}/scoreboard-sword-icon.svg`,
 };
 
-const DDRAGON_SCOREBOARD_ICON_BY_TYPE: Partial<
-  Record<ScoreboardIconType, string>
-> = {};
-
-function useSelectedAssetSource(): AssetSource {
-  const settings = useSettings();
-  return useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(SYSTEM_ASSET_SOURCE_SETTING_ID, onStoreChange),
-    () =>
-      settings.get<AssetSource>(SYSTEM_ASSET_SOURCE_SETTING_ID) ?? "ddragon",
-    () =>
-      settings.get<AssetSource>(SYSTEM_ASSET_SOURCE_SETTING_ID) ?? "ddragon",
-  );
-}
-
-function resolveScoreboardIconSrc(
-  type: ScoreboardIconType,
-  assetSource: AssetSource,
-): string {
-  if (assetSource === "ddragon") {
-    return (
-      DDRAGON_SCOREBOARD_ICON_BY_TYPE[type] ??
-      CDRAGON_SCOREBOARD_ICON_BY_TYPE[type]
-    );
-  }
-
+function resolveScoreboardIconSrc(type: ScoreboardIconType): string {
   return CDRAGON_SCOREBOARD_ICON_BY_TYPE[type];
 }
 
@@ -62,8 +31,7 @@ export function ScoreboardIcon({
   className: string;
   fallbackClassName: string;
 }) {
-  const assetSource = useSelectedAssetSource();
-  const src = resolveScoreboardIconSrc(type, assetSource);
+  const src = resolveScoreboardIconSrc(type);
   const [errored, setErrored] = useState(false);
 
   if (errored) {

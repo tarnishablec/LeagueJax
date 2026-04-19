@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 
@@ -11,7 +11,7 @@ export function MatchCardSpells({
   spell2Id: number;
 }) {
   const { t } = useTranslation();
-  const [spell1, spell2] = useDragonStaticData([
+  const [spell1, spell2] = useCdragonStaticData([
     { type: "spell", spellId: spell1Id },
     { type: "spell", spellId: spell2Id },
   ]);

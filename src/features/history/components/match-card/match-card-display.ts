@@ -20,14 +20,6 @@ export const CDRAGON_PERK_STYLE_ICON_BY_ID: Record<number, string> = {
   8400: `${CDRAGON_PERK_STYLES_ICON_BASE}/7204_resolve.png`,
 };
 
-export const DDRAGON_PERK_STYLE_ICON_BY_ID: Record<number, string> = {
-  8000: "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/Precision.png",
-  8100: "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/Domination.png",
-  8200: "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/Sorcery.png",
-  8300: "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Inspiration/Inspiration.png",
-  8400: "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Resolve/Resolve.png",
-};
-
 function normalizeGameModeCode(value: string): string {
   return value
     .toUpperCase()
@@ -59,7 +51,11 @@ export function formatStartTime(epoch: number): string {
     return "--";
   }
 
+  const now = new Date();
+  const shouldShowYear = date.getFullYear() !== now.getFullYear();
+
   return date.toLocaleString(undefined, {
+    ...(shouldShowYear ? { year: "numeric" as const } : {}),
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",

@@ -1,9 +1,9 @@
 import type { SummonerSearchResult } from "@/bindings/summoner";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import * as s from "./HistoryToolbar.css";
 
 function ResultAvatar({ profileIconId }: { profileIconId: number }) {
-  const { src } = useDragonStaticData({
+  const { src } = useCdragonStaticData({
     type: "profile-icon",
     profileIconId,
   });
