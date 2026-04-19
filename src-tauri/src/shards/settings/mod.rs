@@ -12,6 +12,7 @@ use sled::Db;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::future::Future;
+use std::pin::Pin;
 use std::sync::{Arc, OnceLock, RwLock};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
@@ -96,7 +97,8 @@ impl SettingHandle {
     }
 }
 
-type ActionHandler = Box<dyn Fn() -> Result<Value, AppError> + Send + Sync>;
+type ActionFuture = Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send>>;
+type ActionHandler = Box<dyn Fn() -> ActionFuture + Send + Sync>;
 
 pub struct SettingsShard {
     db: OnceLock<Db>,
@@ -169,13 +171,14 @@ impl SettingsShard {
         self.setting_handle(&definition.id)
     }
 
-    pub fn register_action<F>(
+    pub fn register_action<F, Fut>(
         self: &Arc<Self>,
         definition: SettingDefinitionDto,
         handler: F,
     ) -> Result<(), AppError>
     where
-        F: Fn() -> Result<Value, AppError> + Send + Sync + 'static,
+        F: Fn() -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<Value, AppError>> + Send + 'static,
     {
         if !matches!(definition.control, SettingControlDto::Action) {
             return Err(AppError::other(format!(
@@ -199,23 +202,27 @@ impl SettingsShard {
                 .action_handlers
                 .write()
                 .map_err(|_| AppError::MutexPoisoned)?;
-            handlers.insert(definition.id.clone(), Box::new(handler));
+            handlers.insert(definition.id.clone(), Box::new(move || Box::pin(handler())));
         }
 
         Ok(())
     }
 
-    pub fn invoke_action(&self, id: &str) -> Result<Value, AppError> {
-        let handlers = self
-            .action_handlers
-            .read()
-            .map_err(|_| AppError::MutexPoisoned)?;
+    pub async fn invoke_action(&self, id: &str) -> Result<Value, AppError> {
+        let action = {
+            let handlers = self
+                .action_handlers
+                .read()
+                .map_err(|_| AppError::MutexPoisoned)?;
 
-        let handler = handlers
-            .get(id)
-            .ok_or_else(|| AppError::other(format!("No action handler registered for {id}")))?;
+            let handler = handlers.get(id).ok_or_else(|| {
+                AppError::other(format!("No action handler registered for {id}"))
+            })?;
 
-        handler()
+            handler()
+        };
+
+        action.await
     }
 
     pub fn setting_handle(self: &Arc<Self>, id: &str) -> Result<SettingHandle, AppError> {

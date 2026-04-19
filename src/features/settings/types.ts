@@ -72,7 +72,7 @@ export interface NumberSettingDefinition extends SettingDefinitionBase {
 
 export interface ActionSettingDefinition extends SettingDefinitionBase {
   control: Extract<SettingControl, { kind: "action" }>;
-  onAction: () => void;
+  onAction: () => void | Promise<unknown>;
 }
 
 export type InputSettingDefinition =
