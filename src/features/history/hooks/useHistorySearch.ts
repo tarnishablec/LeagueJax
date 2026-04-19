@@ -21,12 +21,17 @@ function serverDisplayCode(code: string): string {
 type UseHistorySearchParams = {
   open: boolean;
   config: SgpServersConfig;
+  enabled: boolean;
 };
 
-export function useHistorySearch({ open, config }: UseHistorySearchParams) {
+export function useHistorySearch({
+  open,
+  config,
+  enabled,
+}: UseHistorySearchParams) {
   const { t, i18n } = useTranslation();
 
-  const serverContext = useHistorySearchServerContext({ open, config });
+  const serverContext = useHistorySearchServerContext({ open, config, enabled });
   const search = useSummonerSearch({
     effectiveServerCode: serverContext.region.effectiveServerCode,
   });

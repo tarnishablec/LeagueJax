@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
+import { selectIsFocused, useLcuStore } from "@/stores/lcu";
 import { defaultSummonerInfo, useTabStore } from "@/stores/tabs";
 import sgpServersConfigJson from "../../../../resources/league-servers.json";
 import { HistorySearchDialog } from "./HistorySearchDialog";
@@ -11,7 +12,15 @@ const SGP_SERVERS_CONFIG: SgpServersConfig = sgpServersConfigJson;
 
 export function HistoryToolbar() {
   const openTab = useTabStore((st) => st.openTab);
+  const focusedClient = useLcuStore(selectIsFocused);
   const [open, setOpen] = useState(false);
+  const canOpenSearch = focusedClient != null;
+
+  useEffect(() => {
+    if (!canOpenSearch) {
+      setOpen(false);
+    }
+  }, [canOpenSearch]);
 
   const openResult = (result: SummonerSearchResult) => {
     openTab(
@@ -41,6 +50,7 @@ export function HistoryToolbar() {
         open={open}
         onOpenChange={setOpen}
         config={SGP_SERVERS_CONFIG}
+        disabled={!canOpenSearch}
         onOpenResult={openResult}
       />
     </div>

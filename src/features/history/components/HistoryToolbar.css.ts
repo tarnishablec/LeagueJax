@@ -25,6 +25,13 @@ export const triggerButton = style({
     "&:hover": {
       borderColor: vars.color.primary,
     },
+    "&:disabled": {
+      background: vars.color.background,
+      color: vars.color.mutedForeground,
+      borderColor: vars.color.border,
+      cursor: "not-allowed",
+      opacity: 0.72,
+    },
   },
 });
 
