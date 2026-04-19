@@ -9,8 +9,8 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::OnceLock;
-use time::{Duration, OffsetDateTime, UtcOffset};
 use tauri::Manager;
+use time::{Duration, OffsetDateTime, UtcOffset};
 use uuid::Uuid;
 
 const RECORD_TO_FILE_SETTING_ID: &str = "system.logging.recordToFile";
@@ -92,7 +92,10 @@ impl Shard for LogShard {
             options: None,
         })?;
 
-        let file_logging = tauri_host.app.state::<crate::TracingState>().file_logging_handle();
+        let file_logging = tauri_host
+            .app
+            .state::<crate::TracingState>()
+            .file_logging_handle();
 
         let app = tauri_host.app.clone();
         let file_logging_for_action = file_logging.clone();
@@ -180,10 +183,15 @@ impl Shard for LogShard {
         fs::create_dir_all(&log_dir)?;
 
         let active_log_file = log_dir.join(Self::current_log_filename());
-        let retention_days = Self::sanitize_retention_days(Some(&retention_days_handle.get_value()?));
+        let retention_days =
+            Self::sanitize_retention_days(Some(&retention_days_handle.get_value()?));
         let removed_expired = clean_expired_logs(&log_dir, &active_log_file, retention_days)?;
         if removed_expired > 0 {
-            tracing::info!(removed = removed_expired, retention_days, "Cleaned expired log files");
+            tracing::info!(
+                removed = removed_expired,
+                retention_days,
+                "Cleaned expired log files"
+            );
         }
 
         let record_to_file_setting = record_to_file_handle
@@ -312,7 +320,10 @@ fn clean_expired_logs(
     Ok(cleaned)
 }
 
-fn parse_log_created_at_from_filename(path: &Path, local_offset: UtcOffset) -> Option<OffsetDateTime> {
+fn parse_log_created_at_from_filename(
+    path: &Path,
+    local_offset: UtcOffset,
+) -> Option<OffsetDateTime> {
     let file_name = path.file_name()?.to_str()?;
     let uuid_str = file_name
         .strip_prefix(LOG_FILE_PREFIX)?
