@@ -38,7 +38,6 @@ maokai-runner = { git = "https://github.com/tarnishablec/maokai", branch = "main
 maokai-tree = { git = "https://github.com/tarnishablec/maokai", branch = "main" }
 ntapi = "0.4.3"
 reqwest = { version = "0.13.2", default-features = false }
-rusqlite = "0.39.0"
 rustls = { version = "0.23", default-features = false }
 serde = "1"
 serde_json = "1"

@@ -27,9 +27,6 @@ pub enum AppError {
         column: u32,
     },
 
-    #[snafu(display("Database error: {source}"))]
-    Database { source: rusqlite::Error },
-
     #[snafu(display("IO error: {source}"))]
     Io { source: std::io::Error },
 
@@ -58,9 +55,8 @@ macro_rules! from_variant {
 }
 
 from_variant!(LcuRequest => reqwest::Error);
-from_variant!(Database  => rusqlite::Error);
-from_variant!(Io        => std::io::Error);
-from_variant!(Sled      => sled::Error);
+from_variant!(Io         => std::io::Error);
+from_variant!(Sled       => sled::Error);
 
 impl From<serde_json::Error> for AppError {
     #[track_caller]
