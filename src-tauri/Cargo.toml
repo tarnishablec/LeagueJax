@@ -33,7 +33,6 @@ futures-util = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 serde_path_to_error = { workspace = true }
-rusqlite = { workspace = true, features = ["bundled"] }
 async-trait = { workspace = true }
 sysinfo = { workspace = true }
 base64 = { workspace = true }
@@ -41,7 +40,6 @@ urlencoding = { workspace = true }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "local-time"] }
-time = { workspace = true, features = ["local-offset"] }
 maokai-runner = { workspace = true }
 maokai-tree = { workspace = true }
 maokai-machine = { workspace = true, features = ["tokio-mt-task"] }
