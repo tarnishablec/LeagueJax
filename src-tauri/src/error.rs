@@ -1,5 +1,6 @@
 use serde::Serialize;
 use snafu::prelude::*;
+use std::panic::Location;
 
 #[derive(Debug, Snafu)]
 pub enum AppError {
@@ -9,8 +10,22 @@ pub enum AppError {
     #[snafu(display("LCU request failed: {source}"))]
     LcuRequest { source: reqwest::Error },
 
-    #[snafu(display("JSON error: {source}"))]
-    Json { source: serde_json::Error },
+    #[snafu(display("JSON error at {file}:{line}:{column}: {source}"))]
+    Json {
+        source: serde_json::Error,
+        file: &'static str,
+        line: u32,
+        column: u32,
+    },
+
+    #[snafu(display("Deserialize error at {file}:{line}:{column} path={deser_path}: {source}"))]
+    JsonDeserialize {
+        source: serde_json::Error,
+        deser_path: String,
+        file: &'static str,
+        line: u32,
+        column: u32,
+    },
 
     #[snafu(display("Database error: {source}"))]
     Database { source: rusqlite::Error },
@@ -43,23 +58,47 @@ macro_rules! from_variant {
 }
 
 from_variant!(LcuRequest => reqwest::Error);
-from_variant!(Json      => serde_json::Error);
 from_variant!(Database  => rusqlite::Error);
 from_variant!(Io        => std::io::Error);
 from_variant!(Sled      => sled::Error);
 
+impl From<serde_json::Error> for AppError {
+    #[track_caller]
+    fn from(source: serde_json::Error) -> Self {
+        let caller = Location::caller();
+
+        Self::Json {
+            source,
+            file: caller.file(),
+            line: caller.line(),
+            column: caller.column(),
+        }
+    }
+}
+
 impl From<serde_path_to_error::Error<serde_json::Error>> for AppError {
+    #[track_caller]
     fn from(error: serde_path_to_error::Error<serde_json::Error>) -> Self {
+        let caller = Location::caller();
         let deser_path = error.path().to_string();
-        let deser_message = error.inner().to_string();
+        let source = error.into_inner();
 
         tracing::error!(
+            file = caller.file(),
+            line = caller.line(),
+            column = caller.column(),
             deser_path = %deser_path,
-            deser_message = %deser_message,
+            deser_message = %source,
             "Backend deserialization failed"
         );
 
-        Self::other(format!("{deser_path}: {deser_message}"))
+        Self::JsonDeserialize {
+            source,
+            deser_path,
+            file: caller.file(),
+            line: caller.line(),
+            column: caller.column(),
+        }
     }
 }
 

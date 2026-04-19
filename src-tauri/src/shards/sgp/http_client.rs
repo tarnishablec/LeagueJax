@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use reqwest::Client;
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::time::Instant;
 use tokio::sync::RwLock;
 
 use crate::error::AppError;
 use crate::network_config::NetworkConfig;
 use crate::shards::lcu::session::LcuSession;
+use crate::utils::http_json::{headers_to_json, parse_json_or_string};
 
 use super::session::SgpTokenContext;
 
@@ -29,36 +30,6 @@ fn format_error_sources(error: &dyn std::error::Error) -> String {
 
 fn pretty_json(value: &Value) -> String {
     serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
-}
-
-fn headers_to_json(headers: &reqwest::header::HeaderMap) -> Value {
-    let mut object = Map::new();
-
-    for (name, value) in headers {
-        let key = name.as_str().to_string();
-        let value_str = value.to_str().unwrap_or("<non-utf8>").to_string();
-
-        if let Some(existing) = object.get_mut(&key) {
-            match existing {
-                Value::Array(arr) => arr.push(Value::String(value_str)),
-                _ => {
-                    let first = existing.take();
-                    *existing = Value::Array(vec![first, Value::String(value_str)]);
-                }
-            }
-        } else {
-            object.insert(key, Value::String(value_str));
-        }
-    }
-
-    Value::Object(object)
-}
-
-fn parse_json_or_string(raw: &str) -> Value {
-    match serde_json::from_str::<Value>(raw) {
-        Ok(value) => value,
-        Err(_) => Value::String(raw.to_string()),
-    }
 }
 
 #[derive(Clone, Copy)]
