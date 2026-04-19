@@ -701,7 +701,7 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                         // stays `None` and any history tasks we already spawned
                         // went out with `tag=None` — SGP then returns every
                         // mode instead of the current queue. Pick the queue id
-                        // up from the freshly-arrived gameflow and restart the
+                        // up from the freshly arrived gameflow and restart the
                         // history fetches so they carry the right SGP tag.
                         sync_lifecycle_ids_from_gameflow(envo);
                         if envo.context().effective_queue_id != prev_queue_id {
@@ -782,16 +782,13 @@ impl InGameBehavior {
             // populated from champ-select's `my_team` are absent and would
             // vanish the moment we overwrite `ctx.team_members`. Merge them
             // back so the UI keeps rendering ally's cards. `cs.my_team` only
-            // ever contains allies, so construction allies every preserved entry
-            // , and `ally_side` is simply whatever team value the
+            // ever contains allies, so construction allies every preserved entry,
+            // and `ally_side` is simply whatever team value the
             // preserved roster was tagged with.
-            let ally_side = preserved
-                .first()
-                .map(|m| m.team)
-                .unwrap_or(team_two_side);
+            let ally_side = preserved.first().map(|m| m.team).unwrap_or(team_two_side);
             for entry in &preserved {
-                let already_present = !entry.puuid.is_empty()
-                    && members.iter().any(|m| m.puuid == entry.puuid);
+                let already_present =
+                    !entry.puuid.is_empty() && members.iter().any(|m| m.puuid == entry.puuid);
                 if already_present {
                     continue;
                 }
@@ -855,9 +852,9 @@ fn build_team_member_from_teambuilder_cell(cell: &TeambuilderCell) -> TeamMember
     }
 }
 
-/// For a recognised team id, return `(same_side, opposite_side)` so the
+/// For a recognized team id, return `(same_side, opposite_side)` so the
 /// caller can assign the opposite side to the complementary array.
-/// The numeric flavour is preserved — a preserved value of `200` yields
+/// The numeric flavor is preserved — a preserved value of `200` yields
 /// `(200, 100)`, while `2` yields `(2, 1)` — so the in-game roster echoes
 /// whatever scheme champ-select was using.
 fn side_pair(team: u64) -> Option<(u64, u64)> {
@@ -880,7 +877,7 @@ fn lookup_preserved_team(preserved: &[TeamMember], puuid: &str) -> Option<u64> {
 /// Resolve `(team_one_side, team_two_side)` for an in-game roster by
 /// probing the champ-select-era roster for any known puuid. Falls back to
 /// the LCU in-game convention `(100, 200)` when nothing can be matched
-/// (e.g. cold-start straight into `InProgress`).
+/// (e.g., cold-start straight into `InProgress`).
 fn resolve_gameflow_team_sides(
     preserved: &[TeamMember],
     team_one: &[crate::shards::lcu::concepts::gameflow_session::Team],
