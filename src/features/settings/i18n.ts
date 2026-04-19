@@ -38,11 +38,6 @@ export const settingsI18n: Resource = {
         light: "Light",
         dark: "Dark",
       },
-      assetSource: {
-        label: "Asset Source",
-        cdragon: "CommunityDragon",
-        ddragon: "Data Dragon",
-      },
       network: {
         requestTimeoutSeconds: {
           label: "Request Timeout (seconds)",
@@ -142,11 +137,6 @@ export const settingsI18n: Resource = {
         system: "\u8ddf\u968f\u7cfb\u7edf",
         light: "\u6d45\u8272",
         dark: "\u6df1\u8272",
-      },
-      assetSource: {
-        label: "\u8d44\u6e90\u6765\u6e90",
-        cdragon: "CommunityDragon",
-        ddragon: "Data Dragon",
       },
       network: {
         requestTimeoutSeconds: {
@@ -248,11 +238,6 @@ export const settingsI18n: Resource = {
         system: "\u30b7\u30b9\u30c6\u30e0",
         light: "\u30e9\u30a4\u30c8",
         dark: "\u30c0\u30fc\u30af",
-      },
-      assetSource: {
-        label: "\u30a2\u30bb\u30c3\u30c8\u30bd\u30fc\u30b9",
-        cdragon: "CommunityDragon",
-        ddragon: "Data Dragon",
       },
       network: {
         requestTimeoutSeconds: {

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 
@@ -11,7 +11,7 @@ export function MatchCardRunes({
   perkSubStyleId: number;
 }) {
   const { t } = useTranslation();
-  const [primaryRune, subStyle] = useDragonStaticData([
+  const [primaryRune, subStyle] = useCdragonStaticData([
     { type: "rune", runeId: perkPrimaryRuneId },
     { type: "rune-style", styleId: perkSubStyleId },
   ]);

@@ -5,11 +5,9 @@ import { setting, settings } from "./index";
 
 export type Language = "zh-CN" | "en" | "ja-JP";
 export type Theme = "system" | "light" | "dark";
-export type AssetSource = "cdragon" | "ddragon";
 
 export const SYSTEM_LANGUAGE_SETTING_ID = "system.preferences.language";
 export const SYSTEM_THEME_SETTING_ID = "system.preferences.theme";
-export const SYSTEM_ASSET_SOURCE_SETTING_ID = "system.preferences.assetSource";
 
 @settings
 class GeneralSettings {
@@ -64,21 +62,6 @@ export function registerGeneralSettings(api: SettingsShardApi): void {
       { value: "dark", labelKey: "settings.theme.dark" },
     ],
     order: 20,
-    onSet: () => {},
-  });
-
-  api.registerSetting({
-    id: SYSTEM_ASSET_SOURCE_SETTING_ID,
-    labelKey: "settings.assetSource.label",
-    scope: "frontend",
-    control: { kind: "select" },
-    zod: z.enum(["cdragon", "ddragon"]),
-    defaultValue: "ddragon",
-    options: [
-      { value: "cdragon", labelKey: "settings.assetSource.cdragon" },
-      { value: "ddragon", labelKey: "settings.assetSource.ddragon" },
-    ],
-    order: 30,
     onSet: () => {},
   });
 }

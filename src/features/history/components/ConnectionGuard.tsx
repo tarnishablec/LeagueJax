@@ -5,12 +5,12 @@ import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { LazyImage } from "@/components/LazyImage";
 import { SummonerID } from "@/components/SummonerID.tsx";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import * as s from "../routes/HistoryRoute.css";
 
 function InstanceCard({ instance }: { instance: LcuInstanceInfo }) {
   const profileIconId = instance.summoner?.profileIconId ?? 0;
-  const { src: avatarUrl } = useDragonStaticData({
+  const { src: avatarUrl } = useCdragonStaticData({
     type: "profile-icon",
     profileIconId,
   });

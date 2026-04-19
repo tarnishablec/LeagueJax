@@ -12,12 +12,12 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { SummonerInfo } from "@/bindings/summoner";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { useTabStore } from "@/stores/tabs.ts";
 import * as s from "./HistoryTabBar.css.ts";
 
 function TabIcon({ summoner }: { summoner: SummonerInfo }) {
-  const { src: avatarUrl } = useDragonStaticData({
+  const { src: avatarUrl } = useCdragonStaticData({
     type: "profile-icon",
     profileIconId: summoner.profileIconId,
   });

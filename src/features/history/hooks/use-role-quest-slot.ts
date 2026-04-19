@@ -4,7 +4,7 @@ import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 
 export type RoleQuestSlot =
   | { kind: "quest"; iconUrl: string }
@@ -71,7 +71,7 @@ export function useRoleQuestSlot({
     () => [{ type: "item" as const, itemId: roleBoundItem }],
     [roleBoundItem],
   );
-  const [itemAsset] = useDragonStaticData(itemQueryParams);
+  const [itemAsset] = useCdragonStaticData(itemQueryParams);
   const iconSrc = itemAsset?.src ?? null;
 
   return useMemo<RoleQuestResult>(() => {

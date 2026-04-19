@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { LazyImage } from "@/components/LazyImage";
 import { useSettings } from "@/features/settings/context";
-import { useDragonStaticData } from "@/hooks/use-dragon-static-data";
+import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
 import { useTabStore } from "@/stores/tabs";
 import { ConnectionGuard } from "../components/ConnectionGuard";
@@ -22,7 +22,7 @@ function OwnSummonerButton() {
   const openTab = useTabStore((state) => state.openTab);
   const summoner = connected?.summoner ?? null;
 
-  const { src: avatarUrl } = useDragonStaticData(
+  const { src: avatarUrl } = useCdragonStaticData(
     summoner?.profileIconId
       ? { type: "profile-icon", profileIconId: summoner.profileIconId }
       : { type: "profile-icon", profileIconId: 0 },
