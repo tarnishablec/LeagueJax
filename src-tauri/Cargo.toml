@@ -40,6 +40,7 @@ urlencoding = { workspace = true }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "local-time"] }
+time = { workspace = true, features = ["formatting"] }
 maokai-runner = { workspace = true }
 maokai-tree = { workspace = true }
 maokai-machine = { workspace = true, features = ["tokio-mt-task"] }
