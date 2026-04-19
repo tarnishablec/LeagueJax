@@ -13,6 +13,7 @@ type HistorySearchDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   config: SgpServersConfig;
+  disabled: boolean;
   onOpenResult: (result: SummonerSearchResult) => void;
 };
 
@@ -20,12 +21,22 @@ export function HistorySearchDialog({
   open,
   onOpenChange,
   config,
+  disabled,
   onOpenResult,
 }: HistorySearchDialogProps) {
   const { t } = useTranslation();
-  const { server, search, errorMessage } = useHistorySearch({ open, config });
+  const { server, search, errorMessage } = useHistorySearch({
+    open,
+    config,
+    enabled: !disabled,
+  });
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && disabled) {
+      onOpenChange(false);
+      return;
+    }
+
     if (nextOpen) {
       server.reset();
     }
@@ -45,6 +56,7 @@ export function HistorySearchDialog({
           type="button"
           className={s.triggerButton}
           aria-label={t("history.searchDialog.open")}
+          disabled={disabled}
         >
           <Search size={14} aria-hidden="true" />
           <span>{t("history.searchDialog.open")}</span>

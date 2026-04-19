@@ -6,6 +6,7 @@ import { useServerBootstrap } from "./useServerBootstrap";
 type UseHistorySearchServerContextParams = {
   open: boolean;
   config: SgpServersConfig;
+  enabled: boolean;
 };
 
 type UseHistorySearchServerContextResult = {
@@ -22,8 +23,9 @@ type UseHistorySearchServerContextResult = {
 export function useHistorySearchServerContext({
   open,
   config,
+  enabled,
 }: UseHistorySearchServerContextParams): UseHistorySearchServerContextResult {
-  const bootstrap = useServerBootstrap({ enabled: open });
+  const bootstrap = useServerBootstrap({ enabled: open && enabled });
   const [selectedServerId, setSelectedServerId] = useState("");
 
   const region = useLeagueClientRegion({
