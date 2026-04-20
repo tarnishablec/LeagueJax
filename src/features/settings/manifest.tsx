@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Settings } from "lucide-react";
+import { mergeDeep } from "remeda";
 import type {
   SettingsBootstrapDto,
   SettingsChangedEventDto,
@@ -12,6 +13,7 @@ import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
+import { settingsAboutI18n } from "./about.i18n";
 import { settingsI18n } from "./i18n";
 import { SettingsIndexRoute } from "./routes/SettingsIndexRoute";
 import { SettingsPageRoute } from "./routes/SettingsPageRoute";
@@ -161,7 +163,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   }
 
   public i18nResources() {
-    return settingsI18n;
+    return mergeDeep(settingsI18n, settingsAboutI18n);
   }
 
   private async refreshFromBackend(options: {

@@ -7,6 +7,7 @@ import * as s from "../components/SettingsHub.css";
 import { resolveActivePage } from "../components/SettingsHub.utils";
 import { SettingsRegistryList } from "../components/SettingsRegistryList";
 import { SettingsSections } from "../components/SettingsSections";
+import { AboutPage } from "./AboutPage";
 import { ShardsPage } from "./ShardsPage";
 
 export function SettingsPageRoute() {
@@ -25,6 +26,10 @@ export function SettingsPageRoute() {
 
   if (pageId === "shards") {
     return <ShardsPage />;
+  }
+
+  if (pageId === "about") {
+    return <AboutPage />;
   }
 
   const activePage = resolveActivePage(pages, pageId);

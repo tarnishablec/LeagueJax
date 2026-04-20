@@ -47,6 +47,13 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
         >
           {t("settings.shards.tab", { defaultValue: "Shards" })}
         </NavLink>
+
+        <NavLink
+          to="/settings/about"
+          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
+        >
+          {t("settings.pages.about.title", { defaultValue: "About" })}
+        </NavLink>
       </div>
     </div>
   );
