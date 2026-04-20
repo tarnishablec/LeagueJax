@@ -24,6 +24,7 @@ use crate::commands::ongoing_game::*;
 use crate::commands::platform::*;
 use crate::commands::settings::*;
 use crate::commands::shards::*;
+use crate::commands::updater::*;
 
 #[cfg(target_os = "windows")]
 use window_vibrancy::{apply_acrylic, apply_mica};
@@ -173,7 +174,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        // .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .register_asynchronous_uri_scheme_protocol("lcu", |ctx, request, responder| {
             let app_handle = ctx.app_handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -208,7 +209,9 @@ pub fn run() {
             get_shards_status,
             lcu_get_platform_config_namespaces,
             lcu_get_help,
-            execute_setting_action
+            execute_setting_action,
+            get_updater_state,
+            run_updater_action
         ])
         .setup(move |app| {
             let tracing_state = init_tracing(app)?;

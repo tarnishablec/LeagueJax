@@ -16,6 +16,7 @@
     "lint:check_all": "bun run lint:biome && bun run lint:clippy",
     "lint:fix_all": "bun run lint:biome:fix && bun run lint:clippy",
     "typecheck": "tsc --noEmit",
+    "generate_updater_manifest": "bun run ./scripts/generate-updater-manifest.ts",
     "sync_rs_types": "cd src-tauri && cargo test export_bindings && cd .. && bunx biome check --write ./src/bindings && bun run typecheck"
   },
   "dependencies": {

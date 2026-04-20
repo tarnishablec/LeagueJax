@@ -5,20 +5,27 @@ import * as s from "./SettingsActionButton.css";
 interface SettingsActionButtonProps {
   ariaLabel: string;
   label: string;
-  onClick: () => void | Promise<unknown>;
+  onClick: () => Promise<void>;
+  disabled?: boolean;
+  loading?: boolean;
   onError?: (error: unknown) => void;
+  tone?: "accent" | "neutral";
 }
 
 export function SettingsActionButton({
   ariaLabel,
+  disabled = false,
   label,
+  loading = false,
   onClick,
   onError,
+  tone = "accent",
 }: SettingsActionButtonProps) {
   const [pending, setPending] = useState(false);
+  const busy = pending || loading;
 
   const handleClick = async () => {
-    if (pending) {
+    if (busy || disabled) {
       return;
     }
 
@@ -37,18 +44,15 @@ export function SettingsActionButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      className={s.button}
-      disabled={pending}
+      className={s.tone[tone]}
+      disabled={busy || disabled}
       onClick={() => {
         void handleClick();
       }}
     >
       <span className={s.label}>{label}</span>
       <span className={s.loaderSlot} aria-hidden="true">
-        <Loader
-          size={14}
-          className={pending ? s.iconSpin : s.loaderHidden}
-        />
+        <Loader size={14} className={busy ? s.iconSpin : s.loaderHidden} />
       </span>
     </button>
   );

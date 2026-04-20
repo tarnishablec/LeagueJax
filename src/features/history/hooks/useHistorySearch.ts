@@ -31,7 +31,11 @@ export function useHistorySearch({
 }: UseHistorySearchParams) {
   const { t, i18n } = useTranslation();
 
-  const serverContext = useHistorySearchServerContext({ open, config, enabled });
+  const serverContext = useHistorySearchServerContext({
+    open,
+    config,
+    enabled,
+  });
   const search = useSummonerSearch({
     effectiveServerCode: serverContext.region.effectiveServerCode,
   });
