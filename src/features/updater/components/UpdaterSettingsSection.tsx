@@ -31,6 +31,7 @@ export function UpdaterSettingsSection({
   const { t } = useTranslation();
   const [state, setState] = useState<UpdaterStateDto>(initialState);
   const [showTransientUpToDate, setShowTransientUpToDate] = useState(false);
+  const [shouldAnimateUpToDate, setShouldAnimateUpToDate] = useState(false);
   const latestVersionHint =
     state.kind === "error"
       ? (state.message ?? undefined)
@@ -101,16 +102,22 @@ export function UpdaterSettingsSection({
       return;
     }
 
+    if (!shouldAnimateUpToDate) {
+      setShowTransientUpToDate(false);
+      return;
+    }
+
     setShowTransientUpToDate(true);
 
     const resetTimer = setTimeout(() => {
       setShowTransientUpToDate(false);
+      setShouldAnimateUpToDate(false);
     }, 1500);
 
     return () => {
       clearTimeout(resetTimer);
     };
-  }, [state.kind]);
+  }, [shouldAnimateUpToDate, state.kind]);
 
   return (
     <div className={s.root}>
@@ -138,6 +145,7 @@ export function UpdaterSettingsSection({
           loading={actionLoading}
           tone={actionTone}
           onClick={async () => {
+            setShouldAnimateUpToDate(true);
             const next = await invoke<UpdaterStateDto>("run_updater_action");
             setState(next);
           }}
