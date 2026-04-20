@@ -9,4 +9,6 @@ export const text = style({
   fontSize: "0.9rem",
   lineHeight: 1.35,
   wordBreak: "break-word",
+  border: `1px solid ${vars.settings.controlBorder}`,
+  borderRadius: vars.settings.controlBorderRadius,
 });

@@ -13,7 +13,7 @@ export const control = style({
 export const trigger = style({
   width: "100%",
   height: 32,
-  borderRadius: 8,
+  borderRadius: vars.settings.controlBorderRadius,
   border: `1px solid ${vars.settings.controlBorder}`,
   background: vars.settings.controlBg,
   color: vars.settings.controlText,
@@ -61,7 +61,7 @@ export const positioner = style({
 
 export const content = style({
   marginTop: 4,
-  borderRadius: 10,
+  borderRadius: vars.settings.surfaceBorderRadius,
   border: `1px solid ${vars.settings.selectMenuBorder}`,
   background: vars.settings.selectMenuBg,
   boxShadow: `0 10px 24px ${vars.settings.selectMenuShadow}`,

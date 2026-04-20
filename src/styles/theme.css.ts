@@ -22,8 +22,10 @@ export const vars = createGlobalThemeContract({
   settings: {
     controlBg: "settings-control-bg",
     controlBorder: "settings-control-border",
+    controlBorderRadius: "settings-control-border-radius",
     controlText: "settings-control-text",
     controlHoverBorder: "settings-control-hover-border",
+    surfaceBorderRadius: "settings-surface-border-radius",
     selectMenuBg: "settings-select-menu-bg",
     selectMenuBorder: "settings-select-menu-border",
     selectMenuShadow: "settings-select-menu-shadow",
@@ -57,8 +59,10 @@ createGlobalTheme(":root", vars, {
   settings: {
     controlBg: "oklch(1 0 0)",
     controlBorder: "oklch(0.88 0 0)",
+    controlBorderRadius: "8px",
     controlText: "oklch(0.3 0 0)",
     controlHoverBorder: "oklch(0.72 0.19 62 / 0.45)",
+    surfaceBorderRadius: "10px",
     selectMenuBg: "oklch(0.98 0 0)",
     selectMenuBorder: "oklch(0.88 0 0)",
     selectMenuShadow: "oklch(0.25 0 0 / 0.2)",
@@ -92,8 +96,10 @@ createGlobalTheme(":root.dark", vars, {
   settings: {
     controlBg: "oklch(0.16 0.015 270 / 0.22)",
     controlBorder: "oklch(0.4 0.015 270 / 0.3)",
+    controlBorderRadius: "8px",
     controlText: "oklch(0.985 0 0)",
     controlHoverBorder: "oklch(0.72 0.19 62 / 0.45)",
+    surfaceBorderRadius: "10px",
     selectMenuBg: "oklch(0.2 0.015 270 / 0.98)",
     selectMenuBorder: "oklch(1 0 0 / 0.12)",
     selectMenuShadow: "oklch(0.06 0 0 / 0.6)",

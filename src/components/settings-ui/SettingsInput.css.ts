@@ -4,7 +4,7 @@ import { vars } from "@/styles/theme.css";
 export const input = style({
   height: 32,
   minWidth: 180,
-  borderRadius: 8,
+  borderRadius: vars.settings.controlBorderRadius,
   border: `1px solid ${vars.settings.controlBorder}`,
   background: vars.settings.controlBg,
   color: vars.settings.controlText,
@@ -24,7 +24,7 @@ export const input = style({
 export const numberRoot = style({
   height: 32,
   minWidth: 180,
-  borderRadius: 8,
+  borderRadius: vars.settings.controlBorderRadius,
   border: `1px solid ${vars.settings.controlBorder}`,
   background: vars.settings.controlBg,
   color: vars.settings.controlText,
