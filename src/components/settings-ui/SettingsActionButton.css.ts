@@ -1,6 +1,8 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
+export const labelFadeDurationMs = 180;
+
 const spin = keyframes({
   from: {
     transform: "rotate(0deg)",
@@ -71,6 +73,11 @@ export const label = style({
   alignItems: "center",
   justifyContent: "center",
   whiteSpace: "nowrap",
+  transition: `opacity ${labelFadeDurationMs}ms ease`,
+});
+
+export const labelHidden = style({
+  opacity: 0,
 });
 
 export const loaderSlot = style({

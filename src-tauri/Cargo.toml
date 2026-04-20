@@ -1,6 +1,6 @@
 [package]
 name = "league-jax"
-version = "0.1.1"
+version = "0.1.2"
 description = "A League of Legends toolkit built with Tauri"
 authors = ["tarnishablec@outlook.com"]
 edition = "2021"
@@ -58,4 +58,5 @@ tokio = { workspace = true, features = ["full", "test-util"] }
 
 [lints]
 workspace = true
+
 
