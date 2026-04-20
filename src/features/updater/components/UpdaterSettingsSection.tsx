@@ -30,6 +30,7 @@ export function UpdaterSettingsSection({
 }: SettingsSectionRendererProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<UpdaterStateDto>(initialState);
+  const [showTransientUpToDate, setShowTransientUpToDate] = useState(false);
   const latestVersionHint =
     state.kind === "error"
       ? (state.message ?? undefined)
@@ -42,11 +43,13 @@ export function UpdaterSettingsSection({
       : state.kind === "updateAvailable" || state.kind === "installing"
         ? "warning"
         : "info";
+  const showUpToDateState =
+    state.kind === "upToDate" && showTransientUpToDate;
 
   const actionLabel =
     state.kind === "updateAvailable" || state.kind === "installing"
       ? (state.latestVersion ?? t("settings.update.action.install"))
-      : state.kind === "upToDate"
+      : showUpToDateState
         ? t("settings.update.action.upToDate")
         : t("settings.update.action.check");
 
@@ -58,7 +61,7 @@ export function UpdaterSettingsSection({
   const actionLoading =
     state.kind === "checking" || state.kind === "installing";
 
-  const actionDisabled = actionLoading || state.kind === "upToDate";
+  const actionDisabled = actionLoading;
 
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +94,23 @@ export function UpdaterSettingsSection({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (state.kind !== "upToDate") {
+      setShowTransientUpToDate(false);
+      return;
+    }
+
+    setShowTransientUpToDate(true);
+
+    const resetTimer = setTimeout(() => {
+      setShowTransientUpToDate(false);
+    }, 1500);
+
+    return () => {
+      clearTimeout(resetTimer);
+    };
+  }, [state.kind]);
 
   return (
     <div className={s.root}>

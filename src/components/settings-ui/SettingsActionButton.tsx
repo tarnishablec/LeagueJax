@@ -1,5 +1,5 @@
 import { Loader } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as s from "./SettingsActionButton.css";
 
 interface SettingsActionButtonProps {
@@ -22,7 +22,27 @@ export function SettingsActionButton({
   tone = "accent",
 }: SettingsActionButtonProps) {
   const [pending, setPending] = useState(false);
+  const [displayLabel, setDisplayLabel] = useState(label);
+  const [labelVisible, setLabelVisible] = useState(true);
   const busy = pending || loading;
+
+  useEffect(() => {
+    if (label === displayLabel) {
+      setLabelVisible(true);
+      return;
+    }
+
+    setLabelVisible(false);
+
+    const swapTimer = setTimeout(() => {
+      setDisplayLabel(label);
+      setLabelVisible(true);
+    }, s.labelFadeDurationMs);
+
+    return () => {
+      clearTimeout(swapTimer);
+    };
+  }, [displayLabel, label]);
 
   const handleClick = async () => {
     if (busy || disabled) {
@@ -50,7 +70,9 @@ export function SettingsActionButton({
         void handleClick();
       }}
     >
-      <span className={s.label}>{label}</span>
+      <span className={`${s.label} ${labelVisible ? "" : s.labelHidden}`}>
+        {displayLabel}
+      </span>
       <span className={s.loaderSlot} aria-hidden="true">
         <Loader size={14} className={busy ? s.iconSpin : s.loaderHidden} />
       </span>
