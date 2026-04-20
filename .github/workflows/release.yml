@@ -45,6 +45,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build Tauri app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: bun run tauri:build
 
       - name: Upload artifacts
@@ -53,6 +56,7 @@ jobs:
           name: tauri-build-${{ steps.version.outputs.tag }}
           path: |
             target/release/bundle/nsis/*.exe
+            target/release/bundle/nsis/*.sig
           if-no-files-found: error
 
     outputs:
@@ -70,7 +74,11 @@ jobs:
           name: tauri-build-${{ needs.build.outputs.tag }}
           path: artifacts
 
-      - name: Create GitHub Release
+      - name: Generate GitHub latest.json
+        run: |
+          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://github.com/tarnishablec/league-jax-releases/releases/download"
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           repository: tarnishablec/league-jax-releases
@@ -103,7 +111,11 @@ jobs:
           gitee_token: ${{ secrets.GITEE_TOKEN }}
           gitee_tag_name: ${{ needs.build.outputs.tag }}
 
-      - name: Release to Gitee
+      - name: Generate Gitee latest.json
+        run: |
+          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://gitee.com/tarnishablec/league-jax-releases/releases/download"
+
+      - name: Publish to Gitee
         uses: nICEnnnnnnnLee/action-gitee-release@master
         with:
           gitee_action: create_release

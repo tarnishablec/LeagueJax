@@ -16,6 +16,7 @@ import { OngoingGameShard } from "./ongoing-game/manifest";
 import { SettingsShard } from "./settings/manifest";
 import { ShellShard } from "./shell/manifest";
 import { ToolsShard } from "./tools/manifest";
+import { UpdaterFeature } from "./updater/manifest";
 
 export interface RenderedSlot {
   id: string;
@@ -86,6 +87,7 @@ export const initializeWebShards = async (): Promise<void> => {
     logger.info("Initializing web shards");
     const runtime = new Jax()
       .register(new SettingsShard())
+      .register(new UpdaterFeature())
       .register(new ShellShard())
       .register(new HistoryShard())
       .register(new OngoingGameShard())

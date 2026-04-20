@@ -1,4 +1,4 @@
-import { keyframes, style } from "@vanilla-extract/css";
+import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 const spin = keyframes({
@@ -10,22 +10,21 @@ const spin = keyframes({
   },
 });
 
-export const button = style({
+const buttonBase = style({
+  position: "relative",
   height: 32,
   minWidth: 120,
-  display: "grid",
-  gridTemplateColumns: "1fr 14px",
+  display: "inline-flex",
   alignItems: "center",
+  justifyContent: "center",
   borderRadius: 8,
-  border: "none",
-  background: vars.color.accent,
-  color: vars.color.accentForeground,
+  border: "1px solid transparent",
   paddingInline: 14,
   fontSize: "0.875rem",
   fontWeight: 500,
   cursor: "pointer",
   userSelect: "none",
-  transition: "opacity 120ms ease",
+  transition: "opacity 120ms ease, border-color 120ms ease",
   selectors: {
     "&:hover": {
       opacity: 0.8,
@@ -44,21 +43,46 @@ export const button = style({
   },
 });
 
+export const tone = styleVariants({
+  accent: [
+    buttonBase,
+    {
+      borderColor: vars.color.primary,
+      background: vars.color.primary,
+      color: "oklch(0.18 0.01 60)",
+    },
+  ],
+  neutral: [
+    buttonBase,
+    {
+      borderColor: vars.settings.controlBorder,
+      background: vars.settings.controlBg,
+      color: vars.settings.controlText,
+    },
+  ],
+});
+
 export const iconSpin = style({
   animation: `${spin} 900ms linear infinite`,
 });
 
 export const label = style({
-  justifySelf: "center",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
   whiteSpace: "nowrap",
 });
 
 export const loaderSlot = style({
+  position: "absolute",
+  right: 14,
+  top: "50%",
   width: 14,
   height: 14,
   display: "grid",
   placeItems: "center",
-  justifySelf: "end",
+  transform: "translateY(-50%)",
+  pointerEvents: "none",
 });
 
 export const loaderHidden = style({

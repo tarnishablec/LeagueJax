@@ -12,6 +12,8 @@ import type {
   SettingDefinition,
   SettingId,
   SettingsPatchSender,
+  SettingsSectionKey,
+  SettingsSectionRenderer,
 } from "@/features/settings/types";
 import { AppError, type AppThatError } from "@/infra/errors";
 import { createLogger } from "@/infra/logger";
@@ -230,6 +232,10 @@ class SettingsStore {
     RegisteredSetting
   >();
   private readonly fieldSubscribers = new Map<SettingId, Set<() => void>>();
+  private readonly sectionRenderers = new Map<
+    SettingsSectionKey,
+    SettingsSectionRenderer
+  >();
   private declarationSequence = 0;
   private remotePatchSender: SettingsPatchSender | null = null;
   private readonly logger = createLogger("settings-store");
@@ -527,6 +533,19 @@ class SettingsStore {
       }
       return a.declarationOrder - b.declarationOrder;
     });
+  }
+
+  public registerSectionRenderer(
+    key: SettingsSectionKey,
+    renderer: SettingsSectionRenderer,
+  ): void {
+    this.sectionRenderers.set(key, renderer);
+  }
+
+  public getSectionRenderer(
+    key: SettingsSectionKey,
+  ): SettingsSectionRenderer | undefined {
+    return this.sectionRenderers.get(key);
   }
 
   public mergeRemoteDefinitions(definitions: SettingDefinitionDto[]): void {

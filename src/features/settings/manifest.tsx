@@ -23,6 +23,8 @@ import type {
   SettingClassCtor,
   SettingDefinition,
   SettingId,
+  SettingsSectionKey,
+  SettingsSectionRenderer,
   SettingsShardApi,
 } from "./types";
 
@@ -96,6 +98,19 @@ export class SettingsShard implements WebShard, SettingsShardApi {
 
   public listDefinitions(): RegisteredSetting[] {
     return this.store.listDefinitions();
+  }
+
+  public registerSectionRenderer(
+    key: SettingsSectionKey,
+    renderer: SettingsSectionRenderer,
+  ): void {
+    this.store.registerSectionRenderer(key, renderer);
+  }
+
+  public getSectionRenderer(
+    key: SettingsSectionKey,
+  ): SettingsSectionRenderer | undefined {
+    return this.store.getSectionRenderer(key);
   }
 
   public routes() {

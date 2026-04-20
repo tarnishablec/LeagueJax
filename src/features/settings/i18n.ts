@@ -23,6 +23,9 @@ export const settingsI18n: Resource = {
           logging: {
             title: "Logging",
           },
+          update: {
+            title: "Update",
+          },
         },
       },
       language: {
@@ -57,6 +60,44 @@ export const settingsI18n: Resource = {
         },
         cleanLogs: {
           label: "Clear Logs Now",
+        },
+      },
+      update: {
+        source: {
+          label: "Update Source",
+          hint: "Choose where update metadata and installers are resolved from.",
+          options: {
+            auto: "Auto",
+            gitee: "Gitee",
+            github: "GitHub",
+          },
+        },
+        autoCheckOnStartup: {
+          label: "Check Updates On Startup",
+          hint: "Only checks for updates automatically. It will not download or install them.",
+        },
+        action: {
+          label: "Update Action",
+          hint: "The button checks for updates first, then turns into install when a new version is available.",
+          check: "Check For Updates",
+          install: "Install Update",
+        },
+        status: {
+          idle: "Not Checked",
+          checking: "Checking",
+          upToDate: "Up To Date",
+          updateAvailable: "Update Available",
+          installing: "Installing",
+          error: "Failed",
+        },
+        summary: {
+          title: "Update Status",
+          currentVersion: "Current Version",
+          latestVersion: "Latest Version",
+          source: "Selected Source",
+          message: "Message",
+          notes: "Release Notes",
+          none: "None",
         },
       },
       registry: {
@@ -103,40 +144,43 @@ export const settingsI18n: Resource = {
   },
   "zh-CN": {
     nav: {
-      settings: "\u8bbe\u7f6e",
+      settings: "设置",
     },
     settings: {
-      title: "\u8bbe\u7f6e",
+      title: "设置",
       pages: {
         system: {
-          title: "\u7cfb\u7edf",
+          title: "系统",
         },
       },
       sections: {
         system: {
           preferences: {
-            title: "\u504f\u597d",
+            title: "偏好",
           },
           network: {
             title: "网络",
           },
           logging: {
-            title: "\u65e5\u5fd7",
+            title: "日志",
+          },
+          update: {
+            title: "更新",
           },
         },
       },
       language: {
-        label: "\u8bed\u8a00",
-        hint: "部分文本的语言取决于游戏客户端的语言设置，而非此选项。",
-        zhCN: "\u7b80\u4f53\u4e2d\u6587",
+        label: "语言",
+        hint: "部分文本会跟随英雄联盟客户端语言，而不是这个设置。",
+        zhCN: "简体中文",
         en: "English",
         jaJP: "Japanese",
       },
       theme: {
-        label: "\u4e3b\u9898",
-        system: "\u8ddf\u968f\u7cfb\u7edf",
-        light: "\u6d45\u8272",
-        dark: "\u6df1\u8272",
+        label: "主题",
+        system: "跟随系统",
+        light: "浅色",
+        dark: "深色",
       },
       network: {
         requestTimeoutSeconds: {
@@ -159,85 +203,125 @@ export const settingsI18n: Resource = {
           label: "立即清理日志",
         },
       },
+      update: {
+        source: {
+          label: "更新源",
+          hint: "选择更新元数据和安装包优先从哪里解析。",
+          options: {
+            auto: "自动",
+            gitee: "Gitee",
+            github: "GitHub",
+          },
+        },
+        autoCheckOnStartup: {
+          label: "启动时自动检测更新",
+          hint: "只会自动检查更新，不会自动下载或安装。",
+        },
+        action: {
+          label: "更新操作",
+          hint: "按钮会先检查更新，检测到新版本后再切换为安装。",
+          check: "检查更新",
+          install: "立即更新",
+        },
+        status: {
+          idle: "尚未检查",
+          checking: "正在检查",
+          upToDate: "当前已是最新版本",
+          updateAvailable: "发现新版本",
+          installing: "正在安装",
+          error: "更新失败",
+        },
+        summary: {
+          title: "更新状态",
+          currentVersion: "当前版本",
+          latestVersion: "最新版本",
+          source: "已选更新源",
+          message: "状态消息",
+          notes: "更新说明",
+          none: "无",
+        },
+      },
       registry: {
-        tab: "\u6ce8\u518c\u8868",
+        tab: "注册表",
         columns: {
-          key: "\u952e",
-          zh: "\u4e2d\u6587",
-          en: "\u82f1\u6587",
-          scope: "\u4f5c\u7528\u57df",
+          key: "键",
+          zh: "中文",
+          en: "英文",
+          scope: "作用域",
         },
       },
       clientArgs: {
-        tab: "\u5ba2\u6237\u7aef\u53c2\u6570",
-        commandTitle: "\u547d\u4ee4\u884c",
+        tab: "客户端参数",
+        commandTitle: "命令行",
         columns: {
-          key: "\u53c2\u6570",
-          value: "\u503c",
+          key: "参数",
+          value: "值",
         },
-        empty:
-          "\u5f53\u524d\u6ca1\u6709\u805a\u7126\u7684\u5ba2\u6237\u7aef\u3002",
+        empty: "当前没有聚焦的客户端。",
       },
       shards: {
-        tab: "\u63d2\u4ef6",
+        tab: "插件",
         frontendTab: "TS",
         backendTab: "RS",
-        viewTable: "\u8868\u683c",
-        viewGraph: "\u4f9d\u8d56\u56fe",
+        viewTable: "表格",
+        viewGraph: "依赖图",
         columns: {
-          name: "\u540d\u79f0",
+          name: "名称",
           id: "ID",
-          status: "\u72b6\u6001",
-          dependencies: "\u4f9d\u8d56",
-          duration: "\u542f\u52a8\u8017\u65f6",
+          status: "状态",
+          dependencies: "依赖",
+          duration: "启动耗时",
         },
         status: {
-          running: "\u8fd0\u884c\u4e2d",
-          failed: "\u5931\u8d25",
-          skipped: "\u5df2\u8df3\u8fc7",
+          running: "运行中",
+          failed: "失败",
+          skipped: "已跳过",
         },
-        noDependencies: "\u65e0",
+        noDependencies: "无",
         noDuration: "-",
-        copied: "\u5df2\u590d\u5236",
+        copied: "已复制",
       },
     },
   },
   "ja-JP": {
     nav: {
-      settings: "\u8a2d\u5b9a",
+      settings: "設定",
     },
     settings: {
-      title: "\u8a2d\u5b9a",
+      title: "設定",
       pages: {
         system: {
-          title: "\u30b7\u30b9\u30c6\u30e0",
+          title: "システム",
         },
       },
       sections: {
         system: {
           preferences: {
-            title: "\u74b0\u5883\u8a2d\u5b9a",
+            title: "環境設定",
           },
           network: {
             title: "ネットワーク",
           },
           logging: {
-            title: "\u30ed\u30b0",
+            title: "ログ",
+          },
+          update: {
+            title: "更新",
           },
         },
       },
       language: {
-        label: "\u8a00\u8a9e",
-        hint: "一部のテキストはこの設定ではなく、ゲームクライアントの言語設定に従います。",
-        zhCN: "\u7c21\u4f53\u5b57\u4e2d\u56fd\u8a9e",
-        en: "\u82f1\u8a9e",
-        jaJP: "\u65e5\u672c\u8a9e",
+        label: "言語",
+        hint: "一部のテキストはこの設定ではなく、League クライアントの言語設定に従います。",
+        zhCN: "簡体字中国語",
+        en: "英語",
+        jaJP: "日本語",
       },
       theme: {
-        label: "\u30c6\u30fc\u30de",
-        system: "\u30b7\u30b9\u30c6\u30e0",
-        light: "\u30e9\u30a4\u30c8",
-        dark: "\u30c0\u30fc\u30af",
+        label: "テーマ",
+        system: "システム",
+        light: "ライト",
+        dark: "ダーク",
       },
       network: {
         requestTimeoutSeconds: {
@@ -247,11 +331,11 @@ export const settingsI18n: Resource = {
       logging: {
         recordToFile: {
           label: "ログをファイルに記録",
-          hint: "バックエンドログをローカルのログファイルに書き込みます。",
+          hint: "バックエンドログをローカルのログファイルへ書き込みます。",
         },
         retentionDays: {
           label: "ログ保持日数",
-          hint: "この日数より古いログファイルを自動削除します。",
+          hint: "指定日数より古いログファイルを自動削除します。",
         },
         openDir: {
           label: "ログディレクトリを開く",
@@ -260,46 +344,83 @@ export const settingsI18n: Resource = {
           label: "今すぐログを整理",
         },
       },
+      update: {
+        source: {
+          label: "更新ソース",
+          hint: "更新メタデータとインストーラーをどこから解決するかを選択します。",
+          options: {
+            auto: "自動",
+            gitee: "Gitee",
+            github: "GitHub",
+          },
+        },
+        autoCheckOnStartup: {
+          label: "起動時に更新を確認",
+          hint: "起動時に自動で更新確認のみ行います。自動インストールはしません。",
+        },
+        action: {
+          label: "更新アクション",
+          hint: "ボタンは最初に更新確認を行い、新しいバージョンが見つかるとインストールに切り替わります。",
+          check: "更新を確認",
+          install: "更新をインストール",
+        },
+        status: {
+          idle: "未確認",
+          checking: "確認中",
+          upToDate: "最新です",
+          updateAvailable: "更新があります",
+          installing: "インストール中",
+          error: "失敗",
+        },
+        summary: {
+          title: "更新状態",
+          currentVersion: "現在のバージョン",
+          latestVersion: "最新バージョン",
+          source: "選択中のソース",
+          message: "メッセージ",
+          notes: "リリースノート",
+          none: "なし",
+        },
+      },
       registry: {
-        tab: "\u30ec\u30b8\u30b9\u30c8\u30ea",
+        tab: "レジストリ",
         columns: {
-          key: "\u30ad\u30fc",
-          zh: "\u4e2d\u56fd\u8a9e",
-          en: "\u82f1\u8a9e",
-          scope: "\u30b9\u30b3\u30fc\u30d7",
+          key: "キー",
+          zh: "中国語",
+          en: "英語",
+          scope: "スコープ",
         },
       },
       clientArgs: {
-        tab: "\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u5f15\u6570",
-        commandTitle: "\u30b3\u30de\u30f3\u30c9\u30e9\u30a4\u30f3",
+        tab: "クライアント引数",
+        commandTitle: "コマンドライン",
         columns: {
-          key: "\u30ad\u30fc",
-          value: "\u5024",
+          key: "キー",
+          value: "値",
         },
-        empty:
-          "\u30d5\u30a9\u30fc\u30ab\u30b9\u4e2d\u306e\u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u304c\u3042\u308a\u307e\u305b\u3093\u3002",
+        empty: "現在フォーカス中のクライアントがありません。",
       },
       shards: {
-        tab: "\u30d7\u30e9\u30b0\u30a4\u30f3",
+        tab: "プラグイン",
         frontendTab: "TS",
         backendTab: "RS",
-        viewTable: "\u30c6\u30fc\u30d6\u30eb",
-        viewGraph: "\u4f9d\u5b58\u30b0\u30e9\u30d5",
+        viewTable: "テーブル",
+        viewGraph: "依存グラフ",
         columns: {
-          name: "\u540d\u524d",
+          name: "名前",
           id: "ID",
-          status: "\u30b9\u30c6\u30fc\u30bf\u30b9",
-          dependencies: "\u4f9d\u5b58\u95a2\u4fc2",
-          duration: "\u8d77\u52d5\u6642\u9593",
+          status: "ステータス",
+          dependencies: "依存関係",
+          duration: "起動時間",
         },
         status: {
-          running: "\u5b9f\u884c\u4e2d",
-          failed: "\u5931\u6557",
-          skipped: "\u30b9\u30ad\u30c3\u30d7",
+          running: "実行中",
+          failed: "失敗",
+          skipped: "スキップ",
         },
-        noDependencies: "\u306a\u3057",
+        noDependencies: "なし",
         noDuration: "-",
-        copied: "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f",
+        copied: "コピーしました",
       },
     },
   },

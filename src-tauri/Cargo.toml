@@ -20,7 +20,7 @@ tauri = { workspace = true, features = ["tray-icon"] }
 window-vibrancy = { workspace = true }
 uuid = { workspace = true, features = ["serde", "v7"] }
 tauri-plugin-store = { workspace = true }
-#tauri-plugin-updater = "2"
+tauri-plugin-updater = { workspace = true }
 tauri-plugin-opener = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
 

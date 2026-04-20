@@ -1,3 +1,4 @@
+import type React from "react";
 import type { ZodType } from "zod";
 import type { SettingScopeDto } from "@/bindings/settings";
 
@@ -26,6 +27,7 @@ export type SettingControl =
 
 // ── Frontend-only types ──────────────────────────────────────────────────────
 export type SettingId = `${string}.${string}.${string}`;
+export type SettingsSectionKey = `${string}.${string}`;
 
 export interface HydrateOptions {
   notify?: boolean;
@@ -33,6 +35,17 @@ export interface HydrateOptions {
 }
 
 export type SettingsPatchSender = (changes: Record<string, unknown>) => void;
+export type AsyncSettingAction = () => Promise<void>;
+
+export interface SettingsSectionRendererProps {
+  pageId: string;
+  sectionId: string;
+  fields: RegisteredSetting[];
+}
+
+export type SettingsSectionRenderer = (
+  props: SettingsSectionRendererProps,
+) => React.ReactElement;
 
 /**
  * Frontend-enriched setting definition.
@@ -72,7 +85,7 @@ export interface NumberSettingDefinition extends SettingDefinitionBase {
 
 export interface ActionSettingDefinition extends SettingDefinitionBase {
   control: Extract<SettingControl, { kind: "action" }>;
-  onAction: () => void | Promise<unknown>;
+  onAction: AsyncSettingAction;
 }
 
 export type InputSettingDefinition =
@@ -99,9 +112,16 @@ export interface SettingsReader {
   set<T = unknown>(id: SettingId, value: T): boolean;
   subscribe(id: SettingId, callback: () => void): () => void;
   listDefinitions(): RegisteredSetting[];
+  getSectionRenderer(
+    key: SettingsSectionKey,
+  ): SettingsSectionRenderer | undefined;
 }
 
 export interface SettingsShardApi extends SettingsReader {
   registerSetting(definition: SettingDefinition): void;
   registerClass(ctor: SettingClassCtor): void;
+  registerSectionRenderer(
+    key: SettingsSectionKey,
+    renderer: SettingsSectionRenderer,
+  ): void;
 }

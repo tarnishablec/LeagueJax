@@ -5,3 +5,4 @@ pub mod ongoing_game;
 pub mod platform;
 pub mod settings;
 pub mod shards;
+pub mod updater;
