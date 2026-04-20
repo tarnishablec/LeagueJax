@@ -16,7 +16,9 @@ function parseArgs(argv: string[]): { bump: BumpKind; dryRun: boolean } {
   );
 
   if (!bump) {
-    throw new Error("Usage: bun run ./scripts/bump-version.ts <patch|minor|major> [--dry-run]");
+    throw new Error(
+      "Usage: bun run ./scripts/bump-version.ts <patch|minor|major> [--dry-run]",
+    );
   }
 
   return {
@@ -48,7 +50,10 @@ function bumpVersion(version: string, bump: BumpKind): string {
   return `${major}.${minor}.${patch + 1}`;
 }
 
-function replaceCargoPackageVersion(content: string, nextVersion: string): string {
+function replaceCargoPackageVersion(
+  content: string,
+  nextVersion: string,
+): string {
   const lines = content.split(/\r?\n/);
   let inPackageSection = false;
   let replaced = false;
@@ -69,7 +74,9 @@ function replaceCargoPackageVersion(content: string, nextVersion: string): strin
   });
 
   if (!replaced) {
-    throw new Error("Failed to locate [package].version in src-tauri/Cargo.toml");
+    throw new Error(
+      "Failed to locate [package].version in src-tauri/Cargo.toml",
+    );
   }
 
   return `${nextLines.join("\n")}\n`;
