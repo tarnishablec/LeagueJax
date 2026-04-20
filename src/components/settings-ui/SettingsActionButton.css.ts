@@ -26,17 +26,14 @@ const buttonBase = style({
   fontWeight: 500,
   cursor: "pointer",
   userSelect: "none",
-  transition: "opacity 120ms ease, border-color 120ms ease",
+  transition: "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
   selectors: {
-    "&:hover": {
-      opacity: 0.8,
-    },
     "&:focus-visible": {
       outline: `2px solid ${vars.color.primary}`,
       outlineOffset: 1,
     },
     "&:active": {
-      opacity: 0.65,
+      opacity: 0.9,
     },
     "&:disabled": {
       opacity: 0.6,
@@ -52,6 +49,12 @@ export const tone = styleVariants({
       borderColor: vars.color.primary,
       background: vars.color.primary,
       color: "oklch(0.18 0.01 60)",
+      selectors: {
+        "&:hover:not(:disabled)": {
+          borderColor: `color-mix(in oklch, ${vars.color.primary} 92%, oklch(1 0 0))`,
+          background: `color-mix(in oklch, ${vars.color.primary} 88%, oklch(1 0 0))`,
+        },
+      },
     },
   ],
   neutral: [
@@ -60,6 +63,12 @@ export const tone = styleVariants({
       borderColor: vars.settings.controlBorder,
       background: vars.settings.controlBg,
       color: vars.settings.controlText,
+      selectors: {
+        "&:hover:not(:disabled)": {
+          borderColor: vars.settings.controlHoverBorder,
+          background: `color-mix(in oklch, ${vars.color.primary} 10%, ${vars.settings.controlBg})`,
+        },
+      },
     },
   ],
 });
