@@ -9,7 +9,7 @@ export const button = recipe({
     alignItems: "center",
     gap: 8,
     height: 32,
-    borderRadius: 8,
+    borderRadius: vars.settings.controlBorderRadius,
     border: `1px solid ${vars.settings.controlBorder}`,
     background: vars.settings.controlBg,
     padding: "0 10px",

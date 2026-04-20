@@ -24,15 +24,28 @@ const initialState: UpdaterStateDto = {
   message: null,
 };
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This component is inherently complex due to the various states and UI conditions it needs to handle. Refactoring it into smaller components would not necessarily improve readability or maintainability.
 export function UpdaterSettingsSection({
   fields,
 }: SettingsSectionRendererProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<UpdaterStateDto>(initialState);
+  const latestVersionHint =
+    state.kind === "error"
+      ? (state.message ?? undefined)
+      : state.kind === "updateAvailable" || state.kind === "installing"
+        ? (state.notes ?? undefined)
+        : undefined;
+  const latestVersionHintTone =
+    state.kind === "error"
+      ? "error"
+      : state.kind === "updateAvailable" || state.kind === "installing"
+        ? "warning"
+        : "info";
 
   const actionLabel =
     state.kind === "updateAvailable" || state.kind === "installing"
-      ? state.latestVersion ?? t("settings.update.action.install")
+      ? (state.latestVersion ?? t("settings.update.action.install"))
       : state.kind === "upToDate"
         ? t("settings.update.action.upToDate")
         : t("settings.update.action.check");
@@ -94,7 +107,8 @@ export function UpdaterSettingsSection({
 
       <SettingsFieldRow
         label={t("settings.update.summary.latestVersion")}
-        hint={state.notes ?? undefined}
+        hint={latestVersionHint}
+        hintTone={latestVersionHintTone}
         scopeTag="rs"
       >
         <SettingsActionButton

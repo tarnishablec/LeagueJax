@@ -17,7 +17,7 @@ const buttonBase = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: 8,
+  borderRadius: vars.settings.controlBorderRadius,
   border: "1px solid transparent",
   paddingInline: 14,
   fontSize: "0.875rem",

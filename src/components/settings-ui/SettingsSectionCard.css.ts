@@ -5,7 +5,7 @@ export const card = style({
   display: "grid",
   gap: 12,
   padding: 14,
-  borderRadius: 10,
+  borderRadius: vars.settings.surfaceBorderRadius,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.background,
   alignContent: "start",
