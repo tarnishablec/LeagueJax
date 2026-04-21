@@ -19,7 +19,7 @@ const buttonBase = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: vars.settings.controlBorderRadius,
+  borderRadius: 8,
   border: "1px solid transparent",
   paddingInline: 14,
   fontSize: "0.875rem",
@@ -61,13 +61,13 @@ export const tone = styleVariants({
   quiet: [
     buttonBase,
     {
-      borderColor: `color-mix(in oklch, ${vars.color.primary} 88%, ${vars.settings.controlBorder})`,
-      background: `color-mix(in oklch, ${vars.color.primary} 90%, ${vars.settings.controlBg})`,
+      borderColor: `color-mix(in oklch, ${vars.color.primary} 88%, ${vars.color.border})`,
+      background: `color-mix(in oklch, ${vars.color.primary} 90%, ${vars.color.background})`,
       color: "oklch(0.18 0.01 60)",
       selectors: {
         "&:hover:not(:disabled)": {
-          borderColor: `color-mix(in oklch, ${vars.color.primary} 96%, ${vars.settings.controlBorder})`,
-          background: `color-mix(in oklch, ${vars.color.primary} 97%, ${vars.settings.controlBg})`,
+          borderColor: `color-mix(in oklch, ${vars.color.primary} 96%, ${vars.color.border})`,
+          background: `color-mix(in oklch, ${vars.color.primary} 97%, ${vars.color.background})`,
         },
       },
     },
@@ -75,13 +75,13 @@ export const tone = styleVariants({
   neutral: [
     buttonBase,
     {
-      borderColor: vars.settings.controlBorder,
-      background: vars.settings.controlBg,
-      color: vars.settings.controlText,
+      borderColor: vars.color.border,
+      background: vars.color.background,
+      color: vars.color.foreground,
       selectors: {
         "&:hover:not(:disabled)": {
-          borderColor: vars.settings.controlHoverBorder,
-          background: `color-mix(in oklch, ${vars.color.primary} 10%, ${vars.settings.controlBg})`,
+          borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
+          background: `color-mix(in oklch, ${vars.color.primary} 10%, ${vars.color.background})`,
         },
       },
     },

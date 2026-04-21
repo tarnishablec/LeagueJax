@@ -13,10 +13,10 @@ export const control = style({
 export const trigger = style({
   width: "100%",
   height: 32,
-  borderRadius: vars.settings.controlBorderRadius,
-  border: `1px solid ${vars.settings.controlBorder}`,
-  background: vars.settings.controlBg,
-  color: vars.settings.controlText,
+  borderRadius: 8,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.background,
+  color: vars.color.foreground,
   padding: "0 10px",
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
@@ -26,7 +26,7 @@ export const trigger = style({
   cursor: "pointer",
   selectors: {
     "&:hover": {
-      borderColor: vars.settings.controlHoverBorder,
+      borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
     },
     "&:focus-visible": {
       outline: `2px solid ${vars.color.primary}`,
@@ -50,7 +50,7 @@ export const valueText = style({
 });
 
 export const indicator = style({
-  color: vars.settings.selectChevron,
+  color: vars.color.mutedForeground,
   display: "grid",
   placeItems: "center",
 });
@@ -61,13 +61,18 @@ export const positioner = style({
 
 export const content = style({
   marginTop: 4,
-  borderRadius: vars.settings.surfaceBorderRadius,
-  border: `1px solid ${vars.settings.selectMenuBorder}`,
+  borderRadius: 10,
+  border: `1px solid ${vars.color.popoverBorder}`,
   background: vars.color.popupBackgroud,
-  boxShadow: `0 10px 24px ${vars.settings.selectMenuShadow}`,
+  boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
   overflow: "hidden",
   padding: 4,
   minWidth: "var(--reference-width)",
+  selectors: {
+    ":root.dark &": {
+      boxShadow: `0 10px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+    },
+  },
 });
 
 export const list = style({
@@ -80,7 +85,7 @@ export const item = style({
   minHeight: 30,
   borderRadius: 7,
   background: "transparent",
-  color: vars.settings.controlText,
+  color: vars.color.foreground,
   textAlign: "left",
   padding: "0 10px",
   cursor: "pointer",
@@ -91,11 +96,14 @@ export const item = style({
   gap: 8,
   selectors: {
     "&[data-highlighted]": {
-      background: vars.settings.selectOptionHoverBg,
+      background: `oklch(from ${vars.color.accent} 0.9 c h)`,
+    },
+    ":root.dark &[data-highlighted]": {
+      background: `oklch(from ${vars.color.accent} 0.36 c h / 0.45)`,
     },
     "&[data-state='checked']": {
-      background: vars.settings.selectOptionSelectedBg,
-      color: vars.settings.selectOptionSelectedText,
+      background: vars.color.accent,
+      color: vars.color.accentForeground,
     },
     "&:focus-visible": {
       outline: `2px solid ${vars.color.primary}`,
@@ -115,7 +123,7 @@ export const group = style({
   gap: 2,
   selectors: {
     "& + &": {
-      borderTop: `1px solid ${vars.settings.controlBorder}`,
+      borderTop: `1px solid ${vars.color.border}`,
       marginTop: 4,
       paddingTop: 4,
     },

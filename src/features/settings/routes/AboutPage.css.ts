@@ -11,7 +11,7 @@ export const overviewCard = style({
   display: "grid",
   gap: 12,
   padding: 14,
-  borderRadius: vars.settings.surfaceBorderRadius,
+  borderRadius: 10,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.background,
 });
@@ -32,7 +32,7 @@ export const logoPanel = style({
   display: "grid",
   placeItems: "center",
   minHeight: "7rem",
-  borderRadius: `calc(${vars.settings.surfaceBorderRadius} + 4px)`,
+  borderRadius: "14px",
 });
 
 export const markdownShell = style({
@@ -152,7 +152,7 @@ export const softwareItem = style({
   width: "100%",
   padding: 12,
   font: "inherit",
-  borderRadius: vars.settings.surfaceBorderRadius,
+  borderRadius: 10,
   border: `1px solid ${vars.color.border}`,
   background: `oklch(from ${vars.color.accent} l c h / 0.36)`,
   color: "inherit",

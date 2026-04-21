@@ -41,7 +41,12 @@ export const debugPanel = style({
   background: vars.color.popover,
   color: vars.color.foreground,
   padding: 10,
-  boxShadow: `0 10px 24px ${vars.settings.selectMenuShadow}`,
+  boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
+  selectors: {
+    ":root.dark &": {
+      boxShadow: `0 10px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+    },
+  },
   resize: "both",
   overflow: "hidden",
 });

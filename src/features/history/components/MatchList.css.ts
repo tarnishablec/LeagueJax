@@ -46,9 +46,9 @@ export const pageButton = style({
   width: 30,
   height: 30,
   borderRadius: 7,
-  border: `1px solid ${vars.settings.controlBorder}`,
-  background: vars.settings.controlBg,
-  color: vars.settings.controlText,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.background,
+  color: vars.color.foreground,
   cursor: "pointer",
   display: "grid",
   placeItems: "center",
@@ -56,7 +56,7 @@ export const pageButton = style({
   transition: "border-color 120ms, color 120ms",
   selectors: {
     "&:hover": {
-      borderColor: vars.settings.controlHoverBorder,
+      borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
       color: vars.color.primary,
     },
     "&:disabled": {
@@ -69,8 +69,8 @@ export const pageButton = style({
 export const pageIndicator = style({
   height: 30,
   borderRadius: 7,
-  border: `1px solid ${vars.settings.controlBorder}`,
-  background: vars.settings.controlBg,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.background,
   color: vars.color.mutedForeground,
   fontSize: "0.75rem",
   display: "grid",
