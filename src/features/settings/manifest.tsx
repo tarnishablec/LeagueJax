@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Settings } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { mergeDeep } from "remeda";
 import type {
   SettingsBootstrapDto,
@@ -15,9 +16,6 @@ import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { settingsAboutI18n } from "./about.i18n";
 import { settingsI18n } from "./i18n";
-import { SettingsIndexRoute } from "./routes/SettingsIndexRoute";
-import { SettingsPageRoute } from "./routes/SettingsPageRoute";
-import { SettingsRoute } from "./routes/SettingsRoute";
 import { SettingsStore } from "./store";
 import { registerGeneralSettings } from "./store/general";
 import type {
@@ -29,6 +27,24 @@ import type {
   SettingsSectionRenderer,
   SettingsShardApi,
 } from "./types";
+
+const SettingsRoute = lazy(() =>
+  import("./routes/SettingsRoute").then((module) => ({
+    default: module.SettingsRoute,
+  })),
+);
+
+const SettingsIndexRoute = lazy(() =>
+  import("./routes/SettingsIndexRoute").then((module) => ({
+    default: module.SettingsIndexRoute,
+  })),
+);
+
+const SettingsPageRoute = lazy(() =>
+  import("./routes/SettingsPageRoute").then((module) => ({
+    default: module.SettingsPageRoute,
+  })),
+);
 
 export class SettingsShard implements WebShard, SettingsShardApi {
   private readonly sourceId = `web-${crypto.randomUUID()}`;
@@ -119,15 +135,27 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     return [
       {
         path: "settings",
-        element: <SettingsRoute />,
+        element: (
+          <Suspense fallback={null}>
+            <SettingsRoute />
+          </Suspense>
+        ),
         children: [
           {
             index: true,
-            element: <SettingsIndexRoute />,
+            element: (
+              <Suspense fallback={null}>
+                <SettingsIndexRoute />
+              </Suspense>
+            ),
           },
           {
             path: ":pageId",
-            element: <SettingsPageRoute />,
+            element: (
+              <Suspense fallback={null}>
+                <SettingsPageRoute />
+              </Suspense>
+            ),
           },
         ],
         order: 90,

@@ -1,8 +1,14 @@
 import { Wrench } from "lucide-react";
+import { lazy, Suspense } from "react";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { toolsI18n } from "./i18n";
-import { ToolsRoute } from "./routes/ToolsRoute";
+
+const ToolsRoute = lazy(() =>
+  import("./routes/ToolsRoute").then((module) => ({
+    default: module.ToolsRoute,
+  })),
+);
 
 export class ToolsShard implements WebShard {
   public label() {
@@ -21,7 +27,11 @@ export class ToolsShard implements WebShard {
     return [
       {
         path: "tools",
-        element: <ToolsRoute />,
+        element: (
+          <Suspense fallback={null}>
+            <ToolsRoute />
+          </Suspense>
+        ),
         order: 86,
       },
     ];

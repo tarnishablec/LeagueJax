@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import type { RouteObject } from "react-router";
-import { createBrowserRouter, Navigate } from "react-router";
+import { createHashRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { SWRConfig } from "swr";
 import { getRouteContributions } from "@/features/registry";
-import { RootLayout } from "@/layout/__root";
+import { MiniWindowLayout } from "@/layout/__mini";
+import { MainWindowLayout } from "@/layout/__root";
 import type { RouteContribution } from "@/runtime/web-contract";
 
 const toRouteObject = (route: RouteContribution): RouteObject =>
@@ -15,20 +16,54 @@ const toRouteObject = (route: RouteContribution): RouteObject =>
     children: route.children?.map(toRouteObject),
   }) as RouteObject;
 
+function normalizeInitialHashRoute(): void {
+  if (window.location.hash.length > 0) {
+    return;
+  }
+
+  const path = window.location.pathname;
+  if (path === "/" || path === "/index.html") {
+    return;
+  }
+
+  window.history.replaceState(
+    null,
+    "",
+    `/#${path}${window.location.search}${window.location.hash}`,
+  );
+}
+
+normalizeInitialHashRoute();
+
+const isMiniRoute = (route: RouteObject): boolean => {
+  if (typeof route.path !== "string") {
+    return false;
+  }
+
+  return route.path === "mini" || route.path.startsWith("mini/");
+};
+
 export default function App() {
   const router = useMemo(() => {
     const shardRoutes = getRouteContributions().map(toRouteObject);
+    const miniRoutes = shardRoutes.filter(isMiniRoute);
+    const mainRoutes = shardRoutes.filter((route) => !isMiniRoute(route));
 
-    return createBrowserRouter([
+    return createHashRouter([
       {
         path: "/",
-        element: <RootLayout />,
+        element: <MiniWindowLayout />,
+        children: [...miniRoutes],
+      },
+      {
+        path: "/",
+        element: <MainWindowLayout />,
         children: [
           {
             index: true,
             element: <Navigate to="/history" replace />,
           },
-          ...shardRoutes,
+          ...mainRoutes,
         ],
       },
     ]);
@@ -36,7 +71,9 @@ export default function App() {
 
   return (
     <SWRConfig value={{ revalidateOnFocus: false }}>
-      <RouterProvider router={router} />
+      <Suspense fallback={null}>
+        <RouterProvider router={router} />
+      </Suspense>
     </SWRConfig>
   );
 }
