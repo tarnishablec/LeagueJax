@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
 use tauri::{Manager, WebviewWindow};
+#[cfg(target_os = "windows")]
+use tauri::Theme;
 #[cfg(target_os = "macos")]
 use window_vibrancy::apply_acrylic;
 #[cfg(target_os = "windows")]
@@ -21,7 +23,16 @@ const WINDOW_EFFECT_MICA: &str = "mica";
 const WINDOW_EFFECT_ACRYLIC: &str = "acrylic";
 const WINDOW_EFFECT_VIBRANCY: &str = "vibrancy";
 const WINDOW_EFFECT_NONE: &str = "none";
-const ACRYLIC_TINT: Option<(u8, u8, u8, u8)> = Some((18, 18, 28, 160));
+const SYSTEM_THEME_SETTING_ID: &str = "system.preferences.theme";
+const SYSTEM_THEME_SYSTEM: &str = "system";
+const SYSTEM_THEME_LIGHT: &str = "light";
+const SYSTEM_THEME_DARK: &str = "dark";
+#[cfg(target_os = "windows")]
+const ACRYLIC_TINT_LIGHT: Option<(u8, u8, u8, u8)> = Some((248, 248, 248, 120));
+#[cfg(target_os = "windows")]
+const ACRYLIC_TINT_DARK: Option<(u8, u8, u8, u8)> = Some((32, 32, 32, 160));
+#[cfg(target_os = "macos")]
+const VIBRANCY_TINT: Option<(u8, u8, u8, u8)> = Some((18, 18, 28, 160));
 #[cfg(target_os = "windows")]
 const WINDOW_EFFECT_DEFAULT: &str = WINDOW_EFFECT_MICA;
 #[cfg(target_os = "macos")]
@@ -76,6 +87,23 @@ impl WindowEffect {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum ThemePreference {
+    System,
+    Light,
+    Dark,
+}
+
+impl ThemePreference {
+    fn from_setting_value(value: Option<&Value>) -> Self {
+        match value.and_then(Value::as_str) {
+            Some(SYSTEM_THEME_LIGHT) => Self::Light,
+            Some(SYSTEM_THEME_DARK) => Self::Dark,
+            _ => Self::System,
+        }
+    }
+}
+
 fn build_window_effect_options() -> Vec<SettingOptionDto> {
     let mut options = vec![SettingOptionDto {
         value: WINDOW_EFFECT_NONE.to_string(),
@@ -109,6 +137,40 @@ fn build_window_effect_options() -> Vec<SettingOptionDto> {
     options
 }
 
+fn build_theme_options() -> Vec<SettingOptionDto> {
+    vec![
+        SettingOptionDto {
+            value: SYSTEM_THEME_SYSTEM.to_string(),
+            label_key: "settings.theme.system".to_string(),
+            display_label: None,
+        },
+        SettingOptionDto {
+            value: SYSTEM_THEME_LIGHT.to_string(),
+            label_key: "settings.theme.light".to_string(),
+            display_label: None,
+        },
+        SettingOptionDto {
+            value: SYSTEM_THEME_DARK.to_string(),
+            label_key: "settings.theme.dark".to_string(),
+            display_label: None,
+        },
+    ]
+}
+
+fn build_theme_setting_definition() -> SettingDefinitionDto {
+    SettingDefinitionDto {
+        id: SYSTEM_THEME_SETTING_ID.to_string(),
+        label_key: "settings.theme.label".to_string(),
+        hint_key: None,
+        scope: SettingScopeDto::Frontend,
+        control: SettingControlDto::Select,
+        default_value: Value::String(SYSTEM_THEME_SYSTEM.to_string()),
+        order: Some(20),
+        visible: Some(true),
+        options: Some(build_theme_options()),
+    }
+}
+
 impl WindowEffectShard {
     pub fn new() -> Self {
         Self {
@@ -116,37 +178,89 @@ impl WindowEffectShard {
         }
     }
 
-    fn current_window_effect(&self) -> Result<WindowEffect, AppError> {
-        let settings = self
-            .settings
+    fn settings(&self) -> Result<&Arc<SettingsShard>, AppError> {
+        self.settings
             .get()
-            .ok_or_else(|| AppError::other("window effect settings shard is not initialized"))?;
+            .ok_or_else(|| AppError::other("window effect settings shard is not initialized"))
+    }
+
+    fn window_effect_from_settings(settings: &SettingsShard) -> Result<WindowEffect, AppError> {
         let value = settings.get_value(WINDOW_EFFECT_SETTING_ID)?;
         Ok(WindowEffect::from_setting_value(value.as_ref()))
     }
 
+    fn theme_preference_from_settings(
+        settings: &SettingsShard,
+    ) -> Result<ThemePreference, AppError> {
+        let value = settings.get_value(SYSTEM_THEME_SETTING_ID)?;
+        Ok(ThemePreference::from_setting_value(value.as_ref()))
+    }
+
     pub fn apply_current_to_window(&self, window: &WebviewWindow) -> Result<(), AppError> {
-        let effect = self.current_window_effect()?;
-        Self::apply_effect_to_window(window, effect)
+        let settings = self.settings()?;
+        let effect = Self::window_effect_from_settings(settings)?;
+        let theme_preference = Self::theme_preference_from_settings(settings)?;
+        Self::apply_effect_to_window(window, effect, theme_preference)
+    }
+
+    fn apply_current_effect_to_windows(
+        app: &tauri::AppHandle,
+        settings: &SettingsShard,
+    ) -> Result<(), AppError> {
+        let effect = Self::window_effect_from_settings(settings)?;
+        Self::apply_effect_to_windows(app, settings, effect)
     }
 
     fn apply_effect_to_windows(
         app: &tauri::AppHandle,
+        settings: &SettingsShard,
         effect: WindowEffect,
     ) -> Result<(), AppError> {
+        let theme_preference = Self::theme_preference_from_settings(settings)?;
         for window in app.webview_windows().values() {
-            Self::apply_effect_to_window(window, effect)?;
+            Self::apply_effect_to_window(window, effect, theme_preference)?;
         }
 
         Ok(())
     }
 
+    #[cfg(target_os = "windows")]
+    fn acrylic_tint_for_window(
+        window: &WebviewWindow,
+        theme_preference: ThemePreference,
+    ) -> Option<(u8, u8, u8, u8)> {
+        let is_dark = match theme_preference {
+            ThemePreference::Dark => true,
+            ThemePreference::Light => false,
+            ThemePreference::System => match window.theme() {
+                Ok(Theme::Dark) => true,
+                Ok(Theme::Light) => false,
+                Ok(_) => true,
+                Err(error) => {
+                    tracing::warn!(
+                        error = %error,
+                        "Failed to read window theme, fallback to dark acrylic tint"
+                    );
+                    true
+                }
+            },
+        };
+
+        if is_dark {
+            ACRYLIC_TINT_DARK
+        } else {
+            ACRYLIC_TINT_LIGHT
+        }
+    }
+
     fn apply_effect_to_window(
         window: &WebviewWindow,
         effect: WindowEffect,
+        theme_preference: ThemePreference,
     ) -> Result<(), AppError> {
         #[cfg(target_os = "windows")]
         {
+            let acrylic_tint = Self::acrylic_tint_for_window(window, theme_preference);
             let _ = clear_mica(window);
             let _ = clear_acrylic(window);
 
@@ -155,7 +269,7 @@ impl WindowEffectShard {
                 WindowEffect::Mica => {
                     if let Err(error) = apply_mica(window, None) {
                         tracing::warn!(error = %error, "Failed to apply mica, fallback to acrylic");
-                        apply_acrylic(window, ACRYLIC_TINT).map_err(|fallback_error| {
+                        apply_acrylic(window, acrylic_tint).map_err(|fallback_error| {
                             AppError::other(format!(
                                 "failed to apply acrylic fallback: {fallback_error}"
                             ))
@@ -163,16 +277,17 @@ impl WindowEffectShard {
                     }
                     Ok(())
                 }
-                WindowEffect::Acrylic => apply_acrylic(window, ACRYLIC_TINT)
+                WindowEffect::Acrylic => apply_acrylic(window, acrylic_tint)
                     .map_err(|error| AppError::other(format!("failed to apply acrylic: {error}"))),
             };
         }
 
         #[cfg(target_os = "macos")]
         {
+            let _ = theme_preference;
             return match effect {
                 WindowEffect::None => Ok(()),
-                WindowEffect::Vibrancy => apply_acrylic(window, ACRYLIC_TINT)
+                WindowEffect::Vibrancy => apply_acrylic(window, VIBRANCY_TINT)
                     .map_err(|error| AppError::other(format!("failed to apply acrylic: {error}"))),
             };
         }
@@ -181,6 +296,7 @@ impl WindowEffectShard {
         {
             let _ = window;
             let _ = effect;
+            let _ = theme_preference;
             Ok(())
         }
     }
@@ -205,6 +321,8 @@ impl Shard for WindowEffectShard {
             tracing::warn!("WindowEffectShard settings shard was already initialized");
         }
 
+        settings.register_definition(build_theme_setting_definition())?;
+
         let effect_handle = settings.register_definition(SettingDefinitionDto {
             id: WINDOW_EFFECT_SETTING_ID.to_string(),
             label_key: "settings.windowEffect.label".to_string(),
@@ -217,19 +335,41 @@ impl Shard for WindowEffectShard {
             options: Some(build_window_effect_options()),
         })?;
 
-        let startup_effect = WindowEffect::from_setting_value(Some(&effect_handle.get_value()?));
-        if let Err(error) = Self::apply_effect_to_windows(&app, startup_effect) {
+        let theme_handle = settings.setting_handle(SYSTEM_THEME_SETTING_ID)?;
+
+        if let Err(error) = Self::apply_current_effect_to_windows(&app, &settings) {
             tracing::warn!(error = %error, "Failed to apply startup window effect");
         }
 
+        let app_for_effect_watch = app.clone();
+        let settings_for_effect_watch = settings.clone();
         effect_handle.spawn_watch(false, move |value| {
-            let app = app.clone();
+            let app = app_for_effect_watch.clone();
+            let settings = settings_for_effect_watch.clone();
             async move {
                 let effect = WindowEffect::from_setting_value(Some(&value));
-                if let Err(error) = WindowEffectShard::apply_effect_to_windows(&app, effect) {
+                if let Err(error) =
+                    WindowEffectShard::apply_effect_to_windows(&app, &settings, effect)
+                {
                     tracing::warn!(
                         error = %error,
                         "Failed to apply window effect after settings change"
+                    );
+                }
+            }
+        })?;
+
+        let app_for_theme_watch = app.clone();
+        let settings_for_theme_watch = settings.clone();
+        theme_handle.spawn_watch(false, move |_value| {
+            let app = app_for_theme_watch.clone();
+            let settings = settings_for_theme_watch.clone();
+            async move {
+                if let Err(error) = WindowEffectShard::apply_current_effect_to_windows(&app, &settings)
+                {
+                    tracing::warn!(
+                        error = %error,
+                        "Failed to reapply window effect after theme change"
                     );
                 }
             }
