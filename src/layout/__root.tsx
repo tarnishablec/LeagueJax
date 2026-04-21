@@ -22,6 +22,7 @@ import {
 } from "@/features/registry";
 import { useLcuEvents } from "@/hooks/use-lcu-events";
 import { useTheme } from "@/hooks/use-theme";
+import { useWindowEffectBackgroundFallback } from "@/hooks/use-window-effect";
 import * as s from "./__root.css";
 import * as mini from "./mini-window.css";
 
@@ -37,6 +38,8 @@ const DebugCommandPanel = import.meta.env.DEV
   : null;
 
 export function RootLayout() {
+  useWindowEffectBackgroundFallback();
+
   if (isMiniWindow) {
     return <MiniWindowLayout />;
   }

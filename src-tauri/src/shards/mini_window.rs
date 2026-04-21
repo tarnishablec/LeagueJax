@@ -6,6 +6,7 @@ use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::error::AppError;
 use crate::shards::tauri_host::TauriHost;
+use crate::shards::window_effect::WindowEffectShard;
 
 const MINI_WINDOW_LABEL: &str = "mini";
 const MINI_WINDOW_ROUTE: &str = "/mini";
@@ -17,6 +18,7 @@ const MINI_WINDOW_MIN_HEIGHT: f64 = 520.0;
 
 pub struct MiniWindowShard {
     host: OnceLock<Arc<TauriHost>>,
+    window_effect: OnceLock<Arc<WindowEffectShard>>,
     toggle_lock: Mutex<()>,
 }
 
@@ -24,7 +26,18 @@ impl MiniWindowShard {
     pub fn new() -> Self {
         Self {
             host: OnceLock::new(),
+            window_effect: OnceLock::new(),
             toggle_lock: Mutex::new(()),
+        }
+    }
+
+    fn try_apply_window_effect(&self, window: &tauri::WebviewWindow) {
+        if let Some(window_effect) = self.window_effect.get() {
+            if let Err(error) = window_effect.apply_current_to_window(window) {
+                tracing::warn!(error = %error, "Failed to apply window effect for mini window");
+            }
+        } else {
+            tracing::warn!("MiniWindowShard window effect shard is not initialized");
         }
     }
 
@@ -55,12 +68,13 @@ impl MiniWindowShard {
                 window.set_focus().map_err(|error| {
                     AppError::other(format!("failed to focus mini window: {error}"))
                 })?;
+                self.try_apply_window_effect(&window);
             }
 
             return Ok(());
         }
 
-        WebviewWindowBuilder::new(
+        let window = WebviewWindowBuilder::new(
             app,
             MINI_WINDOW_LABEL,
             WebviewUrl::App(MINI_WINDOW_ROUTE.into()),
@@ -75,7 +89,14 @@ impl MiniWindowShard {
         .build()
         .map_err(|error| AppError::other(format!("failed to create mini window: {error}")))?;
 
+        self.try_apply_window_effect(&window);
         Ok(())
+    }
+}
+
+impl Default for MiniWindowShard {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -85,13 +106,19 @@ impl Shard for MiniWindowShard {
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let host = jax.get_shard::<TauriHost>().clone();
+        let window_effect = jax.get_shard::<WindowEffectShard>().clone();
+
         if self.host.set(host).is_err() {
             tracing::warn!("MiniWindowShard app handle was already initialized");
         }
+        if self.window_effect.set(window_effect).is_err() {
+            tracing::warn!("MiniWindowShard window effect shard was already initialized");
+        }
+
         Ok(())
     }
 
     fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![TauriHost]
+        depends![TauriHost, WindowEffectShard]
     }
 }

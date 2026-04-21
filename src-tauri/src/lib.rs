@@ -27,12 +27,6 @@ use crate::commands::settings::*;
 use crate::commands::shards::*;
 use crate::commands::updater::*;
 
-#[cfg(target_os = "windows")]
-use window_vibrancy::{apply_acrylic, apply_mica};
-
-#[cfg(target_os = "macos")]
-use window_vibrancy::apply_acrylic;
-
 use jax::Jax;
 use jax_probes::TimingProbe;
 
@@ -221,30 +215,22 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
 
-            let win = app.get_webview_window("main").expect("no main window");
-
             #[cfg(target_os = "windows")]
             {
-                if apply_mica(&win, None).is_err() {
-                    let _ = apply_acrylic(&win, Some((18, 18, 28, 160)));
-                }
-
                 #[cfg(not(debug_assertions))]
-                win.with_webview(|webview| unsafe {
-                    let controller = webview.controller();
-                    if let Ok(core) = controller.CoreWebView2() {
-                        if let Ok(settings) = core.Settings() {
-                            let settings = settings;
-                            let _ = settings.SetAreDevToolsEnabled(false);
-                            let _ = settings.SetAreDefaultContextMenusEnabled(false);
+                {
+                    let win = app.get_webview_window("main").expect("no main window");
+                    win.with_webview(|webview| unsafe {
+                        let controller = webview.controller();
+                        if let Ok(core) = controller.CoreWebView2() {
+                            if let Ok(settings) = core.Settings() {
+                                let settings = settings;
+                                let _ = settings.SetAreDevToolsEnabled(false);
+                                let _ = settings.SetAreDefaultContextMenusEnabled(false);
+                            }
                         }
-                    }
-                })?;
-            }
-
-            #[cfg(target_os = "macos")]
-            {
-                let _ = apply_acrylic(&win, Some((18, 18, 28, 160)));
+                    })?;
+                }
             }
 
             let data_dir = app.path().app_data_dir().expect("no app data dir");
@@ -255,11 +241,12 @@ pub fn run() {
             let jax = Jax::default()
                 .probe(timing.clone())
                 .register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)))
-                .register(Arc::new(shards::mini_window::MiniWindowShard::new()))
                 .register(Arc::new(shards::persistence_sled::PersistenceSled::new(
                     db_path,
                 )))
                 .register(Arc::new(shards::settings::SettingsShard::new()))
+                .register(Arc::new(shards::window_effect::WindowEffectShard::new()))
+                .register(Arc::new(shards::mini_window::MiniWindowShard::new()))
                 .register(Arc::new(shards::log::LogShard::new()))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
                 .register(Arc::new(shards::league_bridge::LeagueBridgeShard::new()))

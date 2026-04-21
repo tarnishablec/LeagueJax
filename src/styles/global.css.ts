@@ -25,6 +25,14 @@ globalStyle("body, #root", {
   background: "transparent",
 });
 
+globalStyle(":root.window-effect-none", {
+  background: vars.color.backgroundRaw,
+});
+
+globalStyle(":root.window-effect-none body, :root.window-effect-none #root", {
+  background: vars.color.backgroundRaw,
+});
+
 /* ── Reset — minimal, just what the app needs ── */
 
 globalStyle("*, *::before, *::after", {

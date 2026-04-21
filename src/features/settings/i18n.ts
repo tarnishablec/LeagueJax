@@ -41,6 +41,16 @@ export const settingsI18n: Resource = {
         light: "Light",
         dark: "Dark",
       },
+      windowEffect: {
+        label: "Window Effect",
+        hint: "Choose whether to use translucency and which effect to use.",
+        options: {
+          none: "None",
+          mica: "Mica",
+          acrylic: "Acrylic",
+          vibrancy: "Vibrancy",
+        },
+      },
       network: {
         requestTimeoutSeconds: {
           label: "Request Timeout (seconds)",
@@ -158,7 +168,7 @@ export const settingsI18n: Resource = {
           preferences: {
             title: "偏好",
           },
-          network: {
+      network: {
             title: "网络",
           },
           logging: {
@@ -181,6 +191,16 @@ export const settingsI18n: Resource = {
         system: "跟随系统",
         light: "浅色",
         dark: "深色",
+      },
+      windowEffect: {
+        label: "背景材质",
+        hint: "选择是否启用窗口背景材质，以及使用哪种效果。",
+        options: {
+          none: "无",
+          mica: "Mica",
+          acrylic: "Acrylic",
+          vibrancy: "Vibrancy",
+        },
       },
       network: {
         requestTimeoutSeconds: {
@@ -299,7 +319,7 @@ export const settingsI18n: Resource = {
           preferences: {
             title: "環境設定",
           },
-          network: {
+      network: {
             title: "ネットワーク",
           },
           logging: {
@@ -322,6 +342,16 @@ export const settingsI18n: Resource = {
         system: "システム",
         light: "ライト",
         dark: "ダーク",
+      },
+      windowEffect: {
+        label: "背景マテリアル",
+        hint: "ウィンドウの背景材質を有効にするか、どの効果を使うかを選択します。",
+        options: {
+          none: "なし",
+          mica: "Mica",
+          acrylic: "Acrylic",
+          vibrancy: "Vibrancy",
+        },
       },
       network: {
         requestTimeoutSeconds: {
