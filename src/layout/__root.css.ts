@@ -87,13 +87,16 @@ const navBase: StyleRule = {
   textDecoration: "none",
 } as const;
 
+const navHoverBg = `oklch(from ${vars.color.accent} l c h / 0.32)`;
+const navActiveBg = `oklch(from ${vars.color.accent} l c h / 0.48)`;
+
 export const navItem = recipe({
   base: {
     ...navBase,
     gridTemplateColumns: `${iconCol} minmax(0, 1fr)`,
     selectors: {
       "&:hover": {
-        background: vars.color.accent,
+        background: navHoverBg,
         color: vars.color.foreground,
       },
     },
@@ -112,7 +115,7 @@ export const navItem = recipe({
     {
       variants: { active: true, collapsed: false },
       style: {
-        background: vars.color.accent,
+        background: navActiveBg,
         color: vars.color.accentForeground,
         fontWeight: 500,
         borderLeft: `2px solid ${vars.color.primary}`,

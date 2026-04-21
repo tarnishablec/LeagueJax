@@ -3,9 +3,9 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
-use tauri::{Manager, WebviewWindow};
 #[cfg(target_os = "windows")]
 use tauri::Theme;
+use tauri::{Manager, WebviewWindow};
 #[cfg(target_os = "macos")]
 use window_vibrancy::apply_acrylic;
 #[cfg(target_os = "windows")]
@@ -74,11 +74,11 @@ impl WindowEffect {
     fn default_for_platform() -> Self {
         #[cfg(target_os = "windows")]
         {
-            return Self::Mica;
+            Self::Mica
         }
         #[cfg(target_os = "macos")]
         {
-            return Self::Vibrancy;
+            Self::Vibrancy
         }
         #[cfg(not(any(target_os = "windows", target_os = "macos")))]
         {
@@ -264,7 +264,7 @@ impl WindowEffectShard {
             let _ = clear_mica(window);
             let _ = clear_acrylic(window);
 
-            return match effect {
+            match effect {
                 WindowEffect::None => Ok(()),
                 WindowEffect::Mica => {
                     if let Err(error) = apply_mica(window, None) {
@@ -279,7 +279,7 @@ impl WindowEffectShard {
                 }
                 WindowEffect::Acrylic => apply_acrylic(window, acrylic_tint)
                     .map_err(|error| AppError::other(format!("failed to apply acrylic: {error}"))),
-            };
+            }
         }
 
         #[cfg(target_os = "macos")]
@@ -365,7 +365,8 @@ impl Shard for WindowEffectShard {
             let app = app_for_theme_watch.clone();
             let settings = settings_for_theme_watch.clone();
             async move {
-                if let Err(error) = WindowEffectShard::apply_current_effect_to_windows(&app, &settings)
+                if let Err(error) =
+                    WindowEffectShard::apply_current_effect_to_windows(&app, &settings)
                 {
                     tracing::warn!(
                         error = %error,

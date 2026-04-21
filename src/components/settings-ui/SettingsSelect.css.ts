@@ -63,7 +63,7 @@ export const content = style({
   marginTop: 4,
   borderRadius: vars.settings.surfaceBorderRadius,
   border: `1px solid ${vars.settings.selectMenuBorder}`,
-  background: vars.settings.selectMenuBg,
+  background: vars.color.popupBackgroud,
   boxShadow: `0 10px 24px ${vars.settings.selectMenuShadow}`,
   overflow: "hidden",
   padding: 4,
