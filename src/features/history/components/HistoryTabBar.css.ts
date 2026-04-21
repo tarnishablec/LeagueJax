@@ -167,11 +167,16 @@ export const contextMenuPositioner = style({
 export const contextMenuContent = style({
   minWidth: 180,
   borderRadius: 10,
-  border: `1px solid ${vars.settings.selectMenuBorder}`,
-  background: vars.settings.selectMenuBg,
-  boxShadow: `0 10px 24px ${vars.settings.selectMenuShadow}`,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popover,
+  boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
   overflow: "hidden",
   padding: 4,
+  selectors: {
+    ":root.dark &": {
+      boxShadow: `0 10px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+    },
+  },
 });
 
 export const contextMenuItem = style({
@@ -181,11 +186,14 @@ export const contextMenuItem = style({
   display: "grid",
   alignItems: "center",
   cursor: "pointer",
-  color: vars.settings.controlText,
+  color: vars.color.foreground,
   fontSize: "0.8125rem",
   selectors: {
     "&[data-highlighted]": {
-      background: vars.settings.selectOptionHoverBg,
+      background: `oklch(from ${vars.color.accent} 0.9 c h)`,
+    },
+    ":root.dark &[data-highlighted]": {
+      background: `oklch(from ${vars.color.accent} 0.36 c h / 0.45)`,
     },
     "&:focus-visible": {
       outline: `2px solid ${vars.color.primary}`,
@@ -201,5 +209,5 @@ export const contextMenuItem = style({
 export const contextMenuSeparator = style({
   height: 1,
   margin: "4px 2px",
-  background: vars.settings.selectMenuBorder,
+  background: vars.color.popoverBorder,
 });

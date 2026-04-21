@@ -10,17 +10,20 @@ export const root = style({
   width: 30,
   height: 30,
   borderRadius: 7,
-  border: `1px solid ${vars.settings.controlBorder}`,
-  background: vars.settings.controlBg,
-  color: vars.settings.controlText,
+  border: `1px solid ${vars.color.border}`,
+  background: `oklch(from ${vars.color.backgroundRaw} 1 c h)`,
+  color: vars.color.foreground,
   cursor: "pointer",
   display: "grid",
   placeItems: "center",
   padding: 0,
   transition: "border-color 120ms, color 120ms",
   selectors: {
+    ":root.dark &": {
+      background: vars.color.background,
+    },
     "&:hover:not(:disabled)": {
-      borderColor: vars.settings.controlHoverBorder,
+      borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
       color: vars.color.primary,
     },
     "&:disabled": {

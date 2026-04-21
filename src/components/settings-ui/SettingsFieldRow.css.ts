@@ -54,7 +54,7 @@ export const hintPositioner = style({
 });
 
 export const hintContent = style({
-  borderRadius: vars.settings.controlBorderRadius,
+  borderRadius: 8,
   padding: "4px 8px",
   fontSize: "0.8125rem",
   lineHeight: 1.4,

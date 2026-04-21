@@ -465,7 +465,12 @@ export const playerHoverContent = style({
   color: vars.color.foreground,
   padding: "4px 6px",
   fontSize: "0.6875rem",
-  boxShadow: `0 8px 24px ${vars.settings.selectMenuShadow}`,
+  boxShadow: `0 8px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
+  selectors: {
+    ":root.dark &": {
+      boxShadow: `0 8px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+    },
+  },
 });
 
 export const augmentHoverTrigger = style({
@@ -492,7 +497,12 @@ export const augmentHoverContent = style({
   padding: "4px 6px",
   fontSize: "0.6875rem",
   maxWidth: 220,
-  boxShadow: `0 8px 24px ${vars.settings.selectMenuShadow}`,
+  boxShadow: `0 8px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
+  selectors: {
+    ":root.dark &": {
+      boxShadow: `0 8px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+    },
+  },
 });
 
 export const damageBar = style({

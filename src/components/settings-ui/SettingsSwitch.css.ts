@@ -9,15 +9,15 @@ export const button = recipe({
     alignItems: "center",
     gap: 8,
     height: 32,
-    borderRadius: vars.settings.controlBorderRadius,
-    border: `1px solid ${vars.settings.controlBorder}`,
-    background: vars.settings.controlBg,
+    borderRadius: 8,
+    border: `1px solid ${vars.color.border}`,
+    background: vars.color.background,
     padding: "0 10px",
     cursor: "pointer",
-    color: vars.settings.controlText,
+    color: vars.color.foreground,
     selectors: {
       "&:hover": {
-        borderColor: vars.settings.controlHoverBorder,
+        borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
       },
       "&:focus-visible": {
         outline: `2px solid ${vars.color.primary}`,
@@ -50,11 +50,16 @@ export const track = recipe({
   variants: {
     checked: {
       true: {
-        background: vars.settings.switchTrackOn,
+        background: `oklch(from ${vars.color.primary} l c h / 0.3)`,
         justifyItems: "end",
+        selectors: {
+          ":root.dark &": {
+            background: `oklch(from ${vars.color.primary} l c h / 0.82)`,
+          },
+        },
       },
       false: {
-        background: vars.settings.switchTrackOff,
+        background: vars.color.accent,
         justifyItems: "start",
       },
     },
@@ -68,10 +73,10 @@ export const thumb = style({
   width: 16,
   height: 16,
   borderRadius: "50%",
-  background: vars.settings.switchThumb,
+  background: vars.color.foreground,
 });
 
 export const text = style({
   fontSize: "0.875rem",
-  color: vars.settings.switchText,
+  color: vars.color.mutedForeground,
 });

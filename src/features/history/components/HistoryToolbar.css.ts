@@ -69,11 +69,16 @@ export const dialogContent = style({
   border: `1px solid ${vars.color.popoverBorder}`,
   background: vars.color.popover,
   color: vars.color.foreground,
-  boxShadow: `0 16px 36px ${vars.settings.selectMenuShadow}`,
+  boxShadow: `0 16px 36px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
   padding: 14,
   display: "grid",
   gridTemplateRows: "auto auto 1fr",
   gap: 10,
+  selectors: {
+    ":root.dark &": {
+      boxShadow: `0 16px 36px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+    },
+  },
 });
 
 export const headerRow = style({
