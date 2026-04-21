@@ -11,8 +11,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, RunEvent};
 use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
-use tracing_subscriber::fmt::writer::MakeWriter;
 use tracing_subscriber::filter::filter_fn;
+use tracing_subscriber::fmt::writer::MakeWriter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
@@ -290,14 +290,14 @@ pub fn run() {
                                 tracing::error!(
                                     shard_id = %f.id,
                                     error = %f.error,
-                                    "鉂?Shard failed to setup"
+                                    "Shard failed to setup"
                                 );
                             }
                             for s in &report.skipped {
                                 tracing::warn!(
                                     shard_id = %s,
                                     "skip" = true,
-                                    "鈿狅笍 Shard skipped due to dependency failure"
+                                    "Shard skipped due to dependency failure"
                                 );
                             }
                         }
@@ -310,7 +310,7 @@ pub fn run() {
                         }
                     }
                     Err(e) => {
-                        tracing::error!(error = %e, "馃毃 Jax encountered a critical startup error");
+                        tracing::error!(error = %e, "Jax encountered a critical startup error");
                     }
                 }
             });
