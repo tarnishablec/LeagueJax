@@ -263,7 +263,7 @@ pub fn run() {
                 .register(Arc::new(shards::static_cache::StaticCacheShard::new()))
                 .register(Arc::new(shards::sgp::SgpShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
-                .register(Arc::new(shards::auto_gameflow::AutoGameflowShard::new()))
+                .register(Arc::new(shards::auto_accept::AutoAcceptShard::new()))
                 .register(Arc::new(shards::auto_reply::AutoReplyShard::new()))
                 .register(Arc::new(shards::ongoing_game::OngoingGameShard::new()))
                 .register(Arc::new(shards::saved_player::SavedPlayerShard::new()))
