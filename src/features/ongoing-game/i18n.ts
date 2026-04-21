@@ -13,8 +13,8 @@ export const ongoingGameI18n: Resource = {
       },
       sections: {
         ongoing: {
-          behavior: {
-            title: "Behavior",
+          interaction: {
+            title: "Interaction",
           },
         },
       },
@@ -75,8 +75,8 @@ export const ongoingGameI18n: Resource = {
       },
       sections: {
         ongoing: {
-          behavior: {
-            title: "行为",
+          interaction: {
+            title: "交互",
           },
         },
       },
@@ -137,8 +137,8 @@ export const ongoingGameI18n: Resource = {
       },
       sections: {
         ongoing: {
-          behavior: {
-            title: "動作",
+          interaction: {
+            title: "操作",
           },
         },
       },

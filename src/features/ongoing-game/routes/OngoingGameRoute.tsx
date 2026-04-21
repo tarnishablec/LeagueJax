@@ -11,9 +11,9 @@ import {
   resolveOngoingTeamGroups,
 } from "./ongoing-game.player-utils.ts";
 
-const ONGOING_SHOW_BOTS_SETTING = "ongoing.behavior.showBots" as const;
+const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots" as const;
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
-  "ongoing.behavior.matchHistoryCount" as const;
+  "ongoing.interaction.matchHistoryCount" as const;
 
 export function OngoingGameRoute() {
   const { t } = useTranslation();

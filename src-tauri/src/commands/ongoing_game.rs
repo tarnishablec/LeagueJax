@@ -10,7 +10,7 @@ use crate::shards::ongoing_game::types::OngoingGameInput;
 use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::settings::SettingsShard;
 
-const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.behavior.matchHistoryCount";
+const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.interaction.matchHistoryCount";
 const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
 
 #[tauri::command]
