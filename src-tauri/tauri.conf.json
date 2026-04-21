@@ -28,6 +28,7 @@
   },
   "bundle": {
     "active": true,
+    "resources": ["icons/icon.ico"],
     "targets": ["nsis"],
     "createUpdaterArtifacts": true,
     "icon": [
