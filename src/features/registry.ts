@@ -12,6 +12,7 @@ import type {
 } from "@/runtime/web-contract";
 import { AutomationShard } from "./automation/manifest";
 import { HistoryShard } from "./history/manifest";
+import { MiniShard } from "./mini/manifest";
 import { OngoingGameShard } from "./ongoing-game/manifest";
 import { SettingsShard } from "./settings/manifest";
 import { ShellShard } from "./shell/manifest";
@@ -89,6 +90,7 @@ export const initializeWebShards = async (): Promise<void> => {
       .register(new SettingsShard())
       .register(new UpdaterFeature())
       .register(new ShellShard())
+      .register(new MiniShard())
       .register(new HistoryShard())
       .register(new OngoingGameShard())
       .register(new AutomationShard())

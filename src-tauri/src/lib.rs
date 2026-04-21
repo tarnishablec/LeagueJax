@@ -20,6 +20,7 @@ use tracing_subscriber::Layer;
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
+use crate::commands::mini_window::*;
 use crate::commands::ongoing_game::*;
 use crate::commands::platform::*;
 use crate::commands::settings::*;
@@ -209,6 +210,7 @@ pub fn run() {
             get_shards_status,
             lcu_get_platform_config_namespaces,
             lcu_get_help,
+            toggle_mini_window,
             execute_setting_action,
             get_updater_state,
             run_updater_action
@@ -253,6 +255,7 @@ pub fn run() {
             let jax = Jax::default()
                 .probe(timing.clone())
                 .register(Arc::new(shards::tauri_host::TauriHost::new(app_handle)))
+                .register(Arc::new(shards::mini_window::MiniWindowShard::new()))
                 .register(Arc::new(shards::persistence_sled::PersistenceSled::new(
                     db_path,
                 )))

@@ -1,6 +1,7 @@
 pub mod history;
 pub mod lcu;
 pub mod map;
+pub mod mini_window;
 pub mod ongoing_game;
 pub mod platform;
 pub mod settings;

@@ -44,8 +44,7 @@ export function UpdaterSettingsSection({
       : state.kind === "updateAvailable" || state.kind === "installing"
         ? "warning"
         : "info";
-  const showUpToDateState =
-    state.kind === "upToDate" && showTransientUpToDate;
+  const showUpToDateState = state.kind === "upToDate" && showTransientUpToDate;
 
   const actionLabel =
     state.kind === "updateAvailable" || state.kind === "installing"

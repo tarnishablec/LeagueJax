@@ -2,25 +2,13 @@ import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "../styles/theme.css";
 
+export { trigger } from "./ToolbarActionButton.css";
+
 export const wrapper = style({
   position: "relative",
   height: "100%",
   display: "grid",
   placeItems: "center",
-});
-
-export const trigger = style({
-  display: "grid",
-  placeItems: "center",
-  width: 32,
-  height: "100%",
-  color: `oklch(from ${vars.color.foreground} l c h / 0.6)`,
-  transition: "color 100ms",
-  selectors: {
-    "&:hover": {
-      color: vars.color.foreground,
-    },
-  },
 });
 
 export const dropdownOuter = style({
