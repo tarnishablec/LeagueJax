@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Gamepad2 } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { z } from "zod";
 import type {
   OngoingGameMatchHistoriesUpdated,
@@ -13,20 +14,27 @@ import { SettingsShard } from "../settings/manifest";
 import { SHARD_IDS } from "../shard-ids";
 import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
 import { ongoingGameI18n } from "./i18n";
-import { OngoingGameRoute } from "./routes/OngoingGameRoute";
 import { useOngoingGameStore } from "./store";
+
+const OngoingGameRoute = lazy(() =>
+  import("./routes/OngoingGameRoute").then((module) => ({
+    default: module.OngoingGameRoute,
+  })),
+);
 
 const ONGOING_AUTO_SWITCH_TO_GAME_SETTING =
   "ongoing.interaction.autoSwitchToGame";
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots";
 
 function navigateTo(path: string): void {
-  if (window.location.pathname === path) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const targetHash = `#${normalizedPath}`;
+
+  if (window.location.hash === targetHash) {
     return;
   }
 
-  window.history.pushState(null, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
+  window.location.hash = normalizedPath;
 }
 
 /** Collects items within a single animation frame, then flushes them in one batch. */
@@ -175,7 +183,11 @@ export class OngoingGameShard implements WebShard {
     return [
       {
         path: "game",
-        element: <OngoingGameRoute />,
+        element: (
+          <Suspense fallback={null}>
+            <OngoingGameRoute />
+          </Suspense>
+        ),
         order: 20,
       },
     ];

@@ -1,8 +1,14 @@
 import { Bot } from "lucide-react";
+import { lazy, Suspense } from "react";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { automationI18n } from "./i18n";
-import { AutomationRoute } from "./routes/AutomationRoute";
+
+const AutomationRoute = lazy(() =>
+  import("./routes/AutomationRoute").then((module) => ({
+    default: module.AutomationRoute,
+  })),
+);
 
 export class AutomationShard implements WebShard {
   public label() {
@@ -17,7 +23,11 @@ export class AutomationShard implements WebShard {
     return [
       {
         path: "automation",
-        element: <AutomationRoute />,
+        element: (
+          <Suspense fallback={null}>
+            <AutomationRoute />
+          </Suspense>
+        ),
         order: 85,
       },
     ];

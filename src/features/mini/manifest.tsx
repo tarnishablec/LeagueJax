@@ -1,7 +1,13 @@
+import { lazy, Suspense } from "react";
 import type { ToolbarSlot, WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { MiniWindowToggleButton } from "./components/MiniWindowToggleButton";
-import { MiniRoute } from "./routes/MiniRoute";
+
+const MiniRoute = lazy(() =>
+  import("./routes/MiniRoute").then((module) => ({
+    default: module.MiniRoute,
+  })),
+);
 
 export class MiniShard implements WebShard {
   public label() {
@@ -20,7 +26,11 @@ export class MiniShard implements WebShard {
     return [
       {
         path: "mini",
-        element: <MiniRoute />,
+        element: (
+          <Suspense fallback={null}>
+            <MiniRoute />
+          </Suspense>
+        ),
         order: 5,
       },
     ];

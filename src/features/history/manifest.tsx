@@ -1,4 +1,5 @@
 import { BarChart3 } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { z } from "zod";
 import { HistoryTabBar } from "@/features/history/components/HistoryTabBar.tsx";
 import { SettingsShard } from "@/features/settings/manifest";
@@ -9,7 +10,12 @@ import { useTabStore } from "@/stores/tabs";
 import { SHARD_IDS } from "../shard-ids";
 import { HistoryToolbar } from "./components/HistoryToolbar";
 import { historyI18n } from "./i18n";
-import { HistoryRoute } from "./routes/HistoryRoute";
+
+const HistoryRoute = lazy(() =>
+  import("./routes/HistoryRoute").then((module) => ({
+    default: module.HistoryRoute,
+  })),
+);
 export const HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING =
   "history.behavior.autoRefreshOnTabSwitch";
 
@@ -62,7 +68,11 @@ export class HistoryShard implements WebShard {
     return [
       {
         path: "history",
-        element: <HistoryRoute />,
+        element: (
+          <Suspense fallback={null}>
+            <HistoryRoute />
+          </Suspense>
+        ),
         order: 10,
       },
     ];
