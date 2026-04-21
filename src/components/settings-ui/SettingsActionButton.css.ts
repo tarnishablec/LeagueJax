@@ -26,7 +26,8 @@ const buttonBase = style({
   fontWeight: 500,
   cursor: "pointer",
   userSelect: "none",
-  transition: "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+  transition:
+    "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${vars.color.primary}`,

@@ -1,3 +1,4 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import {
@@ -12,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { JaxLogo } from "@/components/JaxLogo";
 import { TitleBar } from "@/components/TitleBar";
+import { MiniTitleBar } from "@/features/mini/components/MiniTitleBar.tsx";
 import {
   getNavItems,
   getSidebarSlots,
@@ -21,6 +23,10 @@ import {
 import { useLcuEvents } from "@/hooks/use-lcu-events";
 import { useTheme } from "@/hooks/use-theme";
 import * as s from "./__root.css";
+import * as mini from "./mini-window.css";
+
+const appWindow = getCurrentWindow();
+const isMiniWindow = appWindow.label === "mini";
 
 const DebugCommandPanel = import.meta.env.DEV
   ? lazy(() =>
@@ -31,6 +37,27 @@ const DebugCommandPanel = import.meta.env.DEV
   : null;
 
 export function RootLayout() {
+  if (isMiniWindow) {
+    return <MiniWindowLayout />;
+  }
+
+  return <MainWindowLayout />;
+}
+
+function MiniWindowLayout() {
+  useTheme();
+
+  return (
+    <div className={mini.shell}>
+      <MiniTitleBar />
+      <main className={mini.content}>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function MainWindowLayout() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
