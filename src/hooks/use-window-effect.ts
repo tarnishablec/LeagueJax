@@ -19,10 +19,7 @@ export function useWindowEffectBackgroundFallback() {
     const root = document.documentElement;
     const shouldUseSolidBackground = windowEffect === WINDOW_EFFECT_NONE;
 
-    root.classList.toggle(
-      WINDOW_EFFECT_NONE_CLASS,
-      shouldUseSolidBackground,
-    );
+    root.classList.toggle(WINDOW_EFFECT_NONE_CLASS, shouldUseSolidBackground);
 
     return () => {
       root.classList.remove(WINDOW_EFFECT_NONE_CLASS);

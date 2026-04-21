@@ -30,6 +30,16 @@ type RegisteredActionSetting = Extract<
 >;
 
 const logger = createLogger("settings-field-renderer");
+const loggingActionToneIds = new Set<SettingId>([
+  "system.logging.openDir",
+  "system.logging.cleanLogs",
+]);
+const actionMinLoadingMsById: Partial<Record<SettingId, number>> = {
+  "system.logging.cleanLogs": 700,
+};
+const successFeedbackActionIds = new Set<SettingId>([
+  "system.logging.cleanLogs",
+]);
 
 const useSettingValue = (id: SettingId): unknown => {
   const settings = useSettings();
@@ -147,11 +157,17 @@ const InputField = ({
 const ActionField = ({ field }: { field: RegisteredActionSetting }) => {
   const { t } = useTranslation();
   const label = t(field.labelKey);
+  const tone = loggingActionToneIds.has(field.id) ? "quiet" : "accent";
+  const minLoadingMs = actionMinLoadingMsById[field.id] ?? 0;
+  const successFeedback = successFeedbackActionIds.has(field.id);
 
   return (
     <SettingsActionButton
       ariaLabel={`Action ${field.id}`}
       label={label}
+      minLoadingMs={minLoadingMs}
+      successFeedback={successFeedback}
+      tone={tone}
       onClick={field.onAction}
       onError={(error) => {
         logger.error({ error, id: field.id }, "Setting action failed");

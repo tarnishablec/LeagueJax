@@ -58,6 +58,20 @@ export const tone = styleVariants({
       },
     },
   ],
+  quiet: [
+    buttonBase,
+    {
+      borderColor: `color-mix(in oklch, ${vars.color.primary} 88%, ${vars.settings.controlBorder})`,
+      background: `color-mix(in oklch, ${vars.color.primary} 90%, ${vars.settings.controlBg})`,
+      color: "oklch(0.18 0.01 60)",
+      selectors: {
+        "&:hover:not(:disabled)": {
+          borderColor: `color-mix(in oklch, ${vars.color.primary} 96%, ${vars.settings.controlBorder})`,
+          background: `color-mix(in oklch, ${vars.color.primary} 97%, ${vars.settings.controlBg})`,
+        },
+      },
+    },
+  ],
   neutral: [
     buttonBase,
     {
@@ -76,6 +90,18 @@ export const tone = styleVariants({
 
 export const iconSpin = style({
   animation: `${spin} 900ms linear infinite`,
+});
+
+export const feedbackIconBase = style({
+  gridArea: "1 / 1",
+  opacity: 0,
+  transform: "scale(0.88)",
+  transition: "opacity 180ms ease-in-out, transform 180ms ease-in-out",
+});
+
+export const feedbackIconVisible = style({
+  opacity: 1,
+  transform: "scale(1)",
 });
 
 export const label = style({
@@ -100,8 +126,4 @@ export const loaderSlot = style({
   placeItems: "center",
   transform: "translateY(-50%)",
   pointerEvents: "none",
-});
-
-export const loaderHidden = style({
-  opacity: 0,
 });

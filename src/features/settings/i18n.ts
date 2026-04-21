@@ -168,7 +168,7 @@ export const settingsI18n: Resource = {
           preferences: {
             title: "偏好",
           },
-      network: {
+          network: {
             title: "网络",
           },
           logging: {
@@ -319,7 +319,7 @@ export const settingsI18n: Resource = {
           preferences: {
             title: "環境設定",
           },
-      network: {
+          network: {
             title: "ネットワーク",
           },
           logging: {
