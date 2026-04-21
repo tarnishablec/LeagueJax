@@ -17,3 +17,4 @@ pub mod statistics;
 pub mod tauri_host;
 pub mod tray;
 pub mod updater;
+pub mod window_effect;
