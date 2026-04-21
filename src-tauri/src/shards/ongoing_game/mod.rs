@@ -19,7 +19,7 @@ use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
 use uuid::Uuid;
 
-const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.behavior.matchHistoryCount";
+const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.interaction.matchHistoryCount";
 const MATCH_HISTORY_COUNT_DEFAULT: u32 = 50;
 
 pub struct OngoingGameShard {

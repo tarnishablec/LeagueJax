@@ -3,7 +3,7 @@ import { vars } from "@/styles/theme.css";
 
 export const card = style({
   display: "grid",
-  gap: 12,
+  gap: 10,
   padding: 14,
   borderRadius: vars.settings.surfaceBorderRadius,
   border: `1px solid ${vars.color.border}`,
@@ -13,9 +13,9 @@ export const card = style({
 
 export const title = style({
   fontSize: "1rem",
-  fontWeight: 600,
+  fontWeight: 575,
   color: vars.color.foreground,
-  margin: "0.4rem 0",
+  margin: "0.25rem 0",
 });
 
 export const body = style({

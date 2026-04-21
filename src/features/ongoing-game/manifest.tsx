@@ -16,8 +16,9 @@ import { ongoingGameI18n } from "./i18n";
 import { OngoingGameRoute } from "./routes/OngoingGameRoute";
 import { useOngoingGameStore } from "./store";
 
-const ONGOING_AUTO_SWITCH_TO_GAME_SETTING = "ongoing.behavior.autoSwitchToGame";
-const ONGOING_SHOW_BOTS_SETTING = "ongoing.behavior.showBots";
+const ONGOING_AUTO_SWITCH_TO_GAME_SETTING =
+  "ongoing.interaction.autoSwitchToGame";
+const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots";
 
 function navigateTo(path: string): void {
   if (window.location.pathname === path) {

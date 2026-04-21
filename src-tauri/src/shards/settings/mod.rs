@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 const SETTINGS_TREE: &str = "settings";
 const SETTINGS_SNAPSHOT_KEY: &[u8] = b"snapshot";
-const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 3] = [
+const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 6] = [
     (
         "general.preferences.language",
         "system.preferences.language",
@@ -29,6 +29,18 @@ const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 3] = [
     (
         "system.logging.detailedMode",
         "system.logging.recordToFile",
+    ),
+    (
+        "ongoing.behavior.autoSwitchToGame",
+        "ongoing.interaction.autoSwitchToGame",
+    ),
+    (
+        "ongoing.behavior.showBots",
+        "ongoing.interaction.showBots",
+    ),
+    (
+        "ongoing.behavior.matchHistoryCount",
+        "ongoing.interaction.matchHistoryCount",
     ),
 ];
 
