@@ -1,4 +1,4 @@
-pub mod auto_gameflow;
+pub mod auto_accept;
 pub mod auto_reply;
 pub mod auto_select;
 pub mod keyboard;
