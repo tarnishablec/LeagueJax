@@ -17,6 +17,7 @@ import { OngoingGameShard } from "./ongoing-game/manifest";
 import { SettingsShard } from "./settings/manifest";
 import { ShellShard } from "./shell/manifest";
 import { ToolsShard } from "./tools/manifest";
+import { TrayShard } from "./tray/manifest";
 import { UpdaterFeature } from "./updater/manifest";
 
 export interface RenderedSlot {
@@ -90,6 +91,7 @@ export const initializeWebShards = async (): Promise<void> => {
       .register(new SettingsShard())
       .register(new UpdaterFeature())
       .register(new ShellShard())
+      .register(new TrayShard())
       .register(new MiniShard())
       .register(new HistoryShard())
       .register(new OngoingGameShard())

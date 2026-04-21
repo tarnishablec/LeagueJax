@@ -6,6 +6,7 @@ import {
   type Language,
   SYSTEM_LANGUAGE_SETTING_ID,
 } from "@/features/settings/store/general";
+import { TrayShard } from "@/features/tray/manifest";
 import "./styles/theme.css";
 import "./styles/global.css";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -33,6 +34,7 @@ async function bootstrap(): Promise<void> {
       settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? "zh-CN";
     logger.info({ language }, "Initializing i18n resources");
     await initializeI18n(getMergedI18nResources(), language);
+    await getJaxRuntime().getShard(TrayShard).initialize();
 
     root.render(
       <React.StrictMode>
