@@ -5,11 +5,12 @@ use ts_rs::TS;
 
 #[derive(TS)]
 #[ts(export, export_to = "settings.ts")]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum SettingScopeDto {
     Frontend,
     Backend,
+    #[default]
     Shared,
 }
 
@@ -25,7 +26,7 @@ pub struct SettingOptionDto {
 
 #[derive(TS)]
 #[ts(export, export_to = "settings.ts")]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SettingControlDto {
     Select,
@@ -41,12 +42,13 @@ pub enum SettingControlDto {
         max: Option<f64>,
         step: Option<f64>,
     },
+    #[default]
     Action,
 }
 
 #[derive(TS)]
 #[ts(export, export_to = "settings.ts")]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingDefinitionDto {
     pub id: String,

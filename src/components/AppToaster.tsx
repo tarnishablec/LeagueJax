@@ -1,6 +1,6 @@
 import { Toast, Toaster, type ToastOptions } from "@ark-ui/react/toast";
-import type { KeyboardEvent } from "react";
 import { X } from "lucide-react";
+import type { KeyboardEvent } from "react";
 import * as s from "./AppToaster.css";
 import { appToaster } from "./toastStore";
 

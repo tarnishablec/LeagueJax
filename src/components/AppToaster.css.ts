@@ -87,7 +87,8 @@ export const closeButton = style({
   display: "grid",
   placeItems: "center",
   color: vars.color.mutedForeground,
-  transition: "background 140ms ease, color 140ms ease, border-color 140ms ease",
+  transition:
+    "background 140ms ease, color 140ms ease, border-color 140ms ease",
   selectors: {
     "&:hover": {
       background: vars.color.accent,
