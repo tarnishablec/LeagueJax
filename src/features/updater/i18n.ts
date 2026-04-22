@@ -48,6 +48,12 @@ export const updaterI18n: Resource = {
           notes: "Release Notes",
           none: "None",
         },
+        toast: {
+          title: "Update Available",
+          description:
+            "Current version: {{currentVersion}}\nLatest version: {{latestVersion}}",
+          action: "Open Update Settings",
+        },
       },
     },
   },
@@ -98,6 +104,12 @@ export const updaterI18n: Resource = {
           notes: "更新说明",
           none: "无",
         },
+        toast: {
+          title: "发现新版本 {{latestVersion}}",
+          description:
+            "当前版本：{{currentVersion}}\n最新版本：{{latestVersion}}",
+          action: "打开更新设置",
+        },
       },
     },
   },
@@ -147,6 +159,12 @@ export const updaterI18n: Resource = {
           message: "メッセージ",
           notes: "リリースノート",
           none: "なし",
+        },
+        toast: {
+          title: "新しいバージョン {{latestVersion}} が利用可能です",
+          description:
+            "現在のバージョン: {{currentVersion}}\n最新バージョン: {{latestVersion}}",
+          action: "更新設定を開く",
         },
       },
     },
