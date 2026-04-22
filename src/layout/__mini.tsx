@@ -4,7 +4,7 @@ import { Outlet } from "react-router";
 import { MiniTitleBar } from "@/features/mini/components/MiniTitleBar.tsx";
 import { useTheme } from "@/hooks/use-theme";
 import { useWindowEffectBackgroundFallback } from "@/hooks/use-window-effect";
-import * as mini from "./mini-window.css";
+import * as mini from "./__mini.css.ts";
 
 const MINI_HOVER_SUSPENDED_ATTRIBUTE = "data-mini-hover-suspended";
 

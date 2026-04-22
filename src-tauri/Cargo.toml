@@ -52,7 +52,7 @@ sled = { workspace = true }
 snafu = { workspace = true, features = ["backtrace"] }
 windows = { workspace = true, features = ["Win32_System_Console"] }
 strum = { workspace = true, features = ["derive"] }
-tauri-plugin-process = "2"
+tauri-plugin-process = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full", "test-util"] }

@@ -4,7 +4,7 @@ import { createHashRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { SWRConfig } from "swr";
 import { getRouteContributions } from "@/features/registry";
-import { MiniWindowLayout } from "@/layout/__mini";
+import { MiniWindowLayout } from "@/layout/__mini.css.ts";
 import { MainWindowLayout } from "@/layout/__root";
 import type { RouteContribution } from "@/runtime/web-contract";
 
