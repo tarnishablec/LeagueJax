@@ -206,6 +206,7 @@ pub fn run() {
             lcu_get_platform_config_namespaces,
             lcu_get_help,
             toggle_mini_window,
+            set_mini_pin,
             execute_setting_action,
             get_updater_state,
             run_updater_action
@@ -246,6 +247,7 @@ pub fn run() {
                     db_path,
                 )))
                 .register(Arc::new(shards::settings::SettingsShard::new()))
+                .register(Arc::new(shards::settings_bridge::SettingsBridgeShard::new()))
                 .register(Arc::new(shards::window_effect::WindowEffectShard::new()))
                 .register(Arc::new(shards::mini_window::MiniWindowShard::new()))
                 .register(Arc::new(shards::log::LogShard::new()))
