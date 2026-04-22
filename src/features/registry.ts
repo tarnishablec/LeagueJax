@@ -1,6 +1,5 @@
-import type { Resource } from "i18next";
 import type React from "react";
-import { entries, mergeDeep, sortBy } from "remeda";
+import { sortBy } from "remeda";
 import { AppError } from "@/infra/errors";
 import { createLogger } from "@/infra/logger";
 import { Jax } from "@/jax";
@@ -12,6 +11,7 @@ import type {
 } from "@/runtime/web-contract";
 import { AutomationShard } from "./automation/manifest";
 import { HistoryShard } from "./history/manifest";
+import { I18nShard } from "./i18n/manifest";
 import { MiniShard } from "./mini/manifest";
 import { OngoingGameShard } from "./ongoing-game/manifest";
 import { SettingsShard } from "./settings/manifest";
@@ -89,6 +89,7 @@ export const initializeWebShards = async (): Promise<void> => {
     logger.info("Initializing web shards");
     const runtime = new Jax()
       .register(new SettingsShard())
+      .register(new I18nShard())
       .register(new UpdaterFeature())
       .register(new ShellShard())
       .register(new TrayShard())
@@ -193,22 +194,4 @@ export const getSidebarSlots = (
     order: slot.order ?? 99,
     node: slot.render(context),
   }));
-};
-
-export const getMergedI18nResources = (): Resource => {
-  const merged: Resource = {};
-
-  for (const shard of listWebShards()) {
-    const resources = shard.i18nResources?.();
-    if (!resources) {
-      continue;
-    }
-
-    for (const [locale, bundle] of entries(resources)) {
-      const localeTarget = merged[locale] ?? {};
-      merged[locale] = mergeDeep(localeTarget, bundle);
-    }
-  }
-
-  return merged;
 };

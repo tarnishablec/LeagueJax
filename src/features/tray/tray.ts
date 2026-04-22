@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Image } from "@tauri-apps/api/image";
-import { Menu } from "@tauri-apps/api/menu";
+import { Menu, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { resolveResource } from "@tauri-apps/api/path";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -11,6 +11,7 @@ const TRAY_ID = "main-tray";
 const TRAY_ICON_RESOURCE = "icons/icon.ico";
 const TRAY_TOOLTIP = "LeagueJax";
 const TOGGLE_MINI_WINDOW_ID = "toggle-mini-window";
+const QUIT_APP_ID = "quit-application";
 
 const logger = createLogger("tray");
 
@@ -78,16 +79,28 @@ export class TrayController {
       return;
     }
 
+    const separator = await PredefinedMenuItem.new({ item: "Separator" });
     const nextMenu = await Menu.new({
       items: [
         {
           id: TOGGLE_MINI_WINDOW_ID,
           text: i18n.t("tray.toggleMiniWindow", {
             lng: language,
-            defaultValue: "Toggle Mini Window",
+            defaultValue: "Mini Window",
           }),
           action: () => {
             void invoke("toggle_mini_window");
+          },
+        },
+        separator,
+        {
+          id: QUIT_APP_ID,
+          text: i18n.t("tray.quit", {
+            lng: language,
+            defaultValue: "Quit",
+          }),
+          action: () => {
+            void invoke("quit_application");
           },
         },
       ],

@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 use crate::error::AppError;
 use crate::shards::tauri_host::TauriHost;
@@ -41,11 +41,7 @@ impl MiniWindowShard {
         }
     }
 
-    pub fn toggle(&self) -> Result<(), AppError> {
-        let _lock = self
-            .toggle_lock
-            .lock()
-            .map_err(|_| AppError::MutexPoisoned)?;
+    fn ensure_window(&self) -> Result<WebviewWindow, AppError> {
         let host = self
             .host
             .get()
@@ -53,25 +49,7 @@ impl MiniWindowShard {
         let app = &host.app;
 
         if let Some(window) = app.get_webview_window(MINI_WINDOW_LABEL) {
-            let is_visible = window.is_visible().map_err(|error| {
-                AppError::other(format!("failed to check mini window visibility: {error}"))
-            })?;
-
-            if is_visible {
-                window.hide().map_err(|error| {
-                    AppError::other(format!("failed to hide mini window: {error}"))
-                })?;
-            } else {
-                window.show().map_err(|error| {
-                    AppError::other(format!("failed to show mini window: {error}"))
-                })?;
-                window.set_focus().map_err(|error| {
-                    AppError::other(format!("failed to focus mini window: {error}"))
-                })?;
-                self.try_apply_window_effect(&window);
-            }
-
-            return Ok(());
+            return Ok(window);
         }
 
         let window = WebviewWindowBuilder::new(
@@ -86,10 +64,40 @@ impl MiniWindowShard {
         .transparent(true)
         .maximizable(false)
         .resizable(true)
+        .visible(false)
+        .focused(false)
         .build()
         .map_err(|error| AppError::other(format!("failed to create mini window: {error}")))?;
 
         self.try_apply_window_effect(&window);
+
+        Ok(window)
+    }
+
+    pub fn toggle(&self) -> Result<(), AppError> {
+        let _lock = self
+            .toggle_lock
+            .lock()
+            .map_err(|_| AppError::MutexPoisoned)?;
+        let window = self.ensure_window()?;
+        let is_visible = window.is_visible().map_err(|error| {
+            AppError::other(format!("failed to check mini window visibility: {error}"))
+        })?;
+
+        if is_visible {
+            window.hide().map_err(|error| {
+                AppError::other(format!("failed to hide mini window: {error}"))
+            })?;
+        } else {
+            window.show().map_err(|error| {
+                AppError::other(format!("failed to show mini window: {error}"))
+            })?;
+            window.set_focus().map_err(|error| {
+                AppError::other(format!("failed to focus mini window: {error}"))
+            })?;
+            self.try_apply_window_effect(&window);
+        }
+
         Ok(())
     }
 }
@@ -114,6 +122,9 @@ impl Shard for MiniWindowShard {
         if self.window_effect.set(window_effect).is_err() {
             tracing::warn!("MiniWindowShard window effect shard was already initialized");
         }
+
+        self.ensure_window()
+            .map_err(|error| -> Box<dyn std::error::Error + Send + Sync> { Box::new(error) })?;
 
         Ok(())
     }

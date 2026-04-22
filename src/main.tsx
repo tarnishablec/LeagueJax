@@ -2,21 +2,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { SettingsProvider } from "@/features/settings/context";
 import { SettingsShard } from "@/features/settings/manifest";
-import {
-  type Language,
-  SYSTEM_LANGUAGE_SETTING_ID,
-} from "@/features/settings/store/general";
-import { TrayShard } from "@/features/tray/manifest";
 import "./styles/theme.css";
 import "./styles/global.css";
 import "react-loading-skeleton/dist/skeleton.css";
-import { initializeI18n } from "@/i18n";
 import App from "./App";
-import {
-  getJaxRuntime,
-  getMergedI18nResources,
-  initializeWebShards,
-} from "./features/registry";
+import { getJaxRuntime, initializeWebShards } from "./features/registry";
 import { toErrorMessage } from "./infra/errors";
 import { createLogger } from "./infra/logger";
 
@@ -30,11 +20,6 @@ async function bootstrap(): Promise<void> {
     logger.info("Starting app bootstrap");
     await initializeWebShards();
     const settings = getJaxRuntime().getShard(SettingsShard);
-    const language =
-      settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? "zh-CN";
-    logger.info({ language }, "Initializing i18n resources");
-    await initializeI18n(getMergedI18nResources(), language);
-    await getJaxRuntime().getShard(TrayShard).initialize();
 
     root.render(
       <React.StrictMode>

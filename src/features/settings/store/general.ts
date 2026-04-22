@@ -1,4 +1,3 @@
-﻿import i18n from "i18next";
 import { z } from "zod";
 import type { SettingsShardApi } from "@/features/settings/types";
 import { setting, settings } from "./index";
@@ -23,7 +22,7 @@ class GeneralSettings {
       {
         value: "zh-CN",
         labelKey: "settings.language.zhCN",
-        displayLabel: "\u7b80\u4f53\u4e2d\u6587",
+        displayLabel: "简体中文",
       },
       {
         value: "en",
@@ -33,15 +32,11 @@ class GeneralSettings {
       {
         value: "ja-JP",
         labelKey: "settings.language.jaJP",
-        displayLabel: "\u65e5\u672c\u8a9e",
+        displayLabel: "日本語",
       },
     ],
     order: 10,
-    onSet: (next) => {
-      if (typeof next === "string") {
-        void i18n.changeLanguage(next);
-      }
-    },
+    onSet: () => {},
   })
   public language: Language = "zh-CN";
 }
