@@ -24,3 +24,12 @@ export const controls = style({
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
 });
+
+export const windowButton = style({
+  selectors: {
+    ':root[data-mini-hover-suspended="true"] &:hover': {
+      background: "transparent",
+      color: `oklch(from ${vars.color.foreground} l c h / 0.7)`,
+    },
+  },
+});

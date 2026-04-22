@@ -80,11 +80,27 @@ impl MiniWindowShard {
             .lock()
             .map_err(|_| AppError::MutexPoisoned)?;
         let window = self.ensure_window()?;
+        let is_minimized = window.is_minimized().map_err(|error| {
+            AppError::other(format!(
+                "failed to check mini window minimized state: {error}"
+            ))
+        })?;
         let is_visible = window.is_visible().map_err(|error| {
             AppError::other(format!("failed to check mini window visibility: {error}"))
         })?;
 
-        if is_visible {
+        if is_minimized {
+            window.unminimize().map_err(|error| {
+                AppError::other(format!("failed to unminimize mini window: {error}"))
+            })?;
+            window
+                .show()
+                .map_err(|error| AppError::other(format!("failed to show mini window: {error}")))?;
+            window.set_focus().map_err(|error| {
+                AppError::other(format!("failed to focus mini window: {error}"))
+            })?;
+            self.try_apply_window_effect(&window);
+        } else if is_visible {
             window
                 .hide()
                 .map_err(|error| AppError::other(format!("failed to hide mini window: {error}")))?;
