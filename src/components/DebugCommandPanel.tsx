@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { RawMatchSummariesResponse } from "@/bindings/matches.ts";
+import { showUpdateSettingsToast } from "@/features/updater/toasts";
 import type { HistoryTab } from "@/stores/tabs";
 import { useTabStore } from "@/stores/tabs";
 import * as s from "./DebugCommandPanel.css";
@@ -195,11 +197,30 @@ const EVENT_LISTENERS: EventListener[] = [
 ];
 
 export function DebugCommandPanel() {
+  const { t } = useTranslation();
   const { tabs, activeTabId } = useTabStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const debugCommands = useMemo(
-    () => buildDebugCommands(activeTab),
-    [activeTab],
+    () => [
+      ...buildDebugCommands(activeTab),
+      {
+        id: "test-update-toast",
+        label: "test_update_toast",
+        run: async () => {
+          showUpdateSettingsToast({
+            id: `debug:update-toast:${Date.now()}`,
+            title: t("settings.update.status.updateAvailable"),
+          });
+
+          return {
+            ok: true,
+            message: "Toast triggered.",
+            target: "/settings/system",
+          };
+        },
+      },
+    ],
+    [activeTab, t],
   );
   const [open, setOpen] = useState(false);
   const [runningId, setRunningId] = useState<string | null>(null);
