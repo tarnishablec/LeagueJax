@@ -14,7 +14,9 @@ export function MiniTitleBar() {
         <button
           type="button"
           aria-label="Minimize"
-          className={trafficButton({ variant: "default" })}
+          className={[trafficButton({ variant: "default" }), s.windowButton]
+            .filter(Boolean)
+            .join(" ")}
           onClick={() => void getCurrentWindow().minimize()}
         >
           <MinimizeIcon />
@@ -22,7 +24,9 @@ export function MiniTitleBar() {
         <button
           type="button"
           aria-label="Close"
-          className={trafficButton({ variant: "close" })}
+          className={[trafficButton({ variant: "close" }), s.windowButton]
+            .filter(Boolean)
+            .join(" ")}
           onClick={() => void getCurrentWindow().hide()}
         >
           <CloseIcon />
