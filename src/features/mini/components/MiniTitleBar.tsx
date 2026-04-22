@@ -25,7 +25,7 @@ export function MiniTitleBar() {
           type="button"
           aria-label="Close"
           className={trafficButton({ variant: "close" })}
-          onClick={() => void appWindow.close()}
+          onClick={() => void appWindow.hide()}
         >
           <CloseIcon />
         </button>
