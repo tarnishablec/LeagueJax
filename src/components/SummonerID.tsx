@@ -7,13 +7,17 @@ export type SummonerIDStyle = {
   tagLine?: CSSProperties;
 };
 
+type SummonerIdentity = Pick<SummonerInfo, "gameName" | "tagLine">;
+
 export const SummonerID = ({
   summoner,
   styles,
 }: {
-  summoner: SummonerInfo;
+  summoner: SummonerIdentity;
   styles?: SummonerIDStyle;
 }) => {
+  const tagLine = summoner.tagLine.trim();
+
   return (
     <span
       style={{
@@ -37,19 +41,21 @@ export const SummonerID = ({
       >
         {summoner.gameName}
       </span>
-      <span
-        style={{
-          lineHeight: 1,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          fontWeight: 400,
-          color: vars.color.mutedForeground,
-          ...styles?.tagLine,
-        }}
-      >
-        #{summoner.tagLine}
-      </span>
+      {tagLine.length > 0 ? (
+        <span
+          style={{
+            lineHeight: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontWeight: 400,
+            color: vars.color.mutedForeground,
+            ...styles?.tagLine,
+          }}
+        >
+          #{tagLine}
+        </span>
+      ) : null}
     </span>
   );
 };

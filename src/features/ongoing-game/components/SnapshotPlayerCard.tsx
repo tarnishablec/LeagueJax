@@ -19,11 +19,12 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
     <article className={s.playerCard}>
       <SnapshotPlayerCardHeader
         championId={cardState.championId}
+        identity={cardState.identity}
         isBot={cardState.isBot}
         level={cardState.level}
         rankIcon={cardState.rankIcon}
         rankText={cardState.rankText}
-        summoner={cardState.summoner}
+        showRank={cardState.showRank}
       />
 
       <div className={s.playerStats}>

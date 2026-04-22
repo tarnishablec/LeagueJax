@@ -5,15 +5,17 @@ import * as s from "./OngoingGameCards.css.ts";
 
 type SnapshotPlayerCardHeaderProps = {
   championId: number | null;
+  identity?: Pick<SummonerInfo, "gameName" | "tagLine">;
   isBot: boolean;
   level: number;
   rankIcon: string;
   rankText: string;
-  summoner?: SummonerInfo;
+  showRank: boolean;
 };
 
 export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
-  const { championId, isBot, level, rankIcon, rankText, summoner } = props;
+  const { championId, identity, isBot, level, rankIcon, rankText, showRank } =
+    props;
 
   return (
     <div className={s.playerHeader}>
@@ -32,26 +34,34 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
             <span className={s.botLabel}>BOT</span>
             <div></div>
           </>
-        ) : summoner ? (
+        ) : (
           <>
-            <SummonerID
-              summoner={summoner}
-              styles={{
-                gameName: {
-                  fontSize: "0.75rem",
-                },
-                tagLine: {
-                  fontSize: "0.7rem",
-                },
-              }}
-            />
+            {identity ? (
+              <SummonerID
+                summoner={identity}
+                styles={{
+                  gameName: {
+                    fontSize: "0.75rem",
+                  },
+                  tagLine: {
+                    fontSize: "0.7rem",
+                  },
+                }}
+              />
+            ) : (
+              <div></div>
+            )}
 
-            <div className={s.rankRow}>
-              <img src={rankIcon} alt="" className={s.rankMiniIcon} />
-              <span className={s.rankText}>{rankText}</span>
-            </div>
+            {showRank ? (
+              <div className={s.rankRow}>
+                <img src={rankIcon} alt="" className={s.rankMiniIcon} />
+                <span className={s.rankText}>{rankText}</span>
+              </div>
+            ) : (
+              <div></div>
+            )}
           </>
-        ) : null}
+        )}
       </div>
     </div>
   );
