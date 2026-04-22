@@ -23,6 +23,7 @@ use crate::commands::map::*;
 use crate::commands::mini_window::*;
 use crate::commands::ongoing_game::*;
 use crate::commands::platform::*;
+use crate::commands::quit::*;
 use crate::commands::settings::*;
 use crate::commands::shards::*;
 use crate::commands::updater::*;
@@ -205,6 +206,7 @@ pub fn run() {
             lcu_get_platform_config_namespaces,
             lcu_get_help,
             toggle_mini_window,
+            quit_application,
             execute_setting_action,
             get_updater_state,
             run_updater_action
@@ -259,7 +261,6 @@ pub fn run() {
                 .register(Arc::new(shards::saved_player::SavedPlayerShard::new()))
                 .register(Arc::new(shards::statistics::StatisticsShard::new()))
                 .register(Arc::new(shards::keyboard::KeyboardShard::new()))
-                .register(Arc::new(shards::tray::TrayShard::new()))
                 .register(Arc::new(shards::updater::UpdaterShard::new()))
                 .build()
                 .expect("Jax failed to build: check logs for details");
