@@ -45,7 +45,7 @@ maokai-runner = { workspace = true }
 maokai-tree = { workspace = true }
 maokai-machine = { workspace = true, features = ["tokio-mt-task"] }
 maokai-gears = { workspace = true }
-windows-sys = { workspace = true, features = ["Win32_System_Threading", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_WindowsProgramming", "Win32_System_LibraryLoader", "Wdk_System_Threading", "Win32_System_Memory", "Win32_Graphics_Dwm", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { workspace = true, features = ["Win32_Graphics_Gdi", "Win32_Graphics", "Win32_System_Threading", "Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_WindowsProgramming", "Win32_System_LibraryLoader", "Wdk_System_Threading", "Win32_System_Memory", "Win32_Graphics_Dwm", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
 ntapi = { workspace = true }
 ts-rs = { workspace = true, features = ["no-serde-warnings"] }
 sled = { workspace = true }
