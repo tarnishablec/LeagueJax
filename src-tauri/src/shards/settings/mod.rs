@@ -1,7 +1,8 @@
 pub mod types;
 
 use self::types::{
-    SettingControlDto, SettingDefinitionDto, SettingsBootstrapDto, SettingsSnapshotDto,
+    SettingControlDto, SettingDefinitionDto, SettingsBootstrapDto, SettingsChangedEventDto,
+    SettingsSnapshotDto,
 };
 use crate::error::AppError;
 use crate::shards::persistence_sled::PersistenceSled;
@@ -14,12 +15,13 @@ use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, OnceLock, RwLock};
-use tokio::sync::watch;
+use tokio::sync::{broadcast, watch};
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 const SETTINGS_TREE: &str = "settings";
 const SETTINGS_SNAPSHOT_KEY: &[u8] = b"snapshot";
+const SETTINGS_CHANGE_CHANNEL_CAPACITY: usize = 64;
 const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 6] = [
     (
         "general.preferences.language",
@@ -41,7 +43,6 @@ const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 6] = [
 #[derive(Debug, Clone)]
 pub struct ApplySettingsOutcome {
     pub snapshot: SettingsSnapshotDto,
-    pub changes: BTreeMap<String, Value>,
 }
 
 #[derive(Clone)]
@@ -112,10 +113,14 @@ pub struct SettingsShard {
     snapshot: RwLock<SettingsSnapshotDto>,
     watch_senders: RwLock<BTreeMap<String, watch::Sender<Value>>>,
     action_handlers: RwLock<BTreeMap<String, ActionHandler>>,
+    change_events: broadcast::Sender<SettingsChangedEventDto>,
 }
 
 impl SettingsShard {
     pub fn new() -> Self {
+        let (change_events, _change_events_rx) =
+            broadcast::channel(SETTINGS_CHANGE_CHANNEL_CAPACITY);
+
         Self {
             db: OnceLock::new(),
             definitions: RwLock::new(BTreeMap::new()),
@@ -124,6 +129,7 @@ impl SettingsShard {
             }),
             watch_senders: RwLock::new(BTreeMap::new()),
             action_handlers: RwLock::new(BTreeMap::new()),
+            change_events,
         }
     }
 
@@ -271,6 +277,10 @@ impl SettingsShard {
         })
     }
 
+    pub fn subscribe_changes(&self) -> broadcast::Receiver<SettingsChangedEventDto> {
+        self.change_events.subscribe()
+    }
+
     pub fn get_value(&self, id: &str) -> Result<Option<Value>, AppError> {
         let snapshot = self.snapshot.read().map_err(|_| AppError::MutexPoisoned)?;
         Ok(snapshot.values.get(id).cloned())
@@ -281,15 +291,25 @@ impl SettingsShard {
     }
 
     pub fn set_value(&self, id: &str, value: Value) -> Result<ApplySettingsOutcome, AppError> {
+        self.set_value_with_source(id, value, None)
+    }
+
+    pub fn set_value_with_source(
+        &self,
+        id: &str,
+        value: Value,
+        source: Option<String>,
+    ) -> Result<ApplySettingsOutcome, AppError> {
         validate_setting_id(id)?;
         let mut changes = BTreeMap::new();
         changes.insert(id.to_string(), value);
-        self.set_values(changes)
+        self.set_values_with_source(changes, source)
     }
 
-    pub fn set_values(
+    pub fn set_values_with_source(
         &self,
         changes: BTreeMap<String, Value>,
+        source: Option<String>,
     ) -> Result<ApplySettingsOutcome, AppError> {
         if changes.is_empty() {
             let snapshot = self
@@ -297,10 +317,7 @@ impl SettingsShard {
                 .read()
                 .map_err(|_| AppError::MutexPoisoned)?
                 .clone();
-            return Ok(ApplySettingsOutcome {
-                snapshot,
-                changes: BTreeMap::new(),
-            });
+            return Ok(ApplySettingsOutcome { snapshot });
         }
 
         let definitions = self
@@ -337,7 +354,6 @@ impl SettingsShard {
             if changed.is_empty() {
                 return Ok(ApplySettingsOutcome {
                     snapshot: snapshot.clone(),
-                    changes: changed,
                 });
             }
             snapshot.clone()
@@ -345,10 +361,10 @@ impl SettingsShard {
 
         self.write_snapshot_to_db(&snapshot_to_persist)?;
         self.sync_watch_senders(&changed)?;
+        self.emit_changed(changed.clone(), source);
 
         Ok(ApplySettingsOutcome {
             snapshot: snapshot_to_persist,
-            changes: changed,
         })
     }
 
@@ -414,6 +430,16 @@ impl SettingsShard {
         let (sender, _receiver) = watch::channel(initial_value);
         senders.insert(id.to_string(), sender.clone());
         Ok(sender)
+    }
+
+    fn emit_changed(&self, changes: BTreeMap<String, Value>, source: Option<String>) {
+        if changes.is_empty() {
+            return;
+        }
+
+        let _ = self
+            .change_events
+            .send(SettingsChangedEventDto { changes, source });
     }
 
     fn read_snapshot_from_db(&self) -> Result<SettingsSnapshotDto, AppError> {

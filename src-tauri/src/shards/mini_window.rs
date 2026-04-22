@@ -429,6 +429,16 @@ impl MiniWindowShard {
 
         Ok(())
     }
+
+    pub async fn set_pin_value(&self, value: Value) -> Result<(), AppError> {
+        let handle = self
+            .pin_setting
+            .get()
+            .ok_or_else(|| AppError::other("mini pin setting is not initialized"))?;
+
+        handle.set_value(value)?;
+        self.sync_follow_controller().await
+    }
 }
 
 impl Default for MiniWindowShard {
@@ -476,9 +486,7 @@ impl Shard for MiniWindowShard {
             tracing::warn!("MiniWindowShard pin_setting already initialized");
         }
 
-        let mini_window = self
-            .ensure_window()
-            .map_err(|error| -> Box<dyn std::error::Error + Send + Sync> { Box::new(error) })?;
+        let mini_window = self.ensure_window().map_err(Box::new)?;
 
         let shard_for_settings = jax.get_shard::<MiniWindowShard>().clone();
         pin_setting.spawn_watch(false, move |_value| {

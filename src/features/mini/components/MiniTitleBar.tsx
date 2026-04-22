@@ -1,6 +1,7 @@
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Pin } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { type MouseEvent, useSyncExternalStore } from "react";
 import { trafficButton } from "@/components/WindowControlButton.css.ts";
 import { CloseIcon, MinimizeIcon } from "@/components/WindowControlIcons.tsx";
 import { useSettings } from "@/features/settings/context";
@@ -21,10 +22,22 @@ function useMiniPinValue(): boolean {
 export function MiniTitleBar() {
   const settings = useSettings();
   const isPinned = useMiniPinValue();
+  const handleDragStart = async (event: MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    if (isPinned) {
+      await invoke("set_mini_pin", { enabled: false });
+    }
+
+    await getCurrentWindow().startDragging();
+  };
 
   return (
     <header className={s.header}>
-      <div data-tauri-drag-region className={s.dragZone}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: this title bar text is used as a native window drag handle, and on mouse down we may unpin the mini window before starting the Tauri drag operation */}
+      <div className={s.dragZone} onMouseDown={handleDragStart}>
         Mini
       </div>
 
