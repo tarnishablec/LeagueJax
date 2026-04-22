@@ -22,14 +22,26 @@ export const dragZone = style({
 
 export const controls = style({
   display: "grid",
-  gridTemplateColumns: "repeat(2, 1fr)",
+  gridTemplateColumns: "repeat(3, 1fr)",
 });
 
 export const windowButton = style({
   selectors: {
+    '&[aria-pressed="true"]': {
+      background: `oklch(from ${vars.color.primary} l c h / 0.14)`,
+      color: vars.color.primary,
+    },
+    '&[aria-pressed="true"]:hover': {
+      background: `oklch(from ${vars.color.primary} l c h / 0.22)`,
+      color: vars.color.primary,
+    },
     ':root[data-mini-hover-suspended="true"] &:hover': {
       background: "transparent",
       color: `oklch(from ${vars.color.foreground} l c h / 0.7)`,
+    },
+    ':root[data-mini-hover-suspended="true"] &[aria-pressed="true"]': {
+      background: `oklch(from ${vars.color.primary} l c h / 0.14)`,
+      color: vars.color.primary,
     },
   },
 });

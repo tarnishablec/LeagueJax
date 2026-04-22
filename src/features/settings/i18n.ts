@@ -455,3 +455,51 @@ export const settingsI18n: Resource = {
     },
   },
 };
+/*
+const settingsI18nMutable = settingsI18n as Record<string, any>;
+
+settingsI18nMutable.en.settings.pages.mini = {
+  title: "Mini",
+};
+settingsI18nMutable.en.settings.sections.mini = {
+  preference: {
+    title: "Preference",
+  },
+};
+settingsI18nMutable.en.settings.mini = {
+  pin: {
+    label: "Pin Mini Window",
+    hint: "Keep the mini window docked to the League client while the client is available.",
+  },
+};
+
+settingsI18nMutable["zh-CN"].settings.pages.mini = {
+  title: "小窗",
+};
+settingsI18nMutable["zh-CN"].settings.sections.mini = {
+  preference: {
+    title: "偏好",
+  },
+};
+settingsI18nMutable["zh-CN"].settings.mini = {
+  pin: {
+    label: "钉住小窗",
+    hint: "启用后，只要英雄联盟客户端可用，小窗就会持续吸附在客户端右侧。",
+  },
+};
+
+settingsI18nMutable["ja-JP"].settings.pages.mini = {
+  title: "ミニ",
+};
+settingsI18nMutable["ja-JP"].settings.sections.mini = {
+  preference: {
+    title: "設定",
+  },
+};
+settingsI18nMutable["ja-JP"].settings.mini = {
+  pin: {
+    label: "ミニウィンドウを固定",
+    hint: "有効にすると、League クライアントが利用できる間はミニウィンドウを右側に吸着し続けます。",
+  },
+};
+*/

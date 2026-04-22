@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import type { ToolbarSlot, WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { MiniWindowToggleButton } from "./components/MiniWindowToggleButton";
+import { miniI18n } from "./i18n";
 
 const MiniRoute = lazy(() =>
   import("./routes/MiniRoute").then((module) => ({
@@ -45,5 +46,9 @@ export class MiniShard implements WebShard {
         routes: ["*"],
       },
     ];
+  }
+
+  public i18nResources() {
+    return miniI18n;
   }
 }
