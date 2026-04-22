@@ -3,8 +3,6 @@ import { trafficButton } from "@/components/WindowControlButton.css.ts";
 import { CloseIcon, MinimizeIcon } from "@/components/WindowControlIcons.tsx";
 import * as s from "./MiniTitleBar.css.ts";
 
-const appWindow = getCurrentWindow();
-
 export function MiniTitleBar() {
   return (
     <header className={s.header}>
@@ -17,7 +15,7 @@ export function MiniTitleBar() {
           type="button"
           aria-label="Minimize"
           className={trafficButton({ variant: "default" })}
-          onClick={() => void appWindow.minimize()}
+          onClick={() => void getCurrentWindow().minimize()}
         >
           <MinimizeIcon />
         </button>
@@ -25,7 +23,7 @@ export function MiniTitleBar() {
           type="button"
           aria-label="Close"
           className={trafficButton({ variant: "close" })}
-          onClick={() => void appWindow.hide()}
+          onClick={() => void getCurrentWindow().hide()}
         >
           <CloseIcon />
         </button>

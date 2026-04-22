@@ -26,18 +26,12 @@ const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 6] = [
         "system.preferences.language",
     ),
     ("general.preferences.theme", "system.preferences.theme"),
-    (
-        "system.logging.detailedMode",
-        "system.logging.recordToFile",
-    ),
+    ("system.logging.detailedMode", "system.logging.recordToFile"),
     (
         "ongoing.behavior.autoSwitchToGame",
         "ongoing.interaction.autoSwitchToGame",
     ),
-    (
-        "ongoing.behavior.showBots",
-        "ongoing.interaction.showBots",
-    ),
+    ("ongoing.behavior.showBots", "ongoing.interaction.showBots"),
     (
         "ongoing.behavior.matchHistoryCount",
         "ongoing.interaction.matchHistoryCount",
@@ -227,9 +221,9 @@ impl SettingsShard {
                 .read()
                 .map_err(|_| AppError::MutexPoisoned)?;
 
-            let handler = handlers.get(id).ok_or_else(|| {
-                AppError::other(format!("No action handler registered for {id}"))
-            })?;
+            let handler = handlers
+                .get(id)
+                .ok_or_else(|| AppError::other(format!("No action handler registered for {id}")))?;
 
             handler()
         };

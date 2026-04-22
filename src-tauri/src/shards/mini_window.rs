@@ -85,13 +85,13 @@ impl MiniWindowShard {
         })?;
 
         if is_visible {
-            window.hide().map_err(|error| {
-                AppError::other(format!("failed to hide mini window: {error}"))
-            })?;
+            window
+                .hide()
+                .map_err(|error| AppError::other(format!("failed to hide mini window: {error}")))?;
         } else {
-            window.show().map_err(|error| {
-                AppError::other(format!("failed to show mini window: {error}"))
-            })?;
+            window
+                .show()
+                .map_err(|error| AppError::other(format!("failed to show mini window: {error}")))?;
             window.set_focus().map_err(|error| {
                 AppError::other(format!("failed to focus mini window: {error}"))
             })?;

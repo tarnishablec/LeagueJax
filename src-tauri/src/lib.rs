@@ -23,7 +23,6 @@ use crate::commands::map::*;
 use crate::commands::mini_window::*;
 use crate::commands::ongoing_game::*;
 use crate::commands::platform::*;
-use crate::commands::quit::*;
 use crate::commands::settings::*;
 use crate::commands::shards::*;
 use crate::commands::updater::*;
@@ -167,6 +166,7 @@ fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -206,7 +206,6 @@ pub fn run() {
             lcu_get_platform_config_namespaces,
             lcu_get_help,
             toggle_mini_window,
-            quit_application,
             execute_setting_action,
             get_updater_state,
             run_updater_action

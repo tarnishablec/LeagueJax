@@ -25,7 +25,9 @@ pub async fn machine_loop(
     machine.init(t.idle);
 
     loop {
-        let Some(input) = input_rx.recv().await else { break };
+        let Some(input) = input_rx.recv().await else {
+            break;
+        };
         machine.post(input);
         machine.advance();
     }

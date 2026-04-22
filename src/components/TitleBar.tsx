@@ -1,10 +1,9 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
 import * as s from "./TitleBar.css";
 import { trafficButton } from "./WindowControlButton.css";
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from "./WindowControlIcons";
-
-const appWindow = getCurrentWindow();
 
 export function Toolbar({ children }: { children?: React.ReactNode }) {
   return (
@@ -42,7 +41,7 @@ export function TitleBar({
           type="button"
           aria-label="Minimize"
           className={trafficButton({ variant: "default" })}
-          onClick={() => void appWindow.minimize()}
+          onClick={() => void getCurrentWindow().minimize()}
         >
           <MinimizeIcon />
         </button>
@@ -50,7 +49,7 @@ export function TitleBar({
           type="button"
           aria-label="Maximize / Restore"
           className={trafficButton({ variant: "default" })}
-          onClick={() => void appWindow.toggleMaximize()}
+          onClick={() => void getCurrentWindow().toggleMaximize()}
         >
           <MaximizeIcon />
         </button>
@@ -58,7 +57,7 @@ export function TitleBar({
           type="button"
           aria-label="Close"
           className={trafficButton({ variant: "close" })}
-          onClick={() => void appWindow.close()}
+          onClick={() => void exit()}
         >
           <CloseIcon />
         </button>
