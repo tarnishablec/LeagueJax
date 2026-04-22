@@ -4,6 +4,7 @@ import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
+import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import {
@@ -53,6 +54,21 @@ function normalizeChampionId(slot: PlayerSlot): number | null {
   const championId =
     slot.championId > 0 ? slot.championId : slot.championPickIntent;
   return championId > 0 ? championId : null;
+}
+
+function resolveSummonerIdentity(
+  slot: PlayerSlot,
+  summoner: SummonerInfo | undefined,
+) {
+  const gameName = summoner?.gameName.trim() || slot.gameName.trim();
+  if (gameName.length === 0) {
+    return undefined;
+  }
+
+  return {
+    gameName,
+    tagLine: summoner?.tagLine.trim() || slot.tagLine.trim(),
+  };
 }
 
 export function useSnapshotPlayerCardState(
@@ -120,6 +136,10 @@ export function useSnapshotPlayerCardState(
 
   const rankEntry = getBestRankEntry(rankedQuery.data);
   const rankIcon = useRankIcon(resolveRankTierForIcon(rankEntry), true);
+  const identity = useMemo(
+    () => resolveSummonerIdentity(slot, summoner),
+    [slot, summoner],
+  );
 
   const winRateStat = useMemo(
     () => computeWinRateStat(recentGames),
@@ -138,10 +158,11 @@ export function useSnapshotPlayerCardState(
     noHistoryText: t("ongoingGame.noHistory", {
       defaultValue: "No match history",
     }),
+    identity,
     rankIcon,
     rankText: formatRankEntryLabel(t, rankEntry),
     recentGames,
-    summoner,
+    showRank: !isBot && Boolean(puuid),
     winRateStat,
   };
 }
