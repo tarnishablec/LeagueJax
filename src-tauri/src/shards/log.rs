@@ -126,9 +126,7 @@ impl Shard for LogShard {
                     }
 
                     tauri_plugin_opener::reveal_item_in_dir(&log_dir).map_err(|e| {
-                        crate::error::AppError::other(format!(
-                            "Failed to open log directory: {e}"
-                        ))
+                        crate::error::AppError::other(format!("Failed to open log directory: {e}"))
                     })?;
 
                     Ok(Value::Null)

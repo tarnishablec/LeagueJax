@@ -11,7 +11,9 @@ use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::SgpShard;
 
 use super::manager::{MatchHistoryModeSetting, OngoingGameSettings};
-use super::types::{OngoingGameEvent, OngoingGameInput, OngoingGameMatchHistoryState, OngoingGameSummonerState};
+use super::types::{
+    OngoingGameEvent, OngoingGameInput, OngoingGameMatchHistoryState, OngoingGameSummonerState,
+};
 
 // ── Broadcast channels ──────────────────────────────────────────────────
 
