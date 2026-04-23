@@ -5,6 +5,7 @@ import type { RouteObject } from "react-router";
 import type { Shard } from "@/jax";
 
 export type NavSection = "main" | "bottom";
+export type RouteLayout = "main" | "mini";
 
 export interface NavItem {
   to: string;
@@ -17,6 +18,7 @@ export interface NavItem {
 export interface RouteContribution
   extends Pick<RouteObject, "path" | "index" | "element"> {
   children?: RouteContribution[];
+  layout?: RouteLayout;
   order?: number;
 }
 

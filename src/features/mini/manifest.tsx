@@ -1,5 +1,9 @@
 import { lazy, Suspense } from "react";
-import type { ToolbarSlot, WebShard } from "@/runtime/web-contract";
+import type {
+  RouteContribution,
+  ToolbarSlot,
+  WebShard,
+} from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { MiniWindowToggleButton } from "./components/MiniWindowToggleButton";
 import { miniI18n } from "./i18n";
@@ -23,10 +27,11 @@ export class MiniShard implements WebShard {
     return [];
   }
 
-  public routes() {
+  public routes(): RouteContribution[] {
     return [
       {
-        path: "mini",
+        index: true,
+        layout: "mini",
         element: (
           <Suspense fallback={null}>
             <MiniRoute />
