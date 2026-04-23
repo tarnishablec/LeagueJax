@@ -37,8 +37,8 @@
     "@vanilla-extract/vite-plugin": "^5.2.2",
     "@xyflow/react": "^12.10.2",
     "graphology": "^0.26.0",
-    "i18next": "^26.0.6",
-    "lucide-react": "^1.8.0",
+    "i18next": "^26.0.7",
+    "lucide-react": "^1.9.0",
     "pino": "^10.3.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
@@ -55,7 +55,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.12",
+    "@biomejs/biome": "^2.4.13",
     "@rollup/plugin-swc": "^0.4.0",
     "@swc/core": "^1.15.30",
     "@tauri-apps/cli": "^2.10.1",
@@ -65,6 +65,6 @@
     "@vitejs/plugin-react": "^6.0.1",
     "graphology-types": "^0.24.8",
     "typescript": "~6.0.3",
-    "vite": "^8.0.9"
+    "vite": "^8.0.10"
   }
 }
