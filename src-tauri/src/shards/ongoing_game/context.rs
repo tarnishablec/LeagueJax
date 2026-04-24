@@ -1,42 +1,77 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use maokai_gears::ops::task::TaskHandle;
 use tokio::sync::{broadcast, mpsc};
 
 use crate::shards::lcu::concepts::champ_select_session::{ChampSelectSessionData, TeamMember};
 use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
+use crate::shards::lcu::concepts::matchmaking_ready_check::MatchmakingReadyCheckData;
+use crate::shards::lcu::concepts::matchmaking_search::{
+    MatchmakingSearchData, MatchmakingSearchState,
+};
 use crate::shards::lcu::concepts::teambuilder_tbd_game::TeambuilderTbdGamePayload;
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::SgpShard;
 
 use super::manager::{MatchHistoryModeSetting, OngoingGameSettings};
 use super::types::{
-    OngoingGameEvent, OngoingGameInput, OngoingGameMatchHistoryState, OngoingGameSummonerState,
+    OngoingGameEvent, OngoingGameInput, OngoingGameMatchHistoryState, OngoingGamePhase,
+    OngoingGameSummonerState, OngoingGameUpdated,
 };
 
-// ── Broadcast channels ──────────────────────────────────────────────────
+fn idle_snapshot() -> OngoingGameUpdated {
+    OngoingGameUpdated {
+        phase: OngoingGamePhase::Idle,
+        lifecycle_game_id: None,
+        match_history_tag: None,
+        effective_queue_id: None,
+        effective_mode_tag: None,
+        match_histories_pending: false,
+        summoner_states: Vec::new(),
+        history_states: Vec::new(),
+        gameflow_session: None,
+        matchmaking_search: None,
+        ready_check: None,
+        champ_select_session: None,
+        team_members: Vec::new(),
+    }
+}
 
 pub(crate) struct Channels {
     pub(crate) ongoing_tx: broadcast::Sender<OngoingGameEvent>,
+    snapshot: RwLock<OngoingGameUpdated>,
 }
 
 impl Channels {
     pub(crate) fn new() -> Self {
         let (ongoing_tx, _) = broadcast::channel(64);
-        Self { ongoing_tx }
+        Self {
+            ongoing_tx,
+            snapshot: RwLock::new(idle_snapshot()),
+        }
     }
 
     pub(crate) fn broadcast(&self, event: OngoingGameEvent) {
+        if let OngoingGameEvent::Updated(payload) = &event {
+            if let Ok(mut snapshot) = self.snapshot.write() {
+                *snapshot = payload.clone();
+            }
+        }
         let _ = self.ongoing_tx.send(event);
     }
 
     pub(crate) fn subscribe(&self) -> broadcast::Receiver<OngoingGameEvent> {
         self.ongoing_tx.subscribe()
     }
-}
 
-// ── Machine context ─────────────────────────────────────────────────────
+    pub(crate) fn snapshot(&self) -> OngoingGameUpdated {
+        self.snapshot
+            .read()
+            .map(|snapshot| snapshot.clone())
+            .unwrap_or_else(|_| idle_snapshot())
+    }
+}
 
 #[derive(Clone)]
 pub struct OngoingGameCtx {
@@ -46,6 +81,8 @@ pub struct OngoingGameCtx {
     // Roster
     pub team_members: Vec<TeamMember>,
     pub gameflow_session: Option<GameflowSessionData>,
+    pub matchmaking_search: Option<MatchmakingSearchData>,
+    pub ready_check: Option<MatchmakingReadyCheckData>,
     pub champ_select_session: Option<ChampSelectSessionData>,
     pub teambuilder_payload: Option<TeambuilderTbdGamePayload>,
     pub effective_queue_id: Option<u64>,
@@ -69,6 +106,7 @@ pub struct OngoingGameCtx {
     // Infrastructure
     pub channels: Arc<Channels>,
     pub input_tx: mpsc::UnboundedSender<OngoingGameInput>,
+    pub current_focus_pid: Option<u32>,
 }
 
 impl OngoingGameCtx {
@@ -82,6 +120,8 @@ impl OngoingGameCtx {
             lifecycle_game_id: None,
             team_members: Vec::new(),
             gameflow_session: None,
+            matchmaking_search: None,
+            ready_check: None,
             champ_select_session: None,
             teambuilder_payload: None,
             effective_queue_id: None,
@@ -95,6 +135,25 @@ impl OngoingGameCtx {
             settings,
             channels: Arc::new(Channels::new()),
             input_tx,
+            current_focus_pid: None,
         }
+    }
+
+    pub fn effective_ready_check(&self) -> Option<&MatchmakingReadyCheckData> {
+        self.ready_check.as_ref().or_else(|| {
+            self.matchmaking_search
+                .as_ref()
+                .map(|search| &search.ready_check)
+        })
+    }
+
+    pub fn is_matchmaking_search_active(&self) -> bool {
+        self.matchmaking_search.as_ref().is_some_and(|search| {
+            search.is_currently_in_queue
+                || matches!(
+                    search.search_state,
+                    MatchmakingSearchState::Searching | MatchmakingSearchState::Found
+                )
+        })
     }
 }

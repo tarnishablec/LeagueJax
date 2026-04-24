@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc};
 
+use crate::shards::lcu::concepts::EventType;
 use crate::shards::lcu::LcuShard;
 use crate::shards::settings::SettingHandle;
 use crate::shards::sgp::SgpShard;
 
 use super::context::{Channels, OngoingGameCtx};
 use super::runtime::machine_loop;
-use super::types::{OngoingGameEvent, OngoingGameInput};
+use super::types::{OngoingGameEvent, OngoingGameInput, OngoingGameUpdated};
 
 pub(crate) const DEFAULT_MATCH_HISTORY_COUNT: u32 = 50;
 const QUEUE_MODE_CURRENT_VALUE: &str = "__current_mode__";
@@ -92,6 +93,10 @@ impl OngoingGameManager {
         self.channels.subscribe()
     }
 
+    pub fn snapshot(&self) -> OngoingGameUpdated {
+        self.channels.snapshot()
+    }
+
     /// Subscribe to LCU focus and WS events. Must be called after LcuShard is initialized.
     pub fn start(&self, lcu_shard: &Arc<LcuShard>) {
         let Some(lcu_manager) = lcu_shard.manager() else {
@@ -121,6 +126,29 @@ impl OngoingGameManager {
                         let _ = tx.send(OngoingGameInput::GameflowSessionUpdated(Box::new(
                             payload.data,
                         )));
+                    }
+                    LcuWsEvent::MatchmakingSearch(payload) => {
+                        match (payload.event_type, payload.data) {
+                            (EventType::Delete, _) | (_, None) => {
+                                let _ = tx.send(OngoingGameInput::MatchmakingSearchDeleted);
+                            }
+                            (_, Some(data)) => {
+                                let _ = tx.send(OngoingGameInput::MatchmakingSearchUpdated(
+                                    Box::new(data),
+                                ));
+                            }
+                        }
+                    }
+                    LcuWsEvent::MatchmakingReadyCheck(payload) => {
+                        match (payload.event_type, payload.data) {
+                            (EventType::Delete, _) | (_, None) => {
+                                let _ = tx.send(OngoingGameInput::ReadyCheckDeleted);
+                            }
+                            (_, Some(data)) => {
+                                let _ =
+                                    tx.send(OngoingGameInput::ReadyCheckUpdated(Box::new(data)));
+                            }
+                        }
                     }
                     LcuWsEvent::ChampSelectSession(payload) => {
                         let _ = tx.send(OngoingGameInput::ChampSelectSessionUpdated(Box::new(

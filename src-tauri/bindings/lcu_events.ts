@@ -3,20 +3,20 @@ import type { LanePosition } from "./lane";
 import type { LcuMapProperties, MapSpellRule } from "./maps";
 
 export type Action = {
-  actorCellId: number;
-  championId: number;
+  actorCellId: bigint;
+  championId: bigint;
   completed: boolean;
-  duration: number;
-  id: number;
+  duration: bigint;
+  id: bigint;
   isAllyAction: boolean;
   isInProgress: boolean;
-  pickTurn: number;
+  pickTurn: bigint;
   type: string;
 };
 
 export type Bans = {
   myTeamBans: Array<Record<string, unknown>>;
-  numBans: number;
+  numBans: bigint;
   theirTeamBans: Array<Record<string, unknown>>;
 };
 
@@ -32,24 +32,24 @@ export type ChampSelectSessionData = {
   bans: Bans;
   benchChampions: Array<Record<string, unknown>>;
   benchEnabled: boolean;
-  boostableSkinCount: number;
+  boostableSkinCount: bigint;
   chatDetails: ChatDetails;
-  counter: number;
+  counter: bigint;
   disallowBanningTeammateHoveredChampions: boolean;
-  gameId: number;
+  gameId: bigint;
   hasSimultaneousBans: boolean;
   hasSimultaneousPicks: boolean;
   id: string;
   isCustomGame: boolean;
   isLegacyChampSelect: boolean;
   isSpectating: boolean;
-  localPlayerCellId: number;
-  lockedEventIndex: number;
+  localPlayerCellId: bigint;
+  lockedEventIndex: bigint;
   myTeam: Array<TeamMember>;
   pickOrderSwaps: Array<Swap>;
   positionSwaps: Array<Swap>;
-  queueId: number;
-  rerollsRemaining: number;
+  queueId: bigint;
+  rerollsRemaining: bigint;
   showQuitButton: boolean;
   skipChampionSelect: boolean;
   theirTeam: Array<TeamMember>;
@@ -75,7 +75,7 @@ export type GameClient = {
 };
 
 export type GameData = {
-  gameId: number;
+  gameId: bigint;
   gameName: string;
   isCustomGame: boolean;
   password: string;
@@ -88,7 +88,7 @@ export type GameData = {
 };
 
 export type GameDodge = {
-  dodgeIds: Array<number>;
+  dodgeIds: Array<bigint>;
   phase: string;
   state: string;
 };
@@ -97,21 +97,21 @@ export type GameTypeConfig = {
   advancedLearningQuests: boolean;
   allowTrades: boolean;
   banMode: string;
-  banTimeDuration: number;
+  banTimeDuration: bigint;
   battleBoost: boolean;
   crossTeamChampionPool: boolean;
   deathMatch: boolean;
   doNotRemove: boolean;
   duplicatedPick: boolean;
   exclusivePick: boolean;
-  id: number;
+  id: bigint;
   learningQuests: boolean;
-  mainPickTimerDuration: number;
-  maxAllowableBans: number;
+  mainPickTimerDuration: bigint;
+  maxAllowableBans: bigint;
   name: string;
   onboardCoopBeginner: boolean;
   pickMode: string;
-  postPickTimerDuration: number;
+  postPickTimerDuration: bigint;
   reroll: boolean;
   teamChampionPool: boolean;
 };
@@ -132,7 +132,7 @@ export type Map = {
   gameModeName: string;
   gameModeShortName: string;
   gameMutator: string;
-  id: number;
+  id: bigint;
   isRgm: boolean;
   mapStringId: string;
   name: string;
@@ -143,26 +143,23 @@ export type Map = {
   properties: LcuMapProperties;
 };
 
+export type MatchmakingDodgeData = { dodgerId: bigint; state: string };
+
+export type MatchmakingLowPriorityData = {
+  bustedLeaverAccessToken: string;
+  penalizedSummonerIds: Array<bigint>;
+  penaltyTime: number;
+  penaltyTimeRemaining: number;
+  reason: string;
+};
+
 export type MatchmakingReadyCheckData = {
-  declinerIds: Array<number>;
+  declinerIds: Array<bigint>;
   dodgeWarning: string;
   playerResponse: ReadyCheckPlayerResponse;
   state: ReadyCheckState;
   suppressUx: boolean;
   timer: number;
-};
-
-export type MatchmakingDodgeData = {
-  dodgerId: number;
-  state: string;
-};
-
-export type MatchmakingLowPriorityData = {
-  bustedLeaverAccessToken: string;
-  penalizedSummonerIds: Array<number>;
-  penaltyTime: number;
-  penaltyTimeRemaining: number;
-  reason: string;
 };
 
 export type MatchmakingSearchData = {
@@ -172,7 +169,7 @@ export type MatchmakingSearchData = {
   isCurrentlyInQueue: boolean;
   lobbyId: string;
   lowPriorityData: MatchmakingLowPriorityData;
-  queueId: number;
+  queueId: bigint;
   readyCheck: MatchmakingReadyCheckData;
   searchState: MatchmakingSearchState;
   timeInQueue: number;
@@ -208,40 +205,40 @@ export type Phase =
   | "Unknown";
 
 export type PlayerChampionSelection = {
-  championId: number;
+  championId: bigint;
   puuid: string;
-  selectedSkinIndex: number;
-  spell1Id: number;
-  spell2Id: number;
+  selectedSkinIndex: bigint;
+  spell1Id: bigint;
+  spell2Id: bigint;
 };
 
 export type Queue = {
-  allowablePremadeSizes: Array<number>;
+  allowablePremadeSizes: Array<bigint>;
   areFreeChampionsAllowed: boolean;
   assetMutator: string;
   category: string;
-  championsRequiredToPlay: number;
+  championsRequiredToPlay: bigint;
   description: string;
   detailedDescription: string;
   gameMode: string;
   gameTypeConfig: GameTypeConfig;
-  id: number;
+  id: bigint;
   isBotHonoringAllowed: boolean;
   isCustom: boolean;
   isRanked: boolean;
   isTeamBuilderManaged: boolean;
-  lastToggleOffTime: number;
-  lastToggleOnTime: number;
-  mapId: number;
-  maximumParticipantListSize: number;
-  minLevel: number;
-  minimumParticipantListSize: number;
+  lastToggleOffTime: bigint;
+  lastToggleOnTime: bigint;
+  mapId: bigint;
+  maximumParticipantListSize: bigint;
+  minLevel: bigint;
+  minimumParticipantListSize: bigint;
   name: string;
-  numPlayerPerTeam: number;
+  numPlayerPerTeam: bigint;
   queueAvailability: string;
   queueRewards: QueueRewards;
   removalFromGameAllowed: boolean;
-  removalFromGameDelayMinutes: number;
+  removalFromGameDelayMinutes: bigint;
   shortName: string;
   showPositionSelector: boolean;
   spectatorEnabled: boolean;
@@ -267,52 +264,52 @@ export type ReadyCheckState =
   | "EveryoneReady"
   | "Unknown";
 
-export type Swap = { cellId: number; id: number; state: string };
+export type Swap = { cellId: bigint; id: bigint; state: string };
 
 export type Team = {
-  championId: number;
-  lastSelectedSkinIndex: number;
-  profileIconId: number;
+  championId: bigint;
+  lastSelectedSkinIndex: bigint;
+  profileIconId: bigint;
   puuid: string;
   selectedPosition: LanePosition;
   selectedRole: string;
-  summonerId: number;
+  summonerId: bigint;
   summonerInternalName: string;
   summonerName: string;
   teamOwner: boolean;
-  teamParticipantId: number;
+  teamParticipantId: bigint;
 };
 
 export type TeamMember = {
   assignedPosition: LanePosition;
-  cellId: number;
-  championId: number;
-  championPickIntent: number;
+  cellId: bigint;
+  championId: bigint;
+  championPickIntent: bigint;
   gameName: string;
   internalName: string;
   isAutoFilled: boolean;
   isHumanoid: boolean;
   nameVisibilityType: NameVisibilityType;
   obfuscatePuuid: string;
-  obfuscateSummonerId: number;
-  pickMode: number;
-  pickTurn: number;
+  obfuscateSummonerId: bigint;
+  pickMode: bigint;
+  pickTurn: bigint;
   playerAlias: string;
   playerType: string;
   puuid: string;
-  selectedSkinId: number;
-  spell1Id: number;
-  spell2Id: number;
-  summonerId: number;
+  selectedSkinId: bigint;
+  spell1Id: bigint;
+  spell2Id: bigint;
+  summonerId: bigint;
   tagLine: string;
-  team: number;
-  wardSkinId: number;
+  team: bigint;
+  wardSkinId: bigint;
 };
 
 export type Timer = {
-  adjustTimeLeftInPhase: number;
-  internalNowEpocMs: number;
+  adjustTimeLeftInPhase: bigint;
+  internalNowEpocMs: bigint;
   isInfinite: boolean;
   phase: string;
-  totalTimeInPhase: number;
+  totalTimeInPhase: bigint;
 };

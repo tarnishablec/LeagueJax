@@ -127,7 +127,11 @@ export function SettingsSelect({
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
-      positioning={{ sameWidth: true, placement: "bottom-start", gutter: 4 }}
+      positioning={{
+        sameWidth: true,
+        placement: "bottom-start",
+        gutter: 4,
+      }}
     >
       <Select.HiddenSelect />
       <Select.Control className={s.control}>

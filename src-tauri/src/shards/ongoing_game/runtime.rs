@@ -2,7 +2,9 @@ use maokai_machine::{Envelope, Machine};
 use maokai_runner::{Behaviors, Runner};
 use tokio::sync::mpsc;
 
-use super::behaviors::{ChampSelectBehavior, IdleBehavior, InGameBehavior};
+use super::behaviors::{
+    ChampSelectBehavior, IdleBehavior, InGameBehavior, MatchmakingBehavior, ReadyCheckBehavior,
+};
 use super::context::OngoingGameCtx;
 use super::tree::ONGOING_TREE;
 use super::types::OngoingGameInput;
@@ -18,6 +20,8 @@ pub async fn machine_loop(
 
     let mut behaviors: Behaviors<'_, OngoingGameInput, Envo> = Behaviors::default();
     behaviors.register(&t.idle, IdleBehavior);
+    behaviors.register(&t.matchmaking, MatchmakingBehavior);
+    behaviors.register(&t.ready_check, ReadyCheckBehavior);
     behaviors.register(&t.champ_select, ChampSelectBehavior);
     behaviors.register(&t.in_game, InGameBehavior);
 

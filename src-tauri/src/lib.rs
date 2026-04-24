@@ -17,6 +17,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
 
+use crate::commands::auto_accept::*;
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
@@ -180,6 +181,7 @@ pub fn run() {
             });
         })
         .invoke_handler(tauri::generate_handler![
+            auto_accept_accept_ready_check,
             lcu_update_focus,
             get_current_summoner,
             get_current_sgp_server_id,
@@ -195,6 +197,7 @@ pub fn run() {
             lcu_get_queues,
             lcu_get_game_version,
             lcu_get_ranked_tiers,
+            ongoing_game_get_snapshot,
             ongoing_game_refresh,
             ongoing_game_refresh_match_histories,
             ongoing_game_set_match_history_tag,

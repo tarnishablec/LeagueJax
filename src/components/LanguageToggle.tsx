@@ -69,7 +69,9 @@ export function LanguageToggle() {
               type="button"
               aria-label={`Switch language to ${ariaLabel}`}
               aria-pressed={language === value}
-              className={s.dropdownItem({ active: language === value })}
+              className={s.dropdownItem({
+                active: language === value,
+              })}
               onClick={() => {
                 settings.set(SYSTEM_LANGUAGE_SETTING_ID, value);
               }}

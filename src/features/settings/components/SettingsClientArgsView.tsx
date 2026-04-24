@@ -82,14 +82,18 @@ export function SettingsClientArgsView() {
     () => [
       col.accessor("key", {
         header: () =>
-          t("settings.clientArgs.columns.key", { defaultValue: "Key" }),
+          t("settings.clientArgs.columns.key", {
+            defaultValue: "Key",
+          }),
         size: 280,
         meta: { className: dt.monospace },
         cell: (info) => info.getValue(),
       }),
       col.accessor("value", {
         header: () =>
-          t("settings.clientArgs.columns.value", { defaultValue: "Value" }),
+          t("settings.clientArgs.columns.value", {
+            defaultValue: "Value",
+          }),
         meta: { className: dt.monospace },
         cell: (info) => info.getValue(),
       }),

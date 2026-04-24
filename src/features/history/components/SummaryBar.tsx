@@ -108,7 +108,9 @@ export function SummaryBar({
             <div className={s.rankCardInner}>
               <div className={s.rankContent}>
                 <span className={s.rankQueue}>
-                  {t("history.summary.solo", { defaultValue: "Solo/Duo" })}
+                  {t("history.summary.solo", {
+                    defaultValue: "Solo/Duo",
+                  })}
                 </span>
                 <span className={s.rankTier}>
                   {formatTier(
@@ -144,7 +146,9 @@ export function SummaryBar({
             <div className={s.rankCardInner}>
               <div className={s.rankContent}>
                 <span className={s.rankQueue}>
-                  {t("history.summary.flex", { defaultValue: "Flex" })}
+                  {t("history.summary.flex", {
+                    defaultValue: "Flex",
+                  })}
                 </span>
                 <span className={s.rankTier}>
                   {formatTier(
@@ -165,7 +169,9 @@ export function SummaryBar({
                 {flexIconUrl ? (
                   <LazyImage
                     src={flexIconUrl}
-                    alt={t("history.summary.flex", { defaultValue: "Flex" })}
+                    alt={t("history.summary.flex", {
+                      defaultValue: "Flex",
+                    })}
                     className={s.rankIcon}
                   />
                 ) : null}

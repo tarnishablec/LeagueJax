@@ -15,9 +15,9 @@ export type OngoingGameMatchHistoriesUpdated = {
 };
 
 export type OngoingGameMatchHistoryState = {
-  game_id: number | null;
+  game_id: bigint | null;
   puuid: string;
-  team_id: number;
+  team_id: bigint;
   status: OngoingGamePlayerLoadStatus;
   games: Array<RawMatchSummaryGame> | null;
 };
@@ -36,9 +36,9 @@ export type OngoingGamePlayerLoadStatus =
   | "failed";
 
 export type OngoingGameSummonerState = {
-  game_id: number | null;
+  game_id: bigint | null;
   puuid: string;
-  team_id: number;
+  team_id: bigint;
   status: OngoingGamePlayerLoadStatus;
   summoner: SummonerInfo | null;
 };
@@ -50,7 +50,7 @@ export type OngoingGameSummonersUpdated = {
 
 export type OngoingGameUpdated = {
   phase: OngoingGamePhase;
-  lifecycle_game_id: number | null;
+  lifecycle_game_id: bigint | null;
   /**
    * User-selected match-history mode tag.
    * - "__current_mode__": follow current queue mode
@@ -61,7 +61,7 @@ export type OngoingGameUpdated = {
   /**
    * Queue id resolved from the current game context.
    */
-  effective_queue_id: number | null;
+  effective_queue_id: bigint | null;
   /**
    * Effective SGP mode tag after resolving `match_history_tag` against current context.
    */

@@ -6,6 +6,7 @@ use maokai_tree::{State, TreeView};
 use crate::shards::lcu::api::OngoingSessionSeed;
 use crate::shards::lcu::concepts::champ_select_session::{NameVisibilityType, TeamMember};
 use crate::shards::lcu::concepts::gameflow_phase::Phase as GameflowPhase;
+use crate::shards::lcu::concepts::matchmaking_ready_check::ReadyCheckState;
 use crate::shards::lcu::concepts::summoner::SummonerInfo;
 use crate::shards::lcu::concepts::teambuilder_tbd_game::TeambuilderCell;
 use crate::shards::lcu::concepts::LanePosition;
@@ -24,16 +25,99 @@ const BOT_PUUID: &str = "BOT";
 
 type Envo = Envelope<OngoingGameInput, OngoingGameCtx>;
 
-// ── Helpers ──────────────────────────────────────────────────────────────
-
 fn is_bot(puuid: &str) -> bool {
     puuid.is_empty() || puuid == BOT_PUUID
+}
+
+fn transition_target(phase: OngoingGamePhase) -> State {
+    let t = &*ONGOING_TREE;
+    match phase {
+        OngoingGamePhase::Idle => t.idle,
+        OngoingGamePhase::Matchmaking => t.matchmaking,
+        OngoingGamePhase::ReadyCheck => t.ready_check,
+        OngoingGamePhase::ChampSelect => t.champ_select,
+        OngoingGamePhase::InGame => t.in_game,
+    }
+}
+
+fn request_transition(
+    current: OngoingGamePhase,
+    next: OngoingGamePhase,
+    envo: &mut Envo,
+    reason: &str,
+) {
+    if current == next {
+        return;
+    }
+
+    tracing::info!(
+        target: "ongoing_game",
+        from = ?current,
+        to = ?next,
+        reason,
+        "Ongoing lifecycle phase changed"
+    );
+    envo.machine
+        .request_transition(transition_target(next), None);
+}
+
+fn derived_phase(envo: &Envo) -> OngoingGamePhase {
+    let ctx = envo.context();
+
+    if let Some(session) = ctx.gameflow_session.as_ref() {
+        match session.phase {
+            GameflowPhase::GameStart | GameflowPhase::InProgress | GameflowPhase::InGame => {
+                return OngoingGamePhase::InGame;
+            }
+            GameflowPhase::ChampSelect => return OngoingGamePhase::ChampSelect,
+            GameflowPhase::ReadyCheck => return OngoingGamePhase::ReadyCheck,
+            GameflowPhase::Matchmaking => {
+                if ctx.ready_check.is_some()
+                    || ctx.matchmaking_search.as_ref().is_some_and(|search| {
+                        !matches!(search.ready_check.state, ReadyCheckState::Invalid)
+                    })
+                {
+                    return OngoingGamePhase::ReadyCheck;
+                }
+                return OngoingGamePhase::Matchmaking;
+            }
+            _ => {}
+        }
+    }
+
+    if ctx.champ_select_session.is_some() || ctx.teambuilder_payload.is_some() {
+        return OngoingGamePhase::ChampSelect;
+    }
+
+    if ctx.ready_check.is_some()
+        || ctx
+            .matchmaking_search
+            .as_ref()
+            .is_some_and(|search| !matches!(search.ready_check.state, ReadyCheckState::Invalid))
+    {
+        return OngoingGamePhase::ReadyCheck;
+    }
+
+    if ctx.is_matchmaking_search_active() {
+        return OngoingGamePhase::Matchmaking;
+    }
+
+    OngoingGamePhase::Idle
+}
+
+fn request_transition_for_context(current: OngoingGamePhase, envo: &mut Envo, reason: &str) {
+    request_transition(current, derived_phase(envo), envo, reason);
+}
+
+fn effective_ready_check_clone(
+    envo: &Envo,
+) -> Option<crate::shards::lcu::concepts::matchmaking_ready_check::MatchmakingReadyCheckData> {
+    envo.context().effective_ready_check().cloned()
 }
 
 fn broadcast_updated(envo: &Envo, phase: OngoingGamePhase) {
     let ctx = envo.context();
 
-    // Strip enemy data from champ-select session — UI only shows allies in this phase.
     let champ_select_session = ctx.champ_select_session.as_ref().map(|cs| {
         let mut cs = cs.clone();
         cs.their_team = Vec::new();
@@ -41,9 +125,6 @@ fn broadcast_updated(envo: &Envo, phase: OngoingGamePhase) {
         cs
     });
 
-    // Strip `games` from history_states — those ride on the per-player
-    // `MatchHistoriesUpdated` channel. Keeping them here would push multi-MB
-    // payloads on every champ-select WS tick.
     let history_states: Vec<_> = ctx
         .history_states
         .values()
@@ -67,6 +148,8 @@ fn broadcast_updated(envo: &Envo, phase: OngoingGamePhase) {
         summoner_states: ctx.summoner_states.values().cloned().collect(),
         history_states,
         gameflow_session: ctx.gameflow_session.clone(),
+        matchmaking_search: ctx.matchmaking_search.clone(),
+        ready_check: effective_ready_check_clone(envo),
         champ_select_session,
         team_members: ctx.team_members.clone(),
     };
@@ -75,8 +158,6 @@ fn broadcast_updated(envo: &Envo, phase: OngoingGamePhase) {
     channels.broadcast(OngoingGameEvent::Updated(payload));
 }
 
-/// Look up the roster team id and the lifecycle game id for a puuid.
-/// Returns `(0, ctx.lifecycle_game_id)` when the puuid isn't on the roster.
 fn player_lifecycle_fields(envo: &Envo, puuid: &str) -> (u64, Option<u64>) {
     let ctx = envo.context();
     let team = ctx
@@ -203,52 +284,63 @@ fn spawn_seed_task(envo: &Envo) {
             let session = manager.focused().await?;
             let api = session.api();
 
-            // Fire all four LCU GETs concurrently — phase decides which
-            // results we keep; the others simply get discarded. Paying for
-            // one round-trip instead of up to four sequential ones takes the
-            // cold-start champ-select delay from ~300–1500 ms to ~100–400 ms.
-            let (phase, gameflow_session, champ_select_session, teambuilder_message) = tokio::join!(
+            let (
+                phase,
+                gameflow_session,
+                matchmaking_search,
+                ready_check,
+                champ_select_session,
+                teambuilder_message,
+            ) = tokio::join!(
                 api.get_gameflow_phase_typed(),
                 api.get_gameflow_session_typed(),
+                api.get_matchmaking_search_typed_optional(),
+                api.get_ready_check_typed_optional(),
                 api.get_champ_select_session_typed(),
                 api.get_teambuilder_tbd_game_message(),
             );
 
             let phase = phase.ok()?;
-            if !matches!(
-                phase,
-                GameflowPhase::ChampSelect
-                    | GameflowPhase::GameStart
-                    | GameflowPhase::InProgress
-                    | GameflowPhase::InGame
-            ) {
-                tracing::info!(
-                    phase = ?phase,
-                    "No active match detected during ongoing-game seed probe"
-                );
-            }
 
             let gameflow_session = match phase {
-                GameflowPhase::ChampSelect
+                GameflowPhase::Matchmaking
+                | GameflowPhase::ReadyCheck
+                | GameflowPhase::ChampSelect
                 | GameflowPhase::GameStart
                 | GameflowPhase::InProgress
                 | GameflowPhase::InGame => gameflow_session.ok(),
                 _ => None,
             };
 
+            let (matchmaking_search, ready_check) = if matches!(
+                phase,
+                GameflowPhase::Matchmaking | GameflowPhase::ReadyCheck
+            ) {
+                (
+                    matchmaking_search.ok().flatten(),
+                    ready_check.ok().flatten(),
+                )
+            } else {
+                (None, None)
+            };
+
             let (champ_select_session, teambuilder_payload) =
                 if matches!(phase, GameflowPhase::ChampSelect) {
                     (
                         champ_select_session.ok().flatten(),
-                        teambuilder_message.ok().flatten().map(|msg| msg.payload),
+                        teambuilder_message
+                            .ok()
+                            .flatten()
+                            .map(|message| message.payload),
                     )
                 } else {
                     (None, None)
                 };
 
             Some(OngoingSessionSeed {
-                phase,
                 gameflow_session,
+                matchmaking_search,
+                ready_check,
                 champ_select_session,
                 teambuilder_payload,
             })
@@ -257,14 +349,10 @@ fn spawn_seed_task(envo: &Envo) {
 
         if let Some(seed) = seed {
             let _ = input_tx.send(OngoingGameInput::Seeded(Box::new(seed)));
-        } else {
-            tracing::info!("No ongoing-game seed produced in this probe");
         }
     });
 }
 
-/// Collect non-bot puuids from the current roster — the set we actually
-/// spawn summoner / match-history fetch tasks for.
 fn team_puuids(envo: &Envo) -> Vec<String> {
     envo.context()
         .team_members
@@ -274,22 +362,27 @@ fn team_puuids(envo: &Envo) -> Vec<String> {
         .collect()
 }
 
-/// Pull `game_id` and `queue_id` off the latest gameflow session and
-/// copy them into the ctx's lifecycle fields. No-op when either side is
-/// absent — we never overwrite with `None`.
 fn sync_lifecycle_ids_from_gameflow(envo: &Envo) {
     let (game_id, queue_id) = {
         let ctx = envo.context();
-        match ctx.gameflow_session.as_ref() {
-            Some(gs) => (Some(gs.game_data.game_id), Some(gs.game_data.queue.id)),
-            None => (None, None),
-        }
+        let game_id = ctx.gameflow_session.as_ref().map(|gs| gs.game_data.game_id);
+        let queue_id = ctx
+            .gameflow_session
+            .as_ref()
+            .map(|gs| gs.game_data.queue.id)
+            .or_else(|| {
+                ctx.matchmaking_search
+                    .as_ref()
+                    .map(|search| search.queue_id)
+            });
+        (game_id, queue_id)
     };
-    if game_id.is_some() {
-        envo.context_mut().lifecycle_game_id = game_id;
+
+    if let Some(game_id) = game_id {
+        envo.context_mut().lifecycle_game_id = Some(game_id);
     }
-    if queue_id.is_some() {
-        envo.context_mut().effective_queue_id = queue_id;
+    if let Some(queue_id) = queue_id {
+        envo.context_mut().effective_queue_id = Some(queue_id);
     }
 }
 
@@ -356,16 +449,43 @@ fn restart_history_tasks(envo: &Envo) {
     }
 }
 
-// Tiny wrapper so we can propagate Option<SummonerInfo> through the async `?` chain
-// without confusing nested Option types. The value we actually forward is `slot.0`.
-struct SummonerInfoSlot(SummonerInfo);
+fn clear_gameplay_context(envo: &Envo) {
+    stop_all_tasks(envo);
+    {
+        let mut ctx = envo.context_mut();
+        ctx.lifecycle_game_id = None;
+        ctx.effective_queue_id = None;
+        ctx.team_members.clear();
+        ctx.champ_select_session = None;
+        ctx.teambuilder_payload = None;
+        ctx.summoner_states.clear();
+        ctx.history_states.clear();
+    }
+}
 
-// ── Shared event handlers ────────────────────────────────────────────────
-//
-// `ChampSelectBehavior` and `InGameBehavior` respond identically to a
-// handful of inputs (per-player load results + user-initiated refresh
-// commands). The helpers below centralize that logic, so each behavior's
-// `on_event` only needs to describe its phase-specific branches.
+fn clear_matchmaking_context(envo: &Envo) {
+    let mut ctx = envo.context_mut();
+    ctx.matchmaking_search = None;
+    ctx.ready_check = None;
+}
+
+fn apply_seed(envo: &Envo, seed: &OngoingSessionSeed) {
+    {
+        let mut ctx = envo.context_mut();
+        ctx.gameflow_session = seed.gameflow_session.clone();
+        ctx.matchmaking_search = seed.matchmaking_search.clone();
+        ctx.ready_check = seed.ready_check.clone();
+        if let Some(champ_select_session) = seed.champ_select_session.as_ref() {
+            ctx.champ_select_session = Some(champ_select_session.clone());
+        }
+        if let Some(teambuilder_payload) = seed.teambuilder_payload.as_ref() {
+            ctx.teambuilder_payload = Some(teambuilder_payload.clone());
+        }
+    }
+    sync_lifecycle_ids_from_gameflow(envo);
+}
+
+struct SummonerInfoSlot(SummonerInfo);
 
 fn handle_summoner_loaded(
     envo: &Envo,
@@ -374,10 +494,6 @@ fn handle_summoner_loaded(
     info: &Option<Box<SummonerInfo>>,
     game_id: Option<u64>,
 ) -> EventReply {
-    // Stale-result guard: if the game id captured at spawn time no longer
-    // matches the current lifecycle, the result belongs to a prior game
-    // (or to a pre-game Idle slot that has since been cleared). Drop it
-    // silently so late-firing tasks can't pollute fresh state.
     if envo.context().lifecycle_game_id != game_id {
         envo.context_mut().summoner_tasks.remove(puuid);
         return EventReply::Handled;
@@ -417,7 +533,6 @@ fn handle_match_history_loaded(
     games: &Option<Vec<RawMatchSummaryGame>>,
     game_id: Option<u64>,
 ) -> EventReply {
-    // Stale-result guard — see `handle_summoner_loaded` for rationale.
     if envo.context().lifecycle_game_id != game_id {
         envo.context_mut().history_tasks.remove(puuid);
         return EventReply::Handled;
@@ -447,10 +562,7 @@ fn handle_match_history_loaded(
     EventReply::Handled
 }
 
-/// Try to handle inputs whose semantics don't depend on the current phase.
-/// Returns `None` when the event is phase-specific and the caller must
-/// dispatch it themselves.
-fn try_handle_common_event(
+fn try_handle_gameplay_common_event(
     envo: &Envo,
     phase: OngoingGamePhase,
     event: &OngoingGameInput,
@@ -487,17 +599,53 @@ fn try_handle_common_event(
     }
 }
 
-// ── IdleBehavior ─────────────────────────────────────────────────────────
+fn try_handle_pre_game_common_event(
+    envo: &Envo,
+    phase: OngoingGamePhase,
+    event: &OngoingGameInput,
+) -> Option<EventReply> {
+    match event {
+        OngoingGameInput::SetMatchHistoryMode(mode) => {
+            envo.context_mut().match_history_mode = mode.clone();
+            broadcast_updated(envo, phase);
+            Some(EventReply::Handled)
+        }
+        OngoingGameInput::Refresh => {
+            spawn_seed_task(envo);
+            Some(EventReply::Handled)
+        }
+        _ => None,
+    }
+}
+
+fn handle_focus_change(
+    current_phase: OngoingGamePhase,
+    envo: &mut Envo,
+    change: &crate::shards::lcu::manager::FocusChange,
+) -> EventReply {
+    envo.context_mut().current_focus_pid = change.current;
+    if change.current.is_none() {
+        request_transition(current_phase, OngoingGamePhase::Idle, envo, "focus cleared");
+        return EventReply::Handled;
+    }
+
+    request_transition(current_phase, OngoingGamePhase::Idle, envo, "focus changed");
+    spawn_seed_task(envo);
+    EventReply::Handled
+}
 
 pub struct IdleBehavior;
 
 impl Behavior<OngoingGameInput, Envo> for IdleBehavior {
     fn on_enter(&self, _t: &Transition, envo: &mut Envo) {
+        stop_all_tasks(envo);
         {
             let mut ctx = envo.context_mut();
             ctx.lifecycle_game_id = None;
             ctx.team_members.clear();
             ctx.gameflow_session = None;
+            ctx.matchmaking_search = None;
+            ctx.ready_check = None;
             ctx.champ_select_session = None;
             ctx.teambuilder_payload = None;
             ctx.effective_queue_id = None;
@@ -514,64 +662,58 @@ impl Behavior<OngoingGameInput, Envo> for IdleBehavior {
         envo: &mut Envo,
         _tree: &dyn TreeView,
     ) -> EventReply {
-        let t = &*ONGOING_TREE;
         match event {
             OngoingGameInput::FocusChanged(change) => {
+                envo.context_mut().current_focus_pid = change.current;
                 if change.current.is_some() {
                     spawn_seed_task(envo);
                 }
                 EventReply::Handled
             }
             OngoingGameInput::Seeded(seed) => {
-                {
-                    let mut ctx = envo.context_mut();
-                    ctx.gameflow_session = seed.gameflow_session.clone();
-                    ctx.champ_select_session = seed.champ_select_session.clone();
-                    ctx.teambuilder_payload = seed.teambuilder_payload.clone();
-                }
-                match seed.phase {
-                    GameflowPhase::ChampSelect => {
-                        envo.machine.request_transition(t.champ_select, None);
-                    }
-                    GameflowPhase::GameStart
-                    | GameflowPhase::InProgress
-                    | GameflowPhase::InGame => {
-                        envo.machine.request_transition(t.in_game, None);
-                    }
-                    _ => {}
-                }
+                apply_seed(envo, seed);
+                request_transition_for_context(OngoingGamePhase::Idle, envo, "seeded");
                 EventReply::Handled
             }
             OngoingGameInput::GameflowSessionUpdated(data) => {
-                match data.phase {
-                    GameflowPhase::ChampSelect => {
-                        envo.context_mut().gameflow_session = Some((**data).clone());
-                        envo.machine.request_transition(t.champ_select, None);
-                    }
-                    GameflowPhase::GameStart
-                    | GameflowPhase::InProgress
-                    | GameflowPhase::InGame => {
-                        envo.context_mut().gameflow_session = Some((**data).clone());
-                        envo.machine.request_transition(t.in_game, None);
-                    }
-                    _ => {}
-                }
+                envo.context_mut().gameflow_session = Some((**data).clone());
+                sync_lifecycle_ids_from_gameflow(envo);
+                request_transition_for_context(OngoingGamePhase::Idle, envo, "gameflow updated");
                 EventReply::Handled
             }
-            // Defensive: LCU isn't guaranteed to push gameflow-session
-            // *before* champ-select / teambuilder. If either arrives while
-            // we're still Idle, cache it and transition — `ChampSelect::on_enter`
-            // will then find the data already there and `build_roster` paints
-            // cards on the first broadcast instead of waiting for a seed
-            // round-trip.
+            OngoingGameInput::MatchmakingSearchUpdated(data) => {
+                envo.context_mut().matchmaking_search = Some((**data).clone());
+                sync_lifecycle_ids_from_gameflow(envo);
+                request_transition_for_context(OngoingGamePhase::Idle, envo, "search updated");
+                EventReply::Handled
+            }
+            OngoingGameInput::MatchmakingSearchDeleted => {
+                envo.context_mut().matchmaking_search = None;
+                request_transition_for_context(OngoingGamePhase::Idle, envo, "search deleted");
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckUpdated(data) => {
+                envo.context_mut().ready_check = Some((**data).clone());
+                request_transition_for_context(OngoingGamePhase::Idle, envo, "ready check updated");
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckDeleted => {
+                envo.context_mut().ready_check = None;
+                request_transition_for_context(OngoingGamePhase::Idle, envo, "ready check deleted");
+                EventReply::Handled
+            }
             OngoingGameInput::ChampSelectSessionUpdated(data) => {
                 envo.context_mut().champ_select_session = Some((**data).clone());
-                envo.machine.request_transition(t.champ_select, None);
+                request_transition_for_context(
+                    OngoingGamePhase::Idle,
+                    envo,
+                    "champ select updated",
+                );
                 EventReply::Handled
             }
             OngoingGameInput::TeambuilderTbdGameUpdated(data) => {
                 envo.context_mut().teambuilder_payload = Some((**data).clone());
-                envo.machine.request_transition(t.champ_select, None);
+                request_transition_for_context(OngoingGamePhase::Idle, envo, "teambuilder updated");
                 EventReply::Handled
             }
             OngoingGameInput::SetMatchHistoryMode(mode) => {
@@ -579,12 +721,227 @@ impl Behavior<OngoingGameInput, Envo> for IdleBehavior {
                 broadcast_updated(envo, OngoingGamePhase::Idle);
                 EventReply::Handled
             }
+            OngoingGameInput::Refresh => {
+                spawn_seed_task(envo);
+                EventReply::Handled
+            }
             _ => EventReply::Ignored,
         }
     }
 }
 
-// ── ChampSelectBehavior ──────────────────────────────────────────────────
+pub struct MatchmakingBehavior;
+
+impl Behavior<OngoingGameInput, Envo> for MatchmakingBehavior {
+    fn on_enter(&self, _t: &Transition, envo: &mut Envo) {
+        clear_gameplay_context(envo);
+        envo.context_mut().ready_check = None;
+        sync_lifecycle_ids_from_gameflow(envo);
+        broadcast_updated(envo, OngoingGamePhase::Matchmaking);
+    }
+
+    fn on_event(
+        &self,
+        event: &OngoingGameInput,
+        _current: &State,
+        envo: &mut Envo,
+        _tree: &dyn TreeView,
+    ) -> EventReply {
+        if let Some(reply) =
+            try_handle_pre_game_common_event(envo, OngoingGamePhase::Matchmaking, event)
+        {
+            return reply;
+        }
+
+        match event {
+            OngoingGameInput::FocusChanged(change) => {
+                handle_focus_change(OngoingGamePhase::Matchmaking, envo, change)
+            }
+            OngoingGameInput::Seeded(seed) => {
+                apply_seed(envo, seed);
+                request_transition_for_context(OngoingGamePhase::Matchmaking, envo, "seeded");
+                broadcast_updated(envo, OngoingGamePhase::Matchmaking);
+                EventReply::Handled
+            }
+            OngoingGameInput::GameflowSessionUpdated(data) => {
+                envo.context_mut().gameflow_session = Some((**data).clone());
+                sync_lifecycle_ids_from_gameflow(envo);
+                request_transition_for_context(
+                    OngoingGamePhase::Matchmaking,
+                    envo,
+                    "gameflow updated",
+                );
+                broadcast_updated(envo, OngoingGamePhase::Matchmaking);
+                EventReply::Handled
+            }
+            OngoingGameInput::MatchmakingSearchUpdated(data) => {
+                envo.context_mut().matchmaking_search = Some((**data).clone());
+                sync_lifecycle_ids_from_gameflow(envo);
+                request_transition_for_context(
+                    OngoingGamePhase::Matchmaking,
+                    envo,
+                    "search updated",
+                );
+                broadcast_updated(envo, OngoingGamePhase::Matchmaking);
+                EventReply::Handled
+            }
+            OngoingGameInput::MatchmakingSearchDeleted => {
+                envo.context_mut().matchmaking_search = None;
+                request_transition_for_context(
+                    OngoingGamePhase::Matchmaking,
+                    envo,
+                    "search deleted",
+                );
+                broadcast_updated(envo, OngoingGamePhase::Matchmaking);
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckUpdated(data) => {
+                envo.context_mut().ready_check = Some((**data).clone());
+                request_transition_for_context(
+                    OngoingGamePhase::Matchmaking,
+                    envo,
+                    "ready check updated",
+                );
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckDeleted => {
+                envo.context_mut().ready_check = None;
+                request_transition_for_context(
+                    OngoingGamePhase::Matchmaking,
+                    envo,
+                    "ready check deleted",
+                );
+                EventReply::Handled
+            }
+            OngoingGameInput::ChampSelectSessionUpdated(data) => {
+                envo.context_mut().champ_select_session = Some((**data).clone());
+                request_transition_for_context(
+                    OngoingGamePhase::Matchmaking,
+                    envo,
+                    "champ select updated",
+                );
+                EventReply::Handled
+            }
+            OngoingGameInput::TeambuilderTbdGameUpdated(data) => {
+                envo.context_mut().teambuilder_payload = Some((**data).clone());
+                request_transition_for_context(
+                    OngoingGamePhase::Matchmaking,
+                    envo,
+                    "teambuilder updated",
+                );
+                EventReply::Handled
+            }
+            _ => EventReply::Ignored,
+        }
+    }
+}
+
+pub struct ReadyCheckBehavior;
+
+impl Behavior<OngoingGameInput, Envo> for ReadyCheckBehavior {
+    fn on_enter(&self, _t: &Transition, envo: &mut Envo) {
+        clear_gameplay_context(envo);
+        sync_lifecycle_ids_from_gameflow(envo);
+        broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
+    }
+
+    fn on_event(
+        &self,
+        event: &OngoingGameInput,
+        _current: &State,
+        envo: &mut Envo,
+        _tree: &dyn TreeView,
+    ) -> EventReply {
+        if let Some(reply) =
+            try_handle_pre_game_common_event(envo, OngoingGamePhase::ReadyCheck, event)
+        {
+            return reply;
+        }
+
+        match event {
+            OngoingGameInput::FocusChanged(change) => {
+                handle_focus_change(OngoingGamePhase::ReadyCheck, envo, change)
+            }
+            OngoingGameInput::Seeded(seed) => {
+                apply_seed(envo, seed);
+                request_transition_for_context(OngoingGamePhase::ReadyCheck, envo, "seeded");
+                broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
+                EventReply::Handled
+            }
+            OngoingGameInput::GameflowSessionUpdated(data) => {
+                envo.context_mut().gameflow_session = Some((**data).clone());
+                sync_lifecycle_ids_from_gameflow(envo);
+                request_transition_for_context(
+                    OngoingGamePhase::ReadyCheck,
+                    envo,
+                    "gameflow updated",
+                );
+                broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
+                EventReply::Handled
+            }
+            OngoingGameInput::MatchmakingSearchUpdated(data) => {
+                envo.context_mut().matchmaking_search = Some((**data).clone());
+                sync_lifecycle_ids_from_gameflow(envo);
+                request_transition_for_context(
+                    OngoingGamePhase::ReadyCheck,
+                    envo,
+                    "search updated",
+                );
+                broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
+                EventReply::Handled
+            }
+            OngoingGameInput::MatchmakingSearchDeleted => {
+                envo.context_mut().matchmaking_search = None;
+                request_transition_for_context(
+                    OngoingGamePhase::ReadyCheck,
+                    envo,
+                    "search deleted",
+                );
+                broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckUpdated(data) => {
+                envo.context_mut().ready_check = Some((**data).clone());
+                request_transition_for_context(
+                    OngoingGamePhase::ReadyCheck,
+                    envo,
+                    "ready check updated",
+                );
+                broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckDeleted => {
+                envo.context_mut().ready_check = None;
+                request_transition_for_context(
+                    OngoingGamePhase::ReadyCheck,
+                    envo,
+                    "ready check deleted",
+                );
+                broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
+                EventReply::Handled
+            }
+            OngoingGameInput::ChampSelectSessionUpdated(data) => {
+                envo.context_mut().champ_select_session = Some((**data).clone());
+                request_transition_for_context(
+                    OngoingGamePhase::ReadyCheck,
+                    envo,
+                    "champ select updated",
+                );
+                EventReply::Handled
+            }
+            OngoingGameInput::TeambuilderTbdGameUpdated(data) => {
+                envo.context_mut().teambuilder_payload = Some((**data).clone());
+                request_transition_for_context(
+                    OngoingGamePhase::ReadyCheck,
+                    envo,
+                    "teambuilder updated",
+                );
+                EventReply::Handled
+            }
+            _ => EventReply::Ignored,
+        }
+    }
+}
 
 pub struct ChampSelectBehavior;
 
@@ -593,8 +950,6 @@ impl ChampSelectBehavior {
         let members: Vec<TeamMember> = {
             let ctx = envo.context();
             if let Some(cs) = ctx.champ_select_session.as_ref() {
-                // Primary path — champ-select session is the source of truth
-                // once LCU has pushed it. my_team already excludes enemies.
                 let mut members: Vec<TeamMember> = cs.my_team.to_vec();
 
                 if let Some(tb) = ctx.teambuilder_payload.as_ref() {
@@ -619,10 +974,6 @@ impl ChampSelectBehavior {
                 }
                 members
             } else if let Some(tb) = ctx.teambuilder_payload.as_ref() {
-                // Fallback — champ-select session hasn't been pushed yet.
-                // Teambuilder's allied cells carry everything we need for
-                // the ally's roster, so the UI can paint cards immediately
-                // instead of waiting on the WS tick.
                 tb.champion_select_state
                     .cells
                     .allied_team
@@ -641,12 +992,12 @@ impl ChampSelectBehavior {
 
 impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
     fn on_enter(&self, _t: &Transition, envo: &mut Envo) {
+        clear_matchmaking_context(envo);
         Self::build_roster(envo);
 
         if envo.context().champ_select_session.is_some() {
             spawn_all_fetch_tasks(envo);
         } else {
-            // Cold start — rely on WS push for champ-select, but seed another state.
             spawn_seed_task(envo);
         }
 
@@ -664,10 +1015,9 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
         envo: &mut Envo,
         _tree: &dyn TreeView,
     ) -> EventReply {
-        let t = &*ONGOING_TREE;
         let phase = phase_of(current);
 
-        if let Some(reply) = try_handle_common_event(envo, phase, event) {
+        if let Some(reply) = try_handle_gameplay_common_event(envo, phase, event) {
             return reply;
         }
 
@@ -693,16 +1043,14 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                     GameflowPhase::GameStart
                     | GameflowPhase::InProgress
                     | GameflowPhase::InGame => {
-                        envo.machine.request_transition(t.in_game, None);
+                        request_transition(
+                            phase,
+                            OngoingGamePhase::InGame,
+                            envo,
+                            "gameflow moved in game",
+                        );
                     }
                     GameflowPhase::ChampSelect => {
-                        // When we entered ChampSelect via a ChampSelectSessionUpdated
-                        // push ahead of the gameflow push, `effective_queue_id`
-                        // stays `None` and any history tasks we already spawned
-                        // went out with `tag=None` — SGP then returns every
-                        // mode instead of the current queue. Pick the queue id
-                        // up from the freshly arrived gameflow and restart the
-                        // history fetches so they carry the right SGP tag.
                         sync_lifecycle_ids_from_gameflow(envo);
                         if envo.context().effective_queue_id != prev_queue_id {
                             stop_history_tasks(envo);
@@ -711,28 +1059,38 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                         }
                     }
                     _ => {
-                        envo.machine.request_transition(t.idle, None);
+                        request_transition_for_context(
+                            phase,
+                            envo,
+                            "gameflow moved away from champ select",
+                        );
                     }
                 }
                 EventReply::Handled
             }
-            OngoingGameInput::FocusChanged(change) => {
-                if change.current.is_none() {
-                    envo.machine.request_transition(t.idle, None);
-                }
+            OngoingGameInput::MatchmakingSearchUpdated(data) => {
+                envo.context_mut().matchmaking_search = Some((**data).clone());
+                request_transition_for_context(phase, envo, "search updated");
                 EventReply::Handled
             }
+            OngoingGameInput::MatchmakingSearchDeleted => {
+                envo.context_mut().matchmaking_search = None;
+                request_transition_for_context(phase, envo, "search deleted");
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckUpdated(data) => {
+                envo.context_mut().ready_check = Some((**data).clone());
+                request_transition_for_context(phase, envo, "ready check updated");
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckDeleted => {
+                envo.context_mut().ready_check = None;
+                request_transition_for_context(phase, envo, "ready check deleted");
+                EventReply::Handled
+            }
+            OngoingGameInput::FocusChanged(change) => handle_focus_change(phase, envo, change),
             OngoingGameInput::Seeded(seed) => {
-                {
-                    let mut ctx = envo.context_mut();
-                    ctx.gameflow_session = seed.gameflow_session.clone();
-                    if let Some(cs) = &seed.champ_select_session {
-                        ctx.champ_select_session = Some(cs.clone());
-                    }
-                    if let Some(tb) = &seed.teambuilder_payload {
-                        ctx.teambuilder_payload = Some(tb.clone());
-                    }
-                }
+                apply_seed(envo, seed);
                 Self::build_roster(envo);
                 spawn_all_fetch_tasks(envo);
                 broadcast_updated(envo, phase);
@@ -742,8 +1100,6 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
         }
     }
 }
-
-// ── InGameBehavior ───────────────────────────────────────────────────────
 
 pub struct InGameBehavior;
 
@@ -756,13 +1112,6 @@ impl InGameBehavior {
             };
 
             let preserved = ctx.team_members.clone();
-
-            // The gameflow payload identifies players by array position
-            // (`team_one` / `team_two`) but carries no explicit side id, so
-            // assuming `team_one == blue` breaks in practice-tool / custom
-            // lobbies where LCU places the local player in whichever array it
-            // likes regardless of picked side. Preserve the side that
-            // champ-select already gave us by probing the in-memory roster.
             let (team_one_side, team_two_side) = resolve_gameflow_team_sides(
                 &preserved,
                 &gs.game_data.team_one,
@@ -777,14 +1126,6 @@ impl InGameBehavior {
                 members.push(build_team_member_from_gameflow(player, team_two_side));
             }
 
-            // Practice-tool / custom games: LCU's gameflow payload only lists
-            // real players in `team_one` / `team_two` — ally's bots that we
-            // populated from champ-select's `my_team` are absent and would
-            // vanish the moment we overwrite `ctx.team_members`. Merge them
-            // back so the UI keeps rendering ally's cards. `cs.my_team` only
-            // ever contains allies, so construction allies every preserved entry,
-            // and `ally_side` is simply whatever team value the
-            // preserved roster was tagged with.
             let ally_side = preserved.first().map(|m| m.team).unwrap_or(team_two_side);
             for entry in &preserved {
                 let already_present =
@@ -852,11 +1193,6 @@ fn build_team_member_from_teambuilder_cell(cell: &TeambuilderCell) -> TeamMember
     }
 }
 
-/// For a recognized team id, return `(same_side, opposite_side)` so the
-/// caller can assign the opposite side to the complementary array.
-/// The numeric flavor is preserved — a preserved value of `200` yields
-/// `(200, 100)`, while `2` yields `(2, 1)` — so the in-game roster echoes
-/// whatever scheme champ-select was using.
 fn side_pair(team: u64) -> Option<(u64, u64)> {
     match team {
         1 => Some((1, 2)),
@@ -874,10 +1210,6 @@ fn lookup_preserved_team(preserved: &[TeamMember], puuid: &str) -> Option<u64> {
     preserved.iter().find(|m| m.puuid == puuid).map(|m| m.team)
 }
 
-/// Resolve `(team_one_side, team_two_side)` for an in-game roster by
-/// probing the champ-select-era roster for any known puuid. Falls back to
-/// the LCU in-game convention `(100, 200)` when nothing can be matched
-/// (e.g., cold-start straight into `InProgress`).
 fn resolve_gameflow_team_sides(
     preserved: &[TeamMember],
     team_one: &[crate::shards::lcu::concepts::gameflow_session::Team],
@@ -894,7 +1226,6 @@ fn resolve_gameflow_team_sides(
     for player in team_two {
         if let Some(team) = lookup_preserved_team(preserved, &player.puuid) {
             if let Some((self_side, other_side)) = side_pair(team) {
-                // Match landed in `team_two`, so `team_one` gets the opposite.
                 return (other_side, self_side);
             }
         }
@@ -936,6 +1267,7 @@ fn build_team_member_from_gameflow(
 
 impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
     fn on_enter(&self, _t: &Transition, envo: &mut Envo) {
+        clear_matchmaking_context(envo);
         Self::build_roster_from_gameflow(envo);
         spawn_all_fetch_tasks(envo);
         broadcast_updated(envo, OngoingGamePhase::InGame);
@@ -952,10 +1284,9 @@ impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
         envo: &mut Envo,
         _tree: &dyn TreeView,
     ) -> EventReply {
-        let t = &*ONGOING_TREE;
         let phase = phase_of(current);
 
-        if let Some(reply) = try_handle_common_event(envo, phase, event) {
+        if let Some(reply) = try_handle_gameplay_common_event(envo, phase, event) {
             return reply;
         }
 
@@ -967,21 +1298,34 @@ impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
                     | GameflowPhase::InProgress
                     | GameflowPhase::InGame => {}
                     _ => {
-                        envo.machine.request_transition(t.idle, None);
+                        request_transition_for_context(phase, envo, "gameflow moved out of game");
                     }
                 }
                 EventReply::Handled
             }
-            OngoingGameInput::FocusChanged(change) => {
-                if change.current.is_none() {
-                    envo.machine.request_transition(t.idle, None);
-                }
+            OngoingGameInput::MatchmakingSearchUpdated(data) => {
+                envo.context_mut().matchmaking_search = Some((**data).clone());
+                request_transition_for_context(phase, envo, "search updated");
                 EventReply::Handled
             }
+            OngoingGameInput::MatchmakingSearchDeleted => {
+                envo.context_mut().matchmaking_search = None;
+                request_transition_for_context(phase, envo, "search deleted");
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckUpdated(data) => {
+                envo.context_mut().ready_check = Some((**data).clone());
+                request_transition_for_context(phase, envo, "ready check updated");
+                EventReply::Handled
+            }
+            OngoingGameInput::ReadyCheckDeleted => {
+                envo.context_mut().ready_check = None;
+                request_transition_for_context(phase, envo, "ready check deleted");
+                EventReply::Handled
+            }
+            OngoingGameInput::FocusChanged(change) => handle_focus_change(phase, envo, change),
             OngoingGameInput::Seeded(seed) => {
-                if let Some(gs) = &seed.gameflow_session {
-                    envo.context_mut().gameflow_session = Some(gs.clone());
-                }
+                apply_seed(envo, seed);
                 Self::build_roster_from_gameflow(envo);
                 spawn_all_fetch_tasks(envo);
                 broadcast_updated(envo, phase);

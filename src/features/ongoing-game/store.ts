@@ -141,6 +141,8 @@ export type OngoingGameUiState = {
   effectiveModeTag: string | null;
   modeTag: MatchModeTag | null;
   gameflowSession: OngoingGameUpdated["gameflow_session"];
+  matchmakingSearch: OngoingGameUpdated["matchmaking_search"];
+  readyCheck: OngoingGameUpdated["ready_check"];
   champSelectSession: OngoingGameUpdated["champ_select_session"];
   summonerStatesByPuuid: Record<string, OngoingGameSummonerState>;
   historyStatesByPuuid: Record<string, OngoingGameMatchHistoryState>;
@@ -157,6 +159,8 @@ const initialState: OngoingGameUiState = {
   effectiveModeTag: null,
   modeTag: null,
   gameflowSession: null,
+  matchmakingSearch: null,
+  readyCheck: null,
   champSelectSession: null,
   summonerStatesByPuuid: {},
   historyStatesByPuuid: {},
@@ -187,6 +191,8 @@ function commonFields(payload: OngoingGameUpdated) {
     effectiveModeTag: payload.effective_mode_tag,
     modeTag: toModeTag(payload.match_history_tag),
     gameflowSession: payload.gameflow_session,
+    matchmakingSearch: payload.matchmaking_search,
+    readyCheck: payload.ready_check,
     champSelectSession: payload.champ_select_session,
   } as const;
 }
@@ -310,7 +316,11 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       const nextSummoners = { ...state.summonersByPuuid };
       for (const payload of batch) {
         if (payload.phase === "Idle") {
-          return { ...state, summonerStatesByPuuid: {}, summonersByPuuid: {} };
+          return {
+            ...state,
+            summonerStatesByPuuid: {},
+            summonersByPuuid: {},
+          };
         }
         const { puuid, summoner } = payload.state;
         nextStates[puuid] = payload.state;

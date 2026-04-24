@@ -1,3 +1,4 @@
+pub mod auto_accept;
 pub mod history;
 pub mod lcu;
 pub mod map;

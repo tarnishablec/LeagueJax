@@ -51,7 +51,7 @@ export function OngoingGameRoute() {
     [champSelectSession, effectiveQueueId, gameflowSession, teamMembers, phase],
   );
 
-  if (phase === "Idle") {
+  if (phase !== "ChampSelect" && phase !== "InGame") {
     return (
       <IconTitleSubtitleState
         icon={Swords}

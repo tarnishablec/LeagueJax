@@ -13,10 +13,7 @@ pub async fn toggle_mini_window(jax: State<'_, Arc<Jax>>) -> Result<(), AppError
 }
 
 #[tauri::command]
-pub async fn set_mini_pin(
-    enabled: bool,
-    jax: State<'_, Arc<Jax>>,
-) -> Result<(), AppError> {
+pub async fn set_mini_pin(enabled: bool, jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
     jax.get_shard::<MiniWindowShard>()
         .set_pin_value(Value::Bool(enabled))
         .await

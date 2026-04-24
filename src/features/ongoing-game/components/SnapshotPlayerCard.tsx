@@ -28,7 +28,11 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
       />
 
       <div className={s.playerStats}>
-        <span className={s.winRateText({ tone: cardState.winRateStat.tone })}>
+        <span
+          className={s.winRateText({
+            tone: cardState.winRateStat.tone,
+          })}
+        >
           {cardState.winRateStat.text}
         </span>
         <LeaguePositionPair
