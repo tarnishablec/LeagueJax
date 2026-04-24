@@ -143,19 +143,7 @@ export type Map = {
   properties: LcuMapProperties;
 };
 
-export type MatchmakingReadyCheckData = {
-  declinerIds: Array<number>;
-  dodgeWarning: string;
-  playerResponse: ReadyCheckPlayerResponse;
-  state: ReadyCheckState;
-  suppressUx: boolean;
-  timer: number;
-};
-
-export type MatchmakingDodgeData = {
-  dodgerId: number;
-  state: string;
-};
+export type MatchmakingDodgeData = { dodgerId: number; state: string };
 
 export type MatchmakingLowPriorityData = {
   bustedLeaverAccessToken: string;
@@ -163,6 +151,15 @@ export type MatchmakingLowPriorityData = {
   penaltyTime: number;
   penaltyTimeRemaining: number;
   reason: string;
+};
+
+export type MatchmakingReadyCheckData = {
+  declinerIds: Array<number>;
+  dodgeWarning: string;
+  playerResponse: ReadyCheckPlayerResponse;
+  state: ReadyCheckState;
+  suppressUx: boolean;
+  timer: number;
 };
 
 export type MatchmakingSearchData = {
