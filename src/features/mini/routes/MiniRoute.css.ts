@@ -36,6 +36,8 @@ export const mapImage = style({
 });
 
 export const mapFallback = style({
+  width: "52px",
+  height: "52px",
   color: vars.color.primary,
 });
 
@@ -46,15 +48,7 @@ export const meta = style({
   textAlign: "center",
 });
 
-export const scene = style({
-  fontSize: "11px",
-  lineHeight: 1.2,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: vars.color.mutedForeground,
-});
-
-export const mode = style({
+export const queueName = style({
   fontSize: "19px",
   lineHeight: 1.15,
   fontWeight: 700,
@@ -68,10 +62,10 @@ export const phase = style({
   color: vars.color.primary,
 });
 
-export const mapName = style({
+export const autoAcceptCountdown = style({
   fontSize: "12px",
-  lineHeight: 1.3,
-  color: vars.color.mutedForeground,
+  lineHeight: 1.35,
+  color: vars.color.success,
 });
 
 export const footer = style({

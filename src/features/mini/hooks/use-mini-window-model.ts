@@ -1,36 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useMemo, useSyncExternalStore } from "react";
-import type {
-  MatchmakingReadyCheckData,
-  MatchmakingSearchData,
-} from "@/bindings/lcu_events";
+import { useEffect, useMemo } from "react";
+import type { MatchmakingSearchData } from "@/bindings/lcu_events";
 import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
 import type { LcuQueue } from "@/bindings/queues";
 import { useOngoingGameStore } from "@/features/ongoing-game/store";
-import { useSettings } from "@/features/settings/context";
-import type { SettingId } from "@/features/settings/types";
 import { useLcuMaps } from "@/hooks/use-lcu-maps";
 import { useLcuQueues } from "@/hooks/use-lcu-queues";
 
-export type MiniWindowScene = "idle" | "matchmaking" | "ongoing";
-
 export type MiniWindowModel = {
-  scene: MiniWindowScene;
-  autoAcceptText: string;
-  phaseText: string;
-  modeName: string | null;
-  mapName: string | null;
+  phase: OngoingGameUpdated["phase"];
+  queueName: string | null;
   mapIconSrc: string | null;
-};
-
-const AUTO_ACCEPT_SETTING_ID =
-  "matchmaking.interaction.autoAccept" satisfies SettingId;
-const ACCEPT_DELAY_SECONDS_SETTING_ID =
-  "matchmaking.interaction.acceptDelayMs" satisfies SettingId;
-
-type AutoAcceptSettingsView = {
-  enabled: boolean;
-  acceptDelaySeconds: number;
+  readyCheck: OngoingGameUpdated["ready_check"];
 };
 
 const MAP_ASSET_KEYS = [
@@ -40,104 +21,6 @@ const MAP_ASSET_KEYS = [
   "icon-v2",
   "icon",
 ];
-
-function isOngoingScene(phase: OngoingGameUpdated["phase"]): boolean {
-  return phase === "ChampSelect" || phase === "InGame";
-}
-
-function isMatchmakingScene(phase: OngoingGameUpdated["phase"]): boolean {
-  return phase === "Matchmaking" || phase === "ReadyCheck";
-}
-
-function toAutoAcceptText(
-  autoAccept: AutoAcceptSettingsView,
-  phase: OngoingGameUpdated["phase"],
-  readyCheck: MatchmakingReadyCheckData | null,
-): string {
-  if (!autoAccept.enabled) {
-    return "Auto accept disabled";
-  }
-
-  if (phase !== "ReadyCheck") {
-    return "Auto accept enabled";
-  }
-
-  if (readyCheck?.state === "EveryoneReady") {
-    return "Ready check accepted";
-  }
-
-  if (readyCheck?.playerResponse === "Accepted") {
-    return "Ready check accepted";
-  }
-
-  if (readyCheck?.state === "InProgress") {
-    return autoAccept.acceptDelaySeconds > 0
-      ? `Auto accept armed (${formatDelaySeconds(autoAccept.acceptDelaySeconds)})`
-      : "Auto accept armed";
-  }
-
-  return "Auto accept enabled";
-}
-
-function formatDelaySeconds(seconds: number): string {
-  return `${Number(seconds.toFixed(2))}s`;
-}
-
-function useAutoAcceptSettings(): AutoAcceptSettingsView {
-  const settings = useSettings();
-  const enabled = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(AUTO_ACCEPT_SETTING_ID, onStoreChange),
-    () => settings.get<boolean>(AUTO_ACCEPT_SETTING_ID),
-    () => settings.get<boolean>(AUTO_ACCEPT_SETTING_ID),
-  );
-  const delaySeconds = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(ACCEPT_DELAY_SECONDS_SETTING_ID, onStoreChange),
-    () => settings.get<number>(ACCEPT_DELAY_SECONDS_SETTING_ID),
-    () => settings.get<number>(ACCEPT_DELAY_SECONDS_SETTING_ID),
-  );
-
-  return {
-    enabled: enabled ?? false,
-    acceptDelaySeconds: delaySeconds ?? 0,
-  };
-}
-
-function toMatchmakingPhaseText(
-  phase: OngoingGameUpdated["phase"],
-  search: MatchmakingSearchData | null,
-  readyCheck: MatchmakingReadyCheckData | null,
-): string {
-  if (readyCheck?.state === "EveryoneReady") {
-    return "Everyone ready";
-  }
-
-  if (readyCheck?.state === "InProgress") {
-    if (readyCheck.playerResponse === "Accepted") {
-      return "Ready check accepted";
-    }
-    return "Ready check";
-  }
-
-  if (search?.searchState === "Found") {
-    return "Match found";
-  }
-
-  if (search?.searchState === "Searching") {
-    return "Searching";
-  }
-
-  if (phase === "ReadyCheck") {
-    return "Ready check";
-  }
-
-  if (phase === "Matchmaking") {
-    return "Matchmaking";
-  }
-
-  return "Idle";
-}
 
 function preferredMapAsset(
   map: { assets: Record<string, unknown> } | null | undefined,
@@ -164,30 +47,28 @@ function queueNameForId(
   queues: LcuQueue[] | undefined,
   queueId: number | null,
 ): string | null {
-  if (!queues || queueId == null) {
+  if (queueId == null) {
     return null;
   }
 
-  const queue = queues.find((entry) => entry.id === queueId);
+  const queue = queues?.find((entry) => entry.id === queueId);
   return queue?.shortName ?? queue?.name ?? `Queue ${queueId}`;
 }
 
-function resolveModeName(
-  queues: LcuQueue[] | undefined,
-  queueId: number | null,
-  session: OngoingGameUpdated["gameflow_session"],
-): string | null {
+function queueIdFromState(
+  effectiveQueueId: number | null,
+  matchmakingSearch: MatchmakingSearchData | null,
+  gameflowSession: OngoingGameUpdated["gameflow_session"],
+): number | null {
   return (
-    queueNameForId(queues, queueId) ??
-    session?.gameData.queue.detailedDescription ??
-    session?.gameData.queue.name ??
-    session?.map.gameModeName ??
+    effectiveQueueId ??
+    matchmakingSearch?.queueId ??
+    gameflowSession?.gameData.queue.id ??
     null
   );
 }
 
 export function useMiniWindowModel(): MiniWindowModel {
-  const autoAccept = useAutoAcceptSettings();
   const { data: queues } = useLcuQueues();
   const { data: maps } = useLcuMaps();
 
@@ -210,48 +91,23 @@ export function useMiniWindowModel(): MiniWindowModel {
   }, []);
 
   return useMemo(() => {
-    const autoAcceptText = toAutoAcceptText(autoAccept, phase, readyCheck);
-    const queueId =
-      effectiveQueueId ?? gameflowSession?.gameData.queue.id ?? null;
+    const queueId = queueIdFromState(
+      effectiveQueueId,
+      matchmakingSearch,
+      gameflowSession,
+    );
     const sessionMap = gameflowSession?.map ?? null;
     const knownMap = sessionMap
       ? (maps?.find((map) => map.id === sessionMap.id) ?? sessionMap)
       : null;
 
-    if (isOngoingScene(phase)) {
-      return {
-        scene: "ongoing" as const,
-        autoAcceptText,
-        phaseText: phase,
-        modeName:
-          resolveModeName(queues, queueId, gameflowSession) ?? "Ongoing game",
-        mapName: sessionMap?.name ?? null,
-        mapIconSrc: preferredMapAsset(knownMap),
-      };
-    }
-
-    if (isMatchmakingScene(phase)) {
-      return {
-        scene: "matchmaking" as const,
-        autoAcceptText,
-        phaseText: toMatchmakingPhaseText(phase, matchmakingSearch, readyCheck),
-        modeName:
-          resolveModeName(queues, queueId, gameflowSession) ?? "Matchmaking",
-        mapName: sessionMap?.name ?? null,
-        mapIconSrc: preferredMapAsset(knownMap),
-      };
-    }
-
     return {
-      scene: "idle" as const,
-      autoAcceptText,
-      phaseText: "Idle",
-      modeName: "League Jax",
-      mapName: null,
-      mapIconSrc: null,
+      phase,
+      queueName: queueNameForId(queues, queueId),
+      mapIconSrc: preferredMapAsset(knownMap),
+      readyCheck,
     };
   }, [
-    autoAccept,
     effectiveQueueId,
     gameflowSession,
     maps,

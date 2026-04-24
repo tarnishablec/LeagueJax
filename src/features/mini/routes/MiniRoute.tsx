@@ -1,6 +1,7 @@
 import { MapPinned } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { uncapitalize } from "remeda";
 import { LcuImage } from "@/components/LcuImage";
 import {
   SettingsFieldRow,
@@ -10,7 +11,7 @@ import {
 import { useSettings } from "@/features/settings/context";
 import type { SettingId } from "@/features/settings/types";
 import {
-  type MiniWindowScene,
+  type MiniWindowModel,
   useMiniWindowModel,
 } from "../hooks/use-mini-window-model";
 import * as s from "./MiniRoute.css";
@@ -19,17 +20,8 @@ const AUTO_ACCEPT_SETTING_ID =
   "matchmaking.interaction.autoAccept" satisfies SettingId;
 const ACCEPT_DELAY_SECONDS_SETTING_ID =
   "matchmaking.interaction.acceptDelayMs" satisfies SettingId;
-
-function sceneLabel(scene: MiniWindowScene): string {
-  switch (scene) {
-    case "matchmaking":
-      return "Matchmaking";
-    case "ongoing":
-      return "Ongoing";
-    case "idle":
-      return "Idle";
-  }
-}
+const ACCEPT_DELAY_MIN_SECONDS = 0;
+const ACCEPT_DELAY_MAX_SECONDS = 10;
 
 function useSettingValue<T>(id: SettingId): T | undefined {
   const settings = useSettings();
@@ -38,6 +30,59 @@ function useSettingValue<T>(id: SettingId): T | undefined {
     () => settings.get<T>(id),
     () => settings.get<T>(id),
   );
+}
+
+function shouldShowAutoAcceptCountdown(
+  enabled: boolean,
+  readyCheck: MiniWindowModel["readyCheck"],
+): boolean {
+  return (
+    enabled &&
+    readyCheck?.state === "InProgress" &&
+    readyCheck.playerResponse === "None"
+  );
+}
+
+function useAutoAcceptCountdown(
+  enabled: boolean,
+  delaySeconds: number,
+  readyCheck: MiniWindowModel["readyCheck"],
+): number | null {
+  const active = shouldShowAutoAcceptCountdown(enabled, readyCheck);
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!active) {
+      setDeadline(null);
+      return;
+    }
+
+    const current = Date.now();
+    setNow(current);
+    const normalizedDelay = Math.min(
+      ACCEPT_DELAY_MAX_SECONDS,
+      Math.max(ACCEPT_DELAY_MIN_SECONDS, delaySeconds),
+    );
+    setDeadline(current + normalizedDelay * 1000);
+  }, [active, delaySeconds]);
+
+  useEffect(() => {
+    if (deadline == null) {
+      return;
+    }
+
+    const tick = () => setNow(Date.now());
+    tick();
+    const intervalId = window.setInterval(tick, 250);
+    return () => window.clearInterval(intervalId);
+  }, [deadline]);
+
+  if (!active || deadline == null) {
+    return null;
+  }
+
+  return Math.max(0, Math.ceil((deadline - now) / 1000));
 }
 
 function MiniAutoAcceptSettings() {
@@ -69,8 +114,8 @@ function MiniAutoAcceptSettings() {
           ariaLabel="Setting matchmaking.interaction.acceptDelayMs"
           type="number"
           value={String(acceptDelay)}
-          min={0}
-          max={10}
+          min={ACCEPT_DELAY_MIN_SECONDS}
+          max={ACCEPT_DELAY_MAX_SECONDS}
           step={1}
           onValueChange={(next) => {
             if (next.trim() === "") {
@@ -90,6 +135,15 @@ function MiniAutoAcceptSettings() {
 
 export function MiniRoute() {
   const model = useMiniWindowModel();
+  const { t } = useTranslation();
+  const autoAccept = useSettingValue<boolean>(AUTO_ACCEPT_SETTING_ID) ?? false;
+  const acceptDelay =
+    useSettingValue<number>(ACCEPT_DELAY_SECONDS_SETTING_ID) ?? 0;
+  const autoAcceptCountdown = useAutoAcceptCountdown(
+    autoAccept,
+    acceptDelay,
+    model.readyCheck,
+  );
 
   return (
     <section className={s.root}>
@@ -102,16 +156,23 @@ export function MiniRoute() {
               alt="Map icon"
             />
           ) : (
-            <MapPinned className={s.mapFallback} size={28} aria-hidden="true" />
+            <MapPinned className={s.mapFallback} size={52} aria-hidden="true" />
           )}
         </div>
 
         <div className={s.meta}>
-          <span className={s.scene}>{sceneLabel(model.scene)}</span>
-          <strong className={s.mode}>{model.modeName}</strong>
-          <span className={s.phase}>{model.phaseText}</span>
-          {model.mapName ? (
-            <span className={s.mapName}>{model.mapName}</span>
+          <strong className={s.queueName}>
+            {model.queueName ?? t("mini.queue.empty")}
+          </strong>
+          <span className={s.phase}>
+            {t(`mini.phase.${uncapitalize(model.phase)}`)}
+          </span>
+          {autoAcceptCountdown != null ? (
+            <span className={s.autoAcceptCountdown}>
+              {t("mini.autoAccept.countdown", {
+                count: autoAcceptCountdown,
+              })}
+            </span>
           ) : null}
         </div>
       </div>
