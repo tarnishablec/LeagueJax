@@ -1,7 +1,7 @@
 {
   "name": "league-jax",
   "private": true,
-  "version": "0.1.10",
+  "version": "0.1.11",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -37,8 +37,8 @@
     "@vanilla-extract/vite-plugin": "^5.2.2",
     "@xyflow/react": "^12.10.2",
     "graphology": "^0.26.0",
-    "i18next": "^26.0.7",
-    "lucide-react": "^1.9.0",
+    "i18next": "^26.0.8",
+    "lucide-react": "^1.11.0",
     "pino": "^10.3.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
