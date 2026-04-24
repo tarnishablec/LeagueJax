@@ -6,9 +6,10 @@ use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tokio::sync::Mutex as AsyncMutex;
+use tokio::time::{sleep, Duration};
 
 use crate::error::AppError;
-use crate::shards::lcu::manager::LcuManager;
+use crate::shards::lcu::manager::{LcuManager, LcuManagerStateEvent};
 use crate::shards::lcu::LcuShard;
 use crate::shards::settings::types::{SettingControlDto, SettingDefinitionDto, SettingScopeDto};
 use crate::shards::settings::{SettingHandle, SettingsShard};
@@ -19,6 +20,7 @@ const MINI_WINDOW_LABEL: &str = "mini";
 const MINI_WINDOW_ROUTE: &str = "/mini";
 const MINI_WINDOW_TITLE: &str = "League Jax - Mini";
 const MAIN_WINDOW_LABEL: &str = "main";
+const MINI_AUTO_OPEN_SETTING_ID: &str = "mini.preference.autoOpen";
 const MINI_PIN_SETTING_ID: &str = "mini.preference.pin";
 
 const MINI_WINDOW_WIDTH: f64 = 420.0;
@@ -26,6 +28,8 @@ const MINI_WINDOW_HEIGHT: f64 = 680.0;
 const MINI_WINDOW_MIN_WIDTH: f64 = 360.0;
 const MINI_WINDOW_MIN_HEIGHT: f64 = 520.0;
 const MINI_WINDOW_GAP_PX: i32 = 4;
+const MINI_AUTO_OPEN_RETRY_ATTEMPTS: usize = 8;
+const MINI_AUTO_OPEN_RETRY_INTERVAL: Duration = Duration::from_millis(250);
 
 type PxPoint = Point2D<i32>;
 type PxSize = Size2D<i32>;
@@ -92,6 +96,7 @@ pub struct MiniWindowShard {
     window_effect: OnceLock<Arc<WindowEffectShard>>,
     lcu: OnceLock<Arc<LcuShard>>,
     lcu_manager: OnceLock<Arc<LcuManager>>,
+    auto_open_setting: OnceLock<SettingHandle>,
     pin_setting: OnceLock<SettingHandle>,
 
     state: Mutex<MiniWindowState>,
@@ -107,11 +112,20 @@ impl MiniWindowShard {
             window_effect: OnceLock::new(),
             lcu: OnceLock::new(),
             lcu_manager: OnceLock::new(),
+            auto_open_setting: OnceLock::new(),
             pin_setting: OnceLock::new(),
             state: Mutex::new(MiniWindowState::default()),
             toggle_lock: AsyncMutex::new(()),
             follow_controller: native_window::FollowController::new(),
         }
+    }
+
+    fn current_auto_open_enabled(&self) -> bool {
+        self.auto_open_setting
+            .get()
+            .and_then(|handle| handle.get_value().ok())
+            .and_then(|value| value.as_bool())
+            .unwrap_or(true)
     }
 
     fn current_pin_enabled(&self) -> bool {
@@ -276,6 +290,29 @@ impl MiniWindowShard {
         })
     }
 
+    async fn focused_league_client_window_target(&self) -> Option<LeagueWindowTarget> {
+        let manager = self.lcu_manager.get()?.clone();
+        let focused_pid = manager.focused_pid().await?;
+        native_window::visible_rect_for_pid(focused_pid).map(|rect| LeagueWindowTarget {
+            pid: focused_pid,
+            rect,
+        })
+    }
+
+    async fn focused_league_client_window_target_with_retry(&self) -> Option<LeagueWindowTarget> {
+        for attempt in 0..MINI_AUTO_OPEN_RETRY_ATTEMPTS {
+            if let Some(target) = self.focused_league_client_window_target().await {
+                return Some(target);
+            }
+
+            if attempt + 1 < MINI_AUTO_OPEN_RETRY_ATTEMPTS {
+                sleep(MINI_AUTO_OPEN_RETRY_INTERVAL).await;
+            }
+        }
+
+        None
+    }
+
     async fn league_client_window_target(&self) -> Option<LeagueWindowTarget> {
         let manager = self.lcu_manager.get()?.clone();
 
@@ -340,6 +377,55 @@ impl MiniWindowShard {
         self.sync_follow_controller().await?;
 
         Ok(())
+    }
+
+    async fn show_window_docked_to_target(
+        &self,
+        window: &WebviewWindow,
+        target: LeagueWindowTarget,
+    ) -> Result<(), AppError> {
+        if self.classify_window_state(window)? == MiniWindowVisibilityState::Minimized {
+            window.unminimize().map_err(|error| {
+                AppError::other(format!("failed to unminimize mini window: {error}"))
+            })?;
+        }
+
+        let mini_rect = self.read_inner_rect(window)?;
+        let docked = DockLayout::dock_right_of(target.rect, mini_rect.size);
+        self.move_window_to_inner_rect(window, docked)?;
+        self.mark_initialized()?;
+
+        window
+            .show()
+            .map_err(|error| AppError::other(format!("failed to show mini window: {error}")))?;
+
+        window
+            .set_focus()
+            .map_err(|error| AppError::other(format!("failed to focus mini window: {error}")))?;
+
+        self.try_apply_window_effect(window);
+        self.sync_follow_controller().await?;
+
+        Ok(())
+    }
+
+    async fn auto_open_for_focused_client(&self) -> Result<(), AppError> {
+        if !self.current_auto_open_enabled() {
+            return Ok(());
+        }
+
+        let _lock = self.toggle_lock.lock().await;
+
+        if !self.current_auto_open_enabled() {
+            return Ok(());
+        }
+
+        let Some(target) = self.focused_league_client_window_target_with_retry().await else {
+            return Ok(());
+        };
+
+        let window = self.ensure_window()?;
+        self.show_window_docked_to_target(&window, target).await
     }
 
     async fn restore_minimized_window(&self, window: &WebviewWindow) -> Result<(), AppError> {
@@ -458,6 +544,18 @@ impl Shard for MiniWindowShard {
         let lcu = jax.get_shard::<LcuShard>().clone();
         let lcu_manager = lcu.initialize(host.cancellation_token());
 
+        let auto_open_setting = settings.register_definition(SettingDefinitionDto {
+            id: MINI_AUTO_OPEN_SETTING_ID.to_string(),
+            label_key: "settings.mini.autoOpen.label".to_string(),
+            hint_key: Some("settings.mini.autoOpen.hint".to_string()),
+            scope: SettingScopeDto::Shared,
+            control: SettingControlDto::Toggle,
+            default_value: Value::Bool(true),
+            order: Some(5),
+            visible: Some(true),
+            options: None,
+        })?;
+
         let pin_setting = settings.register_definition(SettingDefinitionDto {
             id: MINI_PIN_SETTING_ID.to_string(),
             label_key: "settings.mini.pin.label".to_string(),
@@ -482,11 +580,32 @@ impl Shard for MiniWindowShard {
         if self.lcu_manager.set(lcu_manager.clone()).is_err() {
             tracing::warn!("MiniWindowShard lcu_manager already initialized");
         }
+        if self
+            .auto_open_setting
+            .set(auto_open_setting.clone())
+            .is_err()
+        {
+            tracing::warn!("MiniWindowShard auto_open_setting already initialized");
+        }
         if self.pin_setting.set(pin_setting.clone()).is_err() {
             tracing::warn!("MiniWindowShard pin_setting already initialized");
         }
 
         let mini_window = self.ensure_window().map_err(Box::new)?;
+
+        let shard_for_auto_open_setting = jax.get_shard::<MiniWindowShard>().clone();
+        auto_open_setting.spawn_watch(false, move |value| {
+            let shard = shard_for_auto_open_setting.clone();
+            async move {
+                if !value.as_bool().unwrap_or(false) {
+                    return;
+                }
+
+                if let Err(error) = shard.auto_open_for_focused_client().await {
+                    tracing::warn!(error = %error, "Failed to auto-open mini window after setting change");
+                }
+            }
+        })?;
 
         let shard_for_settings = jax.get_shard::<MiniWindowShard>().clone();
         pin_setting.spawn_watch(false, move |_value| {
@@ -499,9 +618,18 @@ impl Shard for MiniWindowShard {
         })?;
 
         let shard_for_lcu = jax.get_shard::<MiniWindowShard>().clone();
-        lcu_manager.subscribe_state_fn(move |_event| {
+        lcu_manager.subscribe_state_fn(move |event| {
             let shard = shard_for_lcu.clone();
             async move {
+                if matches!(
+                    &event,
+                    LcuManagerStateEvent::FocusChanged(change) if change.current.is_some()
+                ) {
+                    if let Err(error) = shard.auto_open_for_focused_client().await {
+                        tracing::warn!(error = %error, "Failed to auto-open mini window after LCU focus change");
+                    }
+                }
+
                 if let Err(error) = shard.sync_follow_controller().await {
                     tracing::warn!(error = %error, "Failed to refresh mini follow after LCU state change");
                 }

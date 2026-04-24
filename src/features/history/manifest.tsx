@@ -81,7 +81,7 @@ export class HistoryShard implements WebShard {
   public navItems() {
     return [
       {
-        to: "/history",
+        to: "/main/history",
         labelKey: "nav.history",
         icon: BarChart3,
         section: "main" as const,
@@ -96,7 +96,7 @@ export class HistoryShard implements WebShard {
         id: "history-search",
         node: <HistoryToolbar />,
         order: 10,
-        routes: ["/history"],
+        routes: ["/main/history"],
       },
     ];
   }
@@ -107,7 +107,7 @@ export class HistoryShard implements WebShard {
         id: "history-tabs",
         node: <HistoryTabBar />,
         order: 10,
-        routes: ["/history"],
+        routes: ["/main/history"],
       },
     ];
   }

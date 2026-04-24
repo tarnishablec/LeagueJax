@@ -36,7 +36,7 @@ export class AutomationShard implements WebShard {
   public navItems() {
     return [
       {
-        to: "/automation",
+        to: "/main/automation",
         labelKey: "nav.automation",
         icon: Bot,
         section: "main" as const,

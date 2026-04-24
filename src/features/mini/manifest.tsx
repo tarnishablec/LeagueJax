@@ -39,6 +39,16 @@ export class MiniShard implements WebShard {
         ),
         order: 5,
       },
+      {
+        path: "game",
+        layout: "mini",
+        element: (
+          <Suspense fallback={null}>
+            <MiniRoute />
+          </Suspense>
+        ),
+        order: 6,
+      },
     ];
   }
 

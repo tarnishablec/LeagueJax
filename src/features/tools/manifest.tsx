@@ -40,7 +40,7 @@ export class ToolsShard implements WebShard {
   public navItems() {
     return [
       {
-        to: "/tools",
+        to: "/main/tools",
         labelKey: "nav.tools",
         icon: Wrench,
         section: "main" as const,

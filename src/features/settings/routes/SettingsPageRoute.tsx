@@ -38,7 +38,7 @@ export function SettingsPageRoute() {
   }
 
   if (!activePage) {
-    return <Navigate to={`/settings/${pages[0].id}`} replace />;
+    return <Navigate to={`/main/settings/${pages[0].id}`} replace />;
   }
 
   return <SettingsSections page={activePage} />;

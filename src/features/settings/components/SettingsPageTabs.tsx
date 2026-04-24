@@ -16,7 +16,7 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
         {pages.map((page) => (
           <NavLink
             key={page.id}
-            to={`/settings/${page.id}`}
+            to={`/main/settings/${page.id}`}
             className={({ isActive }) =>
               isActive ? s.pageTabActive : s.pageTab
             }
@@ -30,7 +30,7 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
 
       <div className={s.pageTabsRight}>
         <NavLink
-          to="/settings/client-args"
+          to="/main/settings/client-args"
           className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
         >
           {t("settings.clientArgs.tab", {
@@ -39,21 +39,21 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
         </NavLink>
 
         <NavLink
-          to="/settings/registry"
+          to="/main/settings/registry"
           className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
         >
           {t("settings.registry.tab", { defaultValue: "Registry" })}
         </NavLink>
 
         <NavLink
-          to="/settings/shards"
+          to="/main/settings/shards"
           className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
         >
           {t("settings.shards.tab", { defaultValue: "Shards" })}
         </NavLink>
 
         <NavLink
-          to="/settings/about"
+          to="/main/settings/about"
           className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
         >
           {t("settings.pages.about.title", { defaultValue: "About" })}

@@ -11,5 +11,5 @@ export function SettingsIndexRoute() {
     return <h1 className={s.title}>{t("settings.title")}</h1>;
   }
 
-  return <Navigate to={`/settings/${pages[0].id}`} replace />;
+  return <Navigate to={`/main/settings/${pages[0].id}`} replace />;
 }

@@ -9,6 +9,15 @@ const getNavigateTarget = (toast: ToastOptions): string | null => {
   return typeof navigateTo === "string" ? navigateTo : null;
 };
 
+const currentRouteRoot = (): "/main" | "/mini" => {
+  return window.location.hash.startsWith("#/mini") ? "/mini" : "/main";
+};
+
+const isInCurrentRouteRoot = (path: string): boolean => {
+  const root = currentRouteRoot();
+  return path === root || path.startsWith(`${root}/`);
+};
+
 export function AppToaster() {
   return (
     <Toaster
@@ -18,10 +27,11 @@ export function AppToaster() {
     >
       {(toast: ToastOptions) => {
         const navigateTo = getNavigateTarget(toast);
-        const isClickable = navigateTo !== null;
+        const isClickable =
+          navigateTo !== null && isInCurrentRouteRoot(navigateTo);
 
         const navigate = () => {
-          if (!navigateTo) {
+          if (!navigateTo || !isInCurrentRouteRoot(navigateTo)) {
             return;
           }
 

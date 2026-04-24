@@ -272,7 +272,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
       return;
     }
     openTab(summoner);
-    void navigate("/history");
+    void navigate("/main/history");
   };
 
   const [open, setOpen] = useState(false);

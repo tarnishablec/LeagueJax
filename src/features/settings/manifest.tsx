@@ -170,7 +170,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   public navItems() {
     return [
       {
-        to: "/settings",
+        to: "/main/settings",
         labelKey: "nav.settings",
         icon: Settings,
         section: "bottom" as const,
