@@ -8,6 +8,7 @@ interface SettingsFieldRowProps {
   label: string;
   hint?: string;
   hintTone?: "info" | "warning" | "error";
+  settingId?: string;
   scopeTag?: string;
   children?: ReactNode;
 }
@@ -16,11 +17,12 @@ export function SettingsFieldRow({
   label,
   hint,
   hintTone = "info",
+  settingId,
   scopeTag,
   children,
 }: SettingsFieldRowProps) {
   return (
-    <div className={s.row}>
+    <div className={s.row} data-setting-id={settingId}>
       <span className={s.label}>
         <span className={s.labelText}>
           <span>{label}</span>

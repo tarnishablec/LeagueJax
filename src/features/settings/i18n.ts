@@ -7,6 +7,11 @@ export const settingsI18n: Resource = {
     },
     settings: {
       title: "Settings",
+      contextMenu: {
+        resetSetting: "Reset This Setting",
+        resetSection: "Reset This Section",
+        resetAll: "Reset All Settings",
+      },
       pages: {
         system: {
           title: "System",
@@ -158,6 +163,11 @@ export const settingsI18n: Resource = {
     },
     settings: {
       title: "设置",
+      contextMenu: {
+        resetSetting: "重置此项",
+        resetSection: "重置此分区",
+        resetAll: "重置所有设置",
+      },
       pages: {
         system: {
           title: "系统",
@@ -309,6 +319,11 @@ export const settingsI18n: Resource = {
     },
     settings: {
       title: "設定",
+      contextMenu: {
+        resetSetting: "この設定をリセット",
+        resetSection: "このセクションをリセット",
+        resetAll: "すべての設定をリセット",
+      },
       pages: {
         system: {
           title: "システム",

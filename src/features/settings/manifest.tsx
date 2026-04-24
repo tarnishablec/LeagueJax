@@ -110,6 +110,10 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     return this.store.set(id, value);
   }
 
+  public reset(ids?: SettingId[]): boolean {
+    return this.store.reset(ids);
+  }
+
   public subscribe(id: SettingId, callback: () => void): () => void {
     return this.store.subscribe(id, callback);
   }

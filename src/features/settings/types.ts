@@ -110,6 +110,7 @@ export type SettingClassCtor = new () => object;
 export interface SettingsReader {
   get<T = unknown>(id: SettingId): T;
   set<T = unknown>(id: SettingId, value: T): boolean;
+  reset(ids?: SettingId[]): boolean;
   subscribe(id: SettingId, callback: () => void): () => void;
   listDefinitions(): RegisteredSetting[];
   getSectionRenderer(

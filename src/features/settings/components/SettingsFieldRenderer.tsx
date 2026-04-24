@@ -190,20 +190,35 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
   switch (field.control.kind) {
     case "select":
       return (
-        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
+        <SettingsFieldRow
+          label={label}
+          hint={hint}
+          settingId={field.id}
+          scopeTag={scopeTag}
+        >
           <SelectField field={field as RegisteredSelectSetting} />
         </SettingsFieldRow>
       );
     case "toggle":
       return (
-        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
+        <SettingsFieldRow
+          label={label}
+          hint={hint}
+          settingId={field.id}
+          scopeTag={scopeTag}
+        >
           <ToggleField ariaLabel={ariaLabel} field={field} />
         </SettingsFieldRow>
       );
     case "text":
     case "number":
       return (
-        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
+        <SettingsFieldRow
+          label={label}
+          hint={hint}
+          settingId={field.id}
+          scopeTag={scopeTag}
+        >
           <InputField
             ariaLabel={ariaLabel}
             field={field as RegisteredInputSetting}
@@ -212,7 +227,12 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
       );
     case "action":
       return (
-        <SettingsFieldRow label={label} hint={hint} scopeTag={scopeTag}>
+        <SettingsFieldRow
+          label={label}
+          hint={hint}
+          settingId={field.id}
+          scopeTag={scopeTag}
+        >
           <ActionField field={field as RegisteredActionSetting} />
         </SettingsFieldRow>
       );
