@@ -41,6 +41,12 @@ function navigateTo(path: string): void {
   window.location.hash = normalizedPath;
 }
 
+function gameRouteForCurrentNamespace(): string {
+  return window.location.hash.startsWith("#/mini")
+    ? "/mini/game"
+    : "/main/game";
+}
+
 /** Collects items within a single animation frame, then flushes them in one batch. */
 function createRafBatcher<T>(flush: (batch: T[]) => void) {
   let pending: T[] = [];
@@ -131,7 +137,7 @@ export class OngoingGameShard implements WebShard {
             !isVisibleOngoingPhase(currentPhase) &&
             isVisibleOngoingPhase(event.payload.phase)
           ) {
-            navigateTo("/game");
+            navigateTo(gameRouteForCurrentNamespace());
           }
         }
 
@@ -203,7 +209,7 @@ export class OngoingGameShard implements WebShard {
   public navItems() {
     return [
       {
-        to: "/game",
+        to: "/main/game",
         labelKey: "nav.game",
         icon: Gamepad2,
         section: "main" as const,
@@ -218,7 +224,7 @@ export class OngoingGameShard implements WebShard {
         id: "ongoing-game-titlebar",
         node: <OngoingGameTitlebar />,
         order: 20,
-        routes: ["/game"],
+        routes: ["/main/game"],
       },
     ];
   }

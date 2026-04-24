@@ -215,7 +215,7 @@ export function DebugCommandPanel() {
           return {
             ok: true,
             message: "Toast triggered.",
-            target: "/settings/system",
+            target: "/main/settings/system",
           };
         },
       },

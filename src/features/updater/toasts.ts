@@ -1,6 +1,6 @@
 import { appToaster } from "@/components/toastStore";
 
-const SETTINGS_SYSTEM_HASH = "/settings/system";
+const SETTINGS_SYSTEM_HASH = "/main/settings/system";
 
 interface UpdateSettingsToastOptions {
   duration?: number;

@@ -19,12 +19,12 @@ const ROUTE_LAYOUTS: Record<
   }
 > = {
   main: {
-    path: "/",
+    path: "/main",
     element: <MainWindowLayout />,
     children: (routes) => [
       {
         index: true,
-        element: <Navigate to="/history" replace />,
+        element: <Navigate to="/main/history" replace />,
       },
       ...routes,
     ],
@@ -80,8 +80,12 @@ export default function App() {
       },
     );
 
-    return createHashRouter(
-      ROUTE_LAYOUT_ORDER.map((layout) => {
+    return createHashRouter([
+      {
+        path: "/",
+        element: <Navigate to="/main/history" replace />,
+      },
+      ...ROUTE_LAYOUT_ORDER.map((layout) => {
         const config = ROUTE_LAYOUTS[layout];
 
         return {
@@ -90,7 +94,7 @@ export default function App() {
           children: config.children(routeBuckets[layout]),
         };
       }),
-    );
+    ]);
   }, []);
 
   return (
