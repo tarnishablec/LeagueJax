@@ -156,7 +156,11 @@ function ShardsDagInner({ shards }: ShardsDagProps) {
         source: shard.id,
         target: depId,
         animated: false,
-        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 16,
+          height: 16,
+        },
       })),
     );
 

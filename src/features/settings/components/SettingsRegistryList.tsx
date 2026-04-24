@@ -90,7 +90,9 @@ export function SettingsRegistryList({
       columnHelper.accessor("labelKey", {
         id: "en",
         header: () =>
-          t("settings.registry.columns.en", { defaultValue: "English" }),
+          t("settings.registry.columns.en", {
+            defaultValue: "English",
+          }),
         meta: { className: mutedCell },
         cell: ({ row }) =>
           t(row.original.labelKey, {
@@ -101,7 +103,9 @@ export function SettingsRegistryList({
       columnHelper.display({
         id: "scope",
         header: () =>
-          t("settings.registry.columns.scope", { defaultValue: "Scope" }),
+          t("settings.registry.columns.scope", {
+            defaultValue: "Scope",
+          }),
         cell: ({ row }) => (
           <span className={s.scope}>{toScope(row.original.scope)}</span>
         ),

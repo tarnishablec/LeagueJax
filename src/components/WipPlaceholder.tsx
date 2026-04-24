@@ -10,7 +10,9 @@ export function WipPlaceholder() {
       icon={Construction}
       title={t("common.wipTitle", { defaultValue: "WIP" })}
       titleWeight={700}
-      subtitle={t("common.wipSubtitle", { defaultValue: "Under Construction" })}
+      subtitle={t("common.wipSubtitle", {
+        defaultValue: "Under Construction",
+      })}
     />
   );
 }

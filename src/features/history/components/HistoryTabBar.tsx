@@ -338,7 +338,10 @@ export function HistoryTabBar() {
         </div>
       </div>
       <div
-        className={s.overflowFade({ side: "left", visible: showLeftOverflow })}
+        className={s.overflowFade({
+          side: "left",
+          visible: showLeftOverflow,
+        })}
         aria-hidden="true"
       />
       <div

@@ -75,8 +75,8 @@ impl LeagueBridgeShard {
 
         if let Some(ongoing_manager) = jax.get_shard::<OngoingGameShard>().manager() {
             let mut ongoing_rx = ongoing_manager.subscribe();
-            let ongoing_app = app;
-            let token = cancel_token;
+            let ongoing_app = app.clone();
+            let token = cancel_token.clone();
 
             tokio::spawn(async move {
                 loop {

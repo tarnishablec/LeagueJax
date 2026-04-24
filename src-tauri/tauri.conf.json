@@ -28,12 +28,8 @@
   },
   "bundle": {
     "active": true,
-    "resources": [
-      "icons/icon.ico"
-    ],
-    "targets": [
-      "nsis"
-    ],
+    "resources": ["icons/icon.ico"],
+    "targets": ["nsis"],
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",

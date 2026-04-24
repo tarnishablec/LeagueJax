@@ -31,10 +31,16 @@
       }
     }
   },
+  "json": {
+    "formatter": {
+      "indentWidth": 2
+    }
+  },
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
-      "bracketSpacing": true
+      "bracketSpacing": true,
+      "indentWidth": 2
     }
   },
   "css": {

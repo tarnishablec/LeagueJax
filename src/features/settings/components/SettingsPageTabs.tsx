@@ -21,7 +21,9 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
               isActive ? s.pageTabActive : s.pageTab
             }
           >
-            {t(`settings.pages.${page.id}.title`, { defaultValue: page.id })}
+            {t(`settings.pages.${page.id}.title`, {
+              defaultValue: page.id,
+            })}
           </NavLink>
         ))}
       </div>
@@ -31,7 +33,9 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
           to="/settings/client-args"
           className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
         >
-          {t("settings.clientArgs.tab", { defaultValue: "Client Args" })}
+          {t("settings.clientArgs.tab", {
+            defaultValue: "Client Args",
+          })}
         </NavLink>
 
         <NavLink

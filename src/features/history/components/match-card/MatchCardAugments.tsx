@@ -137,7 +137,9 @@ export function MatchCardAugments({
                   fallbacks={[fallbackIconSrc]}
                   alt="Hextech augment"
                   className={s.augmentIcon({ rarity })}
-                  fallbackClassName={s.augmentIconFallback({ rarity })}
+                  fallbackClassName={s.augmentIconFallback({
+                    rarity,
+                  })}
                 />
               </span>
             </HoverCard.Trigger>

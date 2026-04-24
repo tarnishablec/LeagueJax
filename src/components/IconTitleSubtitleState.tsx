@@ -22,7 +22,9 @@ export function IconTitleSubtitleState({
       <Icon className={s.icon} aria-hidden={true} />
       <div
         className={s.title}
-        style={assignInlineVars({ [s.titleWeightVar]: String(titleWeight) })}
+        style={assignInlineVars({
+          [s.titleWeightVar]: String(titleWeight),
+        })}
       >
         {title}
       </div>

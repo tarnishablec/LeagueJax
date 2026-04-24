@@ -26,6 +26,10 @@ const ONGOING_AUTO_SWITCH_TO_GAME_SETTING =
   "ongoing.interaction.autoSwitchToGame";
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots";
 
+function isVisibleOngoingPhase(phase: OngoingGameUpdated["phase"]): boolean {
+  return phase === "ChampSelect" || phase === "InGame";
+}
+
 function navigateTo(path: string): void {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const targetHash = `#${normalizedPath}`;
@@ -123,7 +127,10 @@ export class OngoingGameShard implements WebShard {
         );
         if (autoSwitch) {
           const currentPhase = useOngoingGameStore.getState().phase;
-          if (currentPhase === "Idle" && event.payload.phase !== "Idle") {
+          if (
+            !isVisibleOngoingPhase(currentPhase) &&
+            isVisibleOngoingPhase(event.payload.phase)
+          ) {
             navigateTo("/game");
           }
         }

@@ -51,7 +51,9 @@ export function ThemeToggle() {
               type="button"
               aria-label={label}
               aria-pressed={theme === value}
-              className={s.dropdownItem({ active: theme === value })}
+              className={s.dropdownItem({
+                active: theme === value,
+              })}
               onClick={() => {
                 settings.set(SYSTEM_THEME_SETTING_ID, value);
               }}

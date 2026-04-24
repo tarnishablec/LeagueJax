@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import type { OngoingGamePhase } from "@/bindings/ongoing_game";
 import { LcuImage } from "@/components/LcuImage";
 import { RefreshButton } from "@/components/RefreshButton";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
@@ -11,28 +12,8 @@ import * as s from "./OngoingGameTitlebar.css";
 
 const CURRENT_MODE_VALUE = "__current_mode__";
 
-function resolveGameflowAssetIconPath(
-  assets: Record<string, unknown> | undefined,
-): string | null {
-  if (!assets) {
-    return null;
-  }
-
-  const pathCandidates = [assets["icon-v2"], assets["game-select-icon-active"]];
-  const selectedPath = pathCandidates.find(
-    (value): value is string =>
-      typeof value === "string" && value.trim().length > 0,
-  );
-  if (!selectedPath) {
-    return null;
-  }
-
-  const normalizedPath = selectedPath.replace(/\\/g, "/").trim();
-  if (normalizedPath.length === 0) {
-    return null;
-  }
-
-  return normalizedPath;
+function isVisibleOngoingPhase(phase: OngoingGamePhase): boolean {
+  return phase === "ChampSelect" || phase === "InGame";
 }
 
 function resolveSgpTag(modeTag: MatchModeTag | null): string | null {
@@ -70,21 +51,14 @@ export function OngoingGameTitlebar() {
       (s) => s.status === "loading",
     ),
   );
-  const queueIconAssetPath = useOngoingGameStore((state) => {
-    const assets = state.gameflowSession?.map.assets;
-    if (!assets) {
+  const queueIconPath = useOngoingGameStore((state) => {
+    const iconPath = state.gameflowSession?.map.assets["icon-v2"];
+    if (typeof iconPath !== "string") {
       return null;
     }
 
-    const pathCandidates = [
-      assets["icon-v2"],
-      assets["game-select-icon-active"],
-    ];
-    const selectedPath = pathCandidates.find(
-      (value): value is string =>
-        typeof value === "string" && value.trim().length > 0,
-    );
-    return selectedPath ?? null;
+    const normalizedPath = iconPath.replace(/\\/g, "/").trim();
+    return normalizedPath.length > 0 ? normalizedPath : null;
   });
   const queueDetailedDescription = useOngoingGameStore((state) => {
     const session = state.gameflowSession;
@@ -106,16 +80,6 @@ export function OngoingGameTitlebar() {
   });
 
   const setModeTag = useOngoingGameStore((state) => state.setModeTag);
-
-  const queueIconPath = useMemo(
-    () =>
-      queueIconAssetPath
-        ? resolveGameflowAssetIconPath({
-            "icon-v2": queueIconAssetPath,
-          })
-        : null,
-    [queueIconAssetPath],
-  );
 
   const currentModeLabel = t("ongoingGame.titlebar.filterCurrentMode", {
     defaultValue: "Current Mode",
@@ -167,7 +131,7 @@ export function OngoingGameTitlebar() {
   return (
     <div className={s.root} data-tauri-drag-region>
       <div className={s.labels}>
-        {phase === "Idle" ? (
+        {!isVisibleOngoingPhase(phase) ? (
           <span className={s.idleText} />
         ) : (
           <span className={s.queueMeta}>
@@ -207,7 +171,7 @@ export function OngoingGameTitlebar() {
 
         <RefreshButton
           loading={matchHistoriesPending}
-          disabled={phase === "Idle"}
+          disabled={!isVisibleOngoingPhase(phase)}
           ariaLabel={t("ongoingGame.titlebar.refreshAria", {
             defaultValue: "Refresh ongoing game",
           })}

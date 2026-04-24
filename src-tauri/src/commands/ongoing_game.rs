@@ -6,7 +6,7 @@ use tauri::State;
 
 use crate::error::AppError;
 use crate::shards::ongoing_game::manager::MatchHistoryModeSetting;
-use crate::shards::ongoing_game::types::OngoingGameInput;
+use crate::shards::ongoing_game::types::{OngoingGameInput, OngoingGameUpdated};
 use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::settings::SettingsShard;
 
@@ -19,6 +19,31 @@ pub async fn ongoing_game_refresh(jax: State<'_, Arc<Jax>>) -> Result<(), AppErr
         manager.post(OngoingGameInput::Refresh);
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn ongoing_game_get_snapshot(
+    jax: State<'_, Arc<Jax>>,
+) -> Result<OngoingGameUpdated, AppError> {
+    Ok(jax
+        .get_shard::<OngoingGameShard>()
+        .manager()
+        .map(|manager| manager.snapshot())
+        .unwrap_or(OngoingGameUpdated {
+            phase: crate::shards::ongoing_game::types::OngoingGamePhase::Idle,
+            lifecycle_game_id: None,
+            match_history_tag: None,
+            effective_queue_id: None,
+            effective_mode_tag: None,
+            match_histories_pending: false,
+            summoner_states: Vec::new(),
+            history_states: Vec::new(),
+            gameflow_session: None,
+            matchmaking_search: None,
+            ready_check: None,
+            champ_select_session: None,
+            team_members: Vec::new(),
+        }))
 }
 
 #[tauri::command]

@@ -440,7 +440,9 @@ class SettingsStore {
           ...shared,
           control: { kind: "action" },
           onAction: async () => {
-            await invoke("execute_setting_action", { id: definition.id });
+            await invoke("execute_setting_action", {
+              id: definition.id,
+            });
           },
         };
         break;

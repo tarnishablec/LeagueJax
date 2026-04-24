@@ -103,8 +103,10 @@ export function LeaguePositionPair({
   const primaryIcon = normalizeLeaguePosition(primary);
   const secondaryIcon = normalizeLeaguePosition(secondary);
 
-  const prefs: Array<{ key: "primary" | "secondary"; value: LeaguePosition }> =
-    [];
+  const prefs: Array<{
+    key: "primary" | "secondary";
+    value: LeaguePosition;
+  }> = [];
   if (primaryIcon && primaryIcon !== "none") {
     prefs.push({ key: "primary", value: primaryIcon });
   }
