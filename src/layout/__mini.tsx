@@ -2,6 +2,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect } from "react";
 import { Outlet } from "react-router";
 import { MiniTitleBar } from "@/features/mini/components/MiniTitleBar.tsx";
+import { useLcuEvents } from "@/hooks/use-lcu-events";
 import { useTheme } from "@/hooks/use-theme";
 import { useWindowEffectBackgroundFallback } from "@/hooks/use-window-effect";
 import * as mini from "./__mini.css.ts";
@@ -75,6 +76,7 @@ function useMiniWindowHoverSuspension() {
 
 export function MiniWindowLayout() {
   useWindowEffectBackgroundFallback();
+  useLcuEvents();
   useTheme();
   useMiniWindowHoverSuspension();
 

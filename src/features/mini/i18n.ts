@@ -2,6 +2,21 @@ import type { Resource } from "i18next";
 
 export const miniI18n: Resource = {
   en: {
+    mini: {
+      phase: {
+        idle: "Idle",
+        matchmaking: "Matchmaking",
+        readyCheck: "Ready Check",
+        champSelect: "Champion Select",
+        inGame: "In Game",
+      },
+      queue: {
+        empty: "No active queue",
+      },
+      autoAccept: {
+        countdown: "Auto accept: {{count}}s",
+      },
+    },
     settings: {
       pages: {
         mini: {
@@ -28,6 +43,21 @@ export const miniI18n: Resource = {
     },
   },
   "zh-CN": {
+    mini: {
+      phase: {
+        idle: "空闲",
+        matchmaking: "队列中",
+        readyCheck: "接受对局",
+        champSelect: "英雄选择",
+        inGame: "游戏中",
+      },
+      queue: {
+        empty: "暂无活动",
+      },
+      autoAccept: {
+        countdown: "自动接受：{{count}}秒",
+      },
+    },
     settings: {
       pages: {
         mini: {
@@ -54,6 +84,21 @@ export const miniI18n: Resource = {
     },
   },
   "ja-JP": {
+    mini: {
+      phase: {
+        idle: "待機中",
+        matchmaking: "マッチメイキング",
+        readyCheck: "準備確認",
+        champSelect: "チャンピオン選択",
+        inGame: "ゲーム中",
+      },
+      queue: {
+        empty: "アクティブなキューなし",
+      },
+      autoAccept: {
+        countdown: "自動承認: {{count}}秒",
+      },
+    },
     settings: {
       pages: {
         mini: {
