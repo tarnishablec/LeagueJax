@@ -23,7 +23,6 @@ export const input = style({
 
 export const numberRoot = style({
   height: 32,
-  minWidth: 180,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.background,

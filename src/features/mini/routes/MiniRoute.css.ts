@@ -76,23 +76,9 @@ export const mapName = style({
 
 export const footer = style({
   display: "grid",
-  gap: "4px",
-  padding: "10px 12px",
-  borderRadius: "16px",
+  gap: "8px",
+  padding: "8px",
+  borderRadius: "8px",
   background: `oklch(from ${vars.color.surface} l c h / 0.9)`,
   border: `1px solid ${vars.color.border}`,
-});
-
-export const footerLabel = style({
-  fontSize: "10px",
-  lineHeight: 1.2,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  color: vars.color.mutedForeground,
-});
-
-export const footerValue = style({
-  fontSize: "13px",
-  lineHeight: 1.35,
-  color: vars.color.foreground,
 });

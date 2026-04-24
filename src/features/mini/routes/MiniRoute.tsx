@@ -1,10 +1,24 @@
 import { MapPinned } from "lucide-react";
+import { useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
 import { LcuImage } from "@/components/LcuImage";
+import {
+  SettingsFieldRow,
+  SettingsInput,
+  SettingsToggle,
+} from "@/components/settings-ui";
+import { useSettings } from "@/features/settings/context";
+import type { SettingId } from "@/features/settings/types";
 import {
   type MiniWindowScene,
   useMiniWindowModel,
 } from "../hooks/use-mini-window-model";
 import * as s from "./MiniRoute.css";
+
+const AUTO_ACCEPT_SETTING_ID =
+  "matchmaking.interaction.autoAccept" satisfies SettingId;
+const ACCEPT_DELAY_SECONDS_SETTING_ID =
+  "matchmaking.interaction.acceptDelayMs" satisfies SettingId;
 
 function sceneLabel(scene: MiniWindowScene): string {
   switch (scene) {
@@ -15,6 +29,63 @@ function sceneLabel(scene: MiniWindowScene): string {
     case "idle":
       return "Idle";
   }
+}
+
+function useSettingValue<T>(id: SettingId): T | undefined {
+  const settings = useSettings();
+  return useSyncExternalStore(
+    (onStoreChange) => settings.subscribe(id, onStoreChange),
+    () => settings.get<T>(id),
+    () => settings.get<T>(id),
+  );
+}
+
+function MiniAutoAcceptSettings() {
+  const settings = useSettings();
+  const { t } = useTranslation();
+  const autoAccept = useSettingValue<boolean>(AUTO_ACCEPT_SETTING_ID) ?? false;
+  const acceptDelay =
+    useSettingValue<number>(ACCEPT_DELAY_SECONDS_SETTING_ID) ?? 0;
+
+  return (
+    <>
+      <SettingsFieldRow
+        label={t("settings.matchmaking.autoAccept.label")}
+        settingId={AUTO_ACCEPT_SETTING_ID}
+      >
+        <SettingsToggle
+          ariaLabel="Setting matchmaking.interaction.autoAccept"
+          checked={autoAccept}
+          onCheckedChange={(checked) => {
+            settings.set(AUTO_ACCEPT_SETTING_ID, checked);
+          }}
+        />
+      </SettingsFieldRow>
+      <SettingsFieldRow
+        label={t("settings.matchmaking.acceptDelaySeconds.label")}
+        settingId={ACCEPT_DELAY_SECONDS_SETTING_ID}
+      >
+        <SettingsInput
+          ariaLabel="Setting matchmaking.interaction.acceptDelayMs"
+          type="number"
+          value={String(acceptDelay)}
+          min={0}
+          max={10}
+          step={1}
+          onValueChange={(next) => {
+            if (next.trim() === "") {
+              return;
+            }
+
+            const parsed = Number(next);
+            if (!Number.isNaN(parsed)) {
+              settings.set(ACCEPT_DELAY_SECONDS_SETTING_ID, parsed);
+            }
+          }}
+        />
+      </SettingsFieldRow>
+    </>
+  );
 }
 
 export function MiniRoute() {
@@ -46,8 +117,7 @@ export function MiniRoute() {
       </div>
 
       <footer className={s.footer}>
-        <span className={s.footerLabel}>Auto Accept</span>
-        <span className={s.footerValue}>{model.autoAcceptText}</span>
+        <MiniAutoAcceptSettings />
       </footer>
     </section>
   );
