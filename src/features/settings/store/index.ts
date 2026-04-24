@@ -516,6 +516,45 @@ class SettingsStore {
     return true;
   }
 
+  public reset(ids?: SettingId[]): boolean {
+    const candidates =
+      ids && ids.length > 0
+        ? [...new Set(ids)]
+        : [...this.registeredDefinitions.keys()];
+    const changes: Record<string, unknown> = {};
+
+    for (const id of candidates) {
+      const definition = this.registeredDefinitions.get(id);
+      if (!definition || definition.control.kind === "action") {
+        continue;
+      }
+
+      const parsed = definition.zod.safeParse(definition.defaultValue);
+      if (!parsed.success) {
+        this.logger.warn(
+          { id },
+          "Skip settings reset because default value does not match setting schema",
+        );
+        continue;
+      }
+
+      const updated = this.applyParsedValue(id, definition, parsed.data, {
+        notify: true,
+        runOnSet: true,
+      });
+      if (updated) {
+        changes[id] = parsed.data;
+      }
+    }
+
+    if (Object.keys(changes).length === 0) {
+      return false;
+    }
+
+    this.remotePatchSender?.(changes);
+    return true;
+  }
+
   public subscribe(id: SettingId, callback: () => void): () => void {
     const subscribers = this.getFieldSubscribers(id);
     subscribers.add(callback);
