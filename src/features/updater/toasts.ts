@@ -10,9 +10,9 @@ interface UpdateSettingsToastOptions {
   title: string;
 }
 
-export function navigateToUpdateSettings(): void {
-  window.location.hash = SETTINGS_SYSTEM_HASH;
-}
+// export function navigateToUpdateSettings(): void {
+//   window.location.hash = SETTINGS_SYSTEM_HASH;
+// }
 
 export function showUpdateSettingsToast(
   options: UpdateSettingsToastOptions,
