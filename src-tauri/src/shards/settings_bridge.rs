@@ -21,6 +21,9 @@ impl SettingsBridgeShard {
         let tauri_host = jax.get_shard::<TauriHost>();
         let app = tauri_host.app.clone();
         let mut changes_rx = jax.get_shard::<SettingsShard>().subscribe_changes();
+        let mut definitions_rx = jax
+            .get_shard::<SettingsShard>()
+            .subscribe_definitions_changes();
 
         tauri_host.spawn(async move {
             loop {
@@ -32,6 +35,24 @@ impl SettingsBridgeShard {
                         tracing::warn!(
                             skipped,
                             "[settings_bridge] settings change broadcast lagged"
+                        );
+                    }
+                    Err(RecvError::Closed) => break,
+                }
+            }
+        });
+
+        let app = tauri_host.app.clone();
+        tauri_host.spawn(async move {
+            loop {
+                match definitions_rx.recv().await {
+                    Ok(payload) => {
+                        let _ = app.emit("settings_definitions_changed", payload);
+                    }
+                    Err(RecvError::Lagged(skipped)) => {
+                        tracing::warn!(
+                            skipped,
+                            "[settings_bridge] settings definition broadcast lagged"
                         );
                     }
                     Err(RecvError::Closed) => break,
