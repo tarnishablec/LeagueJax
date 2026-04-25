@@ -63,9 +63,13 @@ export function SettingsContextMenu({
     activeSection?.fields
       .filter(isResettableSetting)
       .map((field) => field.id) ?? [];
+  const pageResetIds = page.sections.flatMap((section) =>
+    section.fields.filter(isResettableSetting).map((field) => field.id),
+  );
   const canResetSetting =
     activeField !== undefined && isResettableSetting(activeField);
   const canResetSection = sectionResetIds.length > 0;
+  const canResetPage = pageResetIds.length > 0;
 
   const resetActiveSetting = () => {
     if (!activeField || !isResettableSetting(activeField)) {
@@ -129,7 +133,16 @@ export function SettingsContextMenu({
                 {t("settings.contextMenu.resetSection")}
               </Menu.Item>
             ) : null}
-            {canResetSetting || canResetSection ? (
+            {canResetPage ? (
+              <Menu.Item
+                className={s.item}
+                value="reset-page"
+                onSelect={() => settings.reset(pageResetIds)}
+              >
+                {t("settings.contextMenu.resetPage")}
+              </Menu.Item>
+            ) : null}
+            {canResetSetting || canResetSection || canResetPage ? (
               <Menu.Separator className={s.separator} />
             ) : null}
             <Menu.Item

@@ -63,7 +63,7 @@ export const content = style({
   marginTop: 4,
   borderRadius: 10,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackgroud,
+  background: vars.color.popupBackground,
   boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
   overflow: "hidden",
   padding: 4,

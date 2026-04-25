@@ -13,15 +13,16 @@ export const positioner = style({
 
 export const content = style({
   minWidth: 190,
+  outline: "none",
   borderRadius: 8,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
-  boxShadow: `0 8px 22px oklch(from ${vars.color.foreground} 0.26 c h / 0.2)`,
+  background: vars.color.popupBackground,
+  boxShadow: `0 4px 12px oklch(from ${vars.color.foreground} 0.26 c h / 0.2)`,
   overflow: "hidden",
   padding: 4,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 8px 22px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.62)`,
+      boxShadow: `0 4px 12px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.62)`,
     },
   },
 });

@@ -261,7 +261,7 @@ export const historyDialogContent = style({
   overflow: "auto",
   borderRadius: 12,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
+  background: vars.color.popupBackground,
   color: vars.color.foreground,
   padding: 14,
 });

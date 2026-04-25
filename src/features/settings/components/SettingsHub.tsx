@@ -13,7 +13,10 @@ export interface SettingsOutletContext {
 export function SettingsHub() {
   const settings = useSettings();
   const pages = useMemo(() => {
-    return buildSettingsPages(settings.listDefinitions());
+    return buildSettingsPages(
+      settings.listDefinitions(),
+      settings.listPageOrder(),
+    );
   }, [settings]);
   const outletContext: SettingsOutletContext = { pages };
 

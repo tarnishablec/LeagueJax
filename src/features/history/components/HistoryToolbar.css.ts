@@ -67,7 +67,7 @@ export const dialogContent = style({
   maxHeight: "calc(100vh - 40px)",
   borderRadius: 12,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
+  background: vars.color.popupBackground,
   color: vars.color.foreground,
   boxShadow: `0 16px 36px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
   padding: 14,

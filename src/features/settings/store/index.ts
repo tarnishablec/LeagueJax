@@ -24,6 +24,7 @@ interface SettingsState {
 
 type DecoratedFieldDefinition = SettingDefinition;
 
+const pageIdRegex = /^[^.]+$/;
 const settingIdRegex = /^[^.]+\.[^.]+\.[^.]+$/;
 const settingOptionSchema = z
   .object({
@@ -127,6 +128,10 @@ const settingDefinitionSchema = z.union([
   numberSettingDefinitionSchema,
   actionSettingDefinitionSchema,
 ]);
+
+const pageOrderSchema = z.array(
+  z.string().regex(pageIdRegex, "page id must not contain dots."),
+);
 
 const settingsClasses = new WeakSet<SettingClassCtor>();
 const classFieldDefinitions = new WeakMap<
@@ -237,6 +242,7 @@ class SettingsStore {
     SettingsSectionRenderer
   >();
   private declarationSequence = 0;
+  private pageOrder: string[] = [];
   private remotePatchSender: SettingsPatchSender | null = null;
   private readonly logger = createLogger("settings-store");
 
@@ -314,6 +320,34 @@ class SettingsStore {
       visible: definition.visible ?? true,
       declarationOrder: this.declarationSequence++,
     };
+  }
+
+  private validatePageOrder(pageIds: readonly string[]): string[] | null {
+    const parsedPageIds = pageOrderSchema.safeParse(pageIds);
+    if (!parsedPageIds.success) {
+      const issue = parsedPageIds.error.issues[0];
+      this.reportRegistrationError(
+        AppError.SettingsRegistration(
+          `Invalid setting page order: ${issue?.message ?? "unknown error"}.`,
+        ),
+      );
+      return null;
+    }
+
+    const seen = new Set<string>();
+    for (const id of parsedPageIds.data) {
+      if (seen.has(id)) {
+        this.reportRegistrationError(
+          AppError.SettingsRegistration(
+            `Duplicate setting page id "${id}" in page order.`,
+          ),
+        );
+        return null;
+      }
+      seen.add(id);
+    }
+
+    return parsedPageIds.data;
   }
 
   private registerDefinition(definition: SettingDefinition): void {
@@ -453,6 +487,15 @@ class SettingsStore {
     this.registerDefinition(mapped);
   }
 
+  public setPageOrder(pageIds: readonly string[]): void {
+    const validatedPageIds = this.validatePageOrder(pageIds);
+    if (!validatedPageIds) {
+      return;
+    }
+
+    this.pageOrder = validatedPageIds;
+  }
+
   public registerSetting(definition: SettingDefinition): void {
     this.registerDefinition(definition);
   }
@@ -574,6 +617,10 @@ class SettingsStore {
       }
       return a.declarationOrder - b.declarationOrder;
     });
+  }
+
+  public listPageOrder(): string[] {
+    return [...this.pageOrder];
   }
 
   public registerSectionRenderer(

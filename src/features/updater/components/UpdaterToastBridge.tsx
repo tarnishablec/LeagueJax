@@ -35,7 +35,9 @@ export function UpdaterToastBridge() {
     showUpdateSettingsToast({
       id: toastId,
       title: t("settings.update.status.updateAvailable"),
+      closable: false,
       duration: 10000,
+      hideIcon: true,
     });
   });
 

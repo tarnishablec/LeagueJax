@@ -68,17 +68,17 @@ export const hintContent = style({
 export const hintContentTone = styleVariants({
   info: {
     border: `1px solid ${vars.color.popoverBorder}`,
-    background: vars.color.popover,
+    background: vars.color.popupBackground,
     color: vars.color.foreground,
   },
   warning: {
     border: `1px solid color-mix(in oklch, ${vars.color.primary} 42%, ${vars.color.popoverBorder})`,
-    background: `color-mix(in oklch, ${vars.color.primary} 12%, ${vars.color.popover})`,
+    background: `color-mix(in oklch, ${vars.color.primary} 12%, ${vars.color.popupBackground})`,
     color: `color-mix(in oklch, ${vars.color.primary} 52%, ${vars.color.foreground})`,
   },
   error: {
     border: `1px solid color-mix(in oklch, ${vars.color.error} 42%, ${vars.color.popoverBorder})`,
-    background: `color-mix(in oklch, ${vars.color.error} 12%, ${vars.color.popover})`,
+    background: `color-mix(in oklch, ${vars.color.error} 12%, ${vars.color.popupBackground})`,
     color: `color-mix(in oklch, ${vars.color.error} 58%, ${vars.color.foreground})`,
   },
 });

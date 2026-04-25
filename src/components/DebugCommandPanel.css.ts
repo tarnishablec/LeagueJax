@@ -38,7 +38,7 @@ export const debugPanel = style({
   gap: 8,
   border: `1px solid ${vars.color.popoverBorder}`,
   borderRadius: 10,
-  background: vars.color.popover,
+  background: vars.color.popupBackground,
   color: vars.color.foreground,
   padding: 10,
   boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,

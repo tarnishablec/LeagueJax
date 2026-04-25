@@ -168,7 +168,7 @@ export const contextMenuContent = style({
   minWidth: 180,
   borderRadius: 10,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
+  background: vars.color.popupBackground,
   boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
   overflow: "hidden",
   padding: 4,
