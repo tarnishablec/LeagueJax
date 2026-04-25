@@ -45,7 +45,7 @@ export const dropdownOuter = style({
 });
 
 export const dropdownInner = style({
-  background: vars.color.popupBackgroud,
+  background: vars.color.popupBackground,
   border: `1px solid ${vars.color.border}`,
   borderRadius: 6,
   boxShadow:

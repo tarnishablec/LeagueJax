@@ -5,6 +5,8 @@ import {
   type SectionEntry,
 } from "./settings-view-model";
 
+const UNORDERED_PAGE_ORDER_OFFSET = 1_000_000;
+
 const sortFields = (fields: RegisteredSetting[]): RegisteredSetting[] => {
   return [...fields].sort((a, b) => {
     if (a.order !== b.order) {
@@ -16,30 +18,47 @@ const sortFields = (fields: RegisteredSetting[]): RegisteredSetting[] => {
 
 export const buildSettingsPages = (
   definitions: RegisteredSetting[],
+  pageOrder: readonly string[],
 ): PageEntry[] => {
+  const configuredPageOrder = new Map(
+    pageOrder.map((pageId, index) => [pageId, index]),
+  );
   const pageMap = new Map<
     string,
-    { id: string; order: number; sections: Map<string, SectionEntry> }
+    {
+      id: string;
+      order: number;
+      declarationOrder: number;
+      hasConfiguredOrder: boolean;
+      sections: Map<string, SectionEntry>;
+    }
   >();
 
   for (const definition of definitions) {
     const parsed = parseSettingId(definition.id);
     const fieldOrder = definition.order * 1_000 + definition.declarationOrder;
+    const configuredOrder = configuredPageOrder.get(parsed.pageId);
+    const fallbackPageOrder = UNORDERED_PAGE_ORDER_OFFSET + fieldOrder;
+    const fallbackDeclarationOrder =
+      UNORDERED_PAGE_ORDER_OFFSET + definition.declarationOrder;
 
     const page =
       pageMap.get(parsed.pageId) ??
       (() => {
         const created = {
           id: parsed.pageId,
-          order: fieldOrder,
+          order: configuredOrder ?? fallbackPageOrder,
+          declarationOrder: configuredOrder ?? fallbackDeclarationOrder,
+          hasConfiguredOrder: configuredOrder !== undefined,
           sections: new Map<string, SectionEntry>(),
         };
         pageMap.set(parsed.pageId, created);
         return created;
       })();
 
-    if (fieldOrder < page.order) {
-      page.order = fieldOrder;
+    if (!page.hasConfiguredOrder && fallbackPageOrder < page.order) {
+      page.order = fallbackPageOrder;
+      page.declarationOrder = definition.declarationOrder;
     }
 
     const section =
@@ -62,7 +81,12 @@ export const buildSettingsPages = (
   }
 
   return [...pageMap.values()]
-    .sort((a, b) => a.order - b.order)
+    .sort((a, b) => {
+      if (a.order !== b.order) {
+        return a.order - b.order;
+      }
+      return a.declarationOrder - b.declarationOrder;
+    })
     .map((page) => ({
       id: page.id,
       order: page.order,

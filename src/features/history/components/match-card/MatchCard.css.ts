@@ -461,7 +461,7 @@ export const playerHoverPositioner = style({
 export const playerHoverContent = style({
   borderRadius: 8,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
+  background: vars.color.popupBackground,
   color: vars.color.foreground,
   padding: "4px 6px",
   fontSize: "0.6875rem",
@@ -492,7 +492,7 @@ export const augmentHoverPositioner = style({
 export const augmentHoverContent = style({
   borderRadius: 8,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
+  background: vars.color.popupBackground,
   color: vars.color.foreground,
   padding: "4px 6px",
   fontSize: "0.6875rem",

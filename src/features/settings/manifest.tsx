@@ -16,6 +16,7 @@ import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { settingsAboutI18n } from "./about.i18n";
 import { settingsI18n } from "./i18n";
+import { SETTINGS_PAGE_ORDER } from "./settings-pages";
 import { SettingsStore } from "./store";
 import { registerGeneralSettings } from "./store/general";
 import type {
@@ -62,6 +63,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   }
 
   public async setup(_jax: Jax): Promise<void> {
+    this.setPageOrder(SETTINGS_PAGE_ORDER);
     registerGeneralSettings(this);
 
     this.store.configureRemotePatchSender((changes) => {
@@ -98,6 +100,10 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     this.store.registerSetting(definition);
   }
 
+  public setPageOrder(pageIds: readonly string[]): void {
+    this.store.setPageOrder(pageIds);
+  }
+
   public registerClass(ctor: SettingClassCtor): void {
     this.store.registerClass(ctor);
   }
@@ -120,6 +126,10 @@ export class SettingsShard implements WebShard, SettingsShardApi {
 
   public listDefinitions(): RegisteredSetting[] {
     return this.store.listDefinitions();
+  }
+
+  public listPageOrder(): string[] {
+    return this.store.listPageOrder();
   }
 
   public registerSectionRenderer(

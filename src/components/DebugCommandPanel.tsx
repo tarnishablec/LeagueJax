@@ -210,6 +210,8 @@ export function DebugCommandPanel() {
           showUpdateSettingsToast({
             id: `debug:update-toast:${Date.now()}`,
             title: t("settings.update.status.updateAvailable"),
+            closable: false,
+            hideIcon: true,
           });
 
           return {

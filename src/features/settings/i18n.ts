@@ -10,6 +10,7 @@ export const settingsI18n: Resource = {
       contextMenu: {
         resetSetting: "Reset This Setting",
         resetSection: "Reset This Section",
+        resetPage: "Reset This Page",
         resetAll: "Reset All Settings",
       },
       pages: {
@@ -166,6 +167,7 @@ export const settingsI18n: Resource = {
       contextMenu: {
         resetSetting: "重置此项",
         resetSection: "重置此分区",
+        resetPage: "重置当前页面",
         resetAll: "重置所有设置",
       },
       pages: {
@@ -322,6 +324,7 @@ export const settingsI18n: Resource = {
       contextMenu: {
         resetSetting: "この設定をリセット",
         resetSection: "このセクションをリセット",
+        resetPage: "このページをリセット",
         resetAll: "すべての設定をリセット",
       },
       pages: {

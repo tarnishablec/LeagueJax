@@ -112,6 +112,7 @@ export interface SettingsReader {
   set<T = unknown>(id: SettingId, value: T): boolean;
   reset(ids?: SettingId[]): boolean;
   subscribe(id: SettingId, callback: () => void): () => void;
+  listPageOrder(): string[];
   listDefinitions(): RegisteredSetting[];
   getSectionRenderer(
     key: SettingsSectionKey,
@@ -119,6 +120,7 @@ export interface SettingsReader {
 }
 
 export interface SettingsShardApi extends SettingsReader {
+  setPageOrder(pageIds: readonly string[]): void;
   registerSetting(definition: SettingDefinition): void;
   registerClass(ctor: SettingClassCtor): void;
   registerSectionRenderer(

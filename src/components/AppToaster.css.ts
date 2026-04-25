@@ -1,5 +1,7 @@
-import { style } from "@vanilla-extract/css";
+import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
+
+const controlSize = 24;
 
 export const group = style({
   position: "fixed",
@@ -15,14 +17,28 @@ export const group = style({
 export const root = style({
   pointerEvents: "auto",
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
-  alignItems: "start",
+  alignItems: "center",
   gap: 10,
   padding: "12px",
   borderRadius: 10,
   border: `1px solid ${vars.color.popoverBorder}`,
   background: vars.color.backgroundRaw,
   boxShadow: "0 10px 24px oklch(0 0 0 / 0.22)",
+});
+
+export const rootLayout = styleVariants({
+  balanced: {
+    gridTemplateColumns: `${controlSize}px minmax(0, 1fr) ${controlSize}px`,
+  },
+  iconOnly: {
+    gridTemplateColumns: `${controlSize}px minmax(0, 1fr)`,
+  },
+  closeOnly: {
+    gridTemplateColumns: `minmax(0, 1fr) ${controlSize}px`,
+  },
+  contentOnly: {
+    gridTemplateColumns: "minmax(0, 1fr)",
+  },
 });
 
 export const rootClickable = style({
@@ -40,10 +56,47 @@ export const rootClickable = style({
   },
 });
 
+export const iconSlot = style({
+  width: controlSize,
+  height: controlSize,
+  display: "grid",
+  placeItems: "center",
+});
+
+export const iconTone = styleVariants({
+  error: {
+    color: vars.color.error,
+  },
+  info: {
+    color: vars.color.mutedForeground,
+  },
+  loading: {
+    color: vars.color.primary,
+  },
+  success: {
+    color: vars.color.success,
+  },
+  warning: {
+    color: vars.color.primary,
+  },
+});
+
+const spin = keyframes({
+  to: {
+    transform: "rotate(360deg)",
+  },
+});
+
+export const loadingIcon = style({
+  animation: `${spin} 900ms linear infinite`,
+});
+
 export const body = style({
   minWidth: 0,
   display: "grid",
   gap: 6,
+  justifyItems: "center",
+  textAlign: "center",
 });
 
 export const title = style({
@@ -62,7 +115,7 @@ export const description = style({
 });
 
 export const actionButton = style({
-  justifySelf: "start",
+  justifySelf: "center",
   marginTop: 2,
   borderRadius: 6,
   padding: "4px 8px",
@@ -81,8 +134,8 @@ export const actionButton = style({
 });
 
 export const closeButton = style({
-  width: 24,
-  height: 24,
+  width: controlSize,
+  height: controlSize,
   borderRadius: 6,
   display: "grid",
   placeItems: "center",

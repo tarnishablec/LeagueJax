@@ -85,7 +85,7 @@ export const tooltipPositioner = style({
 export const tooltipContent = style({
   borderRadius: 8,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popover,
+  background: vars.color.popupBackground,
   color: vars.color.foreground,
   padding: "4px 8px",
   fontSize: "0.6875rem",
