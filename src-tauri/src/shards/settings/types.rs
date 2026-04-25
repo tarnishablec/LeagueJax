@@ -90,3 +90,11 @@ pub struct SettingsChangedEventDto {
     pub changes: BTreeMap<String, Value>,
     pub source: Option<String>,
 }
+
+#[derive(TS)]
+#[ts(export, export_to = "settings.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsDefinitionsChangedEventDto {
+    pub ids: Vec<String>,
+}

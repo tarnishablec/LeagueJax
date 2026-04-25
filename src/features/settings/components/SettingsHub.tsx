@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { Outlet } from "react-router";
 import { useSettings } from "@/features/settings/context";
 import * as s from "./SettingsHub.css";
@@ -12,12 +12,18 @@ export interface SettingsOutletContext {
 
 export function SettingsHub() {
   const settings = useSettings();
+  const definitionsVersion = useSyncExternalStore(
+    (onStoreChange) => settings.subscribeDefinitions(onStoreChange),
+    () => settings.getDefinitionsVersion(),
+    () => settings.getDefinitionsVersion(),
+  );
   const pages = useMemo(() => {
+    void definitionsVersion;
     return buildSettingsPages(
       settings.listDefinitions(),
       settings.listPageOrder(),
     );
-  }, [settings]);
+  }, [settings, definitionsVersion]);
   const outletContext: SettingsOutletContext = { pages };
 
   return (

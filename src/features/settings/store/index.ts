@@ -237,11 +237,13 @@ class SettingsStore {
     RegisteredSetting
   >();
   private readonly fieldSubscribers = new Map<SettingId, Set<() => void>>();
+  private readonly definitionSubscribers = new Set<() => void>();
   private readonly sectionRenderers = new Map<
     SettingsSectionKey,
     SettingsSectionRenderer
   >();
   private declarationSequence = 0;
+  private definitionsVersion = 0;
   private pageOrder: string[] = [];
   private remotePatchSender: SettingsPatchSender | null = null;
   private readonly logger = createLogger("settings-store");
@@ -269,6 +271,13 @@ class SettingsStore {
       return;
     }
     for (const callback of subscribers) {
+      callback();
+    }
+  }
+
+  private notifyDefinitionSubscribers(): void {
+    this.definitionsVersion += 1;
+    for (const callback of this.definitionSubscribers) {
       callback();
     }
   }
@@ -393,6 +402,7 @@ class SettingsStore {
 
     const normalized = this.normalizeDefinition(validatedDefinition);
     this.registeredDefinitions.set(validatedDefinition.id, normalized);
+    this.notifyDefinitionSubscribers();
 
     const existingValue = this.store.getState().values[validatedDefinition.id];
     if (existingValue === undefined) {
@@ -494,6 +504,7 @@ class SettingsStore {
     }
 
     this.pageOrder = validatedPageIds;
+    this.notifyDefinitionSubscribers();
   }
 
   public registerSetting(definition: SettingDefinition): void {
@@ -608,6 +619,18 @@ class SettingsStore {
         this.fieldSubscribers.delete(id);
       }
     };
+  }
+
+  public subscribeDefinitions(callback: () => void): () => void {
+    this.definitionSubscribers.add(callback);
+
+    return () => {
+      this.definitionSubscribers.delete(callback);
+    };
+  }
+
+  public getDefinitionsVersion(): number {
+    return this.definitionsVersion;
   }
 
   public listDefinitions(): RegisteredSetting[] {

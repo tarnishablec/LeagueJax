@@ -43,4 +43,6 @@ export type SettingsChangedEventDto = {
   source: string | null;
 };
 
+export type SettingsDefinitionsChangedEventDto = { ids: Array<string> };
+
 export type SettingsSnapshotDto = { values: { [key: string]: unknown } };

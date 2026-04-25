@@ -112,6 +112,8 @@ export interface SettingsReader {
   set<T = unknown>(id: SettingId, value: T): boolean;
   reset(ids?: SettingId[]): boolean;
   subscribe(id: SettingId, callback: () => void): () => void;
+  subscribeDefinitions(callback: () => void): () => void;
+  getDefinitionsVersion(): number;
   listPageOrder(): string[];
   listDefinitions(): RegisteredSetting[];
   getSectionRenderer(

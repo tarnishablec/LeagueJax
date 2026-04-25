@@ -2,7 +2,7 @@ pub mod types;
 
 use self::types::{
     SettingControlDto, SettingDefinitionDto, SettingsBootstrapDto, SettingsChangedEventDto,
-    SettingsSnapshotDto,
+    SettingsDefinitionsChangedEventDto, SettingsSnapshotDto,
 };
 use crate::error::AppError;
 use crate::shards::persistence_sled::PersistenceSled;
@@ -22,23 +22,6 @@ use uuid::Uuid;
 const SETTINGS_TREE: &str = "settings";
 const SETTINGS_SNAPSHOT_KEY: &[u8] = b"snapshot";
 const SETTINGS_CHANGE_CHANNEL_CAPACITY: usize = 64;
-const SETTINGS_KEY_MIGRATIONS: [(&str, &str); 6] = [
-    (
-        "general.preferences.language",
-        "system.preferences.language",
-    ),
-    ("general.preferences.theme", "system.preferences.theme"),
-    ("system.logging.detailedMode", "system.logging.recordToFile"),
-    (
-        "ongoing.behavior.autoSwitchToGame",
-        "ongoing.interaction.autoSwitchToGame",
-    ),
-    ("ongoing.behavior.showBots", "ongoing.interaction.showBots"),
-    (
-        "ongoing.behavior.matchHistoryCount",
-        "ongoing.interaction.matchHistoryCount",
-    ),
-];
 
 #[derive(Debug, Clone)]
 pub struct ApplySettingsOutcome {
@@ -113,11 +96,14 @@ pub struct SettingsShard {
     watch_senders: RwLock<BTreeMap<String, watch::Sender<Value>>>,
     action_handlers: RwLock<BTreeMap<String, ActionHandler>>,
     change_events: broadcast::Sender<SettingsChangedEventDto>,
+    definition_events: broadcast::Sender<SettingsDefinitionsChangedEventDto>,
 }
 
 impl SettingsShard {
     pub fn new() -> Self {
         let (change_events, _change_events_rx) =
+            broadcast::channel(SETTINGS_CHANGE_CHANNEL_CAPACITY);
+        let (definition_events, _definition_events_rx) =
             broadcast::channel(SETTINGS_CHANGE_CHANNEL_CAPACITY);
 
         Self {
@@ -129,6 +115,7 @@ impl SettingsShard {
             watch_senders: RwLock::new(BTreeMap::new()),
             action_handlers: RwLock::new(BTreeMap::new()),
             change_events,
+            definition_events,
         }
     }
 
@@ -179,7 +166,9 @@ impl SettingsShard {
             .unwrap_or_else(|| definition.default_value.clone());
         self.ensure_watch_sender(&definition.id, initial_value)?;
 
-        self.setting_handle(&definition.id)
+        let handle = self.setting_handle(&definition.id)?;
+        self.emit_definitions_changed(vec![definition.id]);
+        Ok(handle)
     }
 
     pub fn register_action<F, Fut>(
@@ -200,13 +189,14 @@ impl SettingsShard {
 
         validate_setting_id(&definition.id)?;
 
-        {
+        let definitions_changed = {
             let mut definitions = self
                 .definitions
                 .write()
                 .map_err(|_| AppError::MutexPoisoned)?;
-            definitions.insert(definition.id.clone(), definition.clone());
-        }
+            let existing = definitions.insert(definition.id.clone(), definition.clone());
+            existing.as_ref() != Some(&definition)
+        };
 
         {
             let mut handlers = self
@@ -214,6 +204,10 @@ impl SettingsShard {
                 .write()
                 .map_err(|_| AppError::MutexPoisoned)?;
             handlers.insert(definition.id.clone(), Box::new(move || Box::pin(handler())));
+        }
+
+        if definitions_changed {
+            self.emit_definitions_changed(vec![definition.id]);
         }
 
         Ok(())
@@ -278,6 +272,12 @@ impl SettingsShard {
 
     pub fn subscribe_changes(&self) -> broadcast::Receiver<SettingsChangedEventDto> {
         self.change_events.subscribe()
+    }
+
+    pub fn subscribe_definitions_changes(
+        &self,
+    ) -> broadcast::Receiver<SettingsDefinitionsChangedEventDto> {
+        self.definition_events.subscribe()
     }
 
     pub fn get_value(&self, id: &str) -> Result<Option<Value>, AppError> {
@@ -441,6 +441,16 @@ impl SettingsShard {
             .send(SettingsChangedEventDto { changes, source });
     }
 
+    fn emit_definitions_changed(&self, ids: Vec<String>) {
+        if ids.is_empty() {
+            return;
+        }
+
+        let _ = self
+            .definition_events
+            .send(SettingsDefinitionsChangedEventDto { ids });
+    }
+
     fn read_snapshot_from_db(&self) -> Result<SettingsSnapshotDto, AppError> {
         let db = self.get_db()?;
         let tree = db.open_tree(SETTINGS_TREE)?;
@@ -508,15 +518,7 @@ impl Shard for SettingsShard {
             .set(db)
             .map_err(|_| "Settings DB already initialized")?;
 
-        let mut snapshot = self.read_snapshot_from_db()?;
-        let migrated_count = migrate_legacy_keys(&mut snapshot);
-        if migrated_count > 0 {
-            self.write_snapshot_to_db(&snapshot)?;
-            tracing::info!(
-                migrated_count,
-                "Migrated legacy settings keys to system namespace",
-            );
-        }
+        let snapshot = self.read_snapshot_from_db()?;
 
         {
             let mut guard = self.snapshot.write().map_err(|_| AppError::MutexPoisoned)?;
@@ -598,20 +600,4 @@ fn parse_snapshot_bytes(bytes: &[u8]) -> Result<SettingsSnapshotDto, AppError> {
     }
 
     Ok(SettingsSnapshotDto { values })
-}
-
-fn migrate_legacy_keys(snapshot: &mut SettingsSnapshotDto) -> usize {
-    let mut changed = 0usize;
-
-    for (old_key, new_key) in SETTINGS_KEY_MIGRATIONS {
-        let old_value = snapshot.values.remove(old_key);
-        if let Some(value) = old_value {
-            if !snapshot.values.contains_key(new_key) {
-                snapshot.values.insert(new_key.to_string(), value);
-            }
-            changed = changed.saturating_add(1);
-        }
-    }
-
-    changed
 }

@@ -114,6 +114,18 @@ This is a **Tauri v2** desktop app with a **React + TypeScript** frontend and a 
 This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of `npm` / `npx`.
 - Always use `bun add <package> --no-cache` for dependency installation.
 
+## Layering and Coupling Rules
+
+- **Before making any code change, explicitly identify the layer of the code being touched** in the implementation plan: infrastructure/foundation, core runtime, shared concept/domain model, feature/business shard, UI/presentation, integration/adapter, or test/tooling.
+- **Do not place business knowledge in infrastructure/foundation code.** Infrastructure code may provide generic mechanisms only. It must not contain feature names, business setting keys, business shard UUIDs, route/page ids, i18n keys, queue/game concepts, or migration tables for specific features.
+- **Business rules must live in the owning feature/shard.** If a rule mentions a concrete feature such as history, ongoing game, matchmaking, mini window, logging, updater, LCU, SGP, or a specific setting id, it belongs to that feature/shard or a clearly named shared domain module owned by that concept.
+- **Core runtime code must not depend on feature/business shards.** Runtime primitives such as Jax, registry, settings store, event bridges, persistence wrappers, and generic wait/sync utilities may depend only on generic contracts/types, not on concrete feature implementations.
+- **Dependency direction must point inward/generic, never outward/specific.** Feature/business layers may call infrastructure APIs. Infrastructure must not import or hard-code feature/business constants. Shared domain modules must stay free of UI and feature orchestration concerns.
+- **Cross-layer communication must use explicit contracts.** Prefer typed events, interfaces, commands, or generic registration APIs. Do not bypass layer boundaries by importing a concrete shard solely to reach its internals.
+- **Settings infrastructure is generic only.** It may define setting DTOs, storage, validation, snapshots, subscriptions, and generic definition/value change events. It must not know specific setting ids, page ids, feature names, legacy migrations, or which feature registered a setting.
+- **If a change appears to require coupling layers, stop and propose a boundary-preserving design first.** Examples include moving the rule into the owning shard, adding a generic callback/event, introducing a shared concept module, or adding an adapter at the edge.
+- **MVP policy:** do not add compatibility migrations unless the user explicitly asks. During MVP, remove obsolete keys/paths instead of adding global migration tables.
+
 ## Frontend Layout
 
 - All page-level layouts should use **CSS Grid** (`grid`, `grid-cols-*`, `grid-rows-*`).
