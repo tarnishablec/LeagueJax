@@ -27,6 +27,7 @@ use crate::commands::platform::*;
 use crate::commands::settings::*;
 use crate::commands::shards::*;
 use crate::commands::updater::*;
+use crate::utils::webview::apply_release_webview_hardening;
 
 use jax::Jax;
 use jax_probes::TimingProbe;
@@ -153,7 +154,6 @@ fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, 
         .with_writer(SwitchableFileMakeWriter::new(file_logging.clone()))
         .with_filter(filter_fn(|metadata| {
             metadata.target().starts_with("league_jax_lib")
-                || matches!(metadata.target(), "lcu_ws_raw" | "lcu_http" | "sgp_http")
         }));
 
     tracing_subscriber::registry()
@@ -220,22 +220,10 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
 
-            #[cfg(target_os = "windows")]
-            {
-                #[cfg(not(debug_assertions))]
-                {
-                    let win = app.get_webview_window("main").expect("no main window");
-                    win.with_webview(|webview| unsafe {
-                        let controller = webview.controller();
-                        if let Ok(core) = controller.CoreWebView2() {
-                            if let Ok(settings) = core.Settings() {
-                                let settings = settings;
-                                let _ = settings.SetAreDevToolsEnabled(false);
-                                let _ = settings.SetAreDefaultContextMenusEnabled(false);
-                            }
-                        }
-                    })?;
-                }
+            if let Some(window) = app.get_webview_window("main") {
+                apply_release_webview_hardening(&window)?;
+            } else {
+                tracing::warn!("Main window was not available for WebView hardening");
             }
 
             let data_dir = app.path().app_data_dir().expect("no app data dir");

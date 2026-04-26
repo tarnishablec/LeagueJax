@@ -15,6 +15,7 @@ use crate::shards::settings::types::{SettingControlDto, SettingDefinitionDto, Se
 use crate::shards::settings::{SettingHandle, SettingsShard};
 use crate::shards::tauri_host::TauriHost;
 use crate::shards::window_effect::WindowEffectShard;
+use crate::utils::webview::apply_release_webview_hardening;
 
 const MINI_WINDOW_LABEL: &str = "mini";
 const MINI_WINDOW_ROUTE: &str = "/mini";
@@ -173,6 +174,8 @@ impl MiniWindowShard {
         .build()
         .map_err(|error| AppError::other(format!("failed to create mini window: {error}")))?;
 
+        apply_release_webview_hardening(&window)
+            .map_err(|error| AppError::other(format!("failed to harden mini webview: {error}")))?;
         self.try_apply_window_effect(&window);
         Ok(window)
     }
