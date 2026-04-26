@@ -51,7 +51,7 @@ fn request_transition(
     }
 
     tracing::info!(
-        target: "ongoing_game",
+        channel = "ongoing_game",
         from = ?current,
         to = ?next,
         reason,

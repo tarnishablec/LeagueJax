@@ -203,7 +203,7 @@ const OPEN_SOURCE_SOFTWARE: OpenSourceItem[] = [
   },
 ];
 
-const LEAGUE_AKARI_REPOSITORY_URL = "https://leagueakari.github.io/";
+const LEAGUE_AKARI_REPOSITORY_URL = "https://github.com/Hanxven/LeagueAkari";
 const LEAGUE_AKARI_BADGE_URL =
   "https://img.shields.io/badge/GitHub-League_Akari-111827?style=flat-square&logo=github&logoColor=white";
 
@@ -241,8 +241,8 @@ export function AboutPage() {
             </p>
             <p className={s.referenceRow}>
               <span className={s.referenceLabel}>
-                {t("settings.about.overview.referenceLabel", {
-                  defaultValue: "This project draws heavily from",
+                {t("settings.about.overview.referencePrefix", {
+                  defaultValue: "This project references",
                 })}
               </span>
               <button
@@ -257,6 +257,11 @@ export function AboutPage() {
                   alt="GitHub - League Akari"
                 />
               </button>
+              <span className={s.referenceLabel}>
+                {t("settings.about.overview.referenceSuffix", {
+                  defaultValue: "'s user experience",
+                })}
+              </span>
             </p>
           </div>
         </div>

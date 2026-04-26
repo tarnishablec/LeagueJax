@@ -41,7 +41,7 @@ export const pageTabs = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) max-content",
   alignItems: "center",
-  gap: 12,
+  // gap: 12,
   minWidth: 0,
   "@media": {
     "(max-width: 900px)": {

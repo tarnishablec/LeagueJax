@@ -14,7 +14,8 @@ export const settingsAboutI18n: Resource = {
           version: "v{{version}}",
           description:
             "<brand>League Jax</brand> <version>v{{version}}</version> is a desktop companion for League of Legends players, designed to make the overall experience clearer and smoother.",
-          referenceLabel: "This project draws heavily from",
+          referencePrefix: "This project references",
+          referenceSuffix: "'s user experience",
         },
         openSource: {
           title: "Open Source Dependencies",
@@ -59,7 +60,8 @@ export const settingsAboutI18n: Resource = {
           version: "v{{version}}",
           description:
             "<brand>League Jax</brand><version>v{{version}}</version> 是一个面向《英雄联盟》玩家的桌面辅助工具，旨在让整体游戏体验更清晰、更顺手。",
-          referenceLabel: "本项目深度参考了",
+          referencePrefix: "本项目参考了",
+          referenceSuffix: "的使用体验",
         },
         openSource: {
           title: "使用的开源依赖",
@@ -103,7 +105,8 @@ export const settingsAboutI18n: Resource = {
           version: "v{{version}}",
           description:
             "<brand>League Jax</brand><version>v{{version}}</version> は『League of Legends』プレイヤー向けのデスクトップ補助ツールで、全体のゲーム体験をより分かりやすく快適にすることを目指しています。",
-          referenceLabel: "本プロジェクトは次を深く参考にしています",
+          referencePrefix: "本プロジェクトは",
+          referenceSuffix: "の使用感を参考にしています",
         },
         openSource: {
           title: "使用しているオープンソース依存関係",

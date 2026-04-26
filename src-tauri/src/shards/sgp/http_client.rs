@@ -97,7 +97,10 @@ impl SgpHttpClient {
         *self.access_token.write().await = new_access_token;
         *self.league_session_token.write().await = new_league_session_token;
 
-        tracing::debug!(target: "sgp_http", "[sgp-http] tokens refreshed after 401");
+        tracing::debug!(
+            channel = "sgp-http",
+            "[sgp-http] tokens refreshed after 401"
+        );
 
         Ok(())
     }
@@ -130,12 +133,12 @@ impl SgpHttpClient {
             SgpResponse::Ok(json) => Ok(json),
             SgpResponse::Unauthorized => {
                 tracing::debug!(
-                    target: "sgp_http",
+                    channel = "sgp-http",
                     "[sgp-http] got 401, attempting token refresh and retry"
                 );
                 if let Err(refresh_err) = self.refresh_tokens().await {
                     tracing::debug!(
-                        target: "sgp_http",
+                        channel = "sgp-http",
                         "[sgp-http] token refresh failed: {refresh_err}"
                     );
                     return Err(AppError::other(format!(
@@ -205,7 +208,7 @@ impl SgpHttpClient {
                         "error": error.to_string(),
                     }
                 });
-                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
+                tracing::debug!(channel = "sgp-http", "[sgp-http] {}", pretty_json(&log));
                 return SgpResponse::Err(AppError::other(format!("SGP request failed: {error}")));
             }
         };
@@ -230,7 +233,7 @@ impl SgpHttpClient {
                     "error": "401 Unauthorized",
                 }
             });
-            tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
+            tracing::debug!(channel = "sgp-http", "[sgp-http] {}", pretty_json(&log));
             return SgpResponse::Unauthorized;
         }
 
@@ -251,7 +254,7 @@ impl SgpHttpClient {
                     "error": error_message,
                 }
             });
-            tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
+            tracing::debug!(channel = "sgp-http", "[sgp-http] {}", pretty_json(&log));
             return SgpResponse::Err(AppError::other(format!(
                 "SGP request failed with status {status}: {body}"
             )));
@@ -279,7 +282,7 @@ impl SgpHttpClient {
                         ),
                     }
                 });
-                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
+                tracing::debug!(channel = "sgp-http", "[sgp-http] {}", pretty_json(&log));
                 return SgpResponse::Err(AppError::other(format!(
                     "Failed to read SGP response body bytes: {error}"
                 )));
@@ -302,7 +305,7 @@ impl SgpHttpClient {
                         "error": Value::Null,
                     }
                 });
-                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
+                tracing::debug!(channel = "sgp-http", "[sgp-http] {}", pretty_json(&log));
                 SgpResponse::Ok(json)
             }
             Err(error) => {
@@ -321,7 +324,7 @@ impl SgpHttpClient {
                         "error": format!("parse json failed: {}", error),
                     }
                 });
-                tracing::debug!(target: "sgp_http", "[sgp-http] {}", pretty_json(&log));
+                tracing::debug!(channel = "sgp-http", "[sgp-http] {}", pretty_json(&log));
                 SgpResponse::Err(AppError::other(format!(
                     "Failed to parse SGP response JSON: {error}"
                 )))
