@@ -1,5 +1,6 @@
+import { Tabs } from "@ark-ui/react/tabs";
 import { useTranslation } from "react-i18next";
-import { NavLink } from "react-router";
+import { Link, useParams } from "react-router";
 import * as s from "./SettingsHub.css";
 import type { PageEntry } from "./settings-view-model";
 
@@ -7,58 +8,95 @@ interface SettingsPageTabsProps {
   pages: PageEntry[];
 }
 
+const utilityPages = [
+  {
+    id: "client-args",
+    to: "/main/settings/client-args",
+    labelKey: "settings.clientArgs.tab",
+    defaultValue: "Client Args",
+  },
+  {
+    id: "registry",
+    to: "/main/settings/registry",
+    labelKey: "settings.registry.tab",
+    defaultValue: "Registry",
+  },
+  {
+    id: "shards",
+    to: "/main/settings/shards",
+    labelKey: "settings.shards.tab",
+    defaultValue: "Shards",
+  },
+  {
+    id: "about",
+    to: "/main/settings/about",
+    labelKey: "settings.pages.about.title",
+    defaultValue: "About",
+  },
+] as const;
+
 export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
   const { t } = useTranslation();
+  const { pageId } = useParams();
+  const activePrimaryPageId =
+    pageId && pages.some((page) => page.id === pageId) ? pageId : null;
+  const activeUtilityPageId =
+    pageId && utilityPages.some((page) => page.id === pageId) ? pageId : null;
 
   return (
     <div className={s.pageTabs}>
-      <div className={s.pageTabsLeft}>
-        {pages.map((page) => (
-          <NavLink
-            key={page.id}
-            to={`/main/settings/${page.id}`}
-            className={({ isActive }) =>
-              isActive ? s.pageTabActive : s.pageTab
-            }
-          >
-            {t(`settings.pages.${page.id}.title`, {
-              defaultValue: page.id,
-            })}
-          </NavLink>
-        ))}
-      </div>
+      <Tabs.Root
+        className={s.primaryTabsRoot}
+        value={activePrimaryPageId}
+        activationMode="manual"
+      >
+        <Tabs.List className={s.primaryTabsList} aria-label="Settings pages">
+          {pages.map((page) => (
+            <Tabs.Trigger
+              key={page.id}
+              value={page.id}
+              asChild
+              className={s.primaryTab}
+            >
+              <Link to={`/main/settings/${page.id}`}>
+                {t(`settings.pages.${page.id}.title`, {
+                  defaultValue: page.id,
+                })}
+              </Link>
+            </Tabs.Trigger>
+          ))}
+          {activePrimaryPageId ? (
+            <Tabs.Indicator className={s.primaryTabsIndicator} />
+          ) : null}
+        </Tabs.List>
+      </Tabs.Root>
 
-      <div className={s.pageTabsRight}>
-        <NavLink
-          to="/main/settings/client-args"
-          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
+      <Tabs.Root
+        className={s.utilityTabsRoot}
+        value={activeUtilityPageId}
+        activationMode="manual"
+      >
+        <Tabs.List
+          className={s.utilityTabsList}
+          aria-label="Settings utility pages"
         >
-          {t("settings.clientArgs.tab", {
-            defaultValue: "Client Args",
-          })}
-        </NavLink>
-
-        <NavLink
-          to="/main/settings/registry"
-          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
-        >
-          {t("settings.registry.tab", { defaultValue: "Registry" })}
-        </NavLink>
-
-        <NavLink
-          to="/main/settings/shards"
-          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
-        >
-          {t("settings.shards.tab", { defaultValue: "Shards" })}
-        </NavLink>
-
-        <NavLink
-          to="/main/settings/about"
-          className={({ isActive }) => (isActive ? s.pageTabActive : s.pageTab)}
-        >
-          {t("settings.pages.about.title", { defaultValue: "About" })}
-        </NavLink>
-      </div>
+          {utilityPages.map((page) => (
+            <Tabs.Trigger
+              key={page.id}
+              value={page.id}
+              asChild
+              className={s.primaryTab}
+            >
+              <Link to={page.to}>
+                {t(page.labelKey, { defaultValue: page.defaultValue })}
+              </Link>
+            </Tabs.Trigger>
+          ))}
+          {activeUtilityPageId ? (
+            <Tabs.Indicator className={s.utilityTabsIndicator} />
+          ) : null}
+        </Tabs.List>
+      </Tabs.Root>
     </div>
   );
 }
