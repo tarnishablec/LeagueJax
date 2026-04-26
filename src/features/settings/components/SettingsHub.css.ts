@@ -42,47 +42,105 @@ export const pageTabs = style({
   gridTemplateColumns: "minmax(0, 1fr) max-content",
   alignItems: "center",
   gap: 12,
-});
-
-export const pageTabsLeft = style({
-  display: "grid",
-  gridAutoFlow: "column",
-  gridAutoColumns: "max-content",
-  gap: 8,
-  justifyContent: "start",
   minWidth: 0,
-});
-
-export const pageTabsRight = style({
-  display: "grid",
-  gridAutoFlow: "column",
-  gridAutoColumns: "max-content",
-  gap: 8,
-  justifyContent: "end",
-});
-
-const pageTabBase = style({
-  border: `1px solid ${vars.color.border}`,
-  borderRadius: 8,
-  padding: "6px 12px",
-  color: vars.color.mutedForeground,
-  textDecoration: "none",
-  fontSize: "0.875rem",
-  selectors: {
-    "&:hover": {
-      color: vars.color.foreground,
-      borderColor: vars.color.primary,
+  "@media": {
+    "(max-width: 900px)": {
+      gridTemplateColumns: "minmax(0, 1fr)",
+      alignItems: "start",
+      gap: 6,
     },
   },
 });
 
-export const pageTab = pageTabBase;
+export const primaryTabsRoot = style({
+  display: "grid",
+  minWidth: 0,
+});
 
-export const pageTabActive = style([
-  pageTabBase,
+export const primaryTabsList = style({
+  position: "relative",
+  display: "flex",
+  gap: 2,
+  alignItems: "end",
+  minWidth: 0,
+  minHeight: 34,
+  overflowX: "auto",
+  overflowY: "hidden",
+  borderBottom: `1px solid ${vars.color.border}`,
+  scrollbarWidth: "none",
+  selectors: {
+    "&::-webkit-scrollbar": {
+      display: "none",
+    },
+  },
+});
+
+export const primaryTab = style({
+  display: "grid",
+  flex: "0 0 auto",
+  placeItems: "center",
+  minHeight: 32,
+  border: "none",
+  borderRadius: "6px 6px 0 0",
+  padding: "0 12px",
+  color: vars.color.mutedForeground,
+  textDecoration: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  transition: "color 120ms ease-out, background 120ms ease-out",
+  selectors: {
+    "&:hover": {
+      color: vars.color.foreground,
+      background: vars.color.accent,
+    },
+    "&[data-selected]": {
+      color: vars.color.foreground,
+    },
+    "&:focus-visible": {
+      outline: `1px solid ${vars.color.primary}`,
+      outlineOffset: -1,
+    },
+  },
+});
+
+export const primaryTabsIndicator = style({
+  bottom: -1,
+  height: 2,
+  width: "var(--width)",
+  borderRadius: 999,
+  background: vars.color.primary,
+});
+
+export const utilityTabsRoot = style({
+  display: "grid",
+  minWidth: 0,
+  justifySelf: "end",
+  "@media": {
+    "(max-width: 900px)": {
+      width: "100%",
+      justifySelf: "stretch",
+    },
+  },
+});
+
+export const utilityTabsList = style([
+  primaryTabsList,
   {
-    color: vars.color.foreground,
-    borderColor: vars.color.primary,
-    background: vars.color.accent,
+    maxWidth: "100%",
+    "@media": {
+      "(max-width: 900px)": {
+        justifyContent: "end",
+      },
+    },
+  },
+]);
+
+export const utilityTabsIndicator = style([
+  primaryTabsIndicator,
+  {
+    background: vars.color.primary,
   },
 ]);
