@@ -1,5 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
 import * as s from "./TitleBar.css";
 import { trafficButton } from "./WindowControlButton.css";
@@ -57,7 +57,7 @@ export function TitleBar({
           type="button"
           aria-label="Close"
           className={trafficButton({ variant: "close" })}
-          onClick={() => void exit()}
+          onClick={() => void invoke("quit_app")}
         >
           <CloseIcon />
         </button>

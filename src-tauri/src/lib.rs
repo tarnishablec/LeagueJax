@@ -214,6 +214,7 @@ pub fn run() {
             get_shards_status,
             lcu_get_platform_config_namespaces,
             lcu_get_help,
+            quit_app,
             toggle_mini_window,
             set_mini_pin,
             execute_setting_action,
@@ -228,6 +229,13 @@ pub fn run() {
 
             if let Some(window) = app.get_webview_window("main") {
                 apply_release_webview_hardening(&window)?;
+                let app_handle_for_close = app_handle.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        app_handle_for_close.exit(0);
+                    }
+                });
             } else {
                 tracing::warn!("Main window was not available for WebView hardening");
             }
