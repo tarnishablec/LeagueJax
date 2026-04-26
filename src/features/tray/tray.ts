@@ -4,7 +4,6 @@ import { Menu, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { resolveResource } from "@tauri-apps/api/path";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { exit } from "@tauri-apps/plugin-process";
 import i18n from "i18next";
 import { createLogger } from "@/infra/logger";
 
@@ -101,7 +100,7 @@ export class TrayController {
             defaultValue: "Quit",
           }),
           action: () => {
-            void exit();
+            void invoke("quit_app");
           },
         },
       ],
