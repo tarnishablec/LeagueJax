@@ -214,7 +214,6 @@ pub fn run() {
             get_shards_status,
             lcu_get_platform_config_namespaces,
             lcu_get_help,
-            quit_app,
             toggle_mini_window,
             set_mini_pin,
             execute_setting_action,
