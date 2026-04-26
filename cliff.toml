@@ -1,0 +1,51 @@
+# Public release notes for League Jax.
+# This config intentionally filters internal maintenance commits from release output.
+
+[changelog]
+header = """
+# Changelog
+"""
+body = """
+{% if version %}\
+## {{ version | trim_start_matches(pat="v") }} - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## Unreleased
+{% endif %}
+
+{% if commits | length == 0 %}\
+- No public changes.
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.breaking %}**Breaking:** {% endif %}{{ commit.message | upper_first }}
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+render_always = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+filter_commits = true
+protect_breaking_commits = true
+sort_commits = "oldest"
+
+commit_parsers = [
+  { message = "^[a-z]+(\\([^)]+\\))?!:", group = "<!-- 0 -->Breaking Changes" },
+  { body = ".*BREAKING CHANGE.*", group = "<!-- 0 -->Breaking Changes" },
+  { body = "(?i).*security.*", group = "<!-- 1 -->Security" },
+  { message = "^feat", group = "<!-- 2 -->Features" },
+  { message = "^fix\\(deps\\)", skip = true },
+  { message = "^fix", group = "<!-- 3 -->Bug Fixes" },
+  { message = "^perf", group = "<!-- 4 -->Performance" },
+  { message = "^revert", group = "<!-- 5 -->Reverts" },
+  { message = "^refactor", skip = true },
+  { message = "^docs", skip = true },
+  { message = "^style", skip = true },
+  { message = "^test", skip = true },
+  { message = "^build", skip = true },
+  { message = "^ci", skip = true },
+  { message = "^chore", skip = true },
+]

@@ -7,6 +7,7 @@ interface CliArgs {
   tag: string;
   releaseBaseUrl: string;
   notes?: string;
+  notesFile?: string;
   output?: string;
   pubDate?: string;
 }
@@ -58,6 +59,7 @@ const parseArgs = (argv: string[]): CliArgs => {
     tag,
     releaseBaseUrl,
     notes: parsed.get("notes"),
+    notesFile: parsed.get("notes-file"),
     output: parsed.get("output"),
     pubDate: parsed.get("pub-date"),
   };
@@ -78,6 +80,14 @@ const firstFileBySuffix = async (
   throw new Error(`No ${suffix} file found in ${artifactDir}`);
 };
 
+const readNotes = async (args: CliArgs): Promise<string> => {
+  if (args.notesFile) {
+    return (await readFile(resolve(args.notesFile), "utf8")).trimEnd();
+  }
+
+  return args.notes ?? `League Jax ${args.tag}`;
+};
+
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
   const artifactDir = resolve(args.artifactDir);
@@ -86,7 +96,7 @@ const main = async () => {
   const signature = (await readFile(sigPath, "utf8")).replace(/[\r\n]+/g, "");
   const exeName = basename(exePath);
   const outputPath = resolve(args.output ?? `${artifactDir}/latest.json`);
-  const notes = args.notes ?? `League Jax ${args.tag}`;
+  const notes = await readNotes(args);
   const pubDate = args.pubDate ?? new Date().toISOString();
   const releaseBaseUrl = args.releaseBaseUrl.replace(/\/+$/, "");
 
