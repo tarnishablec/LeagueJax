@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, RunEvent};
 use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
-use tracing_subscriber::filter::filter_fn;
+use tracing_subscriber::filter::{filter_fn, FilterExt};
 use tracing_subscriber::fmt::writer::MakeWriter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -31,6 +31,8 @@ use crate::utils::webview::apply_release_webview_hardening;
 
 use jax::Jax;
 use jax_probes::TimingProbe;
+
+const DEFAULT_LOG_FILTER: &str = "league_jax_lib=info";
 
 #[derive(Clone)]
 struct FileLoggingHandle {
@@ -130,9 +132,13 @@ impl TracingState {
     }
 }
 
+fn env_filter_from_default_env() -> tracing_subscriber::EnvFilter {
+    tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| DEFAULT_LOG_FILTER.into())
+}
+
 fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, Box<dyn Error>> {
-    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| "league_jax_lib=debug".into());
+    let env_filter = env_filter_from_default_env();
 
     let local_timer = tracing_subscriber::fmt::time::LocalTime::rfc_3339();
     let console_layer = tracing_subscriber::fmt::layer()
@@ -152,9 +158,9 @@ fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, 
         .with_line_number(true)
         .with_target(true)
         .with_writer(SwitchableFileMakeWriter::new(file_logging.clone()))
-        .with_filter(filter_fn(|metadata| {
+        .with_filter(env_filter_from_default_env().and(filter_fn(|metadata| {
             metadata.target().starts_with("league_jax_lib")
-        }));
+        })));
 
     tracing_subscriber::registry()
         .with(console_layer)
