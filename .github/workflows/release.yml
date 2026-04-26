@@ -63,8 +63,33 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
 
-  github-release:
+  release-notes:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate release changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --tag ${{ needs.build.outputs.tag }} --strip header
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes-${{ needs.build.outputs.tag }}
+          path: CHANGELOG.md
+          if-no-files-found: error
+
+  github-release:
+    needs:
+      - build
+      - release-notes
     if: inputs.target == 'all' || inputs.target == 'github'
     runs-on: ubuntu-latest
     steps:
@@ -79,9 +104,15 @@ jobs:
           name: tauri-build-${{ needs.build.outputs.tag }}
           path: artifacts
 
+      - name: Download release notes
+        uses: actions/download-artifact@v7
+        with:
+          name: release-notes-${{ needs.build.outputs.tag }}
+          path: artifacts
+
       - name: Generate GitHub latest.json
         run: |
-          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://github.com/tarnishablec/league-jax-releases/releases/download"
+          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://github.com/tarnishablec/league-jax-releases/releases/download" --notes-file artifacts/CHANGELOG.md
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
@@ -92,11 +123,14 @@ jobs:
           name: League Jax ${{ needs.build.outputs.tag }}
           draft: false
           prerelease: false
+          body_path: artifacts/CHANGELOG.md
           files: artifacts/*
           fail_on_unmatched_files: true
 
   gitee-release:
-    needs: build
+    needs:
+      - build
+      - release-notes
     if: inputs.target == 'all' || inputs.target == 'gitee'
     runs-on: ubuntu-latest
     steps:
@@ -111,6 +145,12 @@ jobs:
           name: tauri-build-${{ needs.build.outputs.tag }}
           path: artifacts
 
+      - name: Download release notes
+        uses: actions/download-artifact@v7
+        with:
+          name: release-notes-${{ needs.build.outputs.tag }}
+          path: artifacts
+
       - name: Delete Existing Gitee Release
         uses: nICEnnnnnnnLee/action-gitee-release@master
         continue-on-error: true
@@ -123,7 +163,17 @@ jobs:
 
       - name: Generate Gitee latest.json
         run: |
-          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://gitee.com/tarnishablec/league-jax-releases/releases/download"
+          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://gitee.com/tarnishablec/league-jax-releases/releases/download" --notes-file artifacts/CHANGELOG.md
+
+      - name: Read release notes
+        id: release_notes
+        shell: bash
+        run: |
+          {
+            echo 'body<<EOF_RELEASE_NOTES'
+            cat artifacts/CHANGELOG.md
+            echo EOF_RELEASE_NOTES
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish to Gitee
         uses: nICEnnnnnnnLee/action-gitee-release@master
@@ -134,7 +184,7 @@ jobs:
           gitee_token: ${{ secrets.GITEE_TOKEN }}
           gitee_tag_name: ${{ needs.build.outputs.tag }}
           gitee_release_name: League Jax ${{ needs.build.outputs.tag }}
-          gitee_release_body: Release ${{ needs.build.outputs.tag }}
+          gitee_release_body: ${{ steps.release_notes.outputs.body }}
           gitee_target_commitish: master
           gitee_files: |
             artifacts/*
