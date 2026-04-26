@@ -3,12 +3,7 @@ use crate::shards::lcu::LcuShard;
 use jax::Jax;
 use serde_json::Value;
 use std::sync::Arc;
-use tauri::{AppHandle, State};
-
-#[tauri::command]
-pub fn quit_app(app: AppHandle) {
-    app.exit(0);
-}
+use tauri::State;
 
 #[tauri::command]
 pub async fn lcu_get_platform_config_namespaces(

@@ -41,6 +41,9 @@
       "quoteStyle": "double",
       "bracketSpacing": true,
       "indentWidth": 2
+    },
+    "linter": {
+      "enabled": true
     }
   },
   "css": {

@@ -4,6 +4,7 @@ import { Menu, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { resolveResource } from "@tauri-apps/api/path";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { exit } from "@tauri-apps/plugin-process";
 import i18n from "i18next";
 import { createLogger } from "@/infra/logger";
 
@@ -70,7 +71,7 @@ export class TrayController {
       const icon = await Image.fromPath(iconPath);
       await this.tray.setIcon(icon);
     } catch (error) {
-      logger.warn({ error }, "Failed to resolve tray icon resource");
+      logger.warn({error}, "Failed to resolve tray icon resource");
     }
   }
 
@@ -79,7 +80,7 @@ export class TrayController {
       return;
     }
 
-    const separator = await PredefinedMenuItem.new({ item: "Separator" });
+    const separator = await PredefinedMenuItem.new({item: "Separator"});
     const nextMenu = await Menu.new({
       items: [
         {
@@ -100,7 +101,7 @@ export class TrayController {
             defaultValue: "Quit",
           }),
           action: () => {
-            void invoke("quit_app");
+            void exit();
           },
         },
       ],
