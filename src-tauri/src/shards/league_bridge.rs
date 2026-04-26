@@ -11,6 +11,7 @@ use crate::shards::lcu::LcuShard;
 use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::sgp::SgpShard;
 use crate::shards::tauri_host::TauriHost;
+use crate::utils::http_json::{pretty_json, redact_sensitive_json};
 
 pub struct LeagueBridgeShard;
 
@@ -37,9 +38,18 @@ impl LeagueBridgeShard {
 
         lcu_manager.subscribe_ws_fn(move |ws_event| {
             async move {
-                match serde_json::to_string_pretty(&ws_event) {
-                    Ok(pretty_json) => {
-                        tracing::debug!(channel = "lcu-ws-raw", "[lcu-ws-raw] {pretty_json}");
+                if !tracing::enabled!(tracing::Level::DEBUG) {
+                    return;
+                }
+
+                match serde_json::to_value(&ws_event) {
+                    Ok(mut value) => {
+                        redact_sensitive_json(&mut value);
+                        tracing::debug!(
+                            channel = "lcu-ws-raw",
+                            "[lcu-ws-raw] {}",
+                            pretty_json(&value)
+                        );
                     }
                     Err(error) => {
                         tracing::warn!(error = %error, "Failed to serialize LCU websocket event for raw logging");
