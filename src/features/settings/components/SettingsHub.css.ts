@@ -76,6 +76,7 @@ export const primaryTabsList = style({
 });
 
 export const primaryTab = style({
+  position: "relative",
   display: "grid",
   flex: "0 0 auto",
   placeItems: "center",
@@ -99,19 +100,21 @@ export const primaryTab = style({
     "&[data-selected]": {
       color: vars.color.foreground,
     },
+    "&[data-selected]::after": {
+      content: '""',
+      position: "absolute",
+      left: 8,
+      right: 8,
+      bottom: -1,
+      height: 2,
+      borderRadius: 999,
+      background: vars.color.primary,
+    },
     "&:focus-visible": {
       outline: `1px solid ${vars.color.primary}`,
       outlineOffset: -1,
     },
   },
-});
-
-export const primaryTabsIndicator = style({
-  bottom: -1,
-  height: 2,
-  width: "var(--width)",
-  borderRadius: 999,
-  background: vars.color.primary,
 });
 
 export const utilityTabsRoot = style({
@@ -135,12 +138,5 @@ export const utilityTabsList = style([
         justifyContent: "end",
       },
     },
-  },
-]);
-
-export const utilityTabsIndicator = style([
-  primaryTabsIndicator,
-  {
-    background: vars.color.primary,
   },
 ]);

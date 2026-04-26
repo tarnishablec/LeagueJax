@@ -65,9 +65,6 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
               </Link>
             </Tabs.Trigger>
           ))}
-          {activePrimaryPageId ? (
-            <Tabs.Indicator className={s.primaryTabsIndicator} />
-          ) : null}
         </Tabs.List>
       </Tabs.Root>
 
@@ -92,9 +89,6 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
               </Link>
             </Tabs.Trigger>
           ))}
-          {activeUtilityPageId ? (
-            <Tabs.Indicator className={s.utilityTabsIndicator} />
-          ) : null}
         </Tabs.List>
       </Tabs.Root>
     </div>

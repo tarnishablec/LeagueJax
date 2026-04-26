@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "league-jax",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "identifier": "com.tarnishablec.league-jax",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -28,12 +28,8 @@
   },
   "bundle": {
     "active": true,
-    "resources": [
-      "icons/icon.ico"
-    ],
-    "targets": [
-      "nsis"
-    ],
+    "resources": ["icons/icon.ico"],
+    "targets": ["nsis"],
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
