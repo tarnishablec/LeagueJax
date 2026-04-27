@@ -7,7 +7,10 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "vite.config.ts"]
+    "includes": [
+      "**",
+      "vite.config.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -33,7 +36,8 @@
   },
   "json": {
     "formatter": {
-      "indentWidth": 2
+      "indentWidth": 2,
+      "expand": "always"
     }
   },
   "javascript": {
