@@ -4,7 +4,7 @@ import type {
 } from "@/bindings/matches.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 
-export const MIN_SHARED_SQUAD_GAMES = 2;
+export const DEFAULT_MIN_SHARED_SQUAD_GAMES = 2;
 
 export type PlayerSquadAssignment = {
   color: string;
@@ -209,26 +209,37 @@ function collectPairEvidence(params: {
   return pairEvidence;
 }
 
+function normalizeMinSharedGames(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_MIN_SHARED_SQUAD_GAMES;
+  }
+
+  return Math.max(1, Math.floor(value));
+}
+
 function isEligiblePair(
   pairEvidence: Map<string, Set<number>>,
   left: string,
   right: string,
+  minSharedGames: number,
 ): boolean {
-  return (
-    (pairEvidence.get(pairKey(left, right))?.size ?? 0) >=
-    MIN_SHARED_SQUAD_GAMES
-  );
+  return (pairEvidence.get(pairKey(left, right))?.size ?? 0) >= minSharedGames;
 }
 
 function isClique(
   memberPuuids: string[],
+  minSharedGames: number,
   pairEvidence: Map<string, Set<number>>,
 ): boolean {
   for (let i = 0; i < memberPuuids.length; i++) {
     for (let j = i + 1; j < memberPuuids.length; j++) {
       const left = memberPuuids[i];
       const right = memberPuuids[j];
-      if (!left || !right || !isEligiblePair(pairEvidence, left, right)) {
+      if (
+        !left ||
+        !right ||
+        !isEligiblePair(pairEvidence, left, right, minSharedGames)
+      ) {
         return false;
       }
     }
@@ -262,6 +273,7 @@ function collectCliqueEvidenceGameIds(
 
 function enumerateSquadCandidates(
   members: CurrentMember[],
+  minSharedGames: number,
   pairEvidence: Map<string, Set<number>>,
 ): SquadCandidate[] {
   const candidates: SquadCandidate[] = [];
@@ -283,7 +295,10 @@ function enumerateSquadCandidates(
       }
     }
 
-    if (memberPuuids.length < 2 || !isClique(memberPuuids, pairEvidence)) {
+    if (
+      memberPuuids.length < 2 ||
+      !isClique(memberPuuids, minSharedGames, pairEvidence)
+    ) {
       continue;
     }
 
@@ -310,6 +325,7 @@ function enumerateSquadCandidates(
 function resolveTeamSquadCandidates(params: {
   historiesByPuuid: Record<string, RawMatchSummaryGame[]>;
   matchHistoryCount: number;
+  minSharedGames: number;
   slots: PlayerSlot[];
 }): SquadCandidate[] {
   const members = collectCurrentMembers(params.slots);
@@ -322,7 +338,11 @@ function resolveTeamSquadCandidates(params: {
     matchHistoryCount: params.matchHistoryCount,
     members,
   });
-  const candidates = enumerateSquadCandidates(members, pairEvidence);
+  const candidates = enumerateSquadCandidates(
+    members,
+    normalizeMinSharedGames(params.minSharedGames),
+    pairEvidence,
+  );
   const usedPuuids = new Set<string>();
   const selected: SquadCandidate[] = [];
 
@@ -345,6 +365,7 @@ function resolveTeamSquadCandidates(params: {
 export function resolvePlayerSquadAssignments(params: {
   historiesByPuuid: Record<string, RawMatchSummaryGame[]>;
   matchHistoryCount: number;
+  minSharedGames: number;
   teamGroups: TeamGroup[];
 }): PlayerSquadAssignments {
   const byPuuid: Record<string, PlayerSquadAssignment> = {};
@@ -355,6 +376,7 @@ export function resolvePlayerSquadAssignments(params: {
     const teamCandidates = resolveTeamSquadCandidates({
       historiesByPuuid: params.historiesByPuuid,
       matchHistoryCount: params.matchHistoryCount,
+      minSharedGames: params.minSharedGames,
       slots: teamGroup.members,
     });
 

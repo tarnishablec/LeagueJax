@@ -14,6 +14,7 @@ import { SettingsShard } from "../settings/manifest";
 import { SHARD_IDS } from "../shard-ids";
 import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
 import { PlayerCardTagsSettings } from "./components/PlayerCardTagsSettings";
+import { DEFAULT_MIN_SHARED_SQUAD_GAMES } from "./components/player-card-squads.ts";
 import {
   getPlayerCardTagColorSettingItems,
   getPlayerCardTagEnabledSettingItems,
@@ -35,6 +36,8 @@ const ONGOING_MATCHMAKING_SECTION = "ongoing.matchmaking" as const;
 const ONGOING_INTERACTION_SECTION = "ongoing.interaction" as const;
 const ONGOING_SQUAD_DETECTION_ENABLED_SETTING =
   "ongoing.playerCardTags.squadDetection.enabled" as const;
+const ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING =
+  "ongoing.playerCardTags.squadDetectionMinGames" as const;
 const ONGOING_PLAYER_CARD_TAGS_SECTION = "ongoing.playerCardTags" as const;
 
 function isVisibleOngoingPhase(phase: OngoingGameUpdated["phase"]): boolean {
@@ -146,6 +149,17 @@ export class OngoingGameShard implements WebShard {
       zod: z.boolean(),
       defaultValue: true,
       order: 5,
+      onSet: () => {},
+    });
+    settings.registerSetting({
+      id: ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING,
+      labelKey: "settings.ongoing.playerCardTags.squadDetection.minGames.label",
+      hintKey: "settings.ongoing.playerCardTags.squadDetection.minGames.hint",
+      scope: "frontend",
+      control: { kind: "number", min: 1, max: 200, step: 1 },
+      zod: z.number().int().min(1).max(200),
+      defaultValue: DEFAULT_MIN_SHARED_SQUAD_GAMES,
+      order: 6,
       onSet: () => {},
     });
     for (const enabledSetting of getPlayerCardTagEnabledSettingItems()) {

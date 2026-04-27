@@ -52,6 +52,10 @@ export const ongoingGameI18n: Resource = {
               label: "Enable squad detection",
               hint: "Detect premade squads from recent same-team match history.",
             },
+            minGames: {
+              label: "Squad detection game threshold",
+              hint: "Two players must appear on the same team at least this many times before being marked as a squad.",
+            },
           },
           items: {
             winStreak: "Win streak",
@@ -162,6 +166,10 @@ export const ongoingGameI18n: Resource = {
               label: "启用小队检测",
               hint: "根据最近同队对局记录检测当前对局中的小队。",
             },
+            minGames: {
+              label: "小队检测阈值对局数",
+              hint: "两名玩家至少同队出现这么多场，才会被判定为同一小队。",
+            },
           },
           items: {
             winStreak: "连胜场次",
@@ -271,6 +279,10 @@ export const ongoingGameI18n: Resource = {
             enabled: {
               label: "パーティー検出を有効化",
               hint: "最近同じチームでプレイした履歴から現在の対局のパーティーを検出します。",
+            },
+            minGames: {
+              label: "パーティー検出の試合数しきい値",
+              hint: "2人のプレイヤーがこの回数以上同じチームにいた場合に、同じパーティーとして判定します。",
             },
           },
           items: {
