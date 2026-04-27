@@ -73,6 +73,6 @@ export const footer = style({
   gap: "8px",
   padding: "8px",
   borderRadius: "8px",
-  background: `oklch(from ${vars.color.surface} l c h / 0.9)`,
-  border: `1px solid ${vars.color.border}`,
+  background: "oklch(0 0 0 / 0.16)",
+  border: "1px solid oklch(1 0 0 / 0.06)",
 });

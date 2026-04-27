@@ -3,6 +3,10 @@ import { recipe } from "@vanilla-extract/recipes";
 import { iconCol } from "@/layout/__root.css";
 import { vars } from "@/styles/theme.css";
 
+const tooltipSurface = `oklch(from ${vars.color.foreground} 0.26 0.012 h / 0.96)`;
+const tooltipSurfaceDark = `oklch(from ${vars.color.backgroundRaw} 0.18 0.012 h / 0.98)`;
+const tooltipShadowColor = `oklch(from ${vars.color.backgroundRaw} 0.05 c h / 0.46)`;
+
 // ─── Trigger area (unchanged) ───────────────────────────────────────────────
 
 export const container = style({
@@ -53,6 +57,35 @@ export const avatar = style({
   borderRadius: "50%",
   objectFit: "cover",
   justifySelf: "center",
+  transformOrigin: "center",
+});
+
+export const triggerIconFrame = style({
+  display: "grid",
+  placeItems: "center",
+  justifySelf: "center",
+  width: 16,
+  height: 16,
+});
+
+export const iconScale = recipe({
+  base: {
+    transition: "transform 200ms ease",
+    transformOrigin: "center",
+  },
+  variants: {
+    collapsed: {
+      false: {
+        transform: "scale(1)",
+      },
+      true: {
+        transform: "scale(1.25)",
+      },
+    },
+  },
+  defaultVariants: {
+    collapsed: false,
+  },
 });
 
 const spinRotate = keyframes({
@@ -117,33 +150,52 @@ export const label = recipe({
 
 export const tooltip = style({
   minWidth: 264,
-  // padding: 8,
+  padding: 6,
   borderRadius: 8,
-  background: "transparent",
+  background: tooltipSurface,
   // border: `1px solid ${vars.color.popoverBorder}`,
-  // boxShadow: "0 0 2px 2px oklch(0 0 0 / 0.12)",
+  boxShadow: `
+    0 12px 30px ${tooltipShadowColor},
+    inset 0 1px 0 oklch(1 0 0 / 0.05)
+  `,
   display: "grid",
   gridAutoRows: "auto",
   gap: 8,
-  color: vars.color.foreground,
+  color: "oklch(0.96 0 0)",
   fontSize: "0.975rem",
   zIndex: 1000,
+  selectors: {
+    ":root.dark &": {
+      background: tooltipSurfaceDark,
+      boxShadow: `
+        0 12px 30px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.72),
+        inset 0 1px 0 oklch(1 0 0 / 0.04)
+      `,
+    },
+  },
 });
 
 export const emptyTooltip = style({
   borderRadius: 6,
   // border: `1px solid color-mix(in oklch, ${vars.color.primary} 34%, ${vars.color.popoverBorder})`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  background: tooltipSurface,
+  color: "oklch(0.96 0 0)",
   padding: "6px 11px",
   fontSize: "0.9rem",
   lineHeight: 1,
   whiteSpace: "nowrap",
-  boxShadow: `0 8px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.18)`,
+  boxShadow: `
+    0 10px 28px ${tooltipShadowColor},
+    inset 0 1px 0 oklch(1 0 0 / 0.05)
+  `,
   zIndex: 1000,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 8px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.58)`,
+      background: tooltipSurfaceDark,
+      boxShadow: `
+        0 12px 30px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.72),
+        inset 0 1px 0 oklch(1 0 0 / 0.04)
+      `,
     },
   },
 });
@@ -197,10 +249,10 @@ export const instanceRow = recipe({
     padding: "7px 10px",
     borderRadius: 6,
     cursor: "default",
-    border: `1px solid ${vars.color.popoverBorder}`,
-    boxShadow: "0 0 2px 2px oklch(0 0 0 / 0.12)",
+    border: "none",
+    boxShadow: "none",
     width: "100%",
-    background: "transparent",
+    background: `oklch(from ${tooltipSurface} l c h / 0.52)`,
     color: "inherit",
     font: "inherit",
     fontSize: "inherit",

@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { root as iconActionButton } from "@/components/IconActionButton.css";
 import { vars } from "@/styles/theme.css";
 
 export const wrapper = style({
@@ -7,33 +8,7 @@ export const wrapper = style({
   paddingInline: 8,
 });
 
-export const triggerButton = style({
-  height: 30,
-  borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
-  color: vars.color.foreground,
-  font: "inherit",
-  fontSize: "0.75rem",
-  paddingInline: 10,
-  display: "inline-grid",
-  gridAutoFlow: "column",
-  alignItems: "center",
-  gap: 6,
-  cursor: "pointer",
-  selectors: {
-    "&:hover": {
-      borderColor: vars.color.primary,
-    },
-    "&:disabled": {
-      background: vars.color.background,
-      color: vars.color.mutedForeground,
-      borderColor: vars.color.border,
-      cursor: "not-allowed",
-      opacity: 0.72,
-    },
-  },
-});
+export const triggerButton = style([iconActionButton]);
 
 export const dialogBackdrop = style({
   position: "fixed",
