@@ -244,6 +244,7 @@ interface ClientStatusProps {
 }
 
 export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const openTab = useTabStore((st) => st.openTab);
   const focusedReady = useLcuStore(selectIsFocused);
@@ -284,6 +285,8 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
   });
   const hover = useHover(context, { delay: { open: 0, close: 80 } });
   const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+  const hasInstances = instances.length > 0;
+  const shouldShowTooltip = hasInstances || collapsed;
 
   return (
     <>
@@ -313,18 +316,22 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
         </button>
       </div>
 
-      {open && (
+      {open && shouldShowTooltip ? (
         <FloatingPortal>
           <div
             ref={refs.setFloating}
-            className={s.tooltip}
+            className={hasInstances ? s.tooltip : s.emptyTooltip}
             style={floatingStyles}
             {...getFloatingProps()}
           >
-            <TooltipContent instances={instances} />
+            {hasInstances ? (
+              <TooltipContent instances={instances} />
+            ) : (
+              t("clientStatus.noClients")
+            )}
           </div>
         </FloatingPortal>
-      )}
+      ) : null}
     </>
   );
 }
