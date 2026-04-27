@@ -21,7 +21,8 @@ export function SettingsHub() {
     void definitionsVersion;
     return buildSettingsPages(
       settings.listDefinitions(),
-      settings.listPageOrder(),
+      settings.listPages(),
+      settings.listSections(),
     );
   }, [settings, definitionsVersion]);
   const outletContext: SettingsOutletContext = { pages };

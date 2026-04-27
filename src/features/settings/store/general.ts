@@ -7,6 +7,7 @@ export type Theme = "system" | "light" | "dark";
 
 export const SYSTEM_LANGUAGE_SETTING_ID = "system.preferences.language";
 export const SYSTEM_THEME_SETTING_ID = "system.preferences.theme";
+const SYSTEM_PREFERENCES_SECTION = "system.preferences" as const;
 
 @settings
 class GeneralSettings {
@@ -42,6 +43,9 @@ class GeneralSettings {
 }
 
 export function registerGeneralSettings(api: SettingsShardApi): void {
+  api.registerPage({ id: "system", order: 10 });
+  api.registerSection({ key: SYSTEM_PREFERENCES_SECTION, order: 10 });
+
   api.registerClass(GeneralSettings);
 
   api.registerSetting({

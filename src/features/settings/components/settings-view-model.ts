@@ -8,12 +8,14 @@ export interface ParsedSettingId {
 export interface SectionEntry {
   id: string;
   order: number;
+  declarationOrder: number;
   fields: RegisteredSetting[];
 }
 
 export interface PageEntry {
   id: string;
   order: number;
+  declarationOrder: number;
   sections: SectionEntry[];
 }
 

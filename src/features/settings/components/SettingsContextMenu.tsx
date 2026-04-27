@@ -7,6 +7,7 @@ import { useSettings } from "@/features/settings/context";
 import type {
   RegisteredSetting,
   SettingId,
+  SettingsGroupKey,
   SettingsSectionKey,
 } from "@/features/settings/types";
 import * as s from "./SettingsContextMenu.css";
@@ -18,10 +19,12 @@ interface SettingsContextMenuProps {
 }
 
 interface ContextTarget {
+  groupKey?: SettingsGroupKey;
   settingId?: SettingId;
   sectionKey?: SettingsSectionKey;
 }
 
+const groupSelector = "[data-settings-group-key]";
 const settingSelector = "[data-setting-id]";
 const sectionSelector = "[data-settings-section-key]";
 
@@ -53,19 +56,31 @@ export function SettingsContextMenu({
     return { fields, sections };
   }, [page]);
 
+  const resettableFields = useMemo(
+    () => [...context.fields.values()].filter(isResettableSetting),
+    [context.fields],
+  );
+  const resetIdsByPrefix = (prefix: string): SettingId[] =>
+    resettableFields
+      .filter(
+        (field) => field.id === prefix || field.id.startsWith(`${prefix}.`),
+      )
+      .map((field) => field.id);
   const activeField = target.settingId
     ? context.fields.get(target.settingId)
     : undefined;
   const activeSection = target.sectionKey
     ? context.sections.get(target.sectionKey)
     : undefined;
+  const groupResetIds = target.groupKey
+    ? resetIdsByPrefix(target.groupKey)
+    : [];
   const sectionResetIds =
-    activeSection?.fields
-      .filter(isResettableSetting)
-      .map((field) => field.id) ?? [];
-  const pageResetIds = page.sections.flatMap((section) =>
-    section.fields.filter(isResettableSetting).map((field) => field.id),
-  );
+    target.sectionKey && activeSection
+      ? resetIdsByPrefix(target.sectionKey)
+      : [];
+  const pageResetIds = resetIdsByPrefix(page.id);
+  const canResetGroup = groupResetIds.length > 0;
   const canResetSetting =
     activeField !== undefined && isResettableSetting(activeField);
   const canResetSection = sectionResetIds.length > 0;
@@ -85,6 +100,7 @@ export function SettingsContextMenu({
       return;
     }
 
+    const groupNode = event.target.closest(groupSelector) as HTMLElement | null;
     const settingNode = event.target.closest(
       settingSelector,
     ) as HTMLElement | null;
@@ -92,11 +108,18 @@ export function SettingsContextMenu({
       sectionSelector,
     ) as HTMLElement | null;
     const settingId = settingNode?.dataset.settingId as SettingId | undefined;
+    const groupKey = groupNode?.dataset.settingsGroupKey as
+      | SettingsGroupKey
+      | undefined;
     const sectionKey = sectionNode?.dataset.settingsSectionKey as
       | SettingsSectionKey
       | undefined;
 
     setTarget({
+      groupKey:
+        groupKey && resetIdsByPrefix(groupKey).length > 0
+          ? groupKey
+          : undefined,
       settingId:
         settingId && context.fields.has(settingId) ? settingId : undefined,
       sectionKey:
@@ -115,7 +138,15 @@ export function SettingsContextMenu({
             className={s.content}
             aria-label="Settings context menu"
           >
-            {canResetSetting ? (
+            {canResetGroup ? (
+              <Menu.Item
+                className={s.item}
+                value="reset-group"
+                onSelect={() => settings.reset(groupResetIds)}
+              >
+                {t("settings.contextMenu.resetSetting")}
+              </Menu.Item>
+            ) : canResetSetting ? (
               <Menu.Item
                 className={s.item}
                 value="reset-setting"
@@ -142,7 +173,10 @@ export function SettingsContextMenu({
                 {t("settings.contextMenu.resetPage")}
               </Menu.Item>
             ) : null}
-            {canResetSetting || canResetSection || canResetPage ? (
+            {canResetGroup ||
+            canResetSetting ||
+            canResetSection ||
+            canResetPage ? (
               <Menu.Separator className={s.separator} />
             ) : null}
             <Menu.Item

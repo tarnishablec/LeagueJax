@@ -2,6 +2,7 @@ import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { memo } from "react";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import * as s from "./OngoingGameCards.css.ts";
+import type { PlayerSquadAssignment } from "./player-card-squads.ts";
 import { SnapshotPlayerCardHeader } from "./SnapshotPlayerCardHeader.tsx";
 import { SnapshotPlayerCardHistory } from "./SnapshotPlayerCardHistory.tsx";
 import { useSnapshotPlayerCardState } from "./use-snapshot-player-card-state.ts";
@@ -9,12 +10,14 @@ import { useSnapshotPlayerCardState } from "./use-snapshot-player-card-state.ts"
 export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
   enabledPlayerCardTagIds: readonly string[];
   playerCardTagColors: Readonly<Record<string, string>>;
+  squadAssignment?: PlayerSquadAssignment;
   slot: PlayerSlot;
   matchHistoryCount: number;
 }) {
   const {
     enabledPlayerCardTagIds,
     playerCardTagColors,
+    squadAssignment,
     slot,
     matchHistoryCount,
   } = props;
@@ -23,10 +26,16 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
     matchHistoryCount,
     enabledPlayerCardTagIds,
     playerCardTagColors,
+    squadAssignment,
   );
+  const playerCardStyle = cardState.squadTag
+    ? assignInlineVars({
+        [s.playerCardSquadColorVar]: cardState.squadTag.color,
+      })
+    : undefined;
 
   return (
-    <article className={s.playerCard}>
+    <article className={s.playerCard} style={playerCardStyle}>
       <SnapshotPlayerCardHeader
         championId={cardState.championId}
         identity={cardState.identity}
@@ -35,6 +44,7 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
         rankIcon={cardState.rankIcon}
         rankText={cardState.rankText}
         showRank={cardState.showRank}
+        squadTag={cardState.squadTag}
       />
 
       <div className={s.playerOverview}>

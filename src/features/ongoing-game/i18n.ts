@@ -46,13 +46,13 @@ export const ongoingGameI18n: Resource = {
         },
         playerCardTags: {
           description: "Choose which tags can appear on player cards.",
-          enabledIds: {
-            label: "Enabled player card tags",
-          },
-          colors: {
-            label: "Player card tag colors",
-          },
           savedColors: "Saved Colors",
+          squadDetection: {
+            enabled: {
+              label: "Enable squad detection",
+              hint: "Detect premade squads from recent same-team match history.",
+            },
+          },
           items: {
             winStreak: "Win streak",
             loseStreak: "Lose streak",
@@ -86,6 +86,7 @@ export const ongoingGameI18n: Resource = {
       redTeam: "Red Team",
       noData: "No player data yet",
       noRanked: "No ranked data",
+      winRate: "Win rate",
       recentGames: "Recent games",
       noHistory: "No match history",
       historyLoadFailed: "Failed to load history, refresh to retry",
@@ -105,6 +106,7 @@ export const ongoingGameI18n: Resource = {
         offFlashPosition: "Flash moved",
         hiddenCareer: "Hidden",
         self: "Self",
+        squad: "Squad {{number}}",
         encountered: "Met",
       },
     },
@@ -154,13 +156,13 @@ export const ongoingGameI18n: Resource = {
         },
         playerCardTags: {
           description: "这些标签会展示在玩家卡片上",
-          enabledIds: {
-            label: "启用的玩家卡片标签",
-          },
-          colors: {
-            label: "玩家卡片标签颜色",
-          },
           savedColors: "保存的颜色",
+          squadDetection: {
+            enabled: {
+              label: "启用小队检测",
+              hint: "根据最近同队对局记录检测当前对局中的小队。",
+            },
+          },
           items: {
             winStreak: "连胜场次",
             loseStreak: "连败场次",
@@ -194,6 +196,7 @@ export const ongoingGameI18n: Resource = {
       redTeam: "红色方",
       noData: "暂无玩家数据",
       noRanked: "无排位数据",
+      winRate: "胜率",
       recentGames: "最近对局",
       noHistory: "暂无战绩",
       historyLoadFailed: "战绩加载失败，请手动刷新重试",
@@ -213,6 +216,7 @@ export const ongoingGameI18n: Resource = {
         offFlashPosition: "闪现异位",
         hiddenCareer: "生涯隐藏",
         self: "自己",
+        squad: "小队{{number}}",
         encountered: "遇到过",
       },
     },
@@ -262,13 +266,13 @@ export const ongoingGameI18n: Resource = {
         },
         playerCardTags: {
           description: "プレイヤーカードに表示するタグを選択します",
-          enabledIds: {
-            label: "有効なプレイヤーカードタグ",
-          },
-          colors: {
-            label: "プレイヤーカードタグの色",
-          },
           savedColors: "保存した色",
+          squadDetection: {
+            enabled: {
+              label: "パーティー検出を有効化",
+              hint: "最近同じチームでプレイした履歴から現在の対局のパーティーを検出します。",
+            },
+          },
           items: {
             winStreak: "連勝数",
             loseStreak: "連敗数",
@@ -302,6 +306,7 @@ export const ongoingGameI18n: Resource = {
       redTeam: "赤チーム",
       noData: "プレイヤーデータがまだありません",
       noRanked: "ランクデータなし",
+      winRate: "勝率",
       recentGames: "最近の試合",
       noHistory: "戦績なし",
       historyLoadFailed:
@@ -322,6 +327,7 @@ export const ongoingGameI18n: Resource = {
         offFlashPosition: "フラッシュ異位置",
         hiddenCareer: "戦績非公開",
         self: "自分",
+        squad: "パーティー{{number}}",
         encountered: "遭遇済み",
       },
     },

@@ -1,11 +1,16 @@
-import type { RegisteredSetting } from "@/features/settings/types";
+import type {
+  RegisteredSetting,
+  RegisteredSettingsPage,
+  RegisteredSettingsSection,
+  SettingsSectionKey,
+} from "@/features/settings/types";
 import {
   type PageEntry,
   parseSettingId,
   type SectionEntry,
 } from "./settings-view-model";
 
-const UNORDERED_PAGE_ORDER_OFFSET = 1_000_000;
+const UNREGISTERED_ORDER = 1_000_000;
 
 const sortFields = (fields: RegisteredSetting[]): RegisteredSetting[] => {
   return [...fields].sort((a, b) => {
@@ -16,12 +21,27 @@ const sortFields = (fields: RegisteredSetting[]): RegisteredSetting[] => {
   });
 };
 
+const sortByOrder = <T extends { order: number; declarationOrder: number }>(
+  entries: T[],
+): T[] => {
+  return [...entries].sort((a, b) => {
+    if (a.order !== b.order) {
+      return a.order - b.order;
+    }
+    return a.declarationOrder - b.declarationOrder;
+  });
+};
+
 export const buildSettingsPages = (
   definitions: RegisteredSetting[],
-  pageOrder: readonly string[],
+  registeredPages: readonly RegisteredSettingsPage[],
+  registeredSections: readonly RegisteredSettingsSection[],
 ): PageEntry[] => {
-  const configuredPageOrder = new Map(
-    pageOrder.map((pageId, index) => [pageId, index]),
+  const pageDefinitions = new Map(
+    registeredPages.map((page) => [page.id, page]),
+  );
+  const sectionDefinitions = new Map(
+    registeredSections.map((section) => [section.key, section]),
   );
   const pageMap = new Map<
     string,
@@ -34,69 +54,107 @@ export const buildSettingsPages = (
     }
   >();
 
+  const getOrCreatePage = (
+    pageId: string,
+    fallbackDeclarationOrder: number,
+  ) => {
+    const pageDefinition = pageDefinitions.get(pageId);
+    const existing = pageMap.get(pageId);
+    if (existing) {
+      if (!existing.hasConfiguredOrder && !pageDefinition) {
+        existing.declarationOrder = Math.min(
+          existing.declarationOrder,
+          fallbackDeclarationOrder,
+        );
+      }
+      return existing;
+    }
+
+    const created = {
+      id: pageId,
+      order: pageDefinition?.order ?? UNREGISTERED_ORDER,
+      declarationOrder:
+        pageDefinition?.declarationOrder ?? fallbackDeclarationOrder,
+      hasConfiguredOrder: pageDefinition !== undefined,
+      sections: new Map<string, SectionEntry>(),
+    };
+    pageMap.set(pageId, created);
+    return created;
+  };
+
+  const getOrCreateSection = (
+    page: {
+      sections: Map<string, SectionEntry>;
+    },
+    pageId: string,
+    sectionId: string,
+    fallbackDeclarationOrder: number,
+  ) => {
+    const sectionKey = `${pageId}.${sectionId}` as SettingsSectionKey;
+    const sectionDefinition = sectionDefinitions.get(sectionKey);
+    const existing = page.sections.get(sectionId);
+    if (existing) {
+      if (!sectionDefinition) {
+        existing.declarationOrder = Math.min(
+          existing.declarationOrder,
+          fallbackDeclarationOrder,
+        );
+      }
+      return existing;
+    }
+
+    const created: SectionEntry = {
+      id: sectionId,
+      order: sectionDefinition?.order ?? UNREGISTERED_ORDER,
+      declarationOrder:
+        sectionDefinition?.declarationOrder ?? fallbackDeclarationOrder,
+      fields: [],
+    };
+    page.sections.set(sectionId, created);
+    return created;
+  };
+
+  for (const sectionDefinition of registeredSections) {
+    if (!sectionDefinition.hasRenderer) {
+      continue;
+    }
+
+    const [pageId, sectionId] = sectionDefinition.key.split(".");
+    if (!pageId || !sectionId) {
+      continue;
+    }
+
+    const page = getOrCreatePage(pageId, sectionDefinition.declarationOrder);
+    getOrCreateSection(
+      page,
+      pageId,
+      sectionId,
+      sectionDefinition.declarationOrder,
+    );
+  }
+
   for (const definition of definitions) {
     const parsed = parseSettingId(definition.id);
-    const fieldOrder = definition.order * 1_000 + definition.declarationOrder;
-    const configuredOrder = configuredPageOrder.get(parsed.pageId);
-    const fallbackPageOrder = UNORDERED_PAGE_ORDER_OFFSET + fieldOrder;
-    const fallbackDeclarationOrder =
-      UNORDERED_PAGE_ORDER_OFFSET + definition.declarationOrder;
-
-    const page =
-      pageMap.get(parsed.pageId) ??
-      (() => {
-        const created = {
-          id: parsed.pageId,
-          order: configuredOrder ?? fallbackPageOrder,
-          declarationOrder: configuredOrder ?? fallbackDeclarationOrder,
-          hasConfiguredOrder: configuredOrder !== undefined,
-          sections: new Map<string, SectionEntry>(),
-        };
-        pageMap.set(parsed.pageId, created);
-        return created;
-      })();
-
-    if (!page.hasConfiguredOrder && fallbackPageOrder < page.order) {
-      page.order = fallbackPageOrder;
-      page.declarationOrder = definition.declarationOrder;
-    }
-
-    const section =
-      page.sections.get(parsed.sectionId) ??
-      (() => {
-        const created: SectionEntry = {
-          id: parsed.sectionId,
-          order: fieldOrder,
-          fields: [],
-        };
-        page.sections.set(parsed.sectionId, created);
-        return created;
-      })();
-
-    if (fieldOrder < section.order) {
-      section.order = fieldOrder;
-    }
+    const page = getOrCreatePage(parsed.pageId, definition.declarationOrder);
+    const section = getOrCreateSection(
+      page,
+      parsed.pageId,
+      parsed.sectionId,
+      definition.declarationOrder,
+    );
 
     section.fields.push(definition);
   }
 
-  return [...pageMap.values()]
-    .sort((a, b) => {
-      if (a.order !== b.order) {
-        return a.order - b.order;
-      }
-      return a.declarationOrder - b.declarationOrder;
-    })
-    .map((page) => ({
-      id: page.id,
-      order: page.order,
-      sections: [...page.sections.values()]
-        .sort((a, b) => a.order - b.order)
-        .map((section) => ({
-          ...section,
-          fields: sortFields(section.fields),
-        })),
-    }));
+  return sortByOrder([...pageMap.values()]).map((page) => ({
+    id: page.id,
+    order: page.order,
+    declarationOrder: page.declarationOrder,
+    sections: sortByOrder([...page.sections.values()]).map((section) => ({
+      ...section,
+      fields: sortFields(section.fields),
+    })),
+  }));
 };
 
 export const resolveActivePage = (

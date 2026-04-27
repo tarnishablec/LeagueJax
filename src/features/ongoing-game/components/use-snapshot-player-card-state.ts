@@ -13,9 +13,11 @@ import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
+import type { PlayerSquadAssignment } from "./player-card-squads.ts";
 import {
   collectMatchPlayerCardTags,
   collectSpecialPlayerCardTags,
+  collectSquadPlayerCardTags,
   computeAverageKda,
   hasEncounteredPlayer,
   type PlayerCardMatch,
@@ -85,6 +87,7 @@ export function useSnapshotPlayerCardState(
   matchHistoryCount: number,
   enabledPlayerCardTagIds: readonly string[],
   playerCardTagColors: Readonly<Record<string, string>>,
+  squadAssignment: PlayerSquadAssignment | undefined,
 ) {
   const { t } = useTranslation();
   const phase = useOngoingGameStore((state) => state.phase);
@@ -161,10 +164,13 @@ export function useSnapshotPlayerCardState(
     [slot, summoner],
   );
 
-  const winRateStat = useMemo(
-    () => computeWinRateStat(recentGames),
-    [recentGames],
-  );
+  const winRateStat = useMemo(() => {
+    const stat = computeWinRateStat(recentGames);
+    return {
+      ...stat,
+      text: `${t("ongoingGame.winRate", { defaultValue: "Win rate" })} ${stat.text}`,
+    };
+  }, [recentGames, t]);
   const averageKdaText = useMemo(
     () => formatAverageKdaText(recentGames),
     [recentGames],
@@ -172,6 +178,14 @@ export function useSnapshotPlayerCardState(
   const isSelf = Boolean(puuid && ownPuuid && puuid === ownPuuid);
   const wasEncountered = Boolean(
     puuid && !isSelf && hasEncounteredPlayer(ownHistoryBucket, puuid),
+  );
+  const squadTag = useMemo(
+    () =>
+      collectSquadPlayerCardTags({
+        assignment: squadAssignment,
+        t,
+      })[0],
+    [squadAssignment, t],
   );
   const playerTags = useMemo(
     () =>
@@ -224,6 +238,7 @@ export function useSnapshotPlayerCardState(
     rankText: formatRankEntryLabel(t, rankEntry),
     recentGames,
     showRank: !isBot && Boolean(puuid),
+    squadTag,
     playerTags,
     winRateStat,
   };

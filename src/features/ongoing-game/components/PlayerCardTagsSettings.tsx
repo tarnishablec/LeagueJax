@@ -4,15 +4,15 @@ import { Portal } from "@ark-ui/react/portal";
 import { Check, Pipette } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { SettingsFieldRenderer } from "@/features/settings/components/SettingsFieldRenderer";
 import { useSettings } from "@/features/settings/context";
 import type { SettingsSectionRendererProps } from "@/features/settings/types";
 import * as s from "./PlayerCardTagsSettings.css";
 import {
   getPlayerCardTagSettingItems,
-  normalizeEnabledPlayerCardTagIds,
   normalizePlayerCardTagColor,
-  ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
   oklchColorToHex,
+  type PlayerCardTagColorSettingItem,
   type PlayerCardTagSettingItem,
 } from "./player-card-tags.ts";
 
@@ -29,47 +29,29 @@ const COLOR_PRESETS = [
   "#F33B63",
 ];
 
-function useEnabledPlayerCardTagIds(): readonly string[] {
+function usePlayerCardTagEnabled(item: PlayerCardTagSettingItem): boolean {
   const settings = useSettings();
 
   return useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(
-        ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
-        onStoreChange,
-      ),
-    () =>
-      normalizeEnabledPlayerCardTagIds(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING),
-      ),
-    () =>
-      normalizeEnabledPlayerCardTagIds(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING),
-      ),
+    (onStoreChange) => settings.subscribe(item.enabledSettingId, onStoreChange),
+    () => settings.get<boolean>(item.enabledSettingId) ?? item.defaultEnabled,
+    () => settings.get<boolean>(item.enabledSettingId) ?? item.defaultEnabled,
   );
 }
 
-function usePlayerCardTagColor(item: PlayerCardTagSettingItem): string {
+function usePlayerCardTagColor(item: PlayerCardTagColorSettingItem): string {
   const settings = useSettings();
 
   return useSyncExternalStore(
-    (onStoreChange) => settings.subscribe(item.colorSettingId, onStoreChange),
-    () =>
-      normalizePlayerCardTagColor(
-        settings.get(item.colorSettingId),
-        item.defaultColor,
-      ),
-    () =>
-      normalizePlayerCardTagColor(
-        settings.get(item.colorSettingId),
-        item.defaultColor,
-      ),
+    (onStoreChange) => settings.subscribe(item.id, onStoreChange),
+    () => normalizePlayerCardTagColor(settings.get(item.id), item.defaultColor),
+    () => normalizePlayerCardTagColor(settings.get(item.id), item.defaultColor),
   );
 }
 
 function TagColorPicker(props: {
   color: string;
-  colorSettingId: PlayerCardTagSettingItem["colorSettingId"];
+  colorSettingId: PlayerCardTagColorSettingItem["id"];
   defaultColor: string;
   id: string;
   label: string;
@@ -218,27 +200,47 @@ function TagColorPicker(props: {
   );
 }
 
-function PlayerCardTagSettingsRow(props: {
-  enabled: boolean;
-  item: PlayerCardTagSettingItem;
-  onEnabledChange: (id: string, checked: boolean) => void;
+function PlayerCardTagColorPicker(props: {
+  colorSetting: PlayerCardTagColorSettingItem;
+  label: string;
 }) {
-  const { enabled, item, onEnabledChange } = props;
+  const { colorSetting, label } = props;
   const settings = useSettings();
-  const color = usePlayerCardTagColor(item);
+  const color = usePlayerCardTagColor(colorSetting);
 
   const updateColor = (nextColor: string) => {
-    settings.set(item.colorSettingId, nextColor);
+    settings.set(colorSetting.id, nextColor);
   };
 
   return (
-    <div className={s.itemRow} data-setting-id={item.colorSettingId}>
+    <TagColorPicker
+      color={color}
+      colorSettingId={colorSetting.id}
+      defaultColor={colorSetting.defaultColor}
+      id={colorSetting.tagId}
+      label={label}
+      onColorChange={updateColor}
+    />
+  );
+}
+
+function PlayerCardTagSettingsRow(props: { item: PlayerCardTagSettingItem }) {
+  const { item } = props;
+  const settings = useSettings();
+  const enabled = usePlayerCardTagEnabled(item);
+
+  const updateEnabled = (checked: boolean) => {
+    settings.set(item.enabledSettingId, checked);
+  };
+
+  return (
+    <div className={s.itemRow} data-settings-group-key={item.groupKey}>
       <Checkbox.Root
         aria-label={`Toggle player card tag ${item.id}`}
         checked={enabled}
         className={s.checkboxRoot}
         onCheckedChange={(details) => {
-          onEnabledChange(item.id, details.checked === true);
+          updateEnabled(details.checked === true);
         }}
       >
         <Checkbox.HiddenInput />
@@ -251,49 +253,37 @@ function PlayerCardTagSettingsRow(props: {
           {item.label}
         </Checkbox.Label>
       </Checkbox.Root>
-      <TagColorPicker
-        color={color}
-        colorSettingId={item.colorSettingId}
-        defaultColor={item.defaultColor}
-        id={item.id}
-        label={item.label}
-        onColorChange={updateColor}
-      />
+      {item.colorSettings.length > 0 ? (
+        <div className={s.colorPickerGroup}>
+          {item.colorSettings.map((colorSetting) => (
+            <PlayerCardTagColorPicker
+              key={colorSetting.id}
+              colorSetting={colorSetting}
+              label={item.label}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-export function PlayerCardTagsSettings(_props: SettingsSectionRendererProps) {
-  const settings = useSettings();
+export function PlayerCardTagsSettings(props: SettingsSectionRendererProps) {
   const { t } = useTranslation();
-  const enabledIds = useEnabledPlayerCardTagIds();
-  const enabledSet = useMemo(() => new Set(enabledIds), [enabledIds]);
   const items = useMemo(() => getPlayerCardTagSettingItems(t), [t]);
-
-  const updateEnabled = (id: string, checked: boolean) => {
-    const next = checked
-      ? [...enabledIds, id]
-      : enabledIds.filter((enabledId) => enabledId !== id);
-
-    settings.set(
-      ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
-      normalizeEnabledPlayerCardTagIds(next),
-    );
-  };
+  const visibleFields = props.fields.filter((field) => field.visible);
 
   return (
     <div className={s.root}>
+      {visibleFields.map((field) => (
+        <SettingsFieldRenderer key={field.id} field={field} />
+      ))}
       <div className={s.description}>
         {t("settings.ongoing.playerCardTags.description")}
       </div>
       <div className={s.list}>
         {items.map((item) => (
-          <PlayerCardTagSettingsRow
-            key={item.id}
-            enabled={enabledSet.has(item.id)}
-            item={item}
-            onEnabledChange={updateEnabled}
-          />
+          <PlayerCardTagSettingsRow key={item.id} item={item} />
         ))}
       </div>
     </div>

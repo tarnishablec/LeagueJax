@@ -11,11 +11,25 @@ type SnapshotPlayerCardHeaderProps = {
   rankIcon: string;
   rankText: string;
   showRank: boolean;
+  squadTag?: {
+    text: string;
+  };
 };
 
 export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
-  const { championId, identity, isBot, level, rankIcon, rankText, showRank } =
-    props;
+  const {
+    championId,
+    identity,
+    isBot,
+    level,
+    rankIcon,
+    rankText,
+    showRank,
+    squadTag,
+  } = props;
+  const squadBadge = squadTag ? (
+    <span className={s.playerSquadBadge}>{squadTag.text}</span>
+  ) : null;
 
   return (
     <div className={s.playerHeader}>
@@ -31,26 +45,32 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
       <div className={s.playerIdentity}>
         {isBot ? (
           <>
-            <span className={s.botLabel}>BOT</span>
+            <div className={s.playerNameRow}>
+              <span className={s.botLabel}>BOT</span>
+              {squadBadge}
+            </div>
             <div></div>
           </>
         ) : (
           <>
-            {identity ? (
-              <SummonerID
-                summoner={identity}
-                styles={{
-                  gameName: {
-                    fontSize: "0.75rem",
-                  },
-                  tagLine: {
-                    fontSize: "0.7rem",
-                  },
-                }}
-              />
-            ) : (
-              <div></div>
-            )}
+            <div className={s.playerNameRow}>
+              <div className={s.playerNameCell}>
+                {identity ? (
+                  <SummonerID
+                    summoner={identity}
+                    styles={{
+                      gameName: {
+                        fontSize: "0.75rem",
+                      },
+                      tagLine: {
+                        fontSize: "0.7rem",
+                      },
+                    }}
+                  />
+                ) : null}
+              </div>
+              {squadBadge}
+            </div>
 
             {showRank ? (
               <div className={s.rankRow}>

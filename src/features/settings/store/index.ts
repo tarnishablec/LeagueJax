@@ -8,10 +8,14 @@ import type {
 import type {
   HydrateOptions,
   RegisteredSetting,
+  RegisteredSettingsPage,
+  RegisteredSettingsSection,
   SettingClassCtor,
   SettingDefinition,
   SettingId,
+  SettingsPageDefinition,
   SettingsPatchSender,
+  SettingsSectionDefinition,
   SettingsSectionKey,
   SettingsSectionRenderer,
 } from "@/features/settings/types";
@@ -23,9 +27,19 @@ interface SettingsState {
 }
 
 type DecoratedFieldDefinition = SettingDefinition;
+type RegisteredPageMetadata = RegisteredSettingsPage & {
+  hasConfiguredOrder: boolean;
+};
+type RegisteredSectionMetadata = Omit<
+  RegisteredSettingsSection,
+  "hasRenderer"
+> & {
+  hasConfiguredOrder: boolean;
+};
 
 const pageIdRegex = /^[^.]+$/;
-const settingIdRegex = /^[^.]+\.[^.]+\.[^.]+$/;
+const sectionKeyRegex = /^[^.]+\.[^.]+$/;
+const settingIdRegex = /^[^.]+(?:\.[^.]+){2,}$/;
 const settingOptionSchema = z
   .object({
     value: z.string().min(1),
@@ -54,7 +68,9 @@ const onSetValueSchema = z.custom<(next: unknown, prev: unknown) => void>(
   },
 );
 const sharedDefinitionShape = {
-  id: z.string().regex(settingIdRegex, 'id must match "page.section.field".'),
+  id: z
+    .string()
+    .regex(settingIdRegex, 'id must match "page.section.field[.child...]".'),
   labelKey: z.string().min(1),
   hintKey: z.string().min(1).optional(),
   scope: settingScopeSchema,
@@ -128,9 +144,27 @@ const settingDefinitionSchema = z.union([
   actionSettingDefinitionSchema,
 ]);
 
-const pageOrderSchema = z.array(
-  z.string().regex(pageIdRegex, "page id must not contain dots."),
+const pageDefinitionSchema = z
+  .object({
+    id: z.string().regex(pageIdRegex, "page id must not contain dots."),
+    order: z.number().int().optional(),
+  })
+  .strict();
+
+const sectionRendererSchema = z.custom<SettingsSectionRenderer>(
+  (value) => typeof value === "function",
+  { message: "renderer must be a function." },
 );
+
+const sectionDefinitionSchema = z
+  .object({
+    key: z
+      .string()
+      .regex(sectionKeyRegex, 'section key must match "page.section".'),
+    order: z.number().int().optional(),
+    renderer: sectionRendererSchema.optional(),
+  })
+  .strict();
 
 const settingsClasses = new WeakSet<SettingClassCtor>();
 const classFieldDefinitions = new WeakMap<
@@ -235,6 +269,11 @@ class SettingsStore {
     SettingId,
     RegisteredSetting
   >();
+  private readonly registeredPages = new Map<string, RegisteredPageMetadata>();
+  private readonly registeredSections = new Map<
+    SettingsSectionKey,
+    RegisteredSectionMetadata
+  >();
   private readonly fieldSubscribers = new Map<SettingId, Set<() => void>>();
   private readonly definitionSubscribers = new Set<() => void>();
   private readonly sectionRenderers = new Map<
@@ -242,8 +281,9 @@ class SettingsStore {
     SettingsSectionRenderer
   >();
   private declarationSequence = 0;
+  private pageDeclarationSequence = 0;
+  private sectionDeclarationSequence = 0;
   private definitionsVersion = 0;
-  private pageOrder: string[] = [];
   private remotePatchSender: SettingsPatchSender | null = null;
   private readonly logger = createLogger("settings-store");
 
@@ -330,32 +370,69 @@ class SettingsStore {
     };
   }
 
-  private validatePageOrder(pageIds: readonly string[]): string[] | null {
-    const parsedPageIds = pageOrderSchema.safeParse(pageIds);
-    if (!parsedPageIds.success) {
-      const issue = parsedPageIds.error.issues[0];
+  private normalizePageDefinition(
+    definition: SettingsPageDefinition,
+  ): RegisteredPageMetadata {
+    return {
+      id: definition.id,
+      order: definition.order ?? 99,
+      declarationOrder: this.pageDeclarationSequence++,
+      hasConfiguredOrder: definition.order !== undefined,
+    };
+  }
+
+  private normalizeSectionDefinition(
+    definition: SettingsSectionDefinition,
+  ): RegisteredSectionMetadata {
+    return {
+      key: definition.key,
+      order: definition.order ?? 99,
+      declarationOrder: this.sectionDeclarationSequence++,
+      hasConfiguredOrder: definition.order !== undefined,
+    };
+  }
+
+  private applySectionOrder(
+    existing: RegisteredSectionMetadata,
+    definition: SettingsSectionDefinition,
+  ): boolean | null {
+    if (definition.order === undefined) {
+      return false;
+    }
+
+    if (existing.hasConfiguredOrder && existing.order !== definition.order) {
       this.reportRegistrationError(
         AppError.SettingsRegistration(
-          `Invalid setting page order: ${issue?.message ?? "unknown error"}.`,
+          `Duplicate setting section key "${definition.key}" was registered with a different order.`,
         ),
       );
       return null;
     }
 
-    const seen = new Set<string>();
-    for (const id of parsedPageIds.data) {
-      if (seen.has(id)) {
-        this.reportRegistrationError(
-          AppError.SettingsRegistration(
-            `Duplicate setting page id "${id}" in page order.`,
-          ),
-        );
-        return null;
-      }
-      seen.add(id);
+    if (existing.hasConfiguredOrder) {
+      return false;
     }
 
-    return parsedPageIds.data;
+    existing.order = definition.order;
+    existing.hasConfiguredOrder = true;
+    return true;
+  }
+
+  private applySectionRenderer(
+    key: SettingsSectionKey,
+    renderer: SettingsSectionRenderer | undefined,
+  ): boolean {
+    if (!renderer) {
+      return false;
+    }
+
+    const currentRenderer = this.sectionRenderers.get(key);
+    if (currentRenderer === renderer) {
+      return false;
+    }
+
+    this.sectionRenderers.set(key, renderer);
+    return true;
   }
 
   private registerDefinition(definition: SettingDefinition): void {
@@ -407,6 +484,99 @@ class SettingsStore {
     if (existingValue === undefined) {
       this.updateRawValue(validatedDefinition.id, normalized.defaultValue);
     }
+  }
+
+  private registerPageDefinition(definition: SettingsPageDefinition): void {
+    const parsedDefinition = pageDefinitionSchema.safeParse(definition);
+    if (!parsedDefinition.success) {
+      const issue = parsedDefinition.error.issues[0];
+      this.reportRegistrationError(
+        AppError.SettingsRegistration(
+          `Invalid setting page definition: ${issue?.message ?? "unknown error"}.`,
+        ),
+      );
+      return;
+    }
+
+    const validatedDefinition = parsedDefinition.data as SettingsPageDefinition;
+    const existing = this.registeredPages.get(validatedDefinition.id);
+    if (existing) {
+      if (validatedDefinition.order === undefined) {
+        return;
+      }
+
+      if (
+        existing.hasConfiguredOrder &&
+        existing.order !== validatedDefinition.order
+      ) {
+        this.reportRegistrationError(
+          AppError.SettingsRegistration(
+            `Duplicate setting page id "${validatedDefinition.id}" was registered with a different order.`,
+          ),
+        );
+        return;
+      }
+
+      if (!existing.hasConfiguredOrder) {
+        existing.order = validatedDefinition.order;
+        existing.hasConfiguredOrder = true;
+        this.notifyDefinitionSubscribers();
+      }
+      return;
+    }
+
+    this.registeredPages.set(
+      validatedDefinition.id,
+      this.normalizePageDefinition(validatedDefinition),
+    );
+    this.notifyDefinitionSubscribers();
+  }
+
+  private registerSectionDefinition(
+    definition: SettingsSectionDefinition,
+  ): void {
+    const parsedDefinition = sectionDefinitionSchema.safeParse(definition);
+    if (!parsedDefinition.success) {
+      const issue = parsedDefinition.error.issues[0];
+      this.reportRegistrationError(
+        AppError.SettingsRegistration(
+          `Invalid setting section definition: ${issue?.message ?? "unknown error"}.`,
+        ),
+      );
+      return;
+    }
+
+    const validatedDefinition =
+      parsedDefinition.data as SettingsSectionDefinition;
+    const existing = this.registeredSections.get(validatedDefinition.key);
+    if (existing) {
+      const orderChanged = this.applySectionOrder(
+        existing,
+        validatedDefinition,
+      );
+      if (orderChanged === null) {
+        return;
+      }
+      const rendererChanged = this.applySectionRenderer(
+        validatedDefinition.key,
+        validatedDefinition.renderer,
+      );
+
+      if (orderChanged || rendererChanged) {
+        this.notifyDefinitionSubscribers();
+      }
+      return;
+    }
+
+    this.registeredSections.set(
+      validatedDefinition.key,
+      this.normalizeSectionDefinition(validatedDefinition),
+    );
+    this.applySectionRenderer(
+      validatedDefinition.key,
+      validatedDefinition.renderer,
+    );
+    this.notifyDefinitionSubscribers();
   }
 
   private buildRemoteOnSet(
@@ -496,14 +666,12 @@ class SettingsStore {
     this.registerDefinition(mapped);
   }
 
-  public setPageOrder(pageIds: readonly string[]): void {
-    const validatedPageIds = this.validatePageOrder(pageIds);
-    if (!validatedPageIds) {
-      return;
-    }
+  public registerPage(definition: SettingsPageDefinition): void {
+    this.registerPageDefinition(definition);
+  }
 
-    this.pageOrder = validatedPageIds;
-    this.notifyDefinitionSubscribers();
+  public registerSection(definition: SettingsSectionDefinition): void {
+    this.registerSectionDefinition(definition);
   }
 
   public registerSetting(definition: SettingDefinition): void {
@@ -641,15 +809,35 @@ class SettingsStore {
     });
   }
 
-  public listPageOrder(): string[] {
-    return [...this.pageOrder];
+  public listPages(): RegisteredSettingsPage[] {
+    return [...this.registeredPages.values()]
+      .sort((a, b) => {
+        if (a.order !== b.order) {
+          return a.order - b.order;
+        }
+        return a.declarationOrder - b.declarationOrder;
+      })
+      .map(({ id, order, declarationOrder }) => ({
+        id,
+        order,
+        declarationOrder,
+      }));
   }
 
-  public registerSectionRenderer(
-    key: SettingsSectionKey,
-    renderer: SettingsSectionRenderer,
-  ): void {
-    this.sectionRenderers.set(key, renderer);
+  public listSections(): RegisteredSettingsSection[] {
+    return [...this.registeredSections.values()]
+      .sort((a, b) => {
+        if (a.order !== b.order) {
+          return a.order - b.order;
+        }
+        return a.declarationOrder - b.declarationOrder;
+      })
+      .map(({ key, order, declarationOrder }) => ({
+        key,
+        order,
+        declarationOrder,
+        hasRenderer: this.sectionRenderers.has(key),
+      }));
   }
 
   public getSectionRenderer(

@@ -1,8 +1,14 @@
-import { createVar, globalStyle, style } from "@vanilla-extract/css";
+import {
+  createVar,
+  fallbackVar,
+  globalStyle,
+  style,
+} from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
+export const playerCardSquadColorVar = createVar();
 export const playerTagColorVar = createVar();
 
 export const teamSection = style({
@@ -59,7 +65,7 @@ export const playerCard = style({
   display: "grid",
   gridTemplateRows: "auto auto 1fr",
   gap: 6,
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${fallbackVar(playerCardSquadColorVar, vars.color.border)}`,
   borderRadius: 10,
   padding: "10px 6px",
   background: vars.color.surface,
@@ -78,11 +84,44 @@ export const playerHeader = style({
 
 export const playerIdentity = style({
   display: "grid",
-  justifyContent: "start",
   alignItems: "center",
   gridTemplateRows: "repeat(2, 1fr)",
   gap: 3,
   height: "100%",
+  minWidth: 0,
+});
+
+export const playerNameRow = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
+  width: "100%",
+});
+
+export const playerNameCell = style({
+  minWidth: 0,
+  overflow: "hidden",
+});
+
+export const playerSquadBadge = style({
+  display: "inline-grid",
+  placeItems: "center",
+  justifySelf: "end",
+  minHeight: 18,
+  maxWidth: "100%",
+  padding: "0 5px",
+  borderRadius: 4,
+  border: `1px solid color-mix(in oklch, ${playerCardSquadColorVar} 42%, transparent)`,
+  color: `color-mix(in oklch, ${playerCardSquadColorVar} 78%, ${vars.color.foreground})`,
+  background: `color-mix(in oklch, ${playerCardSquadColorVar} 18%, transparent)`,
+  fontSize: "0.68rem",
+  fontWeight: 750,
+  lineHeight: 1,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const playerAvatarWrap = style({
@@ -363,7 +402,7 @@ export const terminatedText = style({
 });
 
 export const kdaText = style({
-  color: vars.color.mutedForeground,
+  color: vars.color.foreground,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",

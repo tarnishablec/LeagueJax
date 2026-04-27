@@ -27,6 +27,7 @@ export type SettingControl =
 
 // ── Frontend-only types ──────────────────────────────────────────────────────
 export type SettingId = `${string}.${string}.${string}`;
+export type SettingsGroupKey = string;
 export type SettingsSectionKey = `${string}.${string}`;
 
 export interface HydrateOptions {
@@ -99,10 +100,34 @@ export type SettingDefinition =
   | NumberSettingDefinition
   | ActionSettingDefinition;
 
+export interface SettingsPageDefinition {
+  id: string;
+  order?: number;
+}
+
+export interface SettingsSectionDefinition {
+  key: SettingsSectionKey;
+  order?: number;
+  renderer?: SettingsSectionRenderer;
+}
+
 export type RegisteredSetting = SettingDefinition & {
   order: number;
   visible: boolean;
   declarationOrder: number;
+};
+
+export type RegisteredSettingsPage = {
+  id: string;
+  order: number;
+  declarationOrder: number;
+};
+
+export type RegisteredSettingsSection = {
+  key: SettingsSectionKey;
+  order: number;
+  declarationOrder: number;
+  hasRenderer: boolean;
 };
 
 export type SettingClassCtor = new () => object;
@@ -114,7 +139,8 @@ export interface SettingsReader {
   subscribe(id: SettingId, callback: () => void): () => void;
   subscribeDefinitions(callback: () => void): () => void;
   getDefinitionsVersion(): number;
-  listPageOrder(): string[];
+  listPages(): RegisteredSettingsPage[];
+  listSections(): RegisteredSettingsSection[];
   listDefinitions(): RegisteredSetting[];
   getSectionRenderer(
     key: SettingsSectionKey,
@@ -122,11 +148,8 @@ export interface SettingsReader {
 }
 
 export interface SettingsShardApi extends SettingsReader {
-  setPageOrder(pageIds: readonly string[]): void;
+  registerPage(definition: SettingsPageDefinition): void;
+  registerSection(definition: SettingsSectionDefinition): void;
   registerSetting(definition: SettingDefinition): void;
   registerClass(ctor: SettingClassCtor): void;
-  registerSectionRenderer(
-    key: SettingsSectionKey,
-    renderer: SettingsSectionRenderer,
-  ): void;
 }
