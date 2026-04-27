@@ -1,3 +1,5 @@
+import { Portal } from "@ark-ui/react/portal";
+import { Tooltip } from "@ark-ui/react/tooltip";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import {
@@ -21,6 +23,7 @@ import {
 import { useLcuEvents } from "@/hooks/use-lcu-events";
 import { useTheme } from "@/hooks/use-theme";
 import { useWindowEffectBackgroundFallback } from "@/hooks/use-window-effect";
+import type { NavItem } from "@/runtime/web-contract";
 import * as s from "./__root.css";
 
 const DebugCommandPanel = import.meta.env.DEV
@@ -30,6 +33,54 @@ const DebugCommandPanel = import.meta.env.DEV
       })),
     )
   : null;
+
+interface SidebarNavLinkProps extends NavItem {
+  collapsed: boolean;
+  iconSize: number;
+  label: string;
+}
+
+function SidebarNavLink({
+  to,
+  icon: Icon,
+  collapsed,
+  iconSize,
+  label,
+}: SidebarNavLinkProps) {
+  const link = (
+    <NavLink
+      to={to}
+      className={({ isActive }) => s.navItem({ collapsed, active: isActive })}
+      draggable={false}
+    >
+      <Icon size={iconSize} aria-hidden="true" className={s.navIcon} />
+      <span className={s.navLabel({ collapsed })}>{label}</span>
+    </NavLink>
+  );
+
+  if (!collapsed) {
+    return link;
+  }
+
+  return (
+    <Tooltip.Root
+      lazyMount
+      unmountOnExit
+      openDelay={200}
+      closeDelay={0}
+      positioning={{ placement: "right", gutter: 8 }}
+    >
+      <Tooltip.Trigger asChild>{link}</Tooltip.Trigger>
+      <Portal>
+        <Tooltip.Positioner className={s.navTooltipPositioner}>
+          <Tooltip.Content className={s.navTooltipContent}>
+            {label}
+          </Tooltip.Content>
+        </Tooltip.Positioner>
+      </Portal>
+    </Tooltip.Root>
+  );
+}
 
 export function MainWindowLayout() {
   const { t } = useTranslation();
@@ -111,18 +162,14 @@ export function MainWindowLayout() {
 
       <aside className={s.sidebar}>
         <nav className={s.navList}>
-          {mainNavItems.map(({ to, labelKey, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                s.navItem({ collapsed, active: isActive })
-              }
-              draggable={false}
-            >
-              <Icon size={iconSize} aria-hidden="true" className={s.navIcon} />
-              <span className={s.navLabel({ collapsed })}>{t(labelKey)}</span>
-            </NavLink>
+          {mainNavItems.map((item) => (
+            <SidebarNavLink
+              key={item.to}
+              {...item}
+              collapsed={collapsed}
+              iconSize={iconSize}
+              label={t(item.labelKey)}
+            />
           ))}
         </nav>
 
@@ -130,18 +177,14 @@ export function MainWindowLayout() {
           {sidebarSlots.map((slot) => (
             <div key={slot.id}>{slot.node}</div>
           ))}
-          {bottomNavItems.map(({ to, labelKey, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                s.navItem({ collapsed, active: isActive })
-              }
-              draggable={false}
-            >
-              <Icon size={iconSize} aria-hidden="true" className={s.navIcon} />
-              <span className={s.navLabel({ collapsed })}>{t(labelKey)}</span>
-            </NavLink>
+          {bottomNavItems.map((item) => (
+            <SidebarNavLink
+              key={item.to}
+              {...item}
+              collapsed={collapsed}
+              iconSize={iconSize}
+              label={t(item.labelKey)}
+            />
           ))}
         </div>
       </aside>

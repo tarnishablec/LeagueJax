@@ -4,7 +4,8 @@ import { vars } from "./theme.css";
 /* ── Root & body — transparent for Mica vibrancy ── */
 
 globalStyle(":root", {
-  fontFamily: "Inter, Avenir, Helvetica, Arial, sans-serif",
+  fontFamily:
+    '"Maple UI", Inter, "Segoe UI", "HarmonyOS Sans SC", MiSans, "Noto Sans SC", "Noto Sans JP", "Microsoft YaHei UI", sans-serif',
   fontSize: 16,
   lineHeight: 1.5,
   fontWeight: 400,

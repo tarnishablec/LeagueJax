@@ -16,7 +16,7 @@ export const trigger = recipe({
     placeItems: "center",
     borderRadius: 6,
     height: 36,
-    fontSize: "0.875rem",
+    fontSize: "0.95rem",
     color: vars.color.mutedForeground,
     transition: "all 150ms",
     whiteSpace: "nowrap",
@@ -116,7 +116,7 @@ export const label = recipe({
 // ─── Tooltip container ──────────────────────────────────────────────────────
 
 export const tooltip = style({
-  minWidth: 220,
+  minWidth: 264,
   // padding: 8,
   borderRadius: 8,
   background: "transparent",
@@ -126,8 +126,26 @@ export const tooltip = style({
   gridAutoRows: "auto",
   gap: 8,
   color: vars.color.foreground,
-  fontSize: "0.8125rem",
+  fontSize: "0.975rem",
   zIndex: 1000,
+});
+
+export const emptyTooltip = style({
+  borderRadius: 6,
+  // border: `1px solid color-mix(in oklch, ${vars.color.primary} 34%, ${vars.color.popoverBorder})`,
+  background: vars.color.popupBackground,
+  color: vars.color.foreground,
+  padding: "6px 11px",
+  fontSize: "0.9rem",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  boxShadow: `0 8px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.18)`,
+  zIndex: 1000,
+  selectors: {
+    ":root.dark &": {
+      boxShadow: `0 8px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.58)`,
+    },
+  },
 });
 
 // ─── Unfocus button ─────────────────────────────────────────────────────────
@@ -166,7 +184,7 @@ export const instanceList = style({
   display: "grid",
   gap: 4,
   maxHeight: 240,
-  width: 250,
+  width: 300,
   overflowY: "auto",
 });
 
@@ -176,7 +194,7 @@ export const instanceRow = recipe({
     gridTemplateColumns: "auto 1fr minmax(30px, auto)",
     alignItems: "center",
     gap: 14,
-    padding: "6px 8px",
+    padding: "7px 10px",
     borderRadius: 6,
     cursor: "default",
     border: `1px solid ${vars.color.popoverBorder}`,
@@ -246,12 +264,12 @@ export const instancePath = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  fontSize: "0.8125rem",
+  fontSize: "0.975rem",
 });
 
 export const instancePid = style({
   color: vars.color.mutedForeground,
-  fontSize: "0.7rem",
+  fontSize: "0.84rem",
   textBoxTrim: "trim-end",
 });
 
