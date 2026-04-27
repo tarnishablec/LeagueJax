@@ -4,6 +4,12 @@ import { useTranslation } from "react-i18next";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { useSettings } from "@/features/settings/context";
 import { TeamRow } from "../components/OngoingGameCards.tsx";
+import {
+  normalizeEnabledPlayerCardTagIds,
+  normalizePlayerCardTagColors,
+  ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
+  ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
+} from "../components/player-card-tags.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameRoute.css";
 import {
@@ -29,6 +35,36 @@ export function OngoingGameRoute() {
       settings.subscribe(ONGOING_MATCH_HISTORY_COUNT_SETTING, onStoreChange),
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
+  );
+  const enabledPlayerCardTagIds = useSyncExternalStore(
+    (onStoreChange) =>
+      settings.subscribe(
+        ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
+        onStoreChange,
+      ),
+    () =>
+      normalizeEnabledPlayerCardTagIds(
+        settings.get(ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING),
+      ),
+    () =>
+      normalizeEnabledPlayerCardTagIds(
+        settings.get(ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING),
+      ),
+  );
+  const playerCardTagColors = useSyncExternalStore(
+    (onStoreChange) =>
+      settings.subscribe(
+        ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
+        onStoreChange,
+      ),
+    () =>
+      normalizePlayerCardTagColors(
+        settings.get(ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING),
+      ),
+    () =>
+      normalizePlayerCardTagColors(
+        settings.get(ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING),
+      ),
   );
   const teamMembers = useOngoingGameStore((state) => state.teamMembers);
   const phase = useOngoingGameStore((state) => state.phase);
@@ -72,7 +108,9 @@ export function OngoingGameRoute() {
       {teamGroups.map((group) => (
         <TeamRow
           key={`team:${normalizeTeamId(group.teamId)}`}
+          enabledPlayerCardTagIds={enabledPlayerCardTagIds}
           matchHistoryCount={matchHistoryCount}
+          playerCardTagColors={playerCardTagColors}
           showBots={showBots}
           slots={group.members}
         />

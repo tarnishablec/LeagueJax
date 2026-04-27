@@ -16,6 +16,9 @@ export const ongoingGameI18n: Resource = {
           interaction: {
             title: "Interaction",
           },
+          playerCardTags: {
+            title: "Player card tags",
+          },
         },
       },
       ongoing: {
@@ -27,6 +30,26 @@ export const ongoingGameI18n: Resource = {
         },
         showBots: {
           label: "Show bot players",
+        },
+        playerCardTags: {
+          description: "Choose which tags can appear on player cards.",
+          enabledIds: {
+            label: "Enabled player card tags",
+          },
+          colors: {
+            label: "Player card tag colors",
+          },
+          savedColors: "Saved Colors",
+          items: {
+            winStreak: "Win streak",
+            loseStreak: "Lose streak",
+            averageSoloKills: "Average solo kills",
+            excellent: "Excellent mark",
+            offFlashPosition: "Flash position check",
+            hiddenCareer: "Hidden career mark",
+            self: "Self mark",
+            encountered: "Encountered player",
+          },
         },
       },
     },
@@ -61,6 +84,16 @@ export const ongoingGameI18n: Resource = {
       historyResultTerminated: "Terminated",
       cs: "CS",
       level: "Lv",
+      playerTags: {
+        winStreak: "{{count}} wins",
+        loseStreak: "{{count}} losses",
+        averageSoloKills: "{{value}} solo kills",
+        excellent: "Excellent",
+        offFlashPosition: "Flash moved",
+        hiddenCareer: "Hidden",
+        self: "Self",
+        encountered: "Met",
+      },
     },
   },
   "zh-CN": {
@@ -78,6 +111,9 @@ export const ongoingGameI18n: Resource = {
           interaction: {
             title: "交互",
           },
+          playerCardTags: {
+            title: "玩家卡片标签",
+          },
         },
       },
       ongoing: {
@@ -89,6 +125,26 @@ export const ongoingGameI18n: Resource = {
         },
         showBots: {
           label: "显示机器人卡片",
+        },
+        playerCardTags: {
+          description: "这些标签会展示在玩家卡片上",
+          enabledIds: {
+            label: "启用的玩家卡片标签",
+          },
+          colors: {
+            label: "玩家卡片标签颜色",
+          },
+          savedColors: "保存的颜色",
+          items: {
+            winStreak: "连胜场次",
+            loseStreak: "连败场次",
+            averageSoloKills: "场均单杀次数",
+            excellent: "优异标记",
+            offFlashPosition: "闪现异常位置检测",
+            hiddenCareer: "生涯隐藏标记",
+            self: "自己标记",
+            encountered: "遇到过的玩家",
+          },
         },
       },
     },
@@ -123,6 +179,16 @@ export const ongoingGameI18n: Resource = {
       historyResultTerminated: "终止",
       cs: "补刀",
       level: "等级",
+      playerTags: {
+        winStreak: "{{count}} 连胜",
+        loseStreak: "{{count}} 连败",
+        averageSoloKills: "{{value}} 单杀",
+        excellent: "优异",
+        offFlashPosition: "闪现异位",
+        hiddenCareer: "生涯隐藏",
+        self: "自己",
+        encountered: "遇到过",
+      },
     },
   },
   "ja-JP": {
@@ -140,6 +206,9 @@ export const ongoingGameI18n: Resource = {
           interaction: {
             title: "操作",
           },
+          playerCardTags: {
+            title: "プレイヤーカードタグ",
+          },
         },
       },
       ongoing: {
@@ -151,6 +220,26 @@ export const ongoingGameI18n: Resource = {
         },
         showBots: {
           label: "BOTカードを表示する",
+        },
+        playerCardTags: {
+          description: "プレイヤーカードに表示するタグを選択します",
+          enabledIds: {
+            label: "有効なプレイヤーカードタグ",
+          },
+          colors: {
+            label: "プレイヤーカードタグの色",
+          },
+          savedColors: "保存した色",
+          items: {
+            winStreak: "連勝数",
+            loseStreak: "連敗数",
+            averageSoloKills: "平均ソロキル",
+            excellent: "優秀マーク",
+            offFlashPosition: "フラッシュ位置チェック",
+            hiddenCareer: "戦績非公開マーク",
+            self: "自分マーク",
+            encountered: "遭遇済みプレイヤー",
+          },
         },
       },
     },
@@ -186,6 +275,16 @@ export const ongoingGameI18n: Resource = {
       historyResultTerminated: "中断",
       cs: "CS",
       level: "Lv",
+      playerTags: {
+        winStreak: "{{count}}連勝",
+        loseStreak: "{{count}}連敗",
+        averageSoloKills: "{{value}}ソロキル",
+        excellent: "優秀",
+        offFlashPosition: "フラッシュ異位置",
+        hiddenCareer: "戦績非公開",
+        self: "自分",
+        encountered: "遭遇済み",
+      },
     },
   },
 };

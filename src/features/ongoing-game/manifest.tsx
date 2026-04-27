@@ -13,6 +13,13 @@ import type { WebShard } from "@/runtime/web-contract";
 import { SettingsShard } from "../settings/manifest";
 import { SHARD_IDS } from "../shard-ids";
 import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
+import { PlayerCardTagsSettings } from "./components/PlayerCardTagsSettings";
+import {
+  getDefaultEnabledPlayerCardTagIds,
+  getDefaultPlayerCardTagColors,
+  ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
+  ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
+} from "./components/player-card-tags.ts";
 import { ongoingGameI18n } from "./i18n";
 import { useOngoingGameStore } from "./store";
 
@@ -25,6 +32,7 @@ const OngoingGameRoute = lazy(() =>
 const ONGOING_AUTO_SWITCH_TO_GAME_SETTING =
   "ongoing.interaction.autoSwitchToGame";
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots";
+const ONGOING_PLAYER_CARD_TAGS_SECTION = "ongoing.playerCardTags" as const;
 
 function isVisibleOngoingPhase(phase: OngoingGameUpdated["phase"]): boolean {
   return phase === "ChampSelect" || phase === "InGame";
@@ -123,6 +131,32 @@ export class OngoingGameShard implements WebShard {
       order: 30,
       onSet: () => {},
     });
+    settings.registerSetting({
+      id: ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
+      labelKey: "settings.ongoing.playerCardTags.enabledIds.label",
+      scope: "frontend",
+      control: { kind: "text" },
+      zod: z.array(z.string()),
+      defaultValue: getDefaultEnabledPlayerCardTagIds(),
+      order: 10,
+      visible: false,
+      onSet: () => {},
+    });
+    settings.registerSetting({
+      id: ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
+      labelKey: "settings.ongoing.playerCardTags.colors.label",
+      scope: "frontend",
+      control: { kind: "text" },
+      zod: z.record(z.string(), z.string()),
+      defaultValue: getDefaultPlayerCardTagColors(),
+      order: 11,
+      visible: false,
+      onSet: () => {},
+    });
+    settings.registerSectionRenderer(
+      ONGOING_PLAYER_CARD_TAGS_SECTION,
+      (props) => <PlayerCardTagsSettings {...props} />,
+    );
 
     this.ongoingUpdatedUnlisten = await listen<OngoingGameUpdated>(
       "ongoing-game-updated",

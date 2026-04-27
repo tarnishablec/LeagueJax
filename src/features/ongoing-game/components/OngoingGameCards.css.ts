@@ -3,6 +3,7 @@ import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
+export const playerTagColorVar = createVar();
 
 export const teamSection = style({
   height: "calc(100% + 6px)",
@@ -132,11 +133,17 @@ export const levelBadge = style({
   border: `1px solid color-mix(in oklch, ${vars.color.background} 65%, transparent)`,
 });
 
+export const playerOverview = style({
+  display: "grid",
+  gap: 5,
+  minWidth: 0,
+});
+
 export const playerStats = style({
   fontSize: "0.78rem",
   color: vars.color.foreground,
   display: "grid",
-  gridTemplateColumns: "1fr auto",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
   alignItems: "center",
   gap: 6,
   minHeight: 16,
@@ -144,8 +151,8 @@ export const playerStats = style({
 
 export const winRateText = recipe({
   base: {
-    fontSize: "0.72rem",
-    fontWeight: 600,
+    fontSize: "0.78rem",
+    fontWeight: 750,
     lineHeight: 1,
     whiteSpace: "nowrap",
     justifySelf: "start",
@@ -160,6 +167,43 @@ export const winRateText = recipe({
   defaultVariants: {
     tone: "neutral",
   },
+});
+
+export const averageKdaText = style({
+  color: vars.color.foreground,
+  fontSize: "0.78rem",
+  fontWeight: 750,
+  justifySelf: "end",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+});
+
+export const playerTagList = style({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  alignContent: "start",
+  gap: 4,
+  minHeight: 18,
+  minWidth: 0,
+});
+
+export const playerTag = style({
+  display: "inline-grid",
+  placeItems: "center",
+  minHeight: 18,
+  maxWidth: "100%",
+  padding: "0 5px",
+  borderRadius: 4,
+  border: `1px solid color-mix(in oklch, ${playerTagColorVar} 36%, transparent)`,
+  color: `color-mix(in oklch, ${playerTagColorVar} 72%, ${vars.color.foreground})`,
+  background: `color-mix(in oklch, ${playerTagColorVar} 20%, transparent)`,
+  fontSize: "0.68rem",
+  fontWeight: 700,
+  lineHeight: 1,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const rankRow = style({
