@@ -355,7 +355,7 @@ export const PLAYER_CARD_MATCH_TAGS = [
     settingLabelKey: "settings.ongoing.playerCardTags.items.averageSoloKills",
     order: 30,
     defaultEnabled: true,
-    defaultColor: "#5E1414",
+    defaultColor: "#ff0057",
     tone: "warning",
     evaluate: (matches, _slot) => (computeAverageSoloKills(matches) ?? 0) > 0,
     formatLabel: (matches, _slot) => {
