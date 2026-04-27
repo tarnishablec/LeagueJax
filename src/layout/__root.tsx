@@ -36,7 +36,6 @@ const DebugCommandPanel = import.meta.env.DEV
 
 interface SidebarNavLinkProps extends NavItem {
   collapsed: boolean;
-  iconSize: number;
   label: string;
 }
 
@@ -44,7 +43,6 @@ function SidebarNavLink({
   to,
   icon: Icon,
   collapsed,
-  iconSize,
   label,
 }: SidebarNavLinkProps) {
   const link = (
@@ -53,14 +51,10 @@ function SidebarNavLink({
       className={({ isActive }) => s.navItem({ collapsed, active: isActive })}
       draggable={false}
     >
-      <Icon size={iconSize} aria-hidden="true" className={s.navIcon} />
+      <Icon size={16} aria-hidden="true" className={s.navIcon({ collapsed })} />
       <span className={s.navLabel({ collapsed })}>{label}</span>
     </NavLink>
   );
-
-  if (!collapsed) {
-    return link;
-  }
 
   return (
     <Tooltip.Root
@@ -71,13 +65,15 @@ function SidebarNavLink({
       positioning={{ placement: "right", gutter: 8 }}
     >
       <Tooltip.Trigger asChild>{link}</Tooltip.Trigger>
-      <Portal>
-        <Tooltip.Positioner className={s.navTooltipPositioner}>
-          <Tooltip.Content className={s.navTooltipContent}>
-            {label}
-          </Tooltip.Content>
-        </Tooltip.Positioner>
-      </Portal>
+      {collapsed ? (
+        <Portal>
+          <Tooltip.Positioner className={s.navTooltipPositioner}>
+            <Tooltip.Content className={s.navTooltipContent}>
+              {label}
+            </Tooltip.Content>
+          </Tooltip.Positioner>
+        </Portal>
+      ) : null}
     </Tooltip.Root>
   );
 }
@@ -167,7 +163,6 @@ export function MainWindowLayout() {
               key={item.to}
               {...item}
               collapsed={collapsed}
-              iconSize={iconSize}
               label={t(item.labelKey)}
             />
           ))}
@@ -182,7 +177,6 @@ export function MainWindowLayout() {
               key={item.to}
               {...item}
               collapsed={collapsed}
-              iconSize={iconSize}
               label={t(item.labelKey)}
             />
           ))}

@@ -58,8 +58,7 @@ export function HistorySearchDialog({
           aria-label={t("history.searchDialog.open")}
           disabled={disabled}
         >
-          <Search size={14} aria-hidden="true" />
-          <span>{t("history.searchDialog.open")}</span>
+          <Search size={15} aria-hidden="true" />
         </button>
       </Dialog.Trigger>
 

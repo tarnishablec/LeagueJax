@@ -44,25 +44,26 @@ function TriggerIcon({
   avatarUrl,
   hasSummoner,
   isConnecting,
-  iconSize,
+  collapsed,
 }: {
   avatarUrl: string | null;
   hasSummoner: boolean;
   isConnecting: boolean;
-  iconSize: number;
+  collapsed: boolean;
 }) {
   const [imageErrored, setImageErrored] = useState(false);
+  const iconScaleClassName = s.iconScale({ collapsed });
 
   if (hasSummoner && avatarUrl && !imageErrored) {
     return (
       <LazyImage
         src={avatarUrl}
         alt="Profile icon"
-        className={s.avatar}
+        className={`${s.avatar} ${iconScaleClassName}`}
         style={assignInlineVars({
-          [s.avatarSizeVar]: `${iconSize * 1.3}px`,
+          [s.avatarSizeVar]: "20.8px",
         })}
-        fallbackClassName={s.avatar}
+        fallbackClassName={`${s.avatar} ${iconScaleClassName}`}
         onError={() => setImageErrored(true)}
       />
     );
@@ -70,20 +71,20 @@ function TriggerIcon({
 
   if (isConnecting) {
     return (
-      <LoaderCircle
-        size={iconSize}
-        aria-hidden="true"
-        className={s.connectingIcon}
-      />
+      <span className={`${s.triggerIconFrame} ${iconScaleClassName}`}>
+        <LoaderCircle
+          size={16}
+          aria-hidden="true"
+          className={s.connectingIcon}
+        />
+      </span>
     );
   }
 
   return (
-    <Unplug
-      size={iconSize}
-      aria-hidden="true"
-      style={{ justifySelf: "center" }}
-    />
+    <span className={`${s.triggerIconFrame} ${iconScaleClassName}`}>
+      <Unplug size={16} aria-hidden="true" />
+    </span>
   );
 }
 
@@ -243,7 +244,7 @@ interface ClientStatusProps {
   iconSize: number;
 }
 
-export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
+export function ClientStatus({ collapsed }: ClientStatusProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const openTab = useTabStore((st) => st.openTab);
@@ -304,7 +305,7 @@ export function ClientStatus({ collapsed, iconSize }: ClientStatusProps) {
             avatarUrl={avatarUrl}
             hasSummoner={hasFocusedSummoner}
             isConnecting={isConnecting}
-            iconSize={iconSize}
+            collapsed={collapsed}
           />
           <span className={s.label({ collapsed })}>
             <TriggerLabel

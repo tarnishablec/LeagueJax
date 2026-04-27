@@ -89,6 +89,9 @@ const navBase: StyleRule = {
 
 const navHoverBg = `oklch(from ${vars.color.accent} l c h / 0.32)`;
 const navActiveBg = `oklch(from ${vars.color.accent} l c h / 0.48)`;
+const tooltipSurface = `oklch(from ${vars.color.foreground} 0.26 0.012 h / 0.96)`;
+const tooltipSurfaceDark = `oklch(from ${vars.color.backgroundRaw} 0.18 0.012 h / 0.98)`;
+const tooltipShadowColor = `oklch(from ${vars.color.backgroundRaw} 0.05 c h / 0.46)`;
 
 export const navItem = recipe({
   base: {
@@ -136,9 +139,26 @@ export const navItem = recipe({
   },
 });
 
-export const navIcon = style({
-  justifySelf: "center",
-  transition: "width 200ms, height 200ms",
+export const navIcon = recipe({
+  base: {
+    display: "block",
+    justifySelf: "center",
+    transformOrigin: "center",
+    transition: "transform 200ms ease",
+  },
+  variants: {
+    collapsed: {
+      false: {
+        transform: "scale(1)",
+      },
+      true: {
+        transform: "scale(1.25)",
+      },
+    },
+  },
+  defaultVariants: {
+    collapsed: false,
+  },
 });
 
 export const navLabel = recipe({
@@ -166,16 +186,23 @@ export const navTooltipPositioner = style({
 export const navTooltipContent = style({
   borderRadius: 6,
   // border: `1px solid color-mix(in oklch, ${vars.color.primary} 34%, ${vars.color.popoverBorder})`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  background: tooltipSurface,
+  color: "oklch(0.96 0 0)",
   padding: "6px 11px",
   fontSize: "0.9rem",
   lineHeight: 1,
   whiteSpace: "nowrap",
-  boxShadow: `0 8px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.18)`,
+  boxShadow: `
+    0 10px 28px ${tooltipShadowColor},
+    inset 0 1px 0 oklch(1 0 0 / 0.05)
+  `,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 8px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.58)`,
+      background: tooltipSurfaceDark,
+      boxShadow: `
+        0 12px 30px oklch(from ${vars.color.backgroundRaw} 0.04 c h / 0.76),
+        inset 0 1px 0 oklch(1 0 0 / 0.04)
+      `,
     },
   },
 });
