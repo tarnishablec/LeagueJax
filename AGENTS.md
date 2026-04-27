@@ -155,7 +155,7 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 - **Variants:** Use `recipe()` from `@vanilla-extract/recipes` for component variants. Use `styleVariants()` for simple enumerated variants.
 - **Theme tokens:** Defined in `src/styles/theme.css.ts` via `createGlobalThemeContract` / `createGlobalTheme`. Access with `vars.color.*`.
 - **Dynamic values:** Use `assignInlineVars()` from `@vanilla-extract/dynamic` for runtime-dependent CSS values; avoid inline `style` for anything expressible statically.
-- Define all colors with **`oklch()`** syntax — no hex codes, no `rgba()`.
+- Do not force a single color syntax. Prefer theme tokens for stable UI surfaces, and use the color format that best fits the API or interaction (`oklch()`, hex, `rgba()`, etc.).
 - **No Tailwind, no utility classes.** All styling must go through Vanilla Extract `.css.ts` files.
 
 ## Type Sharing (Rust → TypeScript)

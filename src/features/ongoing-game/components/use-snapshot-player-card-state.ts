@@ -1,5 +1,5 @@
-import type { TFunction } from "i18next";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
@@ -85,8 +85,8 @@ export function useSnapshotPlayerCardState(
   matchHistoryCount: number,
   enabledPlayerCardTagIds: readonly string[],
   playerCardTagColors: Readonly<Record<string, string>>,
-  t: TFunction,
 ) {
+  const { t } = useTranslation();
   const phase = useOngoingGameStore((state) => state.phase);
 
   const isBot = isBotSlot(slot);
@@ -180,6 +180,7 @@ export function useSnapshotPlayerCardState(
           recentGames,
           enabledPlayerCardTagIds,
           playerCardTagColors,
+          slot,
           t,
         ),
         ...collectSpecialPlayerCardTags({

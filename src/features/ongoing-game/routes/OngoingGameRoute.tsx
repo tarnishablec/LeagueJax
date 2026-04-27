@@ -5,9 +5,9 @@ import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { useSettings } from "@/features/settings/context";
 import { TeamRow } from "../components/OngoingGameCards.tsx";
 import {
+  getPlayerCardTagColorSettingItems,
   normalizeEnabledPlayerCardTagIds,
-  normalizePlayerCardTagColors,
-  ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
+  normalizePlayerCardTagColor,
   ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
 } from "../components/player-card-tags.ts";
 import { useOngoingGameStore } from "../store";
@@ -20,6 +20,37 @@ import {
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots" as const;
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
   "ongoing.interaction.matchHistoryCount" as const;
+const PLAYER_CARD_TAG_COLOR_SETTINGS = getPlayerCardTagColorSettingItems();
+
+function createPlayerCardTagColorsSnapshot(
+  settings: ReturnType<typeof useSettings>,
+) {
+  let previousValues: string[] | null = null;
+  let previousSnapshot: Readonly<Record<string, string>> | null = null;
+
+  return () => {
+    const values = PLAYER_CARD_TAG_COLOR_SETTINGS.map((item) =>
+      normalizePlayerCardTagColor(settings.get(item.id), item.defaultColor),
+    );
+
+    if (
+      previousValues &&
+      previousSnapshot &&
+      values.every((value, index) => value === previousValues?.[index])
+    ) {
+      return previousSnapshot;
+    }
+
+    previousValues = values;
+    previousSnapshot = Object.fromEntries(
+      PLAYER_CARD_TAG_COLOR_SETTINGS.map((item, index) => [
+        item.tagId,
+        values[index] ?? item.defaultColor,
+      ]),
+    );
+    return previousSnapshot;
+  };
+}
 
 export function OngoingGameRoute() {
   const { t } = useTranslation();
@@ -51,20 +82,24 @@ export function OngoingGameRoute() {
         settings.get(ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING),
       ),
   );
+  const getPlayerCardTagColorsSnapshot = useMemo(
+    () => createPlayerCardTagColorsSnapshot(settings),
+    [settings],
+  );
   const playerCardTagColors = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(
-        ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
-        onStoreChange,
-      ),
-    () =>
-      normalizePlayerCardTagColors(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING),
-      ),
-    () =>
-      normalizePlayerCardTagColors(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING),
-      ),
+    (onStoreChange) => {
+      const unsubscribes = PLAYER_CARD_TAG_COLOR_SETTINGS.map((item) =>
+        settings.subscribe(item.id, onStoreChange),
+      );
+
+      return () => {
+        for (const unsubscribe of unsubscribes) {
+          unsubscribe();
+        }
+      };
+    },
+    getPlayerCardTagColorsSnapshot,
+    getPlayerCardTagColorsSnapshot,
   );
   const teamMembers = useOngoingGameStore((state) => state.teamMembers);
   const phase = useOngoingGameStore((state) => state.phase);

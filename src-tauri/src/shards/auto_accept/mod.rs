@@ -81,8 +81,8 @@ impl AutoAcceptShard {
     ) -> Result<AutoAcceptSettings, crate::error::AppError> {
         let enabled = settings.register_definition(SettingDefinitionDto {
             id: AUTO_ACCEPT_SETTING_ID.to_string(),
-            label_key: "settings.matchmaking.autoAccept.label".to_string(),
-            hint_key: Some("settings.matchmaking.autoAccept.hint".to_string()),
+            label_key: "settings.ongoing.matchmaking.autoAccept.label".to_string(),
+            hint_key: Some("settings.ongoing.matchmaking.autoAccept.hint".to_string()),
             scope: SettingScopeDto::Backend,
             control: SettingControlDto::Toggle,
             default_value: Value::Bool(AUTO_ACCEPT_DEFAULT),
@@ -93,8 +93,8 @@ impl AutoAcceptShard {
 
         let accept_delay_seconds = settings.register_definition(SettingDefinitionDto {
             id: ACCEPT_DELAY_SECONDS_SETTING_ID.to_string(),
-            label_key: "settings.matchmaking.acceptDelaySeconds.label".to_string(),
-            hint_key: Some("settings.matchmaking.acceptDelaySeconds.hint".to_string()),
+            label_key: "settings.ongoing.matchmaking.acceptDelaySeconds.label".to_string(),
+            hint_key: Some("settings.ongoing.matchmaking.acceptDelaySeconds.hint".to_string()),
             scope: SettingScopeDto::Backend,
             control: SettingControlDto::Number {
                 placeholder_key: None,

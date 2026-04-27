@@ -71,7 +71,7 @@ export class TrayController {
       const icon = await Image.fromPath(iconPath);
       await this.tray.setIcon(icon);
     } catch (error) {
-      logger.warn({error}, "Failed to resolve tray icon resource");
+      logger.warn({ error }, "Failed to resolve tray icon resource");
     }
   }
 
@@ -80,7 +80,7 @@ export class TrayController {
       return;
     }
 
-    const separator = await PredefinedMenuItem.new({item: "Separator"});
+    const separator = await PredefinedMenuItem.new({ item: "Separator" });
     const nextMenu = await Menu.new({
       items: [
         {

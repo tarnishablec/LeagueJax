@@ -17,9 +17,9 @@ import {
 import * as s from "./MiniRoute.css";
 
 const AUTO_ACCEPT_SETTING_ID =
-  "matchmaking.interaction.autoAccept" satisfies SettingId;
+  "ongoing.matchmaking.autoAccept" satisfies SettingId;
 const ACCEPT_DELAY_SECONDS_SETTING_ID =
-  "matchmaking.interaction.acceptDelayMs" satisfies SettingId;
+  "ongoing.matchmaking.acceptDelayMs" satisfies SettingId;
 const ACCEPT_DELAY_MIN_SECONDS = 0;
 const ACCEPT_DELAY_MAX_SECONDS = 10;
 
@@ -95,11 +95,11 @@ function MiniAutoAcceptSettings() {
   return (
     <>
       <SettingsFieldRow
-        label={t("settings.matchmaking.autoAccept.label")}
+        label={t("settings.ongoing.matchmaking.autoAccept.label")}
         settingId={AUTO_ACCEPT_SETTING_ID}
       >
         <SettingsToggle
-          ariaLabel="Setting matchmaking.interaction.autoAccept"
+          ariaLabel="Setting ongoing.matchmaking.autoAccept"
           checked={autoAccept}
           onCheckedChange={(checked) => {
             settings.set(AUTO_ACCEPT_SETTING_ID, checked);
@@ -107,11 +107,11 @@ function MiniAutoAcceptSettings() {
         />
       </SettingsFieldRow>
       <SettingsFieldRow
-        label={t("settings.matchmaking.acceptDelaySeconds.label")}
+        label={t("settings.ongoing.matchmaking.acceptDelaySeconds.label")}
         settingId={ACCEPT_DELAY_SECONDS_SETTING_ID}
       >
         <SettingsInput
-          ariaLabel="Setting matchmaking.interaction.acceptDelayMs"
+          ariaLabel="Setting ongoing.matchmaking.acceptDelayMs"
           type="number"
           value={String(acceptDelay)}
           min={ACCEPT_DELAY_MIN_SECONDS}

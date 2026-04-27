@@ -16,6 +16,9 @@ export const ongoingGameI18n: Resource = {
           interaction: {
             title: "Interaction",
           },
+          matchmaking: {
+            title: "Matchmaking",
+          },
           playerCardTags: {
             title: "Player card tags",
           },
@@ -30,6 +33,16 @@ export const ongoingGameI18n: Resource = {
         },
         showBots: {
           label: "Show bot players",
+        },
+        matchmaking: {
+          autoAccept: {
+            label: "Auto Accept Ready Check",
+            hint: "Automatically accept the ready check before champion select starts.",
+          },
+          acceptDelaySeconds: {
+            label: "Accept Delay (s)",
+            hint: "Wait this many seconds before accepting the ready check.",
+          },
         },
         playerCardTags: {
           description: "Choose which tags can appear on player cards.",
@@ -111,6 +124,9 @@ export const ongoingGameI18n: Resource = {
           interaction: {
             title: "交互",
           },
+          matchmaking: {
+            title: "匹配",
+          },
           playerCardTags: {
             title: "玩家卡片标签",
           },
@@ -125,6 +141,16 @@ export const ongoingGameI18n: Resource = {
         },
         showBots: {
           label: "显示机器人卡片",
+        },
+        matchmaking: {
+          autoAccept: {
+            label: "自动接受对局",
+            hint: "在进入英雄选择前自动接受 ready check。",
+          },
+          acceptDelaySeconds: {
+            label: "接受延迟（秒）",
+            hint: "检测到 ready check 后，延迟这么多秒再发送接受请求。",
+          },
         },
         playerCardTags: {
           description: "这些标签会展示在玩家卡片上",
@@ -206,6 +232,9 @@ export const ongoingGameI18n: Resource = {
           interaction: {
             title: "操作",
           },
+          matchmaking: {
+            title: "マッチメイキング",
+          },
           playerCardTags: {
             title: "プレイヤーカードタグ",
           },
@@ -220,6 +249,16 @@ export const ongoingGameI18n: Resource = {
         },
         showBots: {
           label: "BOTカードを表示する",
+        },
+        matchmaking: {
+          autoAccept: {
+            label: "対局を自動承諾",
+            hint: "チャンピオン選択に入る前に ready check を自動で承諾します。",
+          },
+          acceptDelaySeconds: {
+            label: "承諾遅延（秒）",
+            hint: "ready check を検出してから承諾するまでの待機時間です。",
+          },
         },
         playerCardTags: {
           description: "プレイヤーカードに表示するタグを選択します",
