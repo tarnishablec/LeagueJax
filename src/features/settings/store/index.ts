@@ -53,7 +53,6 @@ const onSetValueSchema = z.custom<(next: unknown, prev: unknown) => void>(
     message: "onSet must be a function.",
   },
 );
-
 const sharedDefinitionShape = {
   id: z.string().regex(settingIdRegex, 'id must match "page.section.field".'),
   labelKey: z.string().min(1),

@@ -16,8 +16,8 @@ import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
 import { PlayerCardTagsSettings } from "./components/PlayerCardTagsSettings";
 import {
   getDefaultEnabledPlayerCardTagIds,
-  getDefaultPlayerCardTagColors,
-  ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
+  getPlayerCardTagColorSettingItems,
+  isPlayerCardTagColor,
   ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
 } from "./components/player-card-tags.ts";
 import { ongoingGameI18n } from "./i18n";
@@ -142,17 +142,19 @@ export class OngoingGameShard implements WebShard {
       visible: false,
       onSet: () => {},
     });
-    settings.registerSetting({
-      id: ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
-      labelKey: "settings.ongoing.playerCardTags.colors.label",
-      scope: "frontend",
-      control: { kind: "text" },
-      zod: z.record(z.string(), z.string()),
-      defaultValue: getDefaultPlayerCardTagColors(),
-      order: 11,
-      visible: false,
-      onSet: () => {},
-    });
+    for (const colorSetting of getPlayerCardTagColorSettingItems()) {
+      settings.registerSetting({
+        id: colorSetting.id,
+        labelKey: colorSetting.labelKey,
+        scope: "frontend",
+        control: { kind: "text" },
+        zod: z.string().refine(isPlayerCardTagColor),
+        defaultValue: colorSetting.defaultColor,
+        order: colorSetting.order,
+        visible: false,
+        onSet: () => {},
+      });
+    }
     settings.registerSectionRenderer(
       ONGOING_PLAYER_CARD_TAGS_SECTION,
       (props) => <PlayerCardTagsSettings {...props} />,

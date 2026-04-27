@@ -8,14 +8,12 @@ import { useSettings } from "@/features/settings/context";
 import type { SettingsSectionRendererProps } from "@/features/settings/types";
 import * as s from "./PlayerCardTagsSettings.css";
 import {
-  getPlayerCardTagColor,
   getPlayerCardTagSettingItems,
-  hexToOklchColor,
   normalizeEnabledPlayerCardTagIds,
-  normalizePlayerCardTagColors,
-  ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
+  normalizePlayerCardTagColor,
   ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
   oklchColorToHex,
+  type PlayerCardTagSettingItem,
 } from "./player-card-tags.ts";
 
 const COLOR_PRESETS = [
@@ -51,33 +49,34 @@ function useEnabledPlayerCardTagIds(): readonly string[] {
   );
 }
 
-function usePlayerCardTagColors(): Readonly<Record<string, string>> {
+function usePlayerCardTagColor(item: PlayerCardTagSettingItem): string {
   const settings = useSettings();
 
   return useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(
-        ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
-        onStoreChange,
+    (onStoreChange) => settings.subscribe(item.colorSettingId, onStoreChange),
+    () =>
+      normalizePlayerCardTagColor(
+        settings.get(item.colorSettingId),
+        item.defaultColor,
       ),
     () =>
-      normalizePlayerCardTagColors(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING),
-      ),
-    () =>
-      normalizePlayerCardTagColors(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING),
+      normalizePlayerCardTagColor(
+        settings.get(item.colorSettingId),
+        item.defaultColor,
       ),
   );
 }
 
 function TagColorPicker(props: {
   color: string;
+  colorSettingId: PlayerCardTagSettingItem["colorSettingId"];
+  defaultColor: string;
   id: string;
   label: string;
-  onColorChange: (id: string, color: string) => void;
+  onColorChange: (color: string) => void;
 }) {
-  const { color, id, label, onColorChange } = props;
+  const { color, colorSettingId, defaultColor, id, label, onColorChange } =
+    props;
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [colorValue, setColorValue] = useState(() =>
@@ -90,7 +89,7 @@ function TagColorPicker(props: {
   }, [color]);
 
   const commitColor = (nextColor = colorValue) => {
-    onColorChange(id, hexToOklchColor(nextColor.toString("hex")));
+    onColorChange(oklchColorToHex(nextColor.toString("hex")));
   };
   const commitPreset = (preset: string) => {
     const nextColor = parseColor(preset);
@@ -124,6 +123,7 @@ function TagColorPicker(props: {
         <ColorPicker.Trigger
           aria-label={`Pick color for player card tag ${id}`}
           className={s.colorTrigger}
+          data-setting-id={colorSettingId}
           title={label}
         >
           <ColorPicker.ValueSwatch className={s.colorValueSwatch} />
@@ -189,19 +189,26 @@ function TagColorPicker(props: {
               {t("settings.ongoing.playerCardTags.savedColors")}
             </div>
             <ColorPicker.SwatchGroup className={s.swatchGroup}>
-              {COLOR_PRESETS.map((preset) => (
-                <ColorPicker.SwatchTrigger
-                  key={preset}
-                  aria-label={`Use preset color ${preset} for player card tag ${id}`}
-                  className={s.swatchTrigger}
-                  value={preset}
-                  onClick={() => {
-                    commitPreset(preset);
-                  }}
-                >
-                  <ColorPicker.Swatch className={s.swatch} value={preset} />
-                </ColorPicker.SwatchTrigger>
-              ))}
+              {[defaultColor, ...COLOR_PRESETS].map((preset) => {
+                const presetHex = oklchColorToHex(preset);
+
+                return (
+                  <ColorPicker.SwatchTrigger
+                    key={preset}
+                    aria-label={`Use preset color ${presetHex} for player card tag ${id}`}
+                    className={s.swatchTrigger}
+                    value={presetHex}
+                    onClick={() => {
+                      commitPreset(presetHex);
+                    }}
+                  >
+                    <ColorPicker.Swatch
+                      className={s.swatch}
+                      value={presetHex}
+                    />
+                  </ColorPicker.SwatchTrigger>
+                );
+              })}
             </ColorPicker.SwatchGroup>
           </ColorPicker.Content>
         </ColorPicker.Positioner>
@@ -211,11 +218,55 @@ function TagColorPicker(props: {
   );
 }
 
+function PlayerCardTagSettingsRow(props: {
+  enabled: boolean;
+  item: PlayerCardTagSettingItem;
+  onEnabledChange: (id: string, checked: boolean) => void;
+}) {
+  const { enabled, item, onEnabledChange } = props;
+  const settings = useSettings();
+  const color = usePlayerCardTagColor(item);
+
+  const updateColor = (nextColor: string) => {
+    settings.set(item.colorSettingId, nextColor);
+  };
+
+  return (
+    <div className={s.itemRow} data-setting-id={item.colorSettingId}>
+      <Checkbox.Root
+        aria-label={`Toggle player card tag ${item.id}`}
+        checked={enabled}
+        className={s.checkboxRoot}
+        onCheckedChange={(details) => {
+          onEnabledChange(item.id, details.checked === true);
+        }}
+      >
+        <Checkbox.HiddenInput />
+        <Checkbox.Control className={s.checkboxControl}>
+          <Checkbox.Indicator className={s.checkboxIndicator}>
+            <Check size={14} aria-hidden="true" />
+          </Checkbox.Indicator>
+        </Checkbox.Control>
+        <Checkbox.Label className={s.checkboxLabel}>
+          {item.label}
+        </Checkbox.Label>
+      </Checkbox.Root>
+      <TagColorPicker
+        color={color}
+        colorSettingId={item.colorSettingId}
+        defaultColor={item.defaultColor}
+        id={item.id}
+        label={item.label}
+        onColorChange={updateColor}
+      />
+    </div>
+  );
+}
+
 export function PlayerCardTagsSettings(_props: SettingsSectionRendererProps) {
   const settings = useSettings();
   const { t } = useTranslation();
   const enabledIds = useEnabledPlayerCardTagIds();
-  const tagColors = usePlayerCardTagColors();
   const enabledSet = useMemo(() => new Set(enabledIds), [enabledIds]);
   const items = useMemo(() => getPlayerCardTagSettingItems(t), [t]);
 
@@ -229,15 +280,6 @@ export function PlayerCardTagsSettings(_props: SettingsSectionRendererProps) {
       normalizeEnabledPlayerCardTagIds(next),
     );
   };
-  const updateColor = (id: string, color: string) => {
-    settings.set(
-      ONGOING_PLAYER_CARD_TAGS_COLORS_SETTING,
-      normalizePlayerCardTagColors({
-        ...tagColors,
-        [id]: color,
-      }),
-    );
-  };
 
   return (
     <div className={s.root}>
@@ -246,32 +288,12 @@ export function PlayerCardTagsSettings(_props: SettingsSectionRendererProps) {
       </div>
       <div className={s.list}>
         {items.map((item) => (
-          <div key={item.id} className={s.itemRow}>
-            <Checkbox.Root
-              aria-label={`Toggle player card tag ${item.id}`}
-              checked={enabledSet.has(item.id)}
-              className={s.checkboxRoot}
-              onCheckedChange={(details) => {
-                updateEnabled(item.id, details.checked === true);
-              }}
-            >
-              <Checkbox.HiddenInput />
-              <Checkbox.Control className={s.checkboxControl}>
-                <Checkbox.Indicator className={s.checkboxIndicator}>
-                  <Check size={14} aria-hidden="true" />
-                </Checkbox.Indicator>
-              </Checkbox.Control>
-              <Checkbox.Label className={s.checkboxLabel}>
-                {item.label}
-              </Checkbox.Label>
-            </Checkbox.Root>
-            <TagColorPicker
-              color={getPlayerCardTagColor(item.id, tagColors)}
-              id={item.id}
-              label={item.label}
-              onColorChange={updateColor}
-            />
-          </div>
+          <PlayerCardTagSettingsRow
+            key={item.id}
+            enabled={enabledSet.has(item.id)}
+            item={item}
+            onEnabledChange={updateEnabled}
+          />
         ))}
       </div>
     </div>

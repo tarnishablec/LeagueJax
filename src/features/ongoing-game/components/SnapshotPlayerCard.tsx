@@ -1,6 +1,5 @@
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { memo } from "react";
-import { useTranslation } from "react-i18next";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import * as s from "./OngoingGameCards.css.ts";
 import { SnapshotPlayerCardHeader } from "./SnapshotPlayerCardHeader.tsx";
@@ -19,13 +18,11 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
     slot,
     matchHistoryCount,
   } = props;
-  const { t } = useTranslation();
   const cardState = useSnapshotPlayerCardState(
     slot,
     matchHistoryCount,
     enabledPlayerCardTagIds,
     playerCardTagColors,
-    t,
   );
 
   return (
