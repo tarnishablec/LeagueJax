@@ -5,6 +5,7 @@ import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { useSettings } from "@/features/settings/context";
 import { TeamRow } from "../components/OngoingGameCards.tsx";
 import {
+  DEFAULT_MIN_SHARED_SQUAD_GAMES,
   type PlayerSquadAssignments,
   resolvePlayerSquadAssignments,
 } from "../components/player-card-squads.ts";
@@ -25,6 +26,8 @@ const ONGOING_MATCH_HISTORY_COUNT_SETTING =
   "ongoing.interaction.matchHistoryCount" as const;
 const ONGOING_SQUAD_DETECTION_ENABLED_SETTING =
   "ongoing.playerCardTags.squadDetection.enabled" as const;
+const ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING =
+  "ongoing.playerCardTags.squadDetectionMinGames" as const;
 const PLAYER_CARD_TAG_COLOR_SETTINGS = getPlayerCardTagColorSettingItems();
 const PLAYER_CARD_TAG_ENABLED_SETTINGS = getPlayerCardTagEnabledSettingItems();
 const EMPTY_SQUAD_ASSIGNMENTS: PlayerSquadAssignments = {
@@ -115,6 +118,19 @@ export function OngoingGameRoute() {
     () =>
       settings.get<boolean>(ONGOING_SQUAD_DETECTION_ENABLED_SETTING) ?? true,
   );
+  const squadDetectionMinGames = useSyncExternalStore(
+    (onStoreChange) =>
+      settings.subscribe(
+        ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING,
+        onStoreChange,
+      ),
+    () =>
+      settings.get<number>(ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING) ??
+      DEFAULT_MIN_SHARED_SQUAD_GAMES,
+    () =>
+      settings.get<number>(ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING) ??
+      DEFAULT_MIN_SHARED_SQUAD_GAMES,
+  );
   const getEnabledPlayerCardTagIdsSnapshot = useMemo(
     () => createEnabledPlayerCardTagIdsSnapshot(settings),
     [settings],
@@ -184,12 +200,14 @@ export function OngoingGameRoute() {
     return resolvePlayerSquadAssignments({
       historiesByPuuid: matchHistoriesByPuuid,
       matchHistoryCount,
+      minSharedGames: squadDetectionMinGames,
       teamGroups,
     });
   }, [
     isSquadDetectionEnabled,
     matchHistoriesByPuuid,
     matchHistoryCount,
+    squadDetectionMinGames,
     teamGroups,
   ]);
 
