@@ -12,6 +12,10 @@ on:
           - all
           - github
           - gitee
+      previous_ref:
+        description: "Optional changelog start ref override"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -71,13 +75,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
       - name: Generate release changelog
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --unreleased --tag ${{ needs.build.outputs.tag }} --strip header
+        shell: bash
         env:
-          OUTPUT: CHANGELOG.md
+          GITHUB_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          PREVIOUS_REF: ${{ inputs.previous_ref }}
+        run: |
+          if [ -n "$PREVIOUS_REF" ]; then
+            bun run release:notes:dry-run -- --from "$PREVIOUS_REF" --output CHANGELOG.md
+          else
+            bun run release:notes:dry-run -- --output CHANGELOG.md
+          fi
 
       - name: Upload release notes
         uses: actions/upload-artifact@v7
