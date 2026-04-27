@@ -1,6 +1,6 @@
+import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
-import { LeaguePositionPair } from "@/components/league-position/LeaguePositionIcon.tsx";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import * as s from "./OngoingGameCards.css.ts";
 import { SnapshotPlayerCardHeader } from "./SnapshotPlayerCardHeader.tsx";
@@ -8,12 +8,25 @@ import { SnapshotPlayerCardHistory } from "./SnapshotPlayerCardHistory.tsx";
 import { useSnapshotPlayerCardState } from "./use-snapshot-player-card-state.ts";
 
 export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
+  enabledPlayerCardTagIds: readonly string[];
+  playerCardTagColors: Readonly<Record<string, string>>;
   slot: PlayerSlot;
   matchHistoryCount: number;
 }) {
-  const { slot, matchHistoryCount } = props;
+  const {
+    enabledPlayerCardTagIds,
+    playerCardTagColors,
+    slot,
+    matchHistoryCount,
+  } = props;
   const { t } = useTranslation();
-  const cardState = useSnapshotPlayerCardState(slot, matchHistoryCount, t);
+  const cardState = useSnapshotPlayerCardState(
+    slot,
+    matchHistoryCount,
+    enabledPlayerCardTagIds,
+    playerCardTagColors,
+    t,
+  );
 
   return (
     <article className={s.playerCard}>
@@ -27,23 +40,32 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
         showRank={cardState.showRank}
       />
 
-      <div className={s.playerStats}>
-        <span
-          className={s.winRateText({
-            tone: cardState.winRateStat.tone,
-          })}
-        >
-          {cardState.winRateStat.text}
-        </span>
-        <LeaguePositionPair
-          assigned={slot.assignedPosition}
-          primary={null}
-          secondary={null}
-          assignedWidth={16}
-          assignedHeight={16}
-          preferenceWidth={12}
-          preferenceHeight={12}
-        />
+      <div className={s.playerOverview}>
+        <div className={s.playerStats}>
+          <span
+            className={s.winRateText({
+              tone: cardState.winRateStat.tone,
+            })}
+          >
+            {cardState.winRateStat.text}
+          </span>
+          <span className={s.averageKdaText}>{cardState.averageKdaText}</span>
+        </div>
+        {cardState.playerTags.length > 0 ? (
+          <div className={s.playerTagList}>
+            {cardState.playerTags.map((tag) => (
+              <span
+                key={tag.id}
+                className={s.playerTag}
+                style={assignInlineVars({
+                  [s.playerTagColorVar]: tag.color,
+                })}
+              >
+                {tag.text}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <SnapshotPlayerCardHistory

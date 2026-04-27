@@ -1,12 +1,9 @@
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
-import type {
-  RawMatchSummaryGame,
-  RawMatchSummaryParticipant,
-} from "@/bindings/matches.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
+import { useLcuStore } from "@/stores/lcu";
 import {
   formatRankEntryLabel,
   getBestRankEntry,
@@ -16,10 +13,16 @@ import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import { useOngoingGameStore } from "../store";
+import {
+  collectMatchPlayerCardTags,
+  collectSpecialPlayerCardTags,
+  computeAverageKda,
+  hasEncounteredPlayer,
+  type PlayerCardMatch,
+  sortPlayerCardTags,
+} from "./player-card-tags.ts";
 
-export type EnrichedMatch = RawMatchSummaryGame & {
-  me: RawMatchSummaryParticipant;
-};
+export type EnrichedMatch = PlayerCardMatch;
 
 export type WinRateTone = "win" | "lose" | "neutral";
 
@@ -27,6 +30,11 @@ export type WinRateStat = {
   text: string;
   tone: WinRateTone;
 };
+
+function formatAverageKdaText(games: EnrichedMatch[]): string {
+  const averageKda = computeAverageKda(games);
+  return averageKda == null ? "--" : averageKda.toFixed(2);
+}
 
 function computeWinRateStat(games: EnrichedMatch[]): WinRateStat {
   let wins = 0;
@@ -42,12 +50,13 @@ function computeWinRateStat(games: EnrichedMatch[]): WinRateStat {
 
   const decided = wins + losses;
   if (decided === 0) {
-    return { text: "-- %", tone: "neutral" };
+    return { text: "-- (0)", tone: "neutral" };
   }
 
   const percentage = Math.round((wins / decided) * 100);
-  const tone: WinRateTone = percentage >= 50 ? "win" : "lose";
-  return { text: `${percentage}%`, tone };
+  const tone: WinRateTone =
+    percentage < 45 ? "lose" : percentage > 60 ? "win" : "neutral";
+  return { text: `${percentage}% (${decided})`, tone };
 }
 
 function normalizeChampionId(slot: PlayerSlot): number | null {
@@ -74,6 +83,8 @@ function resolveSummonerIdentity(
 export function useSnapshotPlayerCardState(
   slot: PlayerSlot,
   matchHistoryCount: number,
+  enabledPlayerCardTagIds: readonly string[],
+  playerCardTagColors: Readonly<Record<string, string>>,
   t: TFunction,
 ) {
   const phase = useOngoingGameStore((state) => state.phase);
@@ -93,6 +104,15 @@ export function useSnapshotPlayerCardState(
   );
   const hasHistoryBucket = useOngoingGameStore((state) =>
     puuid ? Object.hasOwn(state.matchHistoriesByPuuid, puuid) : false,
+  );
+  const ownPuuid = useLcuStore(
+    (state) =>
+      state.instances
+        .find((instance) => instance.isFocused && instance.state === "ready")
+        ?.summoner?.puuid.trim() || undefined,
+  );
+  const ownHistoryBucket = useOngoingGameStore((state) =>
+    ownPuuid ? state.matchHistoriesByPuuid[ownPuuid] : undefined,
   );
 
   const isHistoryLoading = Boolean(
@@ -145,8 +165,48 @@ export function useSnapshotPlayerCardState(
     () => computeWinRateStat(recentGames),
     [recentGames],
   );
+  const averageKdaText = useMemo(
+    () => formatAverageKdaText(recentGames),
+    [recentGames],
+  );
+  const isSelf = Boolean(puuid && ownPuuid && puuid === ownPuuid);
+  const wasEncountered = Boolean(
+    puuid && !isSelf && hasEncounteredPlayer(ownHistoryBucket, puuid),
+  );
+  const playerTags = useMemo(
+    () =>
+      sortPlayerCardTags([
+        ...collectMatchPlayerCardTags(
+          recentGames,
+          enabledPlayerCardTagIds,
+          playerCardTagColors,
+          t,
+        ),
+        ...collectSpecialPlayerCardTags({
+          colors: playerCardTagColors,
+          enabledIds: enabledPlayerCardTagIds,
+          hasHistoryLoadFailed,
+          isSelf,
+          recentGames,
+          slot,
+          t,
+          wasEncountered,
+        }),
+      ]),
+    [
+      enabledPlayerCardTagIds,
+      hasHistoryLoadFailed,
+      isSelf,
+      playerCardTagColors,
+      recentGames,
+      slot,
+      t,
+      wasEncountered,
+    ],
+  );
 
   return {
+    averageKdaText,
     championId: normalizeChampionId(slot),
     hasHistoryLoadFailed,
     historyLoadFailedText: t("ongoingGame.historyLoadFailed", {
@@ -163,6 +223,7 @@ export function useSnapshotPlayerCardState(
     rankText: formatRankEntryLabel(t, rankEntry),
     recentGames,
     showRank: !isBot && Boolean(puuid),
+    playerTags,
     winRateStat,
   };
 }

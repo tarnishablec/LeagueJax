@@ -22,11 +22,19 @@ function getSlotKey(slot: PlayerSlot, index: number): string {
 }
 
 export function TeamRow(props: {
+  enabledPlayerCardTagIds: readonly string[];
   matchHistoryCount: number;
+  playerCardTagColors: Readonly<Record<string, string>>;
   showBots: boolean;
   slots: PlayerSlot[];
 }) {
-  const { matchHistoryCount, showBots, slots } = props;
+  const {
+    enabledPlayerCardTagIds,
+    matchHistoryCount,
+    playerCardTagColors,
+    showBots,
+    slots,
+  } = props;
   const { t } = useTranslation();
 
   const visibleSlots = showBots
@@ -51,7 +59,9 @@ export function TeamRow(props: {
           visibleSlots.map((slot, index) => (
             <SnapshotPlayerCard
               key={getSlotKey(slot, index)}
+              enabledPlayerCardTagIds={enabledPlayerCardTagIds}
               matchHistoryCount={matchHistoryCount}
+              playerCardTagColors={playerCardTagColors}
               slot={slot}
             />
           ))
