@@ -21,6 +21,7 @@ export const HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING =
 
 export const HISTORY_AUTO_OPEN_OWN_TAB_SETTING =
   "history.behavior.autoOpenOwnTab";
+const HISTORY_BEHAVIOR_SECTION = "history.behavior" as const;
 
 export class HistoryShard implements WebShard {
   public label() {
@@ -40,6 +41,8 @@ export class HistoryShard implements WebShard {
     void useLcuStore.getState();
 
     const settingsShard = jax.getShard(SettingsShard);
+    settingsShard.registerPage({ id: "history", order: 20 });
+    settingsShard.registerSection({ key: HISTORY_BEHAVIOR_SECTION, order: 10 });
 
     settingsShard.registerSetting({
       id: HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,

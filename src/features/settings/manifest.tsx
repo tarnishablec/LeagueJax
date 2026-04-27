@@ -19,14 +19,17 @@ import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { settingsAboutI18n } from "./about.i18n";
 import { settingsI18n } from "./i18n";
-import { SETTINGS_PAGE_ORDER } from "./settings-pages";
 import { SettingsStore } from "./store";
 import { registerGeneralSettings } from "./store/general";
 import type {
   RegisteredSetting,
+  RegisteredSettingsPage,
+  RegisteredSettingsSection,
   SettingClassCtor,
   SettingDefinition,
   SettingId,
+  SettingsPageDefinition,
+  SettingsSectionDefinition,
   SettingsSectionKey,
   SettingsSectionRenderer,
   SettingsShardApi,
@@ -69,7 +72,6 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   }
 
   public async setup(_jax: Jax): Promise<void> {
-    this.setPageOrder(SETTINGS_PAGE_ORDER);
     registerGeneralSettings(this);
 
     this.store.configureRemotePatchSender((changes) => {
@@ -122,8 +124,12 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     this.store.registerSetting(definition);
   }
 
-  public setPageOrder(pageIds: readonly string[]): void {
-    this.store.setPageOrder(pageIds);
+  public registerPage(definition: SettingsPageDefinition): void {
+    this.store.registerPage(definition);
+  }
+
+  public registerSection(definition: SettingsSectionDefinition): void {
+    this.store.registerSection(definition);
   }
 
   public registerClass(ctor: SettingClassCtor): void {
@@ -158,15 +164,12 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     return this.store.listDefinitions();
   }
 
-  public listPageOrder(): string[] {
-    return this.store.listPageOrder();
+  public listPages(): RegisteredSettingsPage[] {
+    return this.store.listPages();
   }
 
-  public registerSectionRenderer(
-    key: SettingsSectionKey,
-    renderer: SettingsSectionRenderer,
-  ): void {
-    this.store.registerSectionRenderer(key, renderer);
+  public listSections(): RegisteredSettingsSection[] {
+    return this.store.listSections();
   }
 
   public getSectionRenderer(

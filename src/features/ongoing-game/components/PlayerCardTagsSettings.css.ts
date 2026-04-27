@@ -101,6 +101,13 @@ export const colorControl = style({
   placeItems: "center",
 });
 
+export const colorPickerGroup = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  alignItems: "center",
+  gap: 6,
+});
+
 export const colorTrigger = style({
   position: "relative",
   width: 20,

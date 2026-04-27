@@ -5,15 +5,16 @@ import type {
 } from "@/bindings/matches.ts";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
-
-export const ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING =
-  "ongoing.playerCardTags.enabledIds" as const;
+import type { PlayerSquadAssignment } from "./player-card-squads.ts";
 
 const FLASH_SPELL_ID = 4;
 const MIN_STREAK_COUNT = 3;
 const EXCELLENT_AVERAGE_KDA = 5;
 const DEFAULT_TAG_COLOR = "#F58200";
-export type PlayerCardTagColorSettingId = `ongoing.playerCardTags.${string}`;
+const PLAYER_CARD_SQUAD_TAG_ID = "squad";
+export type PlayerCardTagGroupKey = `ongoing.playerCardTags.${string}`;
+export type PlayerCardTagColorSettingId = `${PlayerCardTagGroupKey}.color`;
+export type PlayerCardTagEnabledSettingId = `${PlayerCardTagGroupKey}.enabled`;
 
 export type PlayerCardMatch = RawMatchSummaryGame & {
   me: RawMatchSummaryParticipant;
@@ -65,12 +66,23 @@ type PlayerCardSpecialTagDefinition = {
 };
 
 export type PlayerCardTagSettingItem = {
-  colorSettingId: PlayerCardTagColorSettingId;
+  colorSettings: PlayerCardTagColorSettingItem[];
+  colorSettingId?: PlayerCardTagColorSettingId;
   defaultColor: string;
+  enabledSettingId: PlayerCardTagEnabledSettingId;
+  groupKey: PlayerCardTagGroupKey;
   id: string;
   label: string;
   order: number;
   defaultEnabled: boolean;
+};
+
+export type PlayerCardTagEnabledSettingItem = {
+  defaultEnabled: boolean;
+  id: PlayerCardTagEnabledSettingId;
+  labelKey: string;
+  order: number;
+  tagId: string;
 };
 
 export type PlayerCardTagColorSettingItem = {
@@ -136,7 +148,7 @@ function parseOklchColor(
     return null;
   }
 
-  return {l: clamp(l, 0, 1), c: Math.max(0, c), h};
+  return { l: clamp(l, 0, 1), c: Math.max(0, c), h };
 }
 
 export function oklchColorToHex(value: string): string {
@@ -244,7 +256,7 @@ function computeResultStreak(
     count += 1;
   }
 
-  return kind ? {kind, count} : null;
+  return kind ? { kind, count } : null;
 }
 
 function flashSlotFromSpells(
@@ -427,35 +439,39 @@ export const PLAYER_CARD_SPECIAL_TAGS = [
   },
 ] as const satisfies PlayerCardSpecialTagDefinition[];
 
-const ALL_TAG_DEFINITIONS = [
+const SINGLE_COLOR_TAG_DEFINITIONS = [
   ...PLAYER_CARD_MATCH_TAGS,
   ...PLAYER_CARD_SPECIAL_TAGS,
 ];
 
-const KNOWN_TAG_IDS: ReadonlySet<string> = new Set(
-  ALL_TAG_DEFINITIONS.map((tag) => tag.id),
-);
-const DEFAULT_ENABLED_PLAYER_CARD_TAG_IDS = ALL_TAG_DEFINITIONS.filter(
-  (tag) => tag.defaultEnabled,
-).map((tag) => tag.id);
+export function getPlayerCardTagGroupKey(tagId: string): PlayerCardTagGroupKey {
+  return `ongoing.playerCardTags.${tagId}`;
+}
 
-const NORMALIZED_ENABLED_PLAYER_CARD_TAG_IDS_CACHE = new WeakMap<
-  readonly unknown[],
-  readonly string[]
->();
-
-function upperFirst(value: string): string {
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+export function getPlayerCardTagEnabledSettingId(
+  tagId: string,
+): PlayerCardTagEnabledSettingId {
+  return `${getPlayerCardTagGroupKey(tagId)}.enabled`;
 }
 
 export function getPlayerCardTagColorSettingId(
   tagId: string,
 ): PlayerCardTagColorSettingId {
-  return `ongoing.playerCardTags.color${upperFirst(tagId)}`;
+  return `${getPlayerCardTagGroupKey(tagId)}.color`;
+}
+
+export function getPlayerCardTagEnabledSettingItems(): PlayerCardTagEnabledSettingItem[] {
+  return SINGLE_COLOR_TAG_DEFINITIONS.map((tag) => ({
+    defaultEnabled: tag.defaultEnabled,
+    id: getPlayerCardTagEnabledSettingId(tag.id),
+    labelKey: tag.settingLabelKey,
+    order: tag.order,
+    tagId: tag.id,
+  }));
 }
 
 export function getPlayerCardTagColorSettingItems(): PlayerCardTagColorSettingItem[] {
-  return ALL_TAG_DEFINITIONS.map((tag) => ({
+  return SINGLE_COLOR_TAG_DEFINITIONS.map((tag) => ({
     defaultColor: tag.defaultColor,
     id: getPlayerCardTagColorSettingId(tag.id),
     labelKey: tag.settingLabelKey,
@@ -464,45 +480,12 @@ export function getPlayerCardTagColorSettingItems(): PlayerCardTagColorSettingIt
   }));
 }
 
-export function getDefaultEnabledPlayerCardTagIds(): string[] {
-  return [...DEFAULT_ENABLED_PLAYER_CARD_TAG_IDS];
-}
-
-export function normalizeEnabledPlayerCardTagIds(
-  value: unknown,
-): readonly string[] {
-  if (!Array.isArray(value)) {
-    return DEFAULT_ENABLED_PLAYER_CARD_TAG_IDS;
-  }
-
-  const cached = NORMALIZED_ENABLED_PLAYER_CARD_TAG_IDS_CACHE.get(value);
-  if (cached) {
-    return cached;
-  }
-
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const rawId of value) {
-    if (typeof rawId !== "string" || !KNOWN_TAG_IDS.has(rawId)) {
-      continue;
-    }
-
-    if (!seen.has(rawId)) {
-      seen.add(rawId);
-      result.push(rawId);
-    }
-  }
-
-  if (
-    result.length === value.length &&
-    result.every((id, index) => id === value[index])
-  ) {
-    return value as string[];
-  }
-
-  NORMALIZED_ENABLED_PLAYER_CARD_TAG_IDS_CACHE.set(value, result);
-  return result;
-}
+const DEFAULT_PLAYER_CARD_TAG_COLORS = Object.fromEntries(
+  getPlayerCardTagColorSettingItems().map((item) => [
+    item.tagId,
+    item.defaultColor,
+  ]),
+);
 
 export function getPlayerCardTagColor(
   id: string,
@@ -513,21 +496,30 @@ export function getPlayerCardTagColor(
     return configured;
   }
 
-  const definition = ALL_TAG_DEFINITIONS.find((tag) => tag.id === id);
-  return definition?.defaultColor ?? DEFAULT_TAG_COLOR;
+  return DEFAULT_PLAYER_CARD_TAG_COLORS[id] ?? DEFAULT_TAG_COLOR;
 }
 
 export function getPlayerCardTagSettingItems(
   t: TFunction,
 ): PlayerCardTagSettingItem[] {
-  return ALL_TAG_DEFINITIONS.map((tag) => ({
-    colorSettingId: getPlayerCardTagColorSettingId(tag.id),
-    defaultColor: tag.defaultColor,
-    id: tag.id,
-    label: t(tag.settingLabelKey),
-    order: tag.order,
-    defaultEnabled: tag.defaultEnabled,
-  })).sort((left, right) => left.order - right.order);
+  return SINGLE_COLOR_TAG_DEFINITIONS.map((tag) => {
+    const colorSettings = getPlayerCardTagColorSettingItems().filter(
+      (item) => item.tagId === tag.id,
+    );
+    const firstColorSetting = colorSettings[0];
+
+    return {
+      colorSettings,
+      colorSettingId: firstColorSetting?.id,
+      defaultColor: firstColorSetting?.defaultColor ?? DEFAULT_TAG_COLOR,
+      enabledSettingId: getPlayerCardTagEnabledSettingId(tag.id),
+      groupKey: getPlayerCardTagGroupKey(tag.id),
+      id: tag.id,
+      label: t(tag.settingLabelKey),
+      order: tag.order,
+      defaultEnabled: tag.defaultEnabled,
+    };
+  }).sort((left, right) => left.order - right.order);
 }
 
 export function collectMatchPlayerCardTags(
@@ -552,6 +544,29 @@ export function collectMatchPlayerCardTags(
       tone: tag.tone,
     };
   });
+}
+
+export function collectSquadPlayerCardTags(params: {
+  assignment: PlayerSquadAssignment | undefined;
+  t: TFunction;
+}): ResolvedPlayerCardTag[] {
+  const { assignment, t } = params;
+  if (!assignment) {
+    return [];
+  }
+
+  return [
+    {
+      color: assignment.color,
+      id: `${PLAYER_CARD_SQUAD_TAG_ID}:${assignment.number}`,
+      order: assignment.number,
+      text: t("ongoingGame.playerTags.squad", {
+        number: assignment.number,
+        defaultValue: "Squad {{number}}",
+      }),
+      tone: "info",
+    },
+  ];
 }
 
 export function collectSpecialPlayerCardTags(params: {

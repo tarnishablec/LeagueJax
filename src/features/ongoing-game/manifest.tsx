@@ -15,10 +15,9 @@ import { SHARD_IDS } from "../shard-ids";
 import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
 import { PlayerCardTagsSettings } from "./components/PlayerCardTagsSettings";
 import {
-  getDefaultEnabledPlayerCardTagIds,
   getPlayerCardTagColorSettingItems,
+  getPlayerCardTagEnabledSettingItems,
   isPlayerCardTagColor,
-  ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
 } from "./components/player-card-tags.ts";
 import { ongoingGameI18n } from "./i18n";
 import { useOngoingGameStore } from "./store";
@@ -32,6 +31,10 @@ const OngoingGameRoute = lazy(() =>
 const ONGOING_AUTO_SWITCH_TO_GAME_SETTING =
   "ongoing.interaction.autoSwitchToGame";
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots";
+const ONGOING_MATCHMAKING_SECTION = "ongoing.matchmaking" as const;
+const ONGOING_INTERACTION_SECTION = "ongoing.interaction" as const;
+const ONGOING_SQUAD_DETECTION_ENABLED_SETTING =
+  "ongoing.playerCardTags.squadDetection.enabled" as const;
 const ONGOING_PLAYER_CARD_TAGS_SECTION = "ongoing.playerCardTags" as const;
 
 function isVisibleOngoingPhase(phase: OngoingGameUpdated["phase"]): boolean {
@@ -111,6 +114,9 @@ export class OngoingGameShard implements WebShard {
 
   public async setup(jax: Jax): Promise<void> {
     const settings = jax.getShard(SettingsShard);
+    settings.registerPage({ id: "ongoing", order: 30 });
+    settings.registerSection({ key: ONGOING_MATCHMAKING_SECTION, order: 10 });
+    settings.registerSection({ key: ONGOING_INTERACTION_SECTION, order: 20 });
     settings.registerSetting({
       id: ONGOING_AUTO_SWITCH_TO_GAME_SETTING,
       labelKey: "settings.ongoing.autoSwitchToGame.label",
@@ -132,16 +138,29 @@ export class OngoingGameShard implements WebShard {
       onSet: () => {},
     });
     settings.registerSetting({
-      id: ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
-      labelKey: "settings.ongoing.playerCardTags.enabledIds.label",
+      id: ONGOING_SQUAD_DETECTION_ENABLED_SETTING,
+      labelKey: "settings.ongoing.playerCardTags.squadDetection.enabled.label",
+      hintKey: "settings.ongoing.playerCardTags.squadDetection.enabled.hint",
       scope: "frontend",
-      control: { kind: "text" },
-      zod: z.array(z.string()),
-      defaultValue: getDefaultEnabledPlayerCardTagIds(),
-      order: 10,
-      visible: false,
+      control: { kind: "toggle" },
+      zod: z.boolean(),
+      defaultValue: true,
+      order: 5,
       onSet: () => {},
     });
+    for (const enabledSetting of getPlayerCardTagEnabledSettingItems()) {
+      settings.registerSetting({
+        id: enabledSetting.id,
+        labelKey: enabledSetting.labelKey,
+        scope: "frontend",
+        control: { kind: "toggle" },
+        zod: z.boolean(),
+        defaultValue: enabledSetting.defaultEnabled,
+        order: enabledSetting.order,
+        visible: false,
+        onSet: () => {},
+      });
+    }
     for (const colorSetting of getPlayerCardTagColorSettingItems()) {
       settings.registerSetting({
         id: colorSetting.id,
@@ -155,10 +174,11 @@ export class OngoingGameShard implements WebShard {
         onSet: () => {},
       });
     }
-    settings.registerSectionRenderer(
-      ONGOING_PLAYER_CARD_TAGS_SECTION,
-      (props) => <PlayerCardTagsSettings {...props} />,
-    );
+    settings.registerSection({
+      key: ONGOING_PLAYER_CARD_TAGS_SECTION,
+      order: 30,
+      renderer: (props) => <PlayerCardTagsSettings {...props} />,
+    });
 
     this.ongoingUpdatedUnlisten = await listen<OngoingGameUpdated>(
       "ongoing-game-updated",

@@ -24,9 +24,11 @@ export class UpdaterFeature implements WebShard {
 
   public async setup(jax: Jax): Promise<void> {
     const settings = jax.getShard(SettingsShard);
-    settings.registerSectionRenderer(UPDATE_SECTION_KEY, (props) => (
-      <UpdaterSettingsSection {...props} />
-    ));
+    settings.registerSection({
+      key: UPDATE_SECTION_KEY,
+      order: 20,
+      renderer: (props) => <UpdaterSettingsSection {...props} />,
+    });
   }
 
   public i18nResources() {

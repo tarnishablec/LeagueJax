@@ -5,10 +5,13 @@ import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { useSettings } from "@/features/settings/context";
 import { TeamRow } from "../components/OngoingGameCards.tsx";
 import {
+  type PlayerSquadAssignments,
+  resolvePlayerSquadAssignments,
+} from "../components/player-card-squads.ts";
+import {
   getPlayerCardTagColorSettingItems,
-  normalizeEnabledPlayerCardTagIds,
+  getPlayerCardTagEnabledSettingItems,
   normalizePlayerCardTagColor,
-  ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
 } from "../components/player-card-tags.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameRoute.css";
@@ -20,7 +23,41 @@ import {
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots" as const;
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
   "ongoing.interaction.matchHistoryCount" as const;
+const ONGOING_SQUAD_DETECTION_ENABLED_SETTING =
+  "ongoing.playerCardTags.squadDetection.enabled" as const;
 const PLAYER_CARD_TAG_COLOR_SETTINGS = getPlayerCardTagColorSettingItems();
+const PLAYER_CARD_TAG_ENABLED_SETTINGS = getPlayerCardTagEnabledSettingItems();
+const EMPTY_SQUAD_ASSIGNMENTS: PlayerSquadAssignments = {
+  byPuuid: {},
+  squads: [],
+};
+
+function createEnabledPlayerCardTagIdsSnapshot(
+  settings: ReturnType<typeof useSettings>,
+) {
+  let previousValues: boolean[] | null = null;
+  let previousSnapshot: readonly string[] | null = null;
+
+  return () => {
+    const values = PLAYER_CARD_TAG_ENABLED_SETTINGS.map(
+      (item) => settings.get<boolean>(item.id) ?? item.defaultEnabled,
+    );
+
+    if (
+      previousValues &&
+      previousSnapshot &&
+      values.every((value, index) => value === previousValues?.[index])
+    ) {
+      return previousSnapshot;
+    }
+
+    previousValues = values;
+    previousSnapshot = PLAYER_CARD_TAG_ENABLED_SETTINGS.filter(
+      (_item, index) => values[index],
+    ).map((item) => item.tagId);
+    return previousSnapshot;
+  };
+}
 
 function createPlayerCardTagColorsSnapshot(
   settings: ReturnType<typeof useSettings>,
@@ -67,20 +104,35 @@ export function OngoingGameRoute() {
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
     () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
   );
-  const enabledPlayerCardTagIds = useSyncExternalStore(
+  const isSquadDetectionEnabled = useSyncExternalStore(
     (onStoreChange) =>
       settings.subscribe(
-        ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING,
+        ONGOING_SQUAD_DETECTION_ENABLED_SETTING,
         onStoreChange,
       ),
     () =>
-      normalizeEnabledPlayerCardTagIds(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING),
-      ),
+      settings.get<boolean>(ONGOING_SQUAD_DETECTION_ENABLED_SETTING) ?? true,
     () =>
-      normalizeEnabledPlayerCardTagIds(
-        settings.get(ONGOING_PLAYER_CARD_TAGS_ENABLED_SETTING),
-      ),
+      settings.get<boolean>(ONGOING_SQUAD_DETECTION_ENABLED_SETTING) ?? true,
+  );
+  const getEnabledPlayerCardTagIdsSnapshot = useMemo(
+    () => createEnabledPlayerCardTagIdsSnapshot(settings),
+    [settings],
+  );
+  const enabledPlayerCardTagIds = useSyncExternalStore(
+    (onStoreChange) => {
+      const unsubscribes = PLAYER_CARD_TAG_ENABLED_SETTINGS.map((item) =>
+        settings.subscribe(item.id, onStoreChange),
+      );
+
+      return () => {
+        for (const unsubscribe of unsubscribes) {
+          unsubscribe();
+        }
+      };
+    },
+    getEnabledPlayerCardTagIdsSnapshot,
+    getEnabledPlayerCardTagIdsSnapshot,
   );
   const getPlayerCardTagColorsSnapshot = useMemo(
     () => createPlayerCardTagColorsSnapshot(settings),
@@ -110,6 +162,9 @@ export function OngoingGameRoute() {
   const effectiveQueueId = useOngoingGameStore(
     (state) => state.effectiveQueueId,
   );
+  const matchHistoriesByPuuid = useOngoingGameStore(
+    (state) => state.matchHistoriesByPuuid,
+  );
   const teamGroups = useMemo(
     () =>
       resolveOngoingTeamGroups({
@@ -121,6 +176,22 @@ export function OngoingGameRoute() {
       }),
     [champSelectSession, effectiveQueueId, gameflowSession, teamMembers, phase],
   );
+  const squadAssignments = useMemo(() => {
+    if (!isSquadDetectionEnabled) {
+      return EMPTY_SQUAD_ASSIGNMENTS;
+    }
+
+    return resolvePlayerSquadAssignments({
+      historiesByPuuid: matchHistoriesByPuuid,
+      matchHistoryCount,
+      teamGroups,
+    });
+  }, [
+    isSquadDetectionEnabled,
+    matchHistoriesByPuuid,
+    matchHistoryCount,
+    teamGroups,
+  ]);
 
   if (phase !== "ChampSelect" && phase !== "InGame") {
     return (
@@ -147,6 +218,7 @@ export function OngoingGameRoute() {
           matchHistoryCount={matchHistoryCount}
           playerCardTagColors={playerCardTagColors}
           showBots={showBots}
+          squadAssignments={squadAssignments}
           slots={group.members}
         />
       ))}

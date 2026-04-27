@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import * as s from "./OngoingGameCards.css.ts";
+import type { PlayerSquadAssignments } from "./player-card-squads.ts";
 import { SnapshotPlayerCard } from "./SnapshotPlayerCard.tsx";
 
 function getSlotKey(slot: PlayerSlot, index: number): string {
@@ -26,6 +27,7 @@ export function TeamRow(props: {
   matchHistoryCount: number;
   playerCardTagColors: Readonly<Record<string, string>>;
   showBots: boolean;
+  squadAssignments: PlayerSquadAssignments;
   slots: PlayerSlot[];
 }) {
   const {
@@ -33,6 +35,7 @@ export function TeamRow(props: {
     matchHistoryCount,
     playerCardTagColors,
     showBots,
+    squadAssignments,
     slots,
   } = props;
   const { t } = useTranslation();
@@ -62,6 +65,7 @@ export function TeamRow(props: {
               enabledPlayerCardTagIds={enabledPlayerCardTagIds}
               matchHistoryCount={matchHistoryCount}
               playerCardTagColors={playerCardTagColors}
+              squadAssignment={squadAssignments.byPuuid[slot.puuid.trim()]}
               slot={slot}
             />
           ))
