@@ -93,8 +93,8 @@ impl SgpHttpClient {
         initial_tokens: SgpTokenContext,
         network_config: Arc<NetworkConfig>,
     ) -> Result<Self, AppError> {
-        let req_client = Client::builder()
-            .no_proxy()
+        let req_client = network_config
+            .client_builder()
             .user_agent(Self::USER_AGENT)
             .build()
             .map_err(|error| AppError::other(format!("Failed to build SGP client: {error}")))?;
