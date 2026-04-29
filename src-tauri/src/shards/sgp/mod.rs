@@ -14,10 +14,9 @@ use jax::{depends, shard_id, Jax, Shard};
 use self::manager::SgpManager;
 use self::session::SgpSession;
 use crate::error::AppError;
-use crate::network_config::{NetworkConfig, REQUEST_TIMEOUT_SETTING_ID};
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::LcuShard;
-use crate::shards::settings::SettingsShard;
+use crate::shards::network::{NetworkConfig, NetworkShard};
 
 pub struct SgpShard {
     pub manager: SgpManager,
@@ -55,15 +54,13 @@ impl LcuSessionSgpExt for Arc<LcuSession> {
 #[async_trait]
 impl Shard for SgpShard {
     shard_id!("3f2a39a7-e3f4-4a76-85ef-1ca8a6f72514");
-    depends![LcuShard, SettingsShard];
+    depends![LcuShard, NetworkShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        let settings = jax.get_shard::<SettingsShard>();
-        let _ = settings.setting_handle(REQUEST_TIMEOUT_SETTING_ID)?;
-        let _ = self
-            .network_config
-            .set(Arc::new(NetworkConfig::new(settings)));
+        let network = jax.get_shard::<NetworkShard>();
+        if self.network_config.set(network.config()?).is_err() {
+            return Err(AppError::other("SGP network config is already initialized").into());
+        }
         Ok(())
     }
-
 }

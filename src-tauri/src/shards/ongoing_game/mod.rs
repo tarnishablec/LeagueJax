@@ -82,5 +82,4 @@ impl Shard for OngoingGameShard {
 
         Ok(())
     }
-
 }

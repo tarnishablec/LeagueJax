@@ -20,12 +20,12 @@ impl LeagueBridgeShard {
         Self
     }
 
-    fn setup_runtime_bridge(&self, jax: Arc<Jax>) {
+    fn setup_runtime_bridge(&self, jax: Arc<Jax>) -> Result<(), AppError> {
         let tauri_host = jax.get_shard::<TauriHost>();
         let cancel_token = tauri_host.cancellation_token();
 
         let lcu_shard = jax.get_shard::<LcuShard>();
-        let lcu_manager = lcu_shard.initialize(cancel_token.clone());
+        let lcu_manager = lcu_shard.initialize(cancel_token.clone())?;
 
         let manager_for_run = lcu_manager.clone();
         tauri_host.spawn(async move {
@@ -57,6 +57,8 @@ impl LeagueBridgeShard {
                 }
             }
         });
+
+        Ok(())
     }
 
     fn setup_emit_bridge(&self, jax: Arc<Jax>) -> Result<(), AppError> {
@@ -132,9 +134,8 @@ impl Shard for LeagueBridgeShard {
     depends![TauriHost, LcuShard, OngoingGameShard, SgpShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        self.setup_runtime_bridge(jax.clone());
+        self.setup_runtime_bridge(jax.clone())?;
         self.setup_emit_bridge(jax)?;
         Ok(())
     }
-
 }

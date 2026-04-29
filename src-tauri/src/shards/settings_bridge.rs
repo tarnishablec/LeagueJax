@@ -73,5 +73,4 @@ impl Shard for SettingsBridgeShard {
         self.setup_emit_bridge(jax)?;
         Ok(())
     }
-
 }

@@ -546,7 +546,7 @@ impl Shard for MiniWindowShard {
         let window_effect = jax.get_shard::<WindowEffectShard>().clone();
         let settings = jax.get_shard::<SettingsShard>().clone();
         let lcu = jax.get_shard::<LcuShard>().clone();
-        let lcu_manager = lcu.initialize(host.cancellation_token());
+        let lcu_manager = lcu.initialize(host.cancellation_token())?;
 
         let auto_open_setting = settings.register_definition(SettingDefinitionDto {
             id: MINI_AUTO_OPEN_SETTING_ID.to_string(),
@@ -647,7 +647,6 @@ impl Shard for MiniWindowShard {
 
         Ok(())
     }
-
 }
 
 #[cfg(target_os = "windows")]

@@ -6,6 +6,7 @@ pub mod lcu;
 pub mod league_bridge;
 pub mod log;
 pub mod mini_window;
+pub mod network;
 pub mod ongoing_game;
 pub mod persistence_sled;
 pub mod saved_player;

@@ -379,5 +379,4 @@ impl Shard for WindowEffectShard {
 
         Ok(())
     }
-
 }

@@ -254,7 +254,6 @@ impl Shard for LogShard {
 
         Ok(())
     }
-
 }
 
 fn clear_log_dir(dir: &Path, active_log_file: &Path) -> Result<u32, std::io::Error> {
