@@ -63,7 +63,7 @@ export const settingsI18n: Resource = {
         },
         useSystemProxy: {
           label: "Use System Proxy",
-          hint: "Used for external API requests. Local LCU requests are not affected.\nWhen enabled, reads system HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, and NO_PROXY environment variables; connects directly when they are not set.",
+          hint: "Used for external API requests. Local LCU requests are not affected.\nWhen enabled, reads system http_proxy, https_proxy, and no_proxy environment variables; connects directly when they are not set.",
         },
       },
       logging: {
@@ -224,7 +224,7 @@ export const settingsI18n: Resource = {
         },
         useSystemProxy: {
           label: "使用系统代理",
-          hint: "用于外部接口请求，LCU 本地请求不受影响。\n开启后读取系统 HTTP_PROXY、HTTPS_PROXY、ALL_PROXY、NO_PROXY 环境变量；未设置时直连。",
+          hint: "用于外部接口请求，LCU 本地请求不受影响。\n开启后读取系统 http_proxy、https_proxy、no_proxy 环境变量；未设置时直连。",
         },
       },
       logging: {
@@ -385,7 +385,7 @@ export const settingsI18n: Resource = {
         },
         useSystemProxy: {
           label: "システムプロキシを使用",
-          hint: "外部 API リクエストに使用します。ローカル LCU リクエストには影響しません。\n有効にすると、システムの HTTP_PROXY、HTTPS_PROXY、ALL_PROXY、NO_PROXY 環境変数を読み取ります。未設定の場合は直接接続します。",
+          hint: "外部 API リクエストに使用します。ローカル LCU リクエストには影響しません。\n有効にすると、システムの http_proxy、https_proxy、no_proxy 環境変数を読み取ります。未設定の場合は直接接続します。",
         },
       },
       logging: {
