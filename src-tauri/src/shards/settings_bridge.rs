@@ -2,7 +2,7 @@ use core::error::Error;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use jax::{depends, shard_id, Jax, Shard};
+use jax::{depends, shard_id, Jax, JaxResult, Shard};
 use tauri::Emitter;
 use tokio::sync::broadcast::error::RecvError;
 
@@ -69,7 +69,7 @@ impl Shard for SettingsBridgeShard {
     shard_id!("3c74c22b-b500-456c-8da7-81a1f1ddf75b");
     depends![TauriHost, SettingsShard];
 
-    async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn setup(&self, jax: Arc<Jax>) -> JaxResult<()> {
         self.setup_emit_bridge(jax)?;
         Ok(())
     }

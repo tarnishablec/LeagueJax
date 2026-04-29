@@ -25,9 +25,9 @@ tauri-plugin-opener = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
 
 reqwest = { workspace = true, features = ["json", "gzip", "rustls-no-provider"] }
-tokio-tungstenite = { workspace = true, features = ["rustls-tls-webpki-roots", "__rustls-tls"] }
+tokio-tungstenite = { workspace = true, features = ["rustls-tls-webpki-roots"] }
 rustls = { workspace = true, features = ["ring"] }
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "sync", "time", "net", "signal"] }
 tokio-util = { workspace = true }
 futures-util = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -50,17 +50,15 @@ ntapi = { workspace = true }
 ts-rs = { workspace = true, features = ["no-serde-warnings"] }
 sled = { workspace = true }
 snafu = { workspace = true, features = ["backtrace"] }
-windows = { workspace = true, features = ["Win32_System_Console"] }
 strum = { workspace = true, features = ["derive"] }
 tauri-plugin-process = { workspace = true }
 euclid = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["full", "test-util"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "sync", "time", "net", "signal", "test-util"] }
 
 [lints]
 workspace = true
-
 
 
 

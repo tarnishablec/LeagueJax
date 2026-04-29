@@ -2229,7 +2229,6 @@ dependencies = [
  "urlencoding",
  "uuid",
  "window-vibrancy 0.7.1",
- "windows 0.62.2",
  "windows-sys 0.61.2",
 ]
 
@@ -4931,7 +4930,6 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot 0.12.5",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",
