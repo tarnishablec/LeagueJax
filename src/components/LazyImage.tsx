@@ -1,6 +1,11 @@
 import type { CSSProperties } from "react";
 import { useCallback, useState } from "react";
-import { lazyFadeIn } from "./LazyImage.css.ts";
+import {
+  framedImage,
+  imageFrame,
+  lazyFadeIn,
+  transparentPlaceholder,
+} from "./LazyImage.css.ts";
 
 const listeners = new Map<Element, () => void>();
 
@@ -22,6 +27,7 @@ export function LazyImage({
   alt,
   className,
   fallbackClassName,
+  loadingClassName,
   onError,
   style,
 }: {
@@ -29,6 +35,7 @@ export function LazyImage({
   alt: string;
   className: string;
   fallbackClassName?: string;
+  loadingClassName?: string;
   onError?: () => void;
   style?: CSSProperties;
 }) {
@@ -55,7 +62,7 @@ export function LazyImage({
     return (
       <span
         ref={ref}
-        className={fallbackClassName ?? className}
+        className={`${className} ${imageFrame} ${loadingClassName ?? transparentPlaceholder}`}
         style={style}
         aria-hidden="true"
       />
@@ -63,23 +70,27 @@ export function LazyImage({
   }
 
   return (
-    <img
-      key={src}
-      src={src}
-      alt={alt}
-      className={`${className} ${lazyFadeIn}`}
+    <span
+      className={`${className} ${imageFrame} ${loadingClassName ?? transparentPlaceholder}`}
       style={style}
-      decoding="async"
-      onLoad={(e) => {
-        e.currentTarget.dataset.loaded = "";
-      }}
-      onError={() => {
-        if (onError) {
-          onError();
-        } else {
-          setErrored(true);
-        }
-      }}
-    />
+    >
+      <img
+        key={src}
+        src={src}
+        alt={alt}
+        className={`${className} ${framedImage} ${lazyFadeIn}`}
+        decoding="async"
+        onLoad={(e) => {
+          e.currentTarget.dataset.loaded = "";
+        }}
+        onError={() => {
+          if (onError) {
+            onError();
+          } else {
+            setErrored(true);
+          }
+        }}
+      />
+    </span>
   );
 }

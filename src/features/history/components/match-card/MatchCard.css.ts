@@ -2,6 +2,8 @@ import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css.ts";
 
+const translucentSlotAccent = `color-mix(in oklch, ${vars.color.accent} 42%, transparent)`;
+
 export const wrapper = style({
   display: "grid",
   gap: 8,
@@ -218,7 +220,7 @@ export const assetIconFallback = style({
   height: 22,
   borderRadius: 4,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
+  background: translucentSlotAccent,
 });
 
 export const augmentIcon = recipe({
@@ -266,12 +268,12 @@ export const augmentIconFallback = recipe({
     borderRadius: 4,
     boxSizing: "border-box",
     border: `1px solid ${vars.color.border}`,
-    background: vars.color.accent,
+    background: translucentSlotAccent,
   },
   variants: {
     rarity: {
       default: {
-        background: vars.color.accent,
+        background: translucentSlotAccent,
       },
       prismatic: {
         border: "1px solid transparent",
@@ -302,7 +304,7 @@ export const augmentEmptySlot = style({
   height: 22,
   borderRadius: 4,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
+  background: translucentSlotAccent,
   boxSizing: "border-box",
 });
 
@@ -327,7 +329,7 @@ export const itemIconFallback = style({
   height: 22,
   borderRadius: 5,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
+  background: translucentSlotAccent,
 });
 
 export const detail = style({
