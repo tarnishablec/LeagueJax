@@ -89,5 +89,4 @@ impl Shard for StaticCacheShard {
         self.app.set(app).ok();
         Ok(())
     }
-
 }

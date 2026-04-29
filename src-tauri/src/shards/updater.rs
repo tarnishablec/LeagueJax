@@ -16,6 +16,7 @@ use tokio::sync::RwLock;
 use ts_rs::TS;
 
 use crate::error::AppError;
+use crate::shards::network::{NetworkConfig, NetworkShard};
 use crate::shards::settings::types::{
     SettingControlDto, SettingDefinitionDto, SettingOptionDto, SettingScopeDto,
 };
@@ -126,6 +127,7 @@ struct ManifestProbe {
 pub struct UpdaterShard {
     app: OnceLock<tauri::AppHandle>,
     settings: OnceLock<Arc<SettingsShard>>,
+    network_config: OnceLock<Arc<NetworkConfig>>,
     state: RwLock<UpdaterStateDto>,
     pending_update: Mutex<Option<Update>>,
     action_lock: Mutex<()>,
@@ -136,6 +138,7 @@ impl UpdaterShard {
         Self {
             app: OnceLock::new(),
             settings: OnceLock::new(),
+            network_config: OnceLock::new(),
             state: RwLock::new(UpdaterStateDto {
                 kind: UpdaterStatusKindDto::Idle,
                 current_version: String::new(),
@@ -221,6 +224,7 @@ impl UpdaterShard {
         let app = self.app_handle()?;
         let updater = app
             .updater_builder()
+            .timeout(self.network_config()?.request_timeout())
             .endpoints(vec![Url::parse(&probe.manifest_url).map_err(|error| {
                 AppError::other(format!("Invalid updater endpoint: {error}"))
             })?])
@@ -366,6 +370,7 @@ impl UpdaterShard {
     ) -> Result<ManifestProbe, AppError> {
         let client = Client::builder()
             .user_agent(USER_AGENT)
+            .timeout(self.network_config()?.request_timeout())
             .build()
             .map_err(|error| AppError::other(format!("Failed to build updater client: {error}")))?;
 
@@ -472,6 +477,13 @@ impl UpdaterShard {
             .ok_or_else(|| AppError::other("Updater settings shard is not initialized"))
     }
 
+    fn network_config(&self) -> Result<Arc<NetworkConfig>, AppError> {
+        self.network_config
+            .get()
+            .cloned()
+            .ok_or_else(|| AppError::other("Updater network config is not initialized"))
+    }
+
     fn app_handle(&self) -> Result<tauri::AppHandle, AppError> {
         self.app
             .get()
@@ -538,15 +550,19 @@ impl Default for UpdaterShard {
 #[async_trait]
 impl Shard for UpdaterShard {
     shard_id!("0adeb8a1-2f80-41af-a381-a852a08e1ab5");
-    depends![SettingsShard, TauriHost];
+    depends![SettingsShard, TauriHost, NetworkShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
         let tauri_host = jax.get_shard::<TauriHost>();
+        let network = jax.get_shard::<NetworkShard>();
 
         self.settings
             .set(Arc::clone(&settings))
             .map_err(|_| AppError::other("Updater settings shard already initialized"))?;
+        self.network_config
+            .set(network.config()?)
+            .map_err(|_| AppError::other("Updater network config already initialized"))?;
         self.app
             .set(tauri_host.app.clone())
             .map_err(|_| AppError::other("Updater app handle already initialized"))?;
@@ -619,5 +635,4 @@ impl Shard for UpdaterShard {
 
         Ok(())
     }
-
 }

@@ -2030,7 +2030,7 @@ dependencies = [
 [[package]]
 name = "jax"
 version = "0.3.0"
-source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#8e8194e5ce993bf81fb84c38c3dd27f40b30f918"
+source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#a3c21becc1b1805eaeaca024903d19b948b65612"
 dependencies = [
  "async-trait",
  "downcast-rs",
@@ -2043,7 +2043,7 @@ dependencies = [
 [[package]]
 name = "jax-probes"
 version = "0.3.0"
-source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#8e8194e5ce993bf81fb84c38c3dd27f40b30f918"
+source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#a3c21becc1b1805eaeaca024903d19b948b65612"
 dependencies = [
  "async-trait",
  "jax",

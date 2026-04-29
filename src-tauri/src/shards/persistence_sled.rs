@@ -129,5 +129,4 @@ impl Shard for PersistenceSled {
             .map_err(|_| "Database already initialized")?;
         Ok(())
     }
-
 }

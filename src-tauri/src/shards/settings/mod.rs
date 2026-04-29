@@ -527,7 +527,6 @@ impl Shard for SettingsShard {
 
         Ok(())
     }
-
 }
 
 fn validate_setting_id(id: &str) -> Result<(), AppError> {

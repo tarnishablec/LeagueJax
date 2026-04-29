@@ -6,8 +6,8 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 
 use crate::error::AppError;
-use crate::network_config::NetworkConfig;
 use crate::shards::lcu::session::LcuSession;
+use crate::shards::network::NetworkConfig;
 use crate::utils::http_json::{
     headers_to_json, parse_json_or_string, pretty_json, redact_sensitive_json,
 };
