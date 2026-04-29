@@ -19,6 +19,7 @@ import { ShellShard } from "./shell/manifest";
 import { ToolsShard } from "./tools/manifest";
 import { TrayShard } from "./tray/manifest";
 import { UpdaterFeature } from "./updater/manifest";
+import { WindowEffectShard } from "./window-effect/manifest";
 
 export interface RenderedSlot {
   id: string;
@@ -89,6 +90,7 @@ export const initializeWebShards = async (): Promise<void> => {
     logger.info("Initializing web shards");
     const runtime = new Jax()
       .register(new SettingsShard())
+      .register(new WindowEffectShard())
       .register(new I18nShard())
       .register(new UpdaterFeature())
       .register(new ShellShard())

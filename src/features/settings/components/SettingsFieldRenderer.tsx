@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   createListCollection,
   SettingsActionButton,
+  SettingsColorPicker,
   SettingsFieldRow,
   SettingsInput,
   SettingsSelect,
@@ -23,6 +24,10 @@ type RegisteredSelectSetting = Extract<
 type RegisteredInputSetting = Extract<
   RegisteredSetting,
   { control: { kind: "text" | "number" } }
+>;
+type RegisteredColorSetting = Extract<
+  RegisteredSetting,
+  { control: { kind: "color" } }
 >;
 type RegisteredActionSetting = Extract<
   RegisteredSetting,
@@ -154,6 +159,28 @@ const InputField = ({
   );
 };
 
+const ColorField = ({
+  ariaLabel,
+  field,
+}: {
+  ariaLabel: string;
+  field: RegisteredColorSetting;
+}) => {
+  const settings = useSettings();
+  const value = useSettingValue(field.id);
+
+  return (
+    <SettingsColorPicker
+      ariaLabel={ariaLabel}
+      value={String(value ?? "")}
+      presets={field.control.presets}
+      onValueChange={(next) => {
+        settings.set(field.id, next);
+      }}
+    />
+  );
+};
+
 const ActionField = ({ field }: { field: RegisteredActionSetting }) => {
   const { t } = useTranslation();
   const label = t(field.labelKey);
@@ -222,6 +249,20 @@ export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
           <InputField
             ariaLabel={ariaLabel}
             field={field as RegisteredInputSetting}
+          />
+        </SettingsFieldRow>
+      );
+    case "color":
+      return (
+        <SettingsFieldRow
+          label={label}
+          hint={hint}
+          settingId={field.id}
+          scopeTag={scopeTag}
+        >
+          <ColorField
+            ariaLabel={ariaLabel}
+            field={field as RegisteredColorSetting}
           />
         </SettingsFieldRow>
       );

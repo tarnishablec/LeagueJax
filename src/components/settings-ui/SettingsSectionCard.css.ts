@@ -6,8 +6,8 @@ export const card = style({
   gap: 10,
   padding: 14,
   borderRadius: 10,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  // border: `1px solid ${vars.color.border}`,
+  background: vars.color.surface,
   alignContent: "start",
 });
 

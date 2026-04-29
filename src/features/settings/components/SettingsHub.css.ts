@@ -95,7 +95,7 @@ export const primaryTab = style({
   selectors: {
     "&:hover": {
       color: vars.color.foreground,
-      background: vars.color.accent,
+      background: vars.color.surface,
     },
     "&[data-selected]": {
       color: vars.color.foreground,
@@ -103,8 +103,8 @@ export const primaryTab = style({
     "&[data-selected]::after": {
       content: '""',
       position: "absolute",
-      left: 8,
-      right: 8,
+      left: 1,
+      right: 1,
       bottom: -1,
       height: 2,
       borderRadius: 999,

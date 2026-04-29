@@ -1,4 +1,5 @@
 export { SettingsActionButton } from "./SettingsActionButton";
+export { SettingsColorPicker } from "./SettingsColorPicker";
 export { SettingsFieldRow } from "./SettingsFieldRow";
 export { SettingsInput } from "./SettingsInput";
 export { SettingsSectionCard } from "./SettingsSectionCard";

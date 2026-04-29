@@ -16,6 +16,7 @@ export type SettingControl =
   | { kind: "select" }
   | { kind: "toggle" }
   | { kind: "text"; placeholderKey?: string }
+  | { kind: "color"; presets?: string[] }
   | {
       kind: "number";
       placeholderKey?: string;
@@ -84,6 +85,10 @@ export interface NumberSettingDefinition extends SettingDefinitionBase {
   control: Extract<SettingControl, { kind: "number" }>;
 }
 
+export interface ColorSettingDefinition extends SettingDefinitionBase {
+  control: Extract<SettingControl, { kind: "color" }>;
+}
+
 export interface ActionSettingDefinition extends SettingDefinitionBase {
   control: Extract<SettingControl, { kind: "action" }>;
   onAction: AsyncSettingAction;
@@ -98,6 +103,7 @@ export type SettingDefinition =
   | ToggleSettingDefinition
   | TextSettingDefinition
   | NumberSettingDefinition
+  | ColorSettingDefinition
   | ActionSettingDefinition;
 
 export interface SettingsPageDefinition {

@@ -76,7 +76,7 @@ export const tone = styleVariants({
     buttonBase,
     {
       borderColor: vars.color.border,
-      background: vars.color.background,
+      background: vars.color.surface,
       color: vars.color.foreground,
       selectors: {
         "&:hover:not(:disabled)": {

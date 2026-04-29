@@ -20,9 +20,9 @@ import {
   getTitlebarSlots,
   getToolbarSlots,
 } from "@/features/registry";
+import { useWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
 import { useLcuEvents } from "@/hooks/use-lcu-events";
 import { useTheme } from "@/hooks/use-theme";
-import { useWindowEffectBackgroundFallback } from "@/hooks/use-window-effect";
 import type { NavItem } from "@/runtime/web-contract";
 import * as s from "./__root.css";
 
