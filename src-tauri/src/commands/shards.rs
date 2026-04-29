@@ -1,38 +1,74 @@
 use crate::error::AppError;
 use crate::shards::shard_status_types::{ShardInfoDto, ShardStatusDto, ShardsSnapshotDto};
-use jax::Jax;
+use jax::report::StartupReport;
+use jax::{Jax, ShardId};
 use jax_probes::TimingProbe;
-use std::sync::Arc;
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::{Arc, RwLock};
 use tauri::State;
+
+#[derive(Clone, Default)]
+pub struct StartupReportState {
+    inner: Arc<RwLock<Option<StartupReportSnapshot>>>,
+}
+
+#[derive(Clone, Default)]
+struct StartupReportSnapshot {
+    failed_errors: BTreeMap<ShardId, String>,
+    skipped_ids: BTreeSet<ShardId>,
+}
+
+impl StartupReportState {
+    pub fn set_report(&self, report: &StartupReport) -> Result<(), AppError> {
+        let snapshot = StartupReportSnapshot {
+            failed_errors: report
+                .failed
+                .iter()
+                .map(|failure| (failure.id, failure.error.to_string()))
+                .collect(),
+            skipped_ids: report.skipped.iter().copied().collect(),
+        };
+
+        let mut guard = self.inner.write().map_err(|_| AppError::MutexPoisoned)?;
+        *guard = Some(snapshot);
+        Ok(())
+    }
+
+    fn snapshot(&self) -> StartupReportSnapshot {
+        self.inner
+            .read()
+            .ok()
+            .and_then(|guard| guard.clone())
+            .unwrap_or_default()
+    }
+}
 
 #[tauri::command]
 pub async fn get_shards_status(
     jax: State<'_, Arc<Jax>>,
     timing: State<'_, Arc<TimingProbe>>,
+    startup_report: State<'_, StartupReportState>,
 ) -> Result<ShardsSnapshotDto, AppError> {
-    Ok(build_shards_snapshot(&jax, &timing))
+    Ok(build_shards_snapshot(&jax, &timing, &startup_report))
 }
 
-pub fn build_shards_snapshot(jax: &Jax, timing: &TimingProbe) -> ShardsSnapshotDto {
+pub fn build_shards_snapshot(
+    jax: &Jax,
+    timing: &TimingProbe,
+    startup_report: &StartupReportState,
+) -> ShardsSnapshotDto {
     let all_shards = jax.list_shards();
-    let report = jax.get_startup_report();
+    let startup_report = startup_report.snapshot();
     let durations = timing.durations();
-
-    let failed_ids: std::collections::HashSet<uuid::Uuid> = report
-        .map(|r| r.failed_ids.iter().copied().collect())
-        .unwrap_or_default();
-    let skipped_ids: std::collections::HashSet<uuid::Uuid> = report
-        .map(|r| r.skipped.iter().copied().collect())
-        .unwrap_or_default();
 
     let shards = all_shards
         .into_iter()
         .map(|(id, label, dependencies)| {
-            let status = if failed_ids.contains(&id) {
+            let status = if let Some(error) = startup_report.failed_errors.get(&id) {
                 ShardStatusDto::Failed {
-                    error: "Setup failed".to_string(),
+                    error: error.clone(),
                 }
-            } else if skipped_ids.contains(&id) {
+            } else if startup_report.skipped_ids.contains(&id) {
                 ShardStatusDto::Skipped
             } else {
                 ShardStatusDto::Running

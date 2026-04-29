@@ -243,6 +243,7 @@ pub fn run() {
             let db_path = data_dir.join("data");
 
             let timing = Arc::new(TimingProbe::new());
+            let startup_report = StartupReportState::default();
 
             let jax = Jax::default()
                 .probe(timing.clone())
@@ -274,11 +275,16 @@ pub fn run() {
             app.manage(jax.clone());
             let timing_for_emit = timing.clone();
             app.manage(timing);
+            app.manage(startup_report.clone());
 
             let app_handle_for_emit = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 match jax.start().await {
                     Ok(report) => {
+                        if let Err(e) = startup_report.set_report(&report) {
+                            tracing::error!(error = %e, "Failed to store Jax startup report");
+                        }
+
                         if report.is_success() {
                             tracing::info!("🚀 Jax started successfully with all shards.");
                         } else {
@@ -299,7 +305,8 @@ pub fn run() {
                         }
 
                         // Emit shard status event for frontend
-                        let snapshot = build_shards_snapshot(&jax, &timing_for_emit);
+                        let snapshot =
+                            build_shards_snapshot(&jax, &timing_for_emit, &startup_report);
                         if let Err(e) = app_handle_for_emit.emit("shards_status_changed", &snapshot)
                         {
                             tracing::error!(error = %e, "Failed to emit shards_status_changed");

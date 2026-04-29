@@ -82,6 +82,7 @@ impl StaticCacheShard {
 #[async_trait]
 impl Shard for StaticCacheShard {
     shard_id!("a1c3e5f7-9b0d-4e2f-8a6c-1d3e5f7a9b0d");
+    depends![TauriHost];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let app = jax.get_shard::<TauriHost>().app.clone();
@@ -89,7 +90,4 @@ impl Shard for StaticCacheShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![TauriHost]
-    }
 }

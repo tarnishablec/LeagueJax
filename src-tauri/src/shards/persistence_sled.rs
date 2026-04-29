@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
-use uuid::Uuid;
 
 pub struct PersistenceSled {
     path: PathBuf,
@@ -119,6 +118,7 @@ impl PersistenceSled {
 #[async_trait::async_trait]
 impl Shard for PersistenceSled {
     shard_id!("11c8b250-cd30-4f0a-a500-aa4b355311f0");
+    depends![];
 
     async fn setup(&self, _jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let path = self.path.clone();
@@ -130,7 +130,4 @@ impl Shard for PersistenceSled {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<Uuid> {
-        depends![]
-    }
 }

@@ -2030,24 +2030,24 @@ dependencies = [
 [[package]]
 name = "jax"
 version = "0.2.0"
-source = "git+https://github.com/tarnishablec/jax.git?branch=main#2226b1145f1d9c3bc3f40f3db50274647a1c5a91"
+source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#c67c80c612c0367e402c0d0801f0606f878be41a"
 dependencies = [
  "async-trait",
  "downcast-rs",
  "futures",
  "petgraph",
+ "spin",
  "uuid",
 ]
 
 [[package]]
 name = "jax-probes"
 version = "0.2.0"
-source = "git+https://github.com/tarnishablec/jax.git?branch=main#2226b1145f1d9c3bc3f40f3db50274647a1c5a91"
+source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#c67c80c612c0367e402c0d0801f0606f878be41a"
 dependencies = [
  "async-trait",
  "jax",
  "spin",
- "uuid",
 ]
 
 [[package]]

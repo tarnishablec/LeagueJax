@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
 use tokio::sync::broadcast;
-use uuid::Uuid;
 
 use crate::shards::lcu::concepts::matchmaking_ready_check::{
     MatchmakingReadyCheckData, ReadyCheckPlayerResponse, ReadyCheckState,
@@ -204,6 +203,7 @@ impl AutoAcceptShard {
 #[async_trait]
 impl Shard for AutoAcceptShard {
     shard_id!("7744b799-c21d-48df-9a9e-fbce77c58452");
+    depends![SettingsShard, LcuShard, OngoingGameShard, TauriHost];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings_shard = jax.get_shard::<SettingsShard>();
@@ -226,9 +226,5 @@ impl Shard for AutoAcceptShard {
         self.setup_runtime(settings, manager, ongoing_manager, tauri_host);
 
         Ok(())
-    }
-
-    fn dependencies(&self) -> Vec<Uuid> {
-        depends![SettingsShard, LcuShard, OngoingGameShard, TauriHost]
     }
 }

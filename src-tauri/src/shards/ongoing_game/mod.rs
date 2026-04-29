@@ -17,7 +17,6 @@ use crate::shards::sgp::SgpShard;
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
-use uuid::Uuid;
 
 const MATCH_HISTORY_COUNT_SETTING_ID: &str = "ongoing.interaction.matchHistoryCount";
 const MATCH_HISTORY_COUNT_DEFAULT: u32 = 50;
@@ -41,6 +40,7 @@ impl OngoingGameShard {
 #[async_trait]
 impl Shard for OngoingGameShard {
     shard_id!("38121643-b79d-4382-9592-c647da511c1b");
+    depends![LcuShard, SgpShard, SettingsShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings_shard = jax.get_shard::<SettingsShard>();
@@ -83,7 +83,4 @@ impl Shard for OngoingGameShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<Uuid> {
-        depends![LcuShard, SgpShard, SettingsShard]
-    }
 }

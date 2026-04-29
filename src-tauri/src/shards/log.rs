@@ -58,6 +58,7 @@ impl LogShard {
 #[async_trait]
 impl Shard for LogShard {
     shard_id!("3f0e1054-6541-40f9-9b4c-73550766168d");
+    depends![SettingsShard, TauriHost];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
@@ -254,9 +255,6 @@ impl Shard for LogShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<Uuid> {
-        depends![SettingsShard, TauriHost]
-    }
 }
 
 fn clear_log_dir(dir: &Path, active_log_file: &Path) -> Result<u32, std::io::Error> {

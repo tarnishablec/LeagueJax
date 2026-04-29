@@ -17,7 +17,6 @@ use std::pin::Pin;
 use std::sync::{Arc, OnceLock, RwLock};
 use tokio::sync::{broadcast, watch};
 use tokio::task::JoinHandle;
-use uuid::Uuid;
 
 const SETTINGS_TREE: &str = "settings";
 const SETTINGS_SNAPSHOT_KEY: &[u8] = b"snapshot";
@@ -511,6 +510,7 @@ impl Default for SettingsShard {
 #[async_trait]
 impl Shard for SettingsShard {
     shard_id!("b59f17b0-24ef-4ce1-a106-f430ec20457e");
+    depends![PersistenceSled];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let db = jax.get_shard::<PersistenceSled>().get_db()?;
@@ -528,9 +528,6 @@ impl Shard for SettingsShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<Uuid> {
-        depends![PersistenceSled]
-    }
 }
 
 fn validate_setting_id(id: &str) -> Result<(), AppError> {
