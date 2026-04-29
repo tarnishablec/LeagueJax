@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { LazyImage } from "@/components/LazyImage";
 import { useSettings } from "@/features/settings/context";
@@ -15,6 +15,28 @@ import {
   HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
 } from "../manifest";
 import * as s from "./HistoryRoute.css";
+
+function useDeferredListMount(key: string | null): boolean {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!key) {
+      setReady(false);
+      return;
+    }
+
+    setReady(false);
+    const frameId = requestAnimationFrame(() => {
+      setReady(true);
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [key]);
+
+  return ready;
+}
 
 function OwnSummonerButton() {
   const { t } = useTranslation();
@@ -73,6 +95,7 @@ export function HistoryRoute() {
   const { instances } = useLcuStore();
   const { tabs, activeTabId } = useTabStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
+  const listReady = useDeferredListMount(activeTab?.id ?? null);
 
   const settings = useSettings();
   const autoOpenOwnTab = useSyncExternalStore(
@@ -104,7 +127,14 @@ export function HistoryRoute() {
         summoner={activeTab.summoner}
         autoRefresh={autoRefreshOnSwitch}
       />
-      <MatchList puuid={activeTab.puuid} sgpServerId={activeTab.sgpServerId} />
+      {listReady ? (
+        <MatchList
+          puuid={activeTab.puuid}
+          sgpServerId={activeTab.sgpServerId}
+        />
+      ) : (
+        <div className={s.listPlaceholder} />
+      )}
     </div>
   );
 }

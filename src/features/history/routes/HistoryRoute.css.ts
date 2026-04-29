@@ -18,6 +18,10 @@ export const emptyState = style({
   fontSize: "0.875rem",
 });
 
+export const listPlaceholder = style({
+  minHeight: 0,
+});
+
 export const focusPicker = style({
   display: "grid",
   placeContent: "center",
