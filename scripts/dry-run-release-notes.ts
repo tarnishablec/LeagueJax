@@ -12,6 +12,12 @@ interface CliArgs {
   tag?: string;
 }
 
+interface GitCliffContext {
+  from: string;
+  tag?: string;
+  to: string;
+}
+
 const repoRoot = resolve(import.meta.dir, "..");
 const tauriConfigPath = resolve(repoRoot, "src-tauri", "tauri.conf.json");
 const tauriConfigRepoPath = "src-tauri/tauri.conf.json";
@@ -114,6 +120,9 @@ const readPreviousPublishedTag = async (
   return previousTag;
 };
 
+const hasManualRangeArgs = (args: CliArgs): boolean =>
+  Boolean(args.from || args.to || args.previousTag || args.tag);
+
 const runGit = async (args: string[]): Promise<string> => {
   const child = Bun.spawn(["git", ...args], {
     cwd: repoRoot,
@@ -165,22 +174,78 @@ const findVersionBoundaryCommit = async (
   return undefined;
 };
 
+const resolveReleaseStartForTag = async (tag: string): Promise<string> => {
+  const version = versionFromTag(tag);
+  const start = await findVersionBoundaryCommit(version);
+
+  if (!start) {
+    throw new Error(
+      `Failed to find a source commit where ${tauriConfigRepoPath} first changed to ${version}. Pass --from <ref> to override the changelog start.`,
+    );
+  }
+
+  return start;
+};
+
+const resolveDefaultGitCliffContext = async (
+  args: CliArgs,
+  tag: string,
+): Promise<GitCliffContext> => {
+  const tags = await readPublishedTags(args.releaseRepo);
+
+  if (tags.includes(tag)) {
+    return {
+      from: await resolveReleaseStartForTag(tag),
+      to: "HEAD",
+    };
+  }
+
+  const previousTag = tags
+    .filter((publishedTag) => compareReleaseTags(publishedTag, tag) < 0)
+    .sort(compareReleaseTags)
+    .at(-1);
+
+  if (!previousTag) {
+    throw new Error(
+      `No published release tag is older than the ${tag} found in ${args.releaseRepo}. Pass --from <ref> or --previous-tag <tag> to override the changelog start.`,
+    );
+  }
+
+  return {
+    from: await resolveReleaseStartForTag(previousTag),
+    tag,
+    to: (await resolveTargetReleaseEnd(tag)) ?? "HEAD",
+  };
+};
+
 const buildGitCliffArgs = async (
   args: CliArgs,
   tag: string,
-): Promise<string[]> => {
-  const from = args.from ?? (await resolvePublishedReleaseStart(args, tag));
-  const to = args.to ?? (await resolveTargetReleaseEnd(tag)) ?? "HEAD";
+): Promise<{ gitCliffArgs: string[]; outputTag?: string }> => {
+  const context = hasManualRangeArgs(args)
+    ? {
+        from: args.from ?? (await resolvePublishedReleaseStart(args, tag)),
+        tag,
+        to: args.to ?? (await resolveTargetReleaseEnd(tag)) ?? "HEAD",
+      }
+    : await resolveDefaultGitCliffContext(args, tag);
 
-  return [
+  const gitCliffArgs = [
     "--config",
     "cliff.toml",
-    "--tag",
-    tag,
     "--strip",
     "header",
-    `${from}..${to}`,
+    `${context.from}..${context.to}`,
   ];
+
+  if (context.tag) {
+    gitCliffArgs.splice(2, 0, "--tag", context.tag);
+  }
+
+  return {
+    gitCliffArgs,
+    outputTag: context.tag,
+  };
 };
 
 const resolvePublishedReleaseStart = async (
@@ -189,16 +254,8 @@ const resolvePublishedReleaseStart = async (
 ): Promise<string> => {
   const previousTag =
     args.previousTag ?? (await readPreviousPublishedTag(args.releaseRepo, tag));
-  const previousVersion = versionFromTag(previousTag);
-  const start = await findVersionBoundaryCommit(previousVersion);
 
-  if (!start) {
-    throw new Error(
-      `Failed to find a source commit where ${tauriConfigRepoPath} first changed to ${previousVersion}. Pass --from <ref> to override the changelog start.`,
-    );
-  }
-
-  return start;
+  return resolveReleaseStartForTag(previousTag);
 };
 
 const resolveTargetReleaseEnd = async (
@@ -224,10 +281,12 @@ const toText = (value: unknown): string => {
 const formatReleaseDate = (date = new Date()): string =>
   date.toISOString().slice(0, 10);
 
-const emptyReleaseNotes = (tag: string): string =>
-  `## ${versionFromTag(tag)} - ${formatReleaseDate()}\n\n- No public changes.\n`;
+const emptyReleaseNotes = (tag?: string): string =>
+  tag
+    ? `## ${versionFromTag(tag)} - ${formatReleaseDate()}\n\n- No public changes.\n`
+    : "## Unreleased\n\n- No public changes.\n";
 
-const normalizeReleaseNotes = (stdout: unknown, tag: string): string => {
+const normalizeReleaseNotes = (stdout: unknown, tag?: string): string => {
   const text = toText(stdout).replace(/\s+$/u, "");
 
   if (!text) {
@@ -242,7 +301,7 @@ const isReleaseNotesEmpty = (notes: string): boolean =>
 
 const main = async (args: CliArgs) => {
   const tag = await readReleaseTag(args.tag);
-  const gitCliffArgs = await buildGitCliffArgs(args, tag);
+  const { gitCliffArgs, outputTag } = await buildGitCliffArgs(args, tag);
   const result = await runGitCliff(gitCliffArgs, {
     cwd: repoRoot,
     reject: false,
@@ -257,7 +316,7 @@ const main = async (args: CliArgs) => {
     throw new Error(`git-cliff failed with exit code ${result.exitCode}`);
   }
 
-  const notes = normalizeReleaseNotes(result.stdout, tag);
+  const notes = normalizeReleaseNotes(result.stdout, outputTag);
 
   if (args.output) {
     const outputPath = resolve(repoRoot, args.output);
