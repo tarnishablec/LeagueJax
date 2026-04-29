@@ -15,20 +15,53 @@ const REQUEST_TIMEOUT_DEFAULT_SECONDS: u64 = 35;
 const USE_SYSTEM_PROXY_SETTING_ID: &str = "system.network.useSystemProxy";
 const USE_SYSTEM_PROXY_DEFAULT: bool = false;
 
+/// Runtime network policy for external HTTP requests.
+///
+/// This config owns generic reqwest clients that are safe to reuse across
+/// features. It intentionally does not carry business headers, tokens, cookies,
+/// or feature-specific TLS configuration. Local LCU traffic is not part of this
+/// policy because LCU owns its per-instance TLS transport.
 #[derive(Clone)]
 pub struct NetworkConfig {
     request_timeout: SettingHandle,
     use_system_proxy: SettingHandle,
+    direct_external_http_client: reqwest::Client,
+    system_proxy_external_http_client: reqwest::Client,
 }
 
 impl NetworkConfig {
-    fn new(request_timeout: SettingHandle, use_system_proxy: SettingHandle) -> Self {
-        Self {
+    fn new(
+        request_timeout: SettingHandle,
+        use_system_proxy: SettingHandle,
+    ) -> Result<Self, AppError> {
+        let direct_external_http_client =
+            reqwest::Client::builder()
+                .no_proxy()
+                .build()
+                .map_err(|error| {
+                    AppError::other(format!(
+                        "Failed to build direct external HTTP client: {error}"
+                    ))
+                })?;
+        let system_proxy_external_http_client =
+            reqwest::Client::builder().build().map_err(|error| {
+                AppError::other(format!(
+                    "Failed to build system proxy external HTTP client: {error}"
+                ))
+            })?;
+
+        Ok(Self {
             request_timeout,
             use_system_proxy,
-        }
+            direct_external_http_client,
+            system_proxy_external_http_client,
+        })
     }
 
+    /// Returns the current request timeout for external HTTP requests.
+    ///
+    /// Callers should apply this at request time when they need live setting
+    /// changes to take effect without rebuilding a reqwest client.
     pub fn request_timeout(&self) -> Duration {
         let seconds = self
             .request_timeout
@@ -49,16 +82,24 @@ impl NetworkConfig {
             .unwrap_or(USE_SYSTEM_PROXY_DEFAULT)
     }
 
-    pub fn client_builder(&self) -> reqwest::ClientBuilder {
-        let builder = reqwest::Client::builder().timeout(self.request_timeout());
+    /// Returns the reusable external HTTP client selected by current proxy policy.
+    ///
+    /// The returned client is generic: callers add feature-specific headers,
+    /// auth tokens, body, and per-request timeout on the request builder.
+    pub fn external_http_client(&self) -> &reqwest::Client {
         if self.use_system_proxy() {
-            builder
+            &self.system_proxy_external_http_client
         } else {
-            builder.no_proxy()
+            &self.direct_external_http_client
         }
     }
 }
 
+/// Registers and exposes app-wide network policy for external HTTP requests.
+///
+/// Consumers should use this shard for traffic that leaves the local machine.
+/// LCU requests stay in the LCU shard because they target the local League
+/// client and require per-instance TLS handling.
 pub struct NetworkShard {
     config: OnceLock<Arc<NetworkConfig>>,
 }
@@ -113,7 +154,7 @@ impl Shard for NetworkShard {
             id: USE_SYSTEM_PROXY_SETTING_ID.to_string(),
             label_key: "settings.network.useSystemProxy.label".to_string(),
             hint_key: Some("settings.network.useSystemProxy.hint".to_string()),
-            scope: SettingScopeDto::Shared,
+            scope: SettingScopeDto::Backend,
             control: SettingControlDto::Toggle,
             default_value: Value::Bool(USE_SYSTEM_PROXY_DEFAULT),
             order: Some(20),
@@ -126,7 +167,7 @@ impl Shard for NetworkShard {
             .set(Arc::new(NetworkConfig::new(
                 request_timeout,
                 use_system_proxy,
-            )))
+            )?))
             .is_err()
         {
             return Err(AppError::other("Network config is already initialized").into());

@@ -46,7 +46,7 @@ impl SgpSession {
         network_config: Arc<NetworkConfig>,
     ) -> Result<Self, AppError> {
         let token_context = exchange_token_context(lcu_session).await?;
-        let http_client = SgpHttpClient::new(lcu_session.clone(), token_context, network_config)?;
+        let http_client = SgpHttpClient::new(lcu_session.clone(), token_context, network_config);
         let api = SgpApi::new(http_client);
         Ok(Self { api })
     }
