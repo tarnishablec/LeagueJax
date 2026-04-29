@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings } from "@/features/settings/context";
-import { type MatchModeTag, useMatchHistory } from "../hooks/use-match-history";
+import { useMatchHistory } from "../hooks/use-match-history";
+import { useMatchListViewState } from "../hooks/use-match-list-view-state";
 import { HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING } from "../manifest";
 import * as s from "./MatchList.css";
 import { MatchListFilters } from "./MatchListFilters";
@@ -24,10 +25,8 @@ export function MatchList({
       settings.get<boolean>(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING) ??
       false,
   );
-  const [modeTag, setModeTag] = useState<MatchModeTag>("all");
-  const [pageSize, setPageSize] = useState<number>(20);
-  const [page, setPage] = useState<number>(1);
-  const previousPuuidRef = useRef<string | null>(null);
+  const { modeTag, pageSize, page, setModeTag, setPageSize, setPage } =
+    useMatchListViewState(puuid, sgpServerId);
   const { matches, error, isLoading, isRefreshing, hasNextPage, refresh } =
     useMatchHistory(
       puuid,
@@ -41,13 +40,6 @@ export function MatchList({
   const matchCount = matches?.length ?? 0;
   const canGoPrev = page > 1 && !isLoading && !isRefreshing;
   const canGoNext = hasNextPage && !isLoading && !isRefreshing;
-
-  useEffect(() => {
-    if (previousPuuidRef.current !== puuid) {
-      previousPuuidRef.current = puuid ?? null;
-      setPage(1);
-    }
-  }, [puuid]);
 
   const modeSelectOptions = modeOptions.map((option) => ({
     value: option.value,
@@ -71,11 +63,9 @@ export function MatchList({
           pageSizeSelectOptions={pageSizeSelectOptions}
           onModeChange={(value) => {
             setModeTag(value);
-            setPage(1);
           }}
           onPageSizeChange={(value) => {
             setPageSize(Number(value));
-            setPage(1);
           }}
         />
 
