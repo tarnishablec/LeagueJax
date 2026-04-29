@@ -80,8 +80,9 @@ const navBase: StyleRule = {
   borderRadius: 6,
   height: 36,
   fontSize: "0.95rem",
+  borderLeft: "2px solid transparent",
   color: vars.color.mutedForeground,
-  transition: "all 150ms",
+  transition: "color 80ms ease-out",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textDecoration: "none",
@@ -116,16 +117,16 @@ export const navItem = recipe({
   },
   compoundVariants: [
     {
-      variants: {active: true, collapsed: false},
+      variants: { active: true, collapsed: false },
       style: {
         background: navActiveBg,
         color: vars.color.accentForeground,
         fontWeight: 500,
-        borderLeft: `2px solid ${vars.color.primary}`,
+        borderLeftColor: vars.color.primary,
       },
     },
     {
-      variants: {active: true, collapsed: true},
+      variants: { active: true, collapsed: true },
       style: {
         background: `oklch(from ${vars.color.primary} l c h / 0.15)`,
         color: vars.color.primary,
@@ -171,8 +172,8 @@ export const navLabel = recipe({
   },
   variants: {
     collapsed: {
-      false: {opacity: 1},
-      true: {opacity: 0},
+      false: { opacity: 1 },
+      true: { opacity: 0 },
     },
   },
   defaultVariants: {
