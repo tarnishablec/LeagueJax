@@ -61,6 +61,10 @@ export const settingsI18n: Resource = {
         requestTimeoutSeconds: {
           label: "Request Timeout (seconds)",
         },
+        useSystemProxy: {
+          label: "Use System Proxy",
+          hint: "Only affects SGP APIs.\nWhen enabled, reads system HTTP_PROXY, HTTPS_PROXY, ALL_PROXY, and NO_PROXY environment variables; connects directly when they are not set.",
+        },
       },
       logging: {
         recordToFile: {
@@ -218,6 +222,10 @@ export const settingsI18n: Resource = {
         requestTimeoutSeconds: {
           label: "请求超时（秒）",
         },
+        useSystemProxy: {
+          label: "使用系统代理",
+          hint: "只影响 SGP 接口。\n开启后读取系统 HTTP_PROXY、HTTPS_PROXY、ALL_PROXY、NO_PROXY 环境变量；未设置时直连。",
+        },
       },
       logging: {
         recordToFile: {
@@ -374,6 +382,10 @@ export const settingsI18n: Resource = {
       network: {
         requestTimeoutSeconds: {
           label: "リクエストタイムアウト（秒）",
+        },
+        useSystemProxy: {
+          label: "システムプロキシを使用",
+          hint: "SGP API のみに影響します。\n有効にすると、システムの HTTP_PROXY、HTTPS_PROXY、ALL_PROXY、NO_PROXY 環境変数を読み取ります。未設定の場合は直接接続します。",
         },
       },
       logging: {

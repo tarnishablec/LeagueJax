@@ -284,10 +284,6 @@ impl SettingsShard {
         Ok(snapshot.values.get(id).cloned())
     }
 
-    pub fn get_setting(&self, key: &str) -> Result<Option<Value>, AppError> {
-        self.get_value(key)
-    }
-
     pub fn set_value(&self, id: &str, value: Value) -> Result<ApplySettingsOutcome, AppError> {
         self.set_value_with_source(id, value, None)
     }
