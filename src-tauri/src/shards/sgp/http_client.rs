@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use reqwest::Client;
 use serde_json::Value;
 use std::time::Instant;
 use tokio::sync::RwLock;
@@ -61,6 +60,7 @@ fn request_log(
     let request_headers = serde_json::json!({
         "Authorization": format!("Bearer {access_token}"),
         "Accept": "application/json",
+        "User-Agent": SgpHttpClient::USER_AGENT,
     });
 
     serde_json::json!({
@@ -76,7 +76,6 @@ fn response_headers_log(response_headers: &Option<Value>) -> Value {
 }
 
 pub struct SgpHttpClient {
-    req_client: Client,
     lcu_session: Arc<LcuSession>,
     network_config: Arc<NetworkConfig>,
     access_token: RwLock<String>,
@@ -92,21 +91,14 @@ impl SgpHttpClient {
         lcu_session: Arc<LcuSession>,
         initial_tokens: SgpTokenContext,
         network_config: Arc<NetworkConfig>,
-    ) -> Result<Self, AppError> {
-        let req_client = network_config
-            .client_builder()
-            .user_agent(Self::USER_AGENT)
-            .build()
-            .map_err(|error| AppError::other(format!("Failed to build SGP client: {error}")))?;
-
-        Ok(Self {
-            req_client,
+    ) -> Self {
+        Self {
             lcu_session,
             network_config,
             access_token: RwLock::new(initial_tokens.access_token),
             league_session_token: RwLock::new(initial_tokens.league_session_token),
             sgp_server_id: initial_tokens.sgp_server_id,
-        })
+        }
     }
 
     pub fn sgp_server_id(&self) -> &str {
@@ -202,11 +194,13 @@ impl SgpHttpClient {
         let started = Instant::now();
 
         let mut req = self
-            .req_client
+            .network_config
+            .external_http_client()
             .request(method.clone(), request_url)
             .timeout(self.network_config.request_timeout())
             .header("Authorization", format!("Bearer {access_token}"))
-            .header("Accept", "application/json");
+            .header("Accept", "application/json")
+            .header("User-Agent", Self::USER_AGENT);
 
         if let Some(payload) = body.as_ref() {
             req = req.json(payload);
