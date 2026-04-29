@@ -134,6 +134,9 @@ export const label = recipe({
     paddingRight: "1rem",
     width: "100%",
     textAlign: "start",
+    fontSize: "0.875rem",
+    lineHeight: 1,
+    textBoxTrim: "trim-both",
   },
   variants: {
     collapsed: {
@@ -150,7 +153,6 @@ export const label = recipe({
 
 export const tooltip = style({
   minWidth: 264,
-  padding: 6,
   borderRadius: 8,
   background: tooltipSurface,
   // border: `1px solid ${vars.color.popoverBorder}`,
@@ -261,7 +263,7 @@ export const instanceRow = recipe({
   variants: {
     focused: {
       true: {
-        borderLeft: `2px solid ${vars.color.primary}`,
+        // borderLeft: `2px solid ${vars.color.primary}`,
         background: `color-mix(in srgb, ${vars.color.primary} 15%, ${vars.color.backgroundRaw})`,
       },
     },
@@ -316,7 +318,7 @@ export const instancePath = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  fontSize: "0.975rem",
+  fontSize: "0.875rem",
 });
 
 export const instancePid = style({
