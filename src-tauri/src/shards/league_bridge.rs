@@ -129,6 +129,7 @@ impl LeagueBridgeShard {
 #[async_trait]
 impl Shard for LeagueBridgeShard {
     shard_id!("bb42f197-0ea8-46f8-9f88-fa5652e08547");
+    depends![TauriHost, LcuShard, OngoingGameShard, SgpShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         self.setup_runtime_bridge(jax.clone());
@@ -136,7 +137,4 @@ impl Shard for LeagueBridgeShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![TauriHost, LcuShard, OngoingGameShard, SgpShard]
-    }
 }

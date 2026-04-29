@@ -67,13 +67,11 @@ impl SettingsBridgeShard {
 #[async_trait]
 impl Shard for SettingsBridgeShard {
     shard_id!("3c74c22b-b500-456c-8da7-81a1f1ddf75b");
+    depends![TauriHost, SettingsShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         self.setup_emit_bridge(jax)?;
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![TauriHost, SettingsShard]
-    }
 }

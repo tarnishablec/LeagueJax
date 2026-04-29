@@ -539,6 +539,7 @@ impl Default for MiniWindowShard {
 #[async_trait]
 impl Shard for MiniWindowShard {
     shard_id!("b5dd6cf2-82b8-4a55-a080-e7e7e7e4b934");
+    depends![TauriHost, WindowEffectShard, SettingsShard, LcuShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let host = jax.get_shard::<TauriHost>().clone();
@@ -647,9 +648,6 @@ impl Shard for MiniWindowShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![TauriHost, WindowEffectShard, SettingsShard, LcuShard]
-    }
 }
 
 #[cfg(target_os = "windows")]

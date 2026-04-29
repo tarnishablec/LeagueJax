@@ -30,8 +30,8 @@ unwrap_used = "deny"
 async-trait = "0.1"
 base64 = "0.22"
 futures-util = "0.3"
-jax = { git = "https://github.com/tarnishablec/jax.git", branch = "main" }
-jax-probes = { git = "https://github.com/tarnishablec/jax.git", branch = "main" }
+jax = { git = "https://github.com/tarnishablec/jax.git", branch = "v0.3" }
+jax-probes = { git = "https://github.com/tarnishablec/jax.git", branch = "v0.3" }
 maokai-gears = { git = "https://github.com/tarnishablec/maokai", branch = "main" }
 maokai-machine = { git = "https://github.com/tarnishablec/maokai", branch = "main" }
 maokai-runner = { git = "https://github.com/tarnishablec/maokai", branch = "main" }

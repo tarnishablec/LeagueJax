@@ -55,6 +55,7 @@ impl LcuSessionSgpExt for Arc<LcuSession> {
 #[async_trait]
 impl Shard for SgpShard {
     shard_id!("3f2a39a7-e3f4-4a76-85ef-1ca8a6f72514");
+    depends![LcuShard, SettingsShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
@@ -65,7 +66,4 @@ impl Shard for SgpShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![LcuShard, SettingsShard]
-    }
 }

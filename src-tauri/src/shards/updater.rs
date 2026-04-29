@@ -14,7 +14,6 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use ts_rs::TS;
-use uuid::Uuid;
 
 use crate::error::AppError;
 use crate::shards::settings::types::{
@@ -539,6 +538,7 @@ impl Default for UpdaterShard {
 #[async_trait]
 impl Shard for UpdaterShard {
     shard_id!("0adeb8a1-2f80-41af-a381-a852a08e1ab5");
+    depends![SettingsShard, TauriHost];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
@@ -620,7 +620,4 @@ impl Shard for UpdaterShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<Uuid> {
-        depends![SettingsShard, TauriHost]
-    }
 }

@@ -311,6 +311,7 @@ impl Default for WindowEffectShard {
 #[async_trait]
 impl Shard for WindowEffectShard {
     shard_id!("2d01df95-cc4e-4d0f-a2a6-c560db81de43");
+    depends![TauriHost, SettingsShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let host = jax.get_shard::<TauriHost>();
@@ -379,7 +380,4 @@ impl Shard for WindowEffectShard {
         Ok(())
     }
 
-    fn dependencies(&self) -> Vec<uuid::Uuid> {
-        depends![TauriHost, SettingsShard]
-    }
 }
