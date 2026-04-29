@@ -88,11 +88,9 @@ const navBase: StyleRule = {
   textDecoration: "none",
 } as const;
 
-const navHoverBg = `oklch(from ${vars.color.accent} l c h / 0.32)`;
-const navActiveBg = `oklch(from ${vars.color.accent} l c h / 0.48)`;
 const tooltipSurface = `oklch(from ${vars.color.foreground} 0.26 0.012 h / 0.96)`;
-const tooltipSurfaceDark = `oklch(from ${vars.color.backgroundRaw} 0.18 0.012 h / 0.98)`;
-const tooltipShadowColor = `oklch(from ${vars.color.backgroundRaw} 0.05 c h / 0.46)`;
+const tooltipSurfaceDark = `oklch(from ${vars.color.background} 0.18 0.012 h / 0.98)`;
+const tooltipShadowColor = `oklch(from ${vars.color.background} 0.05 c h / 0.46)`;
 
 export const navItem = recipe({
   base: {
@@ -100,7 +98,7 @@ export const navItem = recipe({
     gridTemplateColumns: `${iconCol} minmax(0, 1fr)`,
     selectors: {
       "&:hover": {
-        background: navHoverBg,
+        background: vars.color.surface,
         color: vars.color.foreground,
       },
     },
@@ -119,7 +117,7 @@ export const navItem = recipe({
     {
       variants: { active: true, collapsed: false },
       style: {
-        background: navActiveBg,
+        background: vars.color.surface,
         color: vars.color.accentForeground,
         fontWeight: 500,
         borderLeftColor: vars.color.primary,
@@ -202,7 +200,7 @@ export const navTooltipContent = style({
     ":root.dark &": {
       background: tooltipSurfaceDark,
       boxShadow: `
-        0 12px 30px oklch(from ${vars.color.backgroundRaw} 0.04 c h / 0.76),
+        0 12px 30px oklch(from ${vars.color.background} 0.04 c h / 0.76),
         inset 0 1px 0 oklch(1 0 0 / 0.04)
       `,
     },

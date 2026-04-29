@@ -11,7 +11,7 @@ export const button = recipe({
     height: 32,
     borderRadius: 8,
     border: `1px solid ${vars.color.border}`,
-    background: vars.color.background,
+    background: vars.color.surface,
     padding: "0 10px",
     cursor: "pointer",
     color: vars.color.foreground,

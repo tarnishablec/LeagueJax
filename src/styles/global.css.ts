@@ -1,8 +1,6 @@
 import { globalStyle } from "@vanilla-extract/css";
 import { vars } from "./theme.css";
 
-/* ── Root & body — transparent for Mica vibrancy ── */
-
 globalStyle(":root", {
   fontFamily:
     '"Maple UI", Inter, "Segoe UI", "HarmonyOS Sans SC", MiSans, "Noto Sans SC", "Noto Sans JP", "Microsoft YaHei UI", sans-serif',
@@ -14,24 +12,12 @@ globalStyle(":root", {
   WebkitFontSmoothing: "antialiased",
   WebkitTextSizeAdjust: "100%",
   color: vars.color.foreground,
-  background: vars.color.background,
-});
-
-globalStyle(":root.dark", {
   background: "transparent",
 });
 
-globalStyle("body, #root", {
+globalStyle("body", {
   margin: 0,
   background: "transparent",
-});
-
-globalStyle(":root.window-effect-none", {
-  background: vars.color.backgroundRaw,
-});
-
-globalStyle(":root.window-effect-none body, :root.window-effect-none #root", {
-  background: vars.color.backgroundRaw,
 });
 
 /* ── Reset — minimal, just what the app needs ── */

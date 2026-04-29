@@ -15,7 +15,7 @@ export const trigger = style({
   height: 32,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  background: vars.color.surface,
   color: vars.color.foreground,
   padding: "0 10px",
   display: "grid",

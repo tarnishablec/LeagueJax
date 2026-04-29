@@ -17,7 +17,6 @@ jax = { workspace = true }
 jax-probes = { workspace = true }
 
 tauri = { workspace = true, features = ["tray-icon", "image-ico"] }
-window-vibrancy = { workspace = true }
 uuid = { workspace = true, features = ["serde", "v7"] }
 tauri-plugin-store = { workspace = true }
 tauri-plugin-updater = { workspace = true }
@@ -59,7 +58,6 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "sync
 
 [lints]
 workspace = true
-
 
 
 

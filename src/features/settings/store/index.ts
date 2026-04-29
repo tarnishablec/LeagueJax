@@ -108,6 +108,18 @@ const textSettingDefinitionSchema = z
   })
   .strict();
 
+const colorSettingDefinitionSchema = z
+  .object({
+    ...sharedDefinitionShape,
+    control: z
+      .object({
+        kind: z.literal("color"),
+        presets: z.array(z.string().min(1)).optional(),
+      })
+      .strict(),
+  })
+  .strict();
+
 const numberSettingDefinitionSchema = z
   .object({
     ...sharedDefinitionShape,
@@ -140,6 +152,7 @@ const settingDefinitionSchema = z.union([
   selectSettingDefinitionSchema,
   toggleSettingDefinitionSchema,
   textSettingDefinitionSchema,
+  colorSettingDefinitionSchema,
   numberSettingDefinitionSchema,
   actionSettingDefinitionSchema,
 ]);

@@ -3,13 +3,11 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+use tauri::window::{Color, Effect, EffectsBuilder};
 #[cfg(target_os = "windows")]
 use tauri::Theme;
 use tauri::{Manager, WebviewWindow};
-#[cfg(target_os = "macos")]
-use window_vibrancy::apply_acrylic;
-#[cfg(target_os = "windows")]
-use window_vibrancy::{apply_acrylic, apply_mica, clear_acrylic, clear_mica};
 
 use crate::error::AppError;
 use crate::shards::settings::types::{
@@ -27,12 +25,12 @@ const SYSTEM_THEME_SETTING_ID: &str = "system.preferences.theme";
 const SYSTEM_THEME_SYSTEM: &str = "system";
 const SYSTEM_THEME_LIGHT: &str = "light";
 const SYSTEM_THEME_DARK: &str = "dark";
+// #[cfg(target_os = "windows")]
+// const ACRYLIC_TINT_LIGHT: (u8, u8, u8, u8) = (248, 248, 248, 120);
+// #[cfg(target_os = "windows")]
+// const ACRYLIC_TINT_DARK: (u8, u8, u8, u8) = (32, 32, 32, 160);
 #[cfg(target_os = "windows")]
-const ACRYLIC_TINT_LIGHT: Option<(u8, u8, u8, u8)> = Some((248, 248, 248, 120));
-#[cfg(target_os = "windows")]
-const ACRYLIC_TINT_DARK: Option<(u8, u8, u8, u8)> = Some((32, 32, 32, 160));
-#[cfg(target_os = "macos")]
-const VIBRANCY_TINT: Option<(u8, u8, u8, u8)> = Some((18, 18, 28, 160));
+const ACRYLIC_TINT_TRANSPARENT: (u8, u8, u8, u8) = (0, 0, 0, 0);
 #[cfg(target_os = "windows")]
 const WINDOW_EFFECT_DEFAULT: &str = WINDOW_EFFECT_MICA;
 #[cfg(target_os = "macos")]
@@ -225,11 +223,8 @@ impl WindowEffectShard {
     }
 
     #[cfg(target_os = "windows")]
-    fn acrylic_tint_for_window(
-        window: &WebviewWindow,
-        theme_preference: ThemePreference,
-    ) -> Option<(u8, u8, u8, u8)> {
-        let is_dark = match theme_preference {
+    fn is_dark_theme_for_window(window: &WebviewWindow, theme_preference: ThemePreference) -> bool {
+        match theme_preference {
             ThemePreference::Dark => true,
             ThemePreference::Light => false,
             ThemePreference::System => match window.theme() {
@@ -244,13 +239,41 @@ impl WindowEffectShard {
                     true
                 }
             },
-        };
-
-        if is_dark {
-            ACRYLIC_TINT_DARK
-        } else {
-            ACRYLIC_TINT_LIGHT
         }
+    }
+
+    // #[cfg(target_os = "windows")]
+    // fn acrylic_tint_for_window(
+    //     window: &WebviewWindow,
+    //     theme_preference: ThemePreference,
+    // ) -> (u8, u8, u8, u8) {
+    //     let is_dark = Self::is_dark_theme_for_window(window, theme_preference);
+    //
+    //
+    //     if is_dark {
+    //         ACRYLIC_TINT_DARK
+    //     } else {
+    //         ACRYLIC_TINT_LIGHT
+    //     }
+    // }
+
+    #[cfg(target_os = "windows")]
+    fn mica_effect_for_window(window: &WebviewWindow, theme_preference: ThemePreference) -> Effect {
+        if Self::is_dark_theme_for_window(window, theme_preference) {
+            Effect::MicaDark
+        } else {
+            Effect::MicaLight
+        }
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    fn set_window_effects(
+        window: &WebviewWindow,
+        effects: Option<tauri::utils::config::WindowEffectsConfig>,
+    ) -> Result<(), AppError> {
+        window
+            .set_effects(effects)
+            .map_err(|error| AppError::other(format!("failed to apply window effects: {error}")))
     }
 
     fn apply_effect_to_window(
@@ -260,25 +283,29 @@ impl WindowEffectShard {
     ) -> Result<(), AppError> {
         #[cfg(target_os = "windows")]
         {
-            let acrylic_tint = Self::acrylic_tint_for_window(window, theme_preference);
-            let _ = clear_mica(window);
-            let _ = clear_acrylic(window);
+            // let acrylic_tint = Self::acrylic_tint_for_window(window, theme_preference);
+            let acrylic_tint = ACRYLIC_TINT_TRANSPARENT;
+            Self::set_window_effects(window, None)?;
 
             match effect {
                 WindowEffect::None => Ok(()),
-                WindowEffect::Mica => {
-                    if let Err(error) = apply_mica(window, None) {
-                        tracing::warn!(error = %error, "Failed to apply mica, fallback to acrylic");
-                        apply_acrylic(window, acrylic_tint).map_err(|fallback_error| {
-                            AppError::other(format!(
-                                "failed to apply acrylic fallback: {fallback_error}"
-                            ))
-                        })?;
-                    }
-                    Ok(())
-                }
-                WindowEffect::Acrylic => apply_acrylic(window, acrylic_tint)
-                    .map_err(|error| AppError::other(format!("failed to apply acrylic: {error}"))),
+                WindowEffect::Mica => Self::set_window_effects(
+                    window,
+                    Some(
+                        EffectsBuilder::new()
+                            .effect(Self::mica_effect_for_window(window, theme_preference))
+                            .build(),
+                    ),
+                ),
+                WindowEffect::Acrylic => Self::set_window_effects(
+                    window,
+                    Some(
+                        EffectsBuilder::new()
+                            .effect(Effect::Acrylic)
+                            .color(Color::from(acrylic_tint))
+                            .build(),
+                    ),
+                ),
             }
         }
 
@@ -286,9 +313,15 @@ impl WindowEffectShard {
         {
             let _ = theme_preference;
             return match effect {
-                WindowEffect::None => Ok(()),
-                WindowEffect::Vibrancy => apply_acrylic(window, VIBRANCY_TINT)
-                    .map_err(|error| AppError::other(format!("failed to apply acrylic: {error}"))),
+                WindowEffect::None => Self::set_window_effects(window, None),
+                WindowEffect::Vibrancy => Self::set_window_effects(
+                    window,
+                    Some(
+                        EffectsBuilder::new()
+                            .effect(Effect::WindowBackground)
+                            .build(),
+                    ),
+                ),
             };
         }
 

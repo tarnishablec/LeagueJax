@@ -6,7 +6,7 @@ export const root = style({
   height: 30,
   borderRadius: 7,
   border: `1px solid ${vars.color.border}`,
-  background: `oklch(from ${vars.color.backgroundRaw} 1 c h)`,
+  background: vars.color.background,
   color: vars.color.foreground,
   cursor: "pointer",
   display: "grid",
@@ -14,9 +14,6 @@ export const root = style({
   padding: 0,
   transition: "border-color 120ms, color 120ms, opacity 100ms",
   selectors: {
-    ":root.dark &": {
-      background: vars.color.background,
-    },
     "&:hover:not(:disabled)": {
       borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
       color: vars.color.primary,

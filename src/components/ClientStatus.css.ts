@@ -29,7 +29,7 @@ export const trigger = recipe({
     cursor: "pointer",
     selectors: {
       "&:hover": {
-        background: vars.color.accent,
+        background: `rgba(0, 0, 0, 0.2)`,
         color: vars.color.foreground,
       },
     },
@@ -264,16 +264,16 @@ export const instanceRow = recipe({
     focused: {
       true: {
         // borderLeft: `2px solid ${vars.color.primary}`,
-        background: `color-mix(in srgb, ${vars.color.primary} 15%, ${vars.color.backgroundRaw})`,
+        background: `color-mix(in srgb, ${vars.color.primary} 15%, ${vars.color.background})`,
       },
     },
     clickable: {
       true: {
         cursor: "pointer",
-        background: `color-mix(in srgb, ${vars.color.accent} 5%, ${vars.color.backgroundRaw})`,
+        background: `color-mix(in srgb, ${vars.color.accent} 5%, ${vars.color.background})`,
         selectors: {
           "&:hover": {
-            background: `color-mix(in srgb, ${vars.color.accent} 30%, ${vars.color.backgroundRaw})`,
+            background: `color-mix(in srgb, ${vars.color.accent} 30%, ${vars.color.background})`,
           },
         },
       },
