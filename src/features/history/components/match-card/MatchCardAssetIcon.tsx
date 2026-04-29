@@ -9,12 +9,14 @@ export function MatchCardAssetIcon({
   alt,
   className,
   fallbackClassName,
+  loadingClassName = fallbackClassName,
 }: {
   src?: IconSource;
   fallbacks?: IconSource[];
   alt: string;
   className: string;
   fallbackClassName: string;
+  loadingClassName?: string;
 }) {
   const candidates = [...new Set([src, ...fallbacks])].filter(
     (value): value is string => {
@@ -39,6 +41,7 @@ export function MatchCardAssetIcon({
       alt={alt}
       className={className}
       fallbackClassName={fallbackClassName}
+      loadingClassName={loadingClassName}
       onError={() =>
         setState({
           signature,
