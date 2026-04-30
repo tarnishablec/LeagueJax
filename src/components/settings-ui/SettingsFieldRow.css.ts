@@ -51,16 +51,20 @@ export const hintTriggerTone = styleVariants({
 
 export const hintPositioner = style({
   zIndex: 40,
+  pointerEvents: "none",
+  minWidth: "0 !important",
+  maxWidth: "min(32rem, calc(100vw - 32px))",
 });
 
 export const hintContent = style({
+  boxSizing: "border-box",
   borderRadius: 8,
   padding: "4px 8px",
   fontSize: "0.8125rem",
   lineHeight: 1.4,
-  display: "inline-block",
-  width: "max-content",
-  maxWidth: "min(32rem, calc(100vw - 32px))",
+  display: "block",
+  width: "fit-content",
+  maxWidth: "100%",
   whiteSpace: "pre-wrap",
   overflowWrap: "anywhere",
 });
