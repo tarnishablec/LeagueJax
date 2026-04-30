@@ -3,6 +3,9 @@ import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css.ts";
 
 const translucentSlotAccent = `color-mix(in oklch, ${vars.color.accent} 42%, transparent)`;
+const cardWinHoverBackground = `color-mix(in oklch, ${vars.color.win} 86%, ${vars.color.success})`;
+const cardLoseHoverBackground = `color-mix(in oklch, ${vars.color.lose} 86%, ${vars.color.error})`;
+const cardNeutralHoverBackground = `color-mix(in oklch, ${vars.color.surface} 88%, ${vars.color.foreground})`;
 
 export const wrapper = style({
   display: "grid",
@@ -38,7 +41,7 @@ export const card = recipe({
         background: vars.color.win,
         selectors: {
           "&:hover": {
-            background: vars.color.win,
+            background: cardWinHoverBackground,
           },
         },
       },
@@ -46,15 +49,25 @@ export const card = recipe({
         background: vars.color.lose,
         selectors: {
           "&:hover": {
-            background: vars.color.lose,
+            background: cardLoseHoverBackground,
           },
         },
       },
       remake: {
         background: vars.color.surface,
+        selectors: {
+          "&:hover": {
+            background: cardNeutralHoverBackground,
+          },
+        },
       },
       terminated: {
         background: vars.color.surface,
+        selectors: {
+          "&:hover": {
+            background: cardNeutralHoverBackground,
+          },
+        },
       },
     },
   },
