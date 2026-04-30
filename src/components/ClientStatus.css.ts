@@ -89,19 +89,19 @@ export const iconScale = recipe({
 });
 
 const spinRotate = keyframes({
-  "0%": {transform: "rotate(0deg)"},
-  "100%": {transform: "rotate(360deg)"},
+  "0%": { transform: "rotate(0deg)" },
+  "100%": { transform: "rotate(360deg)" },
 });
 
 const spinDash = keyframes({
-  "0%": {strokeDasharray: "1, 150", strokeDashoffset: "0"},
-  "50%": {strokeDasharray: "90, 150", strokeDashoffset: "-35"},
-  "100%": {strokeDasharray: "1, 150", strokeDashoffset: "-124"},
+  "0%": { strokeDasharray: "1, 150", strokeDashoffset: "0" },
+  "50%": { strokeDasharray: "90, 150", strokeDashoffset: "-35" },
+  "100%": { strokeDasharray: "1, 150", strokeDashoffset: "-124" },
 });
 
 const spin = keyframes({
-  "0%": {transform: "rotate(0deg)"},
-  "100%": {transform: "rotate(360deg)"},
+  "0%": { transform: "rotate(0deg)" },
+  "100%": { transform: "rotate(360deg)" },
 });
 
 export const avatarLoading = style({
@@ -140,8 +140,8 @@ export const label = recipe({
   },
   variants: {
     collapsed: {
-      false: {opacity: 1},
-      true: {opacity: 0, width: 0},
+      false: { opacity: 1 },
+      true: { opacity: 0, width: 0 },
     },
   },
   defaultVariants: {
@@ -330,8 +330,8 @@ export const instancePid = style({
 // ─── State indicator ────────────────────────────────────────────────────────
 
 const pulse = keyframes({
-  "0%, 100%": {opacity: 1},
-  "50%": {opacity: 0.4},
+  "0%, 100%": { opacity: 1 },
+  "50%": { opacity: 0.4 },
 });
 
 export const stateIndicator = recipe({
