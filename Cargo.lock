@@ -2030,7 +2030,7 @@ dependencies = [
 [[package]]
 name = "jax"
 version = "0.3.0"
-source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#a3c21becc1b1805eaeaca024903d19b948b65612"
+source = "git+https://github.com/tarnishablec/jax.git?branch=main#084c164190e345c145b03b222dec251859a50737"
 dependencies = [
  "async-trait",
  "downcast-rs",
@@ -2043,7 +2043,7 @@ dependencies = [
 [[package]]
 name = "jax-probes"
 version = "0.3.0"
-source = "git+https://github.com/tarnishablec/jax.git?branch=v0.3#a3c21becc1b1805eaeaca024903d19b948b65612"
+source = "git+https://github.com/tarnishablec/jax.git?branch=main#084c164190e345c145b03b222dec251859a50737"
 dependencies = [
  "async-trait",
  "jax",
@@ -2189,7 +2189,7 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "league-jax"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
