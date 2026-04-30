@@ -1,6 +1,11 @@
+import {
+  type SettingsControlLayoutProps,
+  settingsControlClassName,
+  settingsControlStyle,
+} from "./SettingsControl";
 import * as s from "./SettingsSwitch.css";
 
-interface SettingsSwitchProps {
+interface SettingsSwitchProps extends SettingsControlLayoutProps {
   ariaLabel: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
@@ -8,7 +13,12 @@ interface SettingsSwitchProps {
 
 export function SettingsToggle({
   ariaLabel,
+  className,
   checked,
+  fit,
+  height,
+  size,
+  width,
   onCheckedChange,
 }: SettingsSwitchProps) {
   return (
@@ -17,7 +27,8 @@ export function SettingsToggle({
       role="switch"
       aria-label={ariaLabel}
       aria-checked={checked}
-      className={s.button({ checked })}
+      className={`${settingsControlClassName({ className, fit, size })} ${s.button({ checked })}`}
+      style={settingsControlStyle({ fit, height, size, width })}
       onClick={() => onCheckedChange(!checked)}
     >
       <span className={s.text}>{checked ? "On" : "Off"}</span>

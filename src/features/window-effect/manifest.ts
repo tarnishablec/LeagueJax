@@ -41,6 +41,7 @@ export class WindowEffectShard implements WebShard {
       scope: "frontend",
       control: {
         kind: "color",
+        livePreview: true,
         presets: [...WINDOW_EFFECT_BASE_COLOR_PRESETS],
       },
       zod: windowEffectBaseColorSchema,

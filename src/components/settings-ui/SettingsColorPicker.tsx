@@ -4,6 +4,11 @@ import { Pipette } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as s from "./SettingsColorPicker.css";
+import {
+  type SettingsControlLayoutProps,
+  settingsControlClassName,
+  settingsControlStyle,
+} from "./SettingsControl";
 
 const HEX_COLOR_WITH_OPTIONAL_ALPHA = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const TRANSPARENT_HEX_COLOR = "#00000000";
@@ -11,8 +16,9 @@ const TRANSPARENT_HEX_COLOR = "#00000000";
 type ColorPickerOutputFormat = "hex" | "hexa";
 type ColorPickerVariant = "default" | "compact";
 
-interface SettingsColorPickerProps {
+interface SettingsColorPickerProps extends SettingsControlLayoutProps {
   ariaLabel: string;
+  livePreview?: boolean;
   outputFormat?: ColorPickerOutputFormat;
   value: string;
   presets?: string[];
@@ -50,18 +56,24 @@ function toHexColor(
 }
 
 export function SettingsColorPicker({
-                                      ariaLabel,
-                                      outputFormat = "hexa",
-                                      value,
-                                      presets = [],
-                                      presetsLabel,
-                                      respectAlpha = true,
-                                      triggerSettingId,
-                                      triggerTitle,
-                                      variant = "default",
-                                      onValueChange,
-                                    }: SettingsColorPickerProps) {
-  const {t} = useTranslation();
+  ariaLabel,
+  className,
+  fit,
+  height,
+  livePreview = false,
+  outputFormat = "hexa",
+  value,
+  presets = [],
+  presetsLabel,
+  respectAlpha = true,
+  size,
+  width,
+  triggerSettingId,
+  triggerTitle,
+  variant = "default",
+  onValueChange,
+}: SettingsColorPickerProps) {
+  const { t } = useTranslation();
   const normalizedValue = normalizeHexColor(value);
   const [open, setOpen] = useState(false);
   const [colorValue, setColorValue] = useState(() =>
@@ -88,29 +100,32 @@ export function SettingsColorPicker({
     <ColorPicker.Root
       lazyMount
       unmountOnExit
+      className={settingsControlClassName({ className, fit, size })}
+      style={settingsControlStyle({ fit, height, size, width })}
       format="hsba"
       open={open}
-      positioning={{placement: "bottom-end", gutter: 6}}
+      positioning={{ placement: "bottom-end", gutter: 6 }}
       value={colorValue}
       onOpenChange={(details) => {
         setOpen(details.open);
       }}
       onValueChange={(details) => {
         setColorValue(details.value);
+        if (livePreview) {
+          commitColor(details.value);
+        }
       }}
       onValueChangeEnd={(details) => {
-        commitColor(details.value);
-      }}
-      style={{
-        width: "100%",
-        height: "100%",
+        if (!livePreview) {
+          commitColor(details.value);
+        }
       }}
     >
       <ColorPicker.Label className={s.label}>{ariaLabel}</ColorPicker.Label>
       <ColorPicker.Control className={s.control}>
         <ColorPicker.Trigger
           aria-label={ariaLabel}
-          className={s.trigger({variant})}
+          className={s.trigger({ variant })}
           data-setting-id={triggerSettingId}
           title={triggerTitle}
         >
@@ -129,24 +144,24 @@ export function SettingsColorPicker({
             }}
           >
             <ColorPicker.Area className={s.area}>
-              <ColorPicker.AreaBackground className={s.areaBackground}/>
-              <ColorPicker.AreaThumb className={s.areaThumb}/>
+              <ColorPicker.AreaBackground className={s.areaBackground} />
+              <ColorPicker.AreaThumb className={s.areaThumb} />
             </ColorPicker.Area>
             <div className={s.slidersRow}>
               <ColorPicker.EyeDropperTrigger
                 aria-label={`${ariaLabel} eyedropper`}
                 className={s.eyeDropperTrigger}
               >
-                <Pipette size={16} aria-hidden="true"/>
+                <Pipette size={16} aria-hidden="true" />
               </ColorPicker.EyeDropperTrigger>
               <div className={s.sliderStack}>
                 <ColorPicker.ChannelSlider channel="hue" className={s.slider}>
-                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack}/>
-                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb}/>
+                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack} />
+                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb} />
                 </ColorPicker.ChannelSlider>
                 <ColorPicker.ChannelSlider channel="alpha" className={s.slider}>
-                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack}/>
-                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb}/>
+                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack} />
+                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb} />
                 </ColorPicker.ChannelSlider>
               </div>
             </div>
@@ -172,7 +187,7 @@ export function SettingsColorPicker({
                     <ColorPicker.SwatchTrigger
                       key={preset}
                       aria-label={`Use preset color ${preset}`}
-                      className={s.swatchTrigger({variant})}
+                      className={s.swatchTrigger({ variant })}
                       value={preset}
                       onClick={() => {
                         commitPreset(preset);
@@ -191,7 +206,7 @@ export function SettingsColorPicker({
           </ColorPicker.Content>
         </ColorPicker.Positioner>
       </Portal>
-      <ColorPicker.HiddenInput/>
+      <ColorPicker.HiddenInput />
     </ColorPicker.Root>
   );
 }

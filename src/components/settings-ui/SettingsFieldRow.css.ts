@@ -1,4 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
+import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css";
 
 export const row = style({
@@ -104,8 +105,26 @@ export const scopeBadge = style({
   },
 });
 
-export const control = style({
-  display: "grid",
-  height: "100%",
-  justifyContent: "stretch",
+export const control = recipe({
+  base: {
+    display: "grid",
+    minWidth: 0,
+    alignItems: "center",
+  },
+  variants: {
+    align: {
+      stretch: {
+        justifyItems: "stretch",
+      },
+      start: {
+        justifyItems: "start",
+      },
+      end: {
+        justifyItems: "end",
+      },
+    },
+  },
+  defaultVariants: {
+    align: "stretch",
+  },
 });

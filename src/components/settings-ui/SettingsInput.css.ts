@@ -2,7 +2,6 @@ import { style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 export const input = style({
-  height: 32,
   minWidth: 180,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
@@ -22,7 +21,6 @@ export const input = style({
 });
 
 export const numberRoot = style({
-  height: 32,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.surface,

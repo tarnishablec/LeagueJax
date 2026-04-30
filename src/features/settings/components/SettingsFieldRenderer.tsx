@@ -172,6 +172,7 @@ const ColorField = ({
   return (
     <SettingsColorPicker
       ariaLabel={ariaLabel}
+      livePreview={field.control.livePreview}
       value={String(value ?? "")}
       presets={field.control.presets}
       onValueChange={(next) => {

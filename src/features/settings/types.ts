@@ -16,7 +16,7 @@ export type SettingControl =
   | { kind: "select" }
   | { kind: "toggle" }
   | { kind: "text"; placeholderKey?: string }
-  | { kind: "color"; presets?: string[] }
+  | { kind: "color"; livePreview?: boolean; presets?: string[] }
   | {
       kind: "number";
       placeholderKey?: string;

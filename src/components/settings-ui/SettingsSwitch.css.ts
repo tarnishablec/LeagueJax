@@ -8,7 +8,6 @@ export const button = recipe({
     gridTemplateColumns: "minmax(0, 1fr) auto",
     alignItems: "center",
     gap: 8,
-    height: 32,
     borderRadius: 8,
     border: `1px solid ${vars.color.border}`,
     background: vars.color.surface,
