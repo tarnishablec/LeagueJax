@@ -2,6 +2,7 @@ import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShardInfoDto } from "@/bindings/shards";
+import { CopyButton } from "@/components/CopyButton";
 import { DataTable } from "@/components/DataTable";
 import * as dt from "@/components/DataTable/DataTable.css";
 import * as s from "./ShardsTable.css";
@@ -17,30 +18,38 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
   const { t } = useTranslation();
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-  const copyId = (id: string) => {
-    void navigator.clipboard.writeText(id);
-  };
-
   // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column
   const columns: ColumnDef<ShardInfoDto, any>[] = [
     col.accessor("label", {
       header: () => t("settings.shards.columns.name"),
-      cell: (info) => info.getValue(),
+      cell: (info) => {
+        const name = info.getValue();
+        return (
+          <span className={s.copyCell}>
+            <span className={s.copyText}>{name}</span>
+            <CopyButton
+              text={name}
+              className={s.copyButton}
+              aria-label="Copy shard name"
+            />
+          </span>
+        );
+      },
     }),
     col.accessor("id", {
       header: () => t("settings.shards.columns.id"),
+      meta: { className: dt.monospace },
       cell: (info) => {
         const id = info.getValue() as string;
         return (
-          <button
-            type="button"
-            className={`${dt.monospace} ${s.idCell}`}
-            onClick={() => copyId(id)}
-            title={id}
-            aria-label="Copy shard ID"
-          >
-            {id}
-          </button>
+          <span className={s.copyCell} title={id}>
+            <span className={s.copyText}>{id}</span>
+            <CopyButton
+              text={id}
+              className={s.copyButton}
+              aria-label="Copy shard ID"
+            />
+          </span>
         );
       },
     }),

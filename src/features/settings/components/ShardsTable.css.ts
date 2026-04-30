@@ -23,17 +23,44 @@ export const status = recipe({
   },
 });
 
-export const idCell = style({
-  cursor: "pointer",
-  width: "100%",
+export const copyCell = style({
+  display: "grid",
+  alignItems: "center",
+  gridTemplateColumns: "1fr 20px",
+  paddingRight: "1rem",
+  gap: 8,
+});
+
+export const copyText = style({
+  color: vars.color.foreground,
   overflow: "hidden",
   textWrap: "nowrap",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
-  textAlign: "start",
+});
+
+export const copyButton = style({
+  flexShrink: 0,
+  display: "grid",
+  placeItems: "center",
+  width: 18,
+  height: 18,
+  border: "none",
+  background: "none",
+  color: vars.color.mutedForeground,
+  cursor: "pointer",
+  borderRadius: 4,
+  opacity: 0,
   selectors: {
+    [`${copyCell}:hover &`]: {
+      opacity: 1,
+    },
+    [`${copyCell}:focus-within &`]: {
+      opacity: 1,
+    },
     "&:hover": {
-      color: vars.color.primary,
+      color: vars.color.foreground,
+      background: vars.color.accent,
     },
   },
 });
