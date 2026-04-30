@@ -33,7 +33,7 @@ export function SettingsFieldRow({
               openDelay={200}
               closeDelay={80}
               positioning={{
-                placement: "right",
+                placement: "bottom-start",
                 gutter: 8,
                 slide: false,
                 flip: false,
