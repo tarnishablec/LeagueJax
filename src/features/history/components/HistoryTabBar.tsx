@@ -67,6 +67,16 @@ function computeOverflowState(viewport: HTMLDivElement): OverflowState {
   };
 }
 
+function isOverflowStateEqual(
+  left: OverflowState,
+  right: OverflowState,
+): boolean {
+  return (
+    left.showLeftOverflow === right.showLeftOverflow &&
+    left.showRightOverflow === right.showRightOverflow
+  );
+}
+
 function getHorizontalWheelDelta(event: WheelEvent): number {
   if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
     return event.deltaY;
@@ -91,7 +101,10 @@ function useOverflowIndicators(
       return;
     }
 
-    setState(computeOverflowState(viewport));
+    const nextState = computeOverflowState(viewport);
+    setState((currentState) =>
+      isOverflowStateEqual(currentState, nextState) ? currentState : nextState,
+    );
   }, [viewportRef]);
 
   useEffect(() => {
