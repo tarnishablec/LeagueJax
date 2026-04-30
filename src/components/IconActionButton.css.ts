@@ -6,7 +6,7 @@ export const root = style({
   height: 30,
   borderRadius: 7,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  background: vars.color.surface,
   color: vars.color.foreground,
   cursor: "pointer",
   display: "grid",

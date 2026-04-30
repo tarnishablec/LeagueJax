@@ -17,7 +17,7 @@ export const headCell = style({
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
   padding: "9px 12px",
-  background: vars.color.background,
+  background: vars.color.surface,
   borderBottom: `1px solid ${vars.color.border}`,
   textAlign: "left",
   verticalAlign: "top",

@@ -98,7 +98,7 @@ export const navItem = recipe({
     gridTemplateColumns: `${iconCol} minmax(0, 1fr)`,
     selectors: {
       "&:hover": {
-        background: vars.color.surface,
+        background: vars.color.blurry,
         color: vars.color.foreground,
       },
     },
@@ -117,7 +117,7 @@ export const navItem = recipe({
     {
       variants: { active: true, collapsed: false },
       style: {
-        background: vars.color.surface,
+        background: vars.color.blurry,
         color: vars.color.accentForeground,
         fontWeight: 500,
         borderLeftColor: vars.color.primary,
