@@ -130,7 +130,7 @@ export const rankCard = style({
   gap: 10,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  background: vars.color.blurry,
   padding: "10px 12px",
 });
 
