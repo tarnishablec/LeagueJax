@@ -31,7 +31,14 @@ export function SettingsFieldRow({
               lazyMount
               unmountOnExit
               openDelay={200}
-              closeDelay={0}
+              closeDelay={80}
+              positioning={{
+                placement: "bottom",
+                gutter: 8,
+                slide: false,
+                flip: false,
+                strategy: "fixed",
+              }}
             >
               <Tooltip.Trigger asChild>
                 <span
