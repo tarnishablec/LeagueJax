@@ -51,7 +51,7 @@ export const dialogContent = style({
   gap: 10,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 16px 36px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+      boxShadow: `0 16px 36px oklch(from ${vars.color.background} 0.06 c h / 0.6)`,
     },
   },
 });

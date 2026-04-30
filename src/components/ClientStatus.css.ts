@@ -4,8 +4,8 @@ import { iconCol } from "@/layout/__root.css";
 import { vars } from "@/styles/theme.css";
 
 const tooltipSurface = `oklch(from ${vars.color.foreground} 0.26 0.012 h / 0.96)`;
-const tooltipSurfaceDark = `oklch(from ${vars.color.backgroundRaw} 0.18 0.012 h / 0.98)`;
-const tooltipShadowColor = `oklch(from ${vars.color.backgroundRaw} 0.05 c h / 0.46)`;
+const tooltipSurfaceDark = `oklch(from ${vars.color.background} 0.18 0.012 h / 0.98)`;
+const tooltipShadowColor = `oklch(from ${vars.color.background} 0.05 c h / 0.46)`;
 
 // ─── Trigger area (unchanged) ───────────────────────────────────────────────
 
@@ -89,19 +89,19 @@ export const iconScale = recipe({
 });
 
 const spinRotate = keyframes({
-  "0%": { transform: "rotate(0deg)" },
-  "100%": { transform: "rotate(360deg)" },
+  "0%": {transform: "rotate(0deg)"},
+  "100%": {transform: "rotate(360deg)"},
 });
 
 const spinDash = keyframes({
-  "0%": { strokeDasharray: "1, 150", strokeDashoffset: "0" },
-  "50%": { strokeDasharray: "90, 150", strokeDashoffset: "-35" },
-  "100%": { strokeDasharray: "1, 150", strokeDashoffset: "-124" },
+  "0%": {strokeDasharray: "1, 150", strokeDashoffset: "0"},
+  "50%": {strokeDasharray: "90, 150", strokeDashoffset: "-35"},
+  "100%": {strokeDasharray: "1, 150", strokeDashoffset: "-124"},
 });
 
 const spin = keyframes({
-  "0%": { transform: "rotate(0deg)" },
-  "100%": { transform: "rotate(360deg)" },
+  "0%": {transform: "rotate(0deg)"},
+  "100%": {transform: "rotate(360deg)"},
 });
 
 export const avatarLoading = style({
@@ -140,8 +140,8 @@ export const label = recipe({
   },
   variants: {
     collapsed: {
-      false: { opacity: 1 },
-      true: { opacity: 0, width: 0 },
+      false: {opacity: 1},
+      true: {opacity: 0, width: 0},
     },
   },
   defaultVariants: {
@@ -170,7 +170,7 @@ export const tooltip = style({
     ":root.dark &": {
       background: tooltipSurfaceDark,
       boxShadow: `
-        0 12px 30px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.72),
+        0 12px 30px oklch(from ${vars.color.background} 0.06 c h / 0.72),
         inset 0 1px 0 oklch(1 0 0 / 0.04)
       `,
     },
@@ -195,7 +195,7 @@ export const emptyTooltip = style({
     ":root.dark &": {
       background: tooltipSurfaceDark,
       boxShadow: `
-        0 12px 30px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.72),
+        0 12px 30px oklch(from ${vars.color.background} 0.06 c h / 0.72),
         inset 0 1px 0 oklch(1 0 0 / 0.04)
       `,
     },
@@ -330,8 +330,8 @@ export const instancePid = style({
 // ─── State indicator ────────────────────────────────────────────────────────
 
 const pulse = keyframes({
-  "0%, 100%": { opacity: 1 },
-  "50%": { opacity: 0.4 },
+  "0%, 100%": {opacity: 1},
+  "50%": {opacity: 0.4},
 });
 
 export const stateIndicator = recipe({

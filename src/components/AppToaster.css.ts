@@ -22,7 +22,7 @@ export const root = style({
   padding: "12px",
   borderRadius: 10,
   border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.backgroundRaw,
+  background: vars.color.background,
   boxShadow: "0 10px 24px oklch(0 0 0 / 0.22)",
 });
 

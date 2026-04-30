@@ -174,7 +174,7 @@ export const contextMenuContent = style({
   padding: 4,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 10px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
+      boxShadow: `0 10px 24px oklch(from ${vars.color.background} 0.06 c h / 0.6)`,
     },
   },
 });
