@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "league-jax",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "identifier": "com.tarnishablec.league-jax",
   "build": {
     "beforeDevCommand": "bun run dev",
