@@ -1,7 +1,12 @@
 import { NumberInput } from "@ark-ui/react/number-input";
+import {
+  type SettingsControlLayoutProps,
+  settingsControlClassName,
+  settingsControlStyle,
+} from "./SettingsControl";
 import * as s from "./SettingsInput.css";
 
-interface SettingsInputProps {
+interface SettingsInputProps extends SettingsControlLayoutProps {
   ariaLabel: string;
   type: "text" | "number";
   value: string;
@@ -14,18 +19,27 @@ interface SettingsInputProps {
 
 export function SettingsInput({
   ariaLabel,
+  className,
+  fit,
+  height,
   type,
+  size,
   value,
+  width,
   min,
   max,
   step,
   placeholder,
   onValueChange,
 }: SettingsInputProps) {
+  const rootClassName = settingsControlClassName({ className, fit, size });
+  const rootStyle = settingsControlStyle({ fit, height, size, width });
+
   if (type === "number") {
     return (
       <NumberInput.Root
-        className={s.numberRoot}
+        className={`${rootClassName} ${s.numberRoot}`}
+        style={rootStyle}
         value={value}
         min={min}
         max={max}
@@ -59,7 +73,8 @@ export function SettingsInput({
   return (
     <input
       aria-label={ariaLabel}
-      className={s.input}
+      className={`${rootClassName} ${s.input}`}
+      style={rootStyle}
       type="text"
       value={value}
       placeholder={placeholder}

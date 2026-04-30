@@ -1,10 +1,15 @@
 import { Check, Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import * as s from "./SettingsActionButton.css";
+import {
+  type SettingsControlLayoutProps,
+  settingsControlClassName,
+  settingsControlStyle,
+} from "./SettingsControl";
 
 const defaultSuccessFeedbackDurationMs = 1000;
 
-interface SettingsActionButtonProps {
+interface SettingsActionButtonProps extends SettingsControlLayoutProps {
   ariaLabel: string;
   label: string;
   onClick: () => Promise<void>;
@@ -18,11 +23,16 @@ interface SettingsActionButtonProps {
 
 export function SettingsActionButton({
   ariaLabel,
+  className,
   disabled = false,
+  fit,
+  height,
   label,
   loading = false,
   minLoadingMs = 0,
   successFeedback = false,
+  size,
+  width,
   onClick,
   onError,
   tone = "accent",
@@ -104,7 +114,8 @@ export function SettingsActionButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      className={s.tone[tone]}
+      className={`${settingsControlClassName({ className, fit, size })} ${s.tone[tone]}`}
+      style={settingsControlStyle({ fit, height, size, width })}
       disabled={busy || disabled}
       onClick={() => {
         void handleClick();

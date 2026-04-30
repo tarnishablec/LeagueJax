@@ -1,6 +1,11 @@
 import { Portal } from "@ark-ui/react/portal";
 import { createListCollection, Select } from "@ark-ui/react/select";
 import { Check, ChevronsUpDown } from "lucide-react";
+import {
+  type SettingsControlLayoutProps,
+  settingsControlClassName,
+  settingsControlStyle,
+} from "./SettingsControl";
 import * as s from "./SettingsSelect.css";
 
 export { createListCollection };
@@ -15,7 +20,7 @@ type SelectGroup = {
   items: SelectItem[];
 };
 
-type SettingsSelectProps = {
+type SettingsSelectProps = SettingsControlLayoutProps & {
   collection: ReturnType<typeof createListCollection<SelectItem>>;
   value: string[];
   onValueChange: (details: Select.ValueChangeDetails<SelectItem>) => void;
@@ -97,9 +102,14 @@ function GroupedItems({
 }
 
 export function SettingsSelect({
+  className,
   collection,
   value,
+  fit,
+  height,
   onValueChange,
+  size,
+  width,
   disabled,
   placeholder,
   formatValue,
@@ -122,7 +132,8 @@ export function SettingsSelect({
 
   return (
     <Select.Root
-      className={s.root}
+      className={`${settingsControlClassName({ className, fit, size })} ${s.root}`}
+      style={settingsControlStyle({ fit, height, size, width })}
       collection={collection}
       value={value}
       onValueChange={onValueChange}

@@ -76,6 +76,8 @@ function PlayerCardTagColorPicker(props: {
       triggerTitle={label}
       value={oklchColorToHex(color)}
       variant="compact"
+      width={20}
+      height={20}
       onValueChange={updateColor}
     />
   );

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import * as s from "./SettingsFieldRow.css";
 
 interface SettingsFieldRowProps {
+  controlAlign?: "stretch" | "start" | "end";
   label: string;
   hint?: string;
   hintTone?: "info" | "warning" | "error";
@@ -14,6 +15,7 @@ interface SettingsFieldRowProps {
 }
 
 export function SettingsFieldRow({
+  controlAlign = "stretch",
   label,
   hint,
   hintTone = "info",
@@ -62,7 +64,7 @@ export function SettingsFieldRow({
         <span className={s.scopeBadge}>{scopeTag ?? ""}</span>
       </span>
 
-      <div className={s.control}>{children}</div>
+      <div className={s.control({ align: controlAlign })}>{children}</div>
     </div>
   );
 }

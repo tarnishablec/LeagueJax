@@ -14,7 +14,6 @@ const spin = keyframes({
 
 const buttonBase = style({
   position: "relative",
-  height: 32,
   minWidth: 120,
   display: "inline-flex",
   alignItems: "center",

@@ -1,5 +1,28 @@
+import {
+  type SettingsControlLayoutProps,
+  settingsControlClassName,
+  settingsControlStyle,
+} from "./SettingsControl";
 import * as s from "./SettingsValueText.css";
 
-export function SettingsValueText({ value }: { value: string }) {
-  return <span className={s.text}>{value}</span>;
+interface SettingsValueTextProps extends SettingsControlLayoutProps {
+  value: string;
+}
+
+export function SettingsValueText({
+  className,
+  fit,
+  height,
+  size,
+  value,
+  width,
+}: SettingsValueTextProps) {
+  return (
+    <span
+      className={`${settingsControlClassName({ className, fit, size })} ${s.text}`}
+      style={settingsControlStyle({ fit, height, size, width })}
+    >
+      {value}
+    </span>
+  );
 }

@@ -114,6 +114,7 @@ const colorSettingDefinitionSchema = z
     control: z
       .object({
         kind: z.literal("color"),
+        livePreview: z.boolean().optional(),
         presets: z.array(z.string().min(1)).optional(),
       })
       .strict(),
