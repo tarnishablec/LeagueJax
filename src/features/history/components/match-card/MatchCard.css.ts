@@ -35,20 +35,26 @@ export const card = recipe({
   variants: {
     outcome: {
       victory: {
-        borderLeftWidth: 3,
-        borderLeftColor: "oklch(0.73 0.18 142)",
+        background: vars.color.win,
+        selectors: {
+          "&:hover": {
+            background: vars.color.win,
+          },
+        },
       },
       defeat: {
-        borderLeftWidth: 3,
-        borderLeftColor: "oklch(0.55 0.2 20)",
+        background: vars.color.lose,
+        selectors: {
+          "&:hover": {
+            background: vars.color.lose,
+          },
+        },
       },
       remake: {
-        borderLeftWidth: 3,
-        borderLeftColor: "oklch(0.62 0 0)",
+        background: vars.color.surface,
       },
       terminated: {
-        borderLeftWidth: 3,
-        borderLeftColor: "oklch(0.62 0 0)",
+        background: vars.color.surface,
       },
     },
   },
