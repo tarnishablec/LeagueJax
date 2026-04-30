@@ -163,7 +163,7 @@ export const tooltip = style({
   display: "grid",
   gridAutoRows: "auto",
   gap: 8,
-  color: "oklch(0.96 0 0)",
+  // color: "oklch(0.96 0 0)",
   fontSize: "0.975rem",
   zIndex: 1000,
   selectors: {
@@ -181,7 +181,7 @@ export const emptyTooltip = style({
   borderRadius: 6,
   // border: `1px solid color-mix(in oklch, ${vars.color.primary} 34%, ${vars.color.popoverBorder})`,
   background: tooltipSurface,
-  color: "oklch(0.96 0 0)",
+  color: vars.color.foreground,
   padding: "6px 11px",
   fontSize: "0.9rem",
   lineHeight: 1,

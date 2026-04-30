@@ -5,6 +5,7 @@ export const row = style({
   display: "grid",
   gridTemplateColumns: "14rem minmax(0, 1fr)",
   alignItems: "center",
+  height: 32,
   gap: 12,
 });
 
@@ -105,5 +106,6 @@ export const scopeBadge = style({
 
 export const control = style({
   display: "grid",
+  height: "100%",
   justifyContent: "stretch",
 });

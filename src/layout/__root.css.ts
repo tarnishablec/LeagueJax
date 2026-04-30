@@ -129,6 +129,12 @@ export const navItem = recipe({
         background: `oklch(from ${vars.color.primary} l c h / 0.15)`,
         color: vars.color.primary,
         fontWeight: 500,
+        selectors: {
+          "&:hover": {
+            background: `oklch(from ${vars.color.primary} l c h / 0.15)`,
+            color: vars.color.primary,
+          },
+        },
       },
     },
   ],
