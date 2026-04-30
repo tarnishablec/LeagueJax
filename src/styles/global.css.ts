@@ -12,7 +12,7 @@ globalStyle(":root", {
   WebkitFontSmoothing: "antialiased",
   WebkitTextSizeAdjust: "100%",
   color: vars.color.foreground,
-  background: "transparent",
+  background: vars.color.backdrop,
 });
 
 globalStyle("body", {
@@ -20,12 +20,8 @@ globalStyle("body", {
   background: "transparent",
 });
 
-globalStyle("span", {
-  textBoxTrim: "trim-both"
-});
-
-globalStyle(":root.window-effect-none", {
-  background: vars.color.background,
+globalStyle("*", {
+  textBoxTrim: "trim-both",
 });
 
 /* ── Reset — minimal, just what the app needs ── */

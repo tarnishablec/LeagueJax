@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css";
 
 export const srOnly = style({
@@ -20,26 +21,49 @@ export const control = style({
   placeItems: "center",
 });
 
-export const trigger = style({
-  position: "relative",
-  width: 36,
-  height: 24,
-  borderRadius: 6,
-  overflow: "hidden",
-  display: "grid",
-  placeItems: "center",
-  cursor: "pointer",
-  background:
-    "conic-gradient(oklch(0.82 0 0) 25%, oklch(0.96 0 0) 0 50%, oklch(0.82 0 0) 0 75%, oklch(0.96 0 0) 0) 0 0 / 10px 10px",
-  boxShadow: `inset 0 0 0 1px ${vars.color.border}`,
-  selectors: {
-    "&:hover": {
-      boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${vars.color.primary} 58%, ${vars.color.border})`,
+export const trigger = recipe({
+  base: {
+    borderRadius: 6,
+    overflow: "hidden",
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+    selectors: {
+      "&:focus-visible": {
+        outline: `2px solid ${vars.color.primary}`,
+        outlineOffset: 1,
+      },
     },
-    "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
-      outlineOffset: 1,
+  },
+  variants: {
+    variant: {
+      default: {
+        width: "100%",
+        height: 24,
+        background:
+          "conic-gradient(oklch(0.82 0 0) 25%, oklch(0.96 0 0) 0 50%, oklch(0.82 0 0) 0 75%, oklch(0.96 0 0) 0) 0 0 / 10px 10px",
+        boxShadow: `inset 0 0 0 1px ${vars.color.border}`,
+        selectors: {
+          "&:hover": {
+            boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${vars.color.primary} 58%, ${vars.color.border})`,
+          },
+        },
+      },
+      compact: {
+        position: "relative",
+        width: 20,
+        height: 20,
+        background: vars.color.background,
+        selectors: {
+          "&:hover": {
+            boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${vars.color.primary} 58%, transparent)`,
+          },
+        },
+      },
     },
+  },
+  defaultVariants: {
+    variant: "default",
   },
 });
 
@@ -194,26 +218,43 @@ export const swatchGroup = style({
   placeItems: "center",
 });
 
-export const swatchTrigger = style({
-  display: "grid",
-  placeItems: "center",
-  width: 28,
-  height: 28,
-  borderRadius: 5,
-  border: 0,
-  background:
-    "conic-gradient(oklch(0.82 0 0) 25%, oklch(0.96 0 0) 0 50%, oklch(0.82 0 0) 0 75%, oklch(0.96 0 0) 0) 0 0 / 8px 8px",
-  padding: 0,
-  cursor: "pointer",
-  selectors: {
-    "&[data-state=checked]": {
-      outline: "2px solid oklch(1 0 0)",
-      outlineOffset: 2,
+export const swatchTrigger = recipe({
+  base: {
+    width: 28,
+    height: 28,
+    borderRadius: 5,
+    border: 0,
+    padding: 0,
+    cursor: "pointer",
+    selectors: {
+      "&[data-state=checked]": {
+        outline: "2px solid oklch(1 0 0)",
+        outlineOffset: 2,
+      },
+      "&:focus-visible": {
+        outline: `2px solid ${vars.color.primary}`,
+        outlineOffset: 1,
+      },
     },
-    "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
-      outlineOffset: 1,
+  },
+  variants: {
+    variant: {
+      default: {
+        display: "grid",
+        placeItems: "center",
+        background:
+          "conic-gradient(oklch(0.82 0 0) 25%, oklch(0.96 0 0) 0 50%, oklch(0.82 0 0) 0 75%, oklch(0.96 0 0) 0) 0 0 / 8px 8px",
+      },
+      compact: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "transparent",
+      },
     },
+  },
+  defaultVariants: {
+    variant: "default",
   },
 });
 

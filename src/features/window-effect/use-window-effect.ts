@@ -1,14 +1,14 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useSettings } from "@/features/settings/context";
+import { THEME_BACKDROP_OVERRIDE_PROPERTY } from "@/styles/theme.css";
 import {
   normalizeWindowEffectBaseColor,
   WINDOW_EFFECT_BASE_COLOR_SETTING_ID,
-  WINDOW_EFFECT_NONE,
   WINDOW_EFFECT_SETTING_ID,
 } from "./color";
 
-const WINDOW_EFFECT_NONE_CLASS = "window-effect-none";
 const WINDOW_EFFECT_BASE_COLOR_PROPERTY = "--window-effect-base-color";
+const WINDOW_EFFECT_ATTRIBUTE = "data-window-effect";
 
 export function useWindowEffectBackgroundFallback() {
   const settings = useSettings();
@@ -28,16 +28,15 @@ export function useWindowEffectBackgroundFallback() {
 
   useEffect(() => {
     const root = document.documentElement;
-    const shouldUseSolidBackground = windowEffect === WINDOW_EFFECT_NONE;
-    const baseColor = shouldUseSolidBackground
-      ? "transparent"
-      : normalizeWindowEffectBaseColor(windowEffectBaseColor);
+    const baseColor = normalizeWindowEffectBaseColor(windowEffectBaseColor);
 
-    root.classList.toggle(WINDOW_EFFECT_NONE_CLASS, shouldUseSolidBackground);
+    root.setAttribute(WINDOW_EFFECT_ATTRIBUTE, windowEffect);
+    root.style.setProperty(THEME_BACKDROP_OVERRIDE_PROPERTY, baseColor);
     root.style.setProperty(WINDOW_EFFECT_BASE_COLOR_PROPERTY, baseColor);
 
     return () => {
-      root.classList.remove(WINDOW_EFFECT_NONE_CLASS);
+      root.removeAttribute(WINDOW_EFFECT_ATTRIBUTE);
+      root.style.removeProperty(THEME_BACKDROP_OVERRIDE_PROPERTY);
       root.style.removeProperty(WINDOW_EFFECT_BASE_COLOR_PROPERTY);
     };
   }, [windowEffect, windowEffectBaseColor]);

@@ -3,8 +3,8 @@ import { recipe } from "@vanilla-extract/recipes";
 import { iconCol } from "@/layout/__root.css";
 import { vars } from "@/styles/theme.css";
 
-const tooltipSurface = `oklch(from ${vars.color.foreground} 0.26 0.012 h / 0.96)`;
-const tooltipSurfaceDark = `oklch(from ${vars.color.background} 0.18 0.012 h / 0.98)`;
+const tooltipSurface = `color-mix(in srgb, ${vars.color.primary}, transparent 0.75)`;
+const tooltipSurfaceDark = `color-mix(in srgb, ${vars.color.primary}, transparent 0.875)`;
 const tooltipShadowColor = `oklch(from ${vars.color.background} 0.05 c h / 0.46)`;
 
 // ─── Trigger area (unchanged) ───────────────────────────────────────────────
@@ -311,7 +311,6 @@ export const instanceInfo = style({
   display: "grid",
   gap: 1,
   minWidth: 0,
-  paddingTop: 2,
 });
 
 export const instancePath = style({
