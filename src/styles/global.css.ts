@@ -20,6 +20,10 @@ globalStyle("body", {
   background: "transparent",
 });
 
+globalStyle("span", {
+  textBoxTrim: "trim-both"
+});
+
 globalStyle(":root.window-effect-none", {
   background: vars.color.background,
 });

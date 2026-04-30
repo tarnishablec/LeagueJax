@@ -10,9 +10,9 @@ export type SummonerIDStyle = {
 type SummonerIdentity = Pick<SummonerInfo, "gameName" | "tagLine">;
 
 export const SummonerID = ({
-  summoner,
-  styles,
-}: {
+                             summoner,
+                             styles,
+                           }: {
   summoner: SummonerIdentity;
   styles?: SummonerIDStyle;
 }) => {
@@ -25,6 +25,7 @@ export const SummonerID = ({
         gridTemplateColumns: "max-content auto",
         alignItems: "center",
         justifyContent: "start",
+        textBoxTrim: "trim-both",
         gap: 2,
       }}
     >
@@ -36,6 +37,7 @@ export const SummonerID = ({
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          textBoxTrim: "trim-both",
           ...styles?.gameName,
         }}
       >
@@ -50,6 +52,7 @@ export const SummonerID = ({
             whiteSpace: "nowrap",
             fontWeight: 400,
             color: vars.color.mutedForeground,
+            textBoxTrim: "trim-both",
             ...styles?.tagLine,
           }}
         >
