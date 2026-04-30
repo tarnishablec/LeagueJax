@@ -49,7 +49,7 @@ const toCmdLine = (
   const executable = installDir
     ? `${installDir}\\LeagueClientUx.exe`
     : "LeagueClientUx.exe";
-  const segments = rows.map(({key, raw, value}) => {
+  const segments = rows.map(({ key, raw, value }) => {
     if (typeof raw === "boolean") {
       return raw ? `--${key}` : `--${key}=false`;
     }
@@ -61,7 +61,7 @@ const toCmdLine = (
 const col = createColumnHelper<CmdArgRow>();
 
 export function SettingsClientArgsView() {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const focused = useLcuStore((state) =>
     state.instances.find((instance) => instance.isFocused),
   );
@@ -86,7 +86,7 @@ export function SettingsClientArgsView() {
             defaultValue: "Key",
           }),
         size: 280,
-        meta: {className: dt.monospace},
+        meta: { className: dt.monospace },
         cell: (info) => info.getValue(),
       }),
       col.accessor("value", {
@@ -94,7 +94,7 @@ export function SettingsClientArgsView() {
           t("settings.clientArgs.columns.value", {
             defaultValue: "Value",
           }),
-        meta: {className: dt.monospace},
+        meta: { className: dt.monospace },
         cell: (info) => info.getValue(),
       }),
     ],
