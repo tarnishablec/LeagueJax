@@ -73,9 +73,11 @@ export const controls = style({
   gridAutoFlow: "column",
   alignItems: "center",
   gap: 8,
+  height: 30,
 });
 
 export const filterSelect = style({
   width: 140,
   minWidth: 140,
+  height: 30,
 });
