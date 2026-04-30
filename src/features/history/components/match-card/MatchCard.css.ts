@@ -19,11 +19,11 @@ export const card = recipe({
     padding: 12,
     borderRadius: 8,
     border: `1px solid ${vars.color.border}`,
-    background: vars.color.background,
+    background: vars.color.blurry,
     transition: "background 140ms, border-color 140ms",
     selectors: {
       "&:hover": {
-        background: vars.color.accent,
+        background: vars.color.surface,
       },
     },
     "@media": {
@@ -445,9 +445,6 @@ export const playerNameButton = style({
   whiteSpace: "nowrap",
   cursor: "pointer",
   selectors: {
-    "&:hover": {
-      color: vars.color.primary,
-    },
     "&:focus-visible": {
       outline: `2px solid ${vars.color.primary}`,
       outlineOffset: 1,
@@ -467,12 +464,6 @@ export const playerHoverContent = style({
   color: vars.color.foreground,
   padding: "4px 6px",
   fontSize: "0.6875rem",
-  boxShadow: `0 8px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
-  selectors: {
-    ":root.dark &": {
-      boxShadow: `0 8px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
-    },
-  },
 });
 
 export const augmentHoverTrigger = style({
@@ -499,12 +490,6 @@ export const augmentHoverContent = style({
   padding: "4px 6px",
   fontSize: "0.6875rem",
   maxWidth: 220,
-  boxShadow: `0 8px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
-  selectors: {
-    ":root.dark &": {
-      boxShadow: `0 8px 24px oklch(from ${vars.color.backgroundRaw} 0.06 c h / 0.6)`,
-    },
-  },
 });
 
 export const damageBar = style({

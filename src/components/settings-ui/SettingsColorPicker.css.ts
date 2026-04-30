@@ -61,7 +61,7 @@ export const content = style({
   padding: "1rem",
   borderRadius: 6,
   background: vars.color.popupBackground,
-  boxShadow: `0 12px 28px color-mix(in oklch, ${vars.color.backgroundRaw} 82%, transparent)`,
+  boxShadow: `0 12px 28px color-mix(in oklch, ${vars.color.background} 82%, transparent)`,
 });
 
 export const area = style({
