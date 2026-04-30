@@ -50,18 +50,18 @@ function toHexColor(
 }
 
 export function SettingsColorPicker({
-  ariaLabel,
-  outputFormat = "hexa",
-  value,
-  presets = [],
-  presetsLabel,
-  respectAlpha = true,
-  triggerSettingId,
-  triggerTitle,
-  variant = "default",
-  onValueChange,
-}: SettingsColorPickerProps) {
-  const { t } = useTranslation();
+                                      ariaLabel,
+                                      outputFormat = "hexa",
+                                      value,
+                                      presets = [],
+                                      presetsLabel,
+                                      respectAlpha = true,
+                                      triggerSettingId,
+                                      triggerTitle,
+                                      variant = "default",
+                                      onValueChange,
+                                    }: SettingsColorPickerProps) {
+  const {t} = useTranslation();
   const normalizedValue = normalizeHexColor(value);
   const [open, setOpen] = useState(false);
   const [colorValue, setColorValue] = useState(() =>
@@ -90,7 +90,7 @@ export function SettingsColorPicker({
       unmountOnExit
       format="hsba"
       open={open}
-      positioning={{ placement: "bottom-end", gutter: 6 }}
+      positioning={{placement: "bottom-end", gutter: 6}}
       value={colorValue}
       onOpenChange={(details) => {
         setOpen(details.open);
@@ -101,12 +101,16 @@ export function SettingsColorPicker({
       onValueChangeEnd={(details) => {
         commitColor(details.value);
       }}
+      style={{
+        width: "100%",
+        height: "100%",
+      }}
     >
       <ColorPicker.Label className={s.label}>{ariaLabel}</ColorPicker.Label>
       <ColorPicker.Control className={s.control}>
         <ColorPicker.Trigger
           aria-label={ariaLabel}
-          className={s.trigger({ variant })}
+          className={s.trigger({variant})}
           data-setting-id={triggerSettingId}
           title={triggerTitle}
         >
@@ -125,24 +129,24 @@ export function SettingsColorPicker({
             }}
           >
             <ColorPicker.Area className={s.area}>
-              <ColorPicker.AreaBackground className={s.areaBackground} />
-              <ColorPicker.AreaThumb className={s.areaThumb} />
+              <ColorPicker.AreaBackground className={s.areaBackground}/>
+              <ColorPicker.AreaThumb className={s.areaThumb}/>
             </ColorPicker.Area>
             <div className={s.slidersRow}>
               <ColorPicker.EyeDropperTrigger
                 aria-label={`${ariaLabel} eyedropper`}
                 className={s.eyeDropperTrigger}
               >
-                <Pipette size={16} aria-hidden="true" />
+                <Pipette size={16} aria-hidden="true"/>
               </ColorPicker.EyeDropperTrigger>
               <div className={s.sliderStack}>
                 <ColorPicker.ChannelSlider channel="hue" className={s.slider}>
-                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack} />
-                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb} />
+                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack}/>
+                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb}/>
                 </ColorPicker.ChannelSlider>
                 <ColorPicker.ChannelSlider channel="alpha" className={s.slider}>
-                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack} />
-                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb} />
+                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack}/>
+                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb}/>
                 </ColorPicker.ChannelSlider>
               </div>
             </div>
@@ -168,7 +172,7 @@ export function SettingsColorPicker({
                     <ColorPicker.SwatchTrigger
                       key={preset}
                       aria-label={`Use preset color ${preset}`}
-                      className={s.swatchTrigger({ variant })}
+                      className={s.swatchTrigger({variant})}
                       value={preset}
                       onClick={() => {
                         commitPreset(preset);
@@ -187,7 +191,7 @@ export function SettingsColorPicker({
           </ColorPicker.Content>
         </ColorPicker.Positioner>
       </Portal>
-      <ColorPicker.HiddenInput />
+      <ColorPicker.HiddenInput/>
     </ColorPicker.Root>
   );
 }
