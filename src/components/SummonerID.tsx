@@ -10,9 +10,9 @@ export type SummonerIDStyle = {
 type SummonerIdentity = Pick<SummonerInfo, "gameName" | "tagLine">;
 
 export const SummonerID = ({
-                             summoner,
-                             styles,
-                           }: {
+  summoner,
+  styles,
+}: {
   summoner: SummonerIdentity;
   styles?: SummonerIDStyle;
 }) => {

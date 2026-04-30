@@ -8,10 +8,19 @@ import * as s from "./SettingsColorPicker.css";
 const HEX_COLOR_WITH_OPTIONAL_ALPHA = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const TRANSPARENT_HEX_COLOR = "#00000000";
 
+type ColorPickerOutputFormat = "hex" | "hexa";
+type ColorPickerVariant = "default" | "compact";
+
 interface SettingsColorPickerProps {
   ariaLabel: string;
+  outputFormat?: ColorPickerOutputFormat;
   value: string;
   presets?: string[];
+  presetsLabel?: string;
+  respectAlpha?: boolean;
+  triggerSettingId?: string;
+  triggerTitle?: string;
+  variant?: ColorPickerVariant;
   onValueChange: (value: string) => void;
 }
 
@@ -33,14 +42,23 @@ function toColorValue(value: string) {
   return parseColor(normalizeHexColor(value));
 }
 
-function toHexa(value: { toString: (format: "hexa") => string }): string {
-  return normalizeHexColor(value.toString("hexa"));
+function toHexColor(
+  value: { toString: (format: ColorPickerOutputFormat) => string },
+  outputFormat: ColorPickerOutputFormat,
+): string {
+  return normalizeHexColor(value.toString(outputFormat));
 }
 
 export function SettingsColorPicker({
   ariaLabel,
+  outputFormat = "hexa",
   value,
   presets = [],
+  presetsLabel,
+  respectAlpha = true,
+  triggerSettingId,
+  triggerTitle,
+  variant = "default",
   onValueChange,
 }: SettingsColorPickerProps) {
   const { t } = useTranslation();
@@ -56,7 +74,7 @@ export function SettingsColorPicker({
   }, [normalizedValue]);
 
   const commitColor = (nextColor = colorValue) => {
-    onValueChange(toHexa(nextColor));
+    onValueChange(toHexColor(nextColor, outputFormat));
   };
 
   const commitPreset = (preset: string) => {
@@ -86,8 +104,16 @@ export function SettingsColorPicker({
     >
       <ColorPicker.Label className={s.label}>{ariaLabel}</ColorPicker.Label>
       <ColorPicker.Control className={s.control}>
-        <ColorPicker.Trigger aria-label={ariaLabel} className={s.trigger}>
-          <ColorPicker.ValueSwatch className={s.valueSwatch} respectAlpha />
+        <ColorPicker.Trigger
+          aria-label={ariaLabel}
+          className={s.trigger({ variant })}
+          data-setting-id={triggerSettingId}
+          title={triggerTitle}
+        >
+          <ColorPicker.ValueSwatch
+            className={s.valueSwatch}
+            respectAlpha={respectAlpha}
+          />
         </ColorPicker.Trigger>
       </ColorPicker.Control>
       <Portal>
@@ -135,14 +161,14 @@ export function SettingsColorPicker({
             {normalizedPresets.length > 0 ? (
               <>
                 <div className={s.presetsLabel}>
-                  {t("settings.colorPicker.presets")}
+                  {presetsLabel ?? t("settings.colorPicker.presets")}
                 </div>
                 <ColorPicker.SwatchGroup className={s.swatchGroup}>
                   {normalizedPresets.map((preset) => (
                     <ColorPicker.SwatchTrigger
                       key={preset}
                       aria-label={`Use preset color ${preset}`}
-                      className={s.swatchTrigger}
+                      className={s.swatchTrigger({ variant })}
                       value={preset}
                       onClick={() => {
                         commitPreset(preset);
@@ -151,7 +177,7 @@ export function SettingsColorPicker({
                       <ColorPicker.Swatch
                         className={s.swatch}
                         value={preset}
-                        respectAlpha
+                        respectAlpha={respectAlpha}
                       />
                     </ColorPicker.SwatchTrigger>
                   ))}

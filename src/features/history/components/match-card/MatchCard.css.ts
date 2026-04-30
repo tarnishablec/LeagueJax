@@ -2,10 +2,24 @@ import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "@/styles/theme.css.ts";
 
-const translucentSlotAccent = `color-mix(in oklch, ${vars.color.accent} 42%, transparent)`;
-const cardWinHoverBackground = `color-mix(in oklch, ${vars.color.win} 86%, ${vars.color.success})`;
-const cardLoseHoverBackground = `color-mix(in oklch, ${vars.color.lose} 86%, ${vars.color.error})`;
-const cardNeutralHoverBackground = `color-mix(in oklch, ${vars.color.surface} 88%, ${vars.color.foreground})`;
+const translucentSlotAccent = `color-mix(in srgb, ${vars.color.accent} 42%, transparent)`;
+const cardWinBackground = "rgba(91, 195, 82, 0.2)";
+const cardLoseBackground = "rgba(255, 37, 43, 0.18)";
+const cardWinHoverBackground = "rgba(91, 195, 82, 0.28)";
+const cardLoseHoverBackground = "rgba(255, 37, 43, 0.25)";
+const cardNeutralHoverBackground = `color-mix(in srgb, ${vars.color.surface} 88%, ${vars.color.foreground})`;
+const cardWinBackgroundDark = "rgba(91, 195, 82, 0.14)";
+const cardLoseBackgroundDark = "rgba(255, 37, 43, 0.13)";
+const cardWinHoverBackgroundDark = "rgba(91, 195, 82, 0.2)";
+const cardLoseHoverBackgroundDark = "rgba(255, 37, 43, 0.19)";
+const cardWinBackgroundMicaLight = "rgba(91, 195, 82, 0.34)";
+const cardLoseBackgroundMicaLight = "rgba(255, 37, 43, 0.32)";
+const cardWinHoverBackgroundMicaLight = "rgba(91, 195, 82, 0.44)";
+const cardLoseHoverBackgroundMicaLight = "rgba(255, 37, 43, 0.42)";
+const cardWinBackgroundMica = "rgba(91, 195, 82, 0.08)";
+const cardLoseBackgroundMica = "rgba(255, 37, 43, 0.075)";
+const cardWinHoverBackgroundMica = "rgba(91, 195, 82, 0.12)";
+const cardLoseHoverBackgroundMica = "rgba(255, 37, 43, 0.11)";
 
 export const wrapper = style({
   display: "grid",
@@ -38,18 +52,54 @@ export const card = recipe({
   variants: {
     outcome: {
       victory: {
-        background: vars.color.win,
+        background: cardWinBackground,
         selectors: {
           "&:hover": {
             background: cardWinHoverBackground,
           },
+          ":root.dark &": {
+            background: cardWinBackgroundDark,
+          },
+          ":root.dark &:hover": {
+            background: cardWinHoverBackgroundDark,
+          },
+          ':root:not(.dark)[data-window-effect="mica"] &': {
+            background: cardWinBackgroundMicaLight,
+          },
+          ':root:not(.dark)[data-window-effect="mica"] &:hover': {
+            background: cardWinHoverBackgroundMicaLight,
+          },
+          ':root.dark[data-window-effect="mica"] &': {
+            background: cardWinBackgroundMica,
+          },
+          ':root.dark[data-window-effect="mica"] &:hover': {
+            background: cardWinHoverBackgroundMica,
+          },
         },
       },
       defeat: {
-        background: vars.color.lose,
+        background: cardLoseBackground,
         selectors: {
           "&:hover": {
             background: cardLoseHoverBackground,
+          },
+          ":root.dark &": {
+            background: cardLoseBackgroundDark,
+          },
+          ":root.dark &:hover": {
+            background: cardLoseHoverBackgroundDark,
+          },
+          ':root:not(.dark)[data-window-effect="mica"] &': {
+            background: cardLoseBackgroundMicaLight,
+          },
+          ':root:not(.dark)[data-window-effect="mica"] &:hover': {
+            background: cardLoseHoverBackgroundMicaLight,
+          },
+          ':root.dark[data-window-effect="mica"] &': {
+            background: cardLoseBackgroundMica,
+          },
+          ':root.dark[data-window-effect="mica"] &:hover': {
+            background: cardLoseHoverBackgroundMica,
           },
         },
       },
@@ -357,6 +407,7 @@ export const detail = style({
   border: `1px solid ${vars.color.border}`,
   display: "grid",
   gap: 8,
+  background: vars.color.surface,
 });
 
 export const participantIcon = style({

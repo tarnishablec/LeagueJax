@@ -21,7 +21,7 @@ export const bar = style({
   gap: 16,
   padding: 12,
   borderRadius: 8,
-  background: vars.color.accent,
+  background: vars.color.surface,
   border: `1px solid ${vars.color.border}`,
   "@media": {
     "(max-width: 1000px)": {
@@ -37,7 +37,6 @@ export const avatarSlot = style({
   borderRadius: 8,
   overflow: "hidden",
   background: vars.color.border,
-  position: "relative",
 });
 
 export const iconFallback = style({
@@ -46,6 +45,7 @@ export const iconFallback = style({
 });
 
 export const profileIcon = style({
+  display: "block",
   width: "100%",
   height: "100%",
   objectFit: "cover",
@@ -130,7 +130,7 @@ export const rankCard = style({
   gap: 10,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.blurry,
+  background: vars.color.surface,
   padding: "10px 12px",
 });
 
@@ -143,6 +143,7 @@ export const rankIconWrap = style({
 });
 
 export const rankIcon = style({
+  display: "block",
   width: "100%",
   height: "100%",
   objectFit: "contain",

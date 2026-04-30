@@ -6,14 +6,13 @@ export const transparentPlaceholder = style({
 });
 
 export const imageFrame = style({
-  position: "relative",
-  display: "inline-block",
+  display: "block",
+  lineHeight: 0,
   overflow: "hidden",
 });
 
 export const framedImage = style({
-  position: "absolute",
-  inset: 0,
+  display: "block",
   width: "100%",
   height: "100%",
 });
