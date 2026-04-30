@@ -28,6 +28,8 @@ export const trigger = recipe({
     overflow: "hidden",
     display: "grid",
     placeItems: "center",
+    width: "100%",
+    height: "100%",
     cursor: "pointer",
     selectors: {
       "&:focus-visible": {
@@ -39,8 +41,6 @@ export const trigger = recipe({
   variants: {
     variant: {
       default: {
-        width: "100%",
-        height: "100%",
         background:
           "conic-gradient(oklch(0.82 0 0) 25%, oklch(0.96 0 0) 0 50%, oklch(0.82 0 0) 0 75%, oklch(0.96 0 0) 0) 0 0 / 10px 10px",
         boxShadow: `inset 0 0 0 1px ${vars.color.border}`,
@@ -51,9 +51,7 @@ export const trigger = recipe({
         },
       },
       compact: {
-        height: "auto",
         position: "relative",
-        width: 20,
         background: vars.color.background,
         selectors: {
           "&:hover": {

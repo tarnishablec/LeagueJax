@@ -21,7 +21,7 @@ export const list = style({
 
 export const itemRow = style({
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gridTemplateColumns: "minmax(0, 1fr) 20px",
   alignItems: "center",
   gap: 8,
   minWidth: 0,
@@ -86,5 +86,7 @@ export const colorPickerGroup = style({
   display: "grid",
   gridAutoFlow: "column",
   alignItems: "center",
+  width: "100%",
+  height: 20,
   gap: 6,
 });

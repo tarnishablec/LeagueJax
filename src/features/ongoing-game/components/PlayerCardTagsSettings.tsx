@@ -1,5 +1,6 @@
 import { Checkbox } from "@ark-ui/react/checkbox";
 import { Check } from "lucide-react";
+import type React from "react";
 import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsColorPicker } from "@/components/settings-ui";
@@ -51,6 +52,7 @@ function usePlayerCardTagColor(item: PlayerCardTagColorSettingItem): string {
 function PlayerCardTagColorPicker(props: {
   colorSetting: PlayerCardTagColorSettingItem;
   label: string;
+  style?: React.CSSProperties;
 }) {
   const { colorSetting, label } = props;
   const { t } = useTranslation();
