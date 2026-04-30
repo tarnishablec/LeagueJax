@@ -1,7 +1,7 @@
 {
   "name": "league-jax",
   "private": true,
-  "version": "0.1.21",
+  "version": "0.1.22",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -39,7 +39,7 @@
     "@xyflow/react": "^12.10.2",
     "graphology": "^0.26.0",
     "i18next": "^26.0.8",
-    "lucide-react": "^1.11.0",
+    "lucide-react": "^1.14.0",
     "pino": "^10.3.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
@@ -52,7 +52,7 @@
     "smol-toml": "^1.6.1",
     "swr": "^2.4.1",
     "uuid": "^14.0.0",
-    "zod": "^4.3.6",
+    "zod": "^4.4.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
