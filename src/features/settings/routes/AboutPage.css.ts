@@ -13,7 +13,7 @@ export const overviewCard = style({
   padding: 14,
   borderRadius: 10,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  background: vars.color.blurry,
 });
 
 export const overview = style({
@@ -154,7 +154,7 @@ export const softwareItem = style({
   font: "inherit",
   borderRadius: 10,
   border: `1px solid ${vars.color.border}`,
-  background: `oklch(from ${vars.color.accent} l c h / 0.36)`,
+  background: vars.color.surface,
   color: "inherit",
   textAlign: "left",
   cursor: "pointer",
@@ -217,12 +217,13 @@ export const softwareMeta = style({
 export const softwarePill = style({
   display: "inline-grid",
   placeItems: "center",
-  minHeight: "1.75rem",
   paddingInline: 10,
   borderRadius: 999,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  background: vars.color.blurry,
   color: vars.color.foreground,
   fontSize: "0.8rem",
+  lineHeight: 1,
+  minHeight: "1.5rem",
   whiteSpace: "nowrap",
 });

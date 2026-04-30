@@ -11,7 +11,7 @@ export const card = style({
   gap: 10,
   border: `1px solid ${vars.color.border}`,
   borderRadius: 10,
-  background: vars.color.background,
+  background: vars.color.surface,
   padding: 12,
 });
 
@@ -27,7 +27,7 @@ export const commandBox = style({
   resize: "vertical",
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  background: vars.color.surface,
   color: vars.color.foreground,
   padding: "8px 10px",
   fontSize: "0.75rem",

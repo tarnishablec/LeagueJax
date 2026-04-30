@@ -41,8 +41,8 @@ export const segmentActive = style([
   segment,
   {
     color: vars.color.foreground,
-    background: vars.color.background,
-    boxShadow: `0 1px 2px oklch(0 0 0 / 0.06)`,
+    background: vars.color.deep,
+    // boxShadow: `0 1px 2px oklch(0 0 0 / 0.06)`,
   },
 ]);
 
