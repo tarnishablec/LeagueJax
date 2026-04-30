@@ -8,11 +8,12 @@ export const root = style({
 export const control = style({
   width: "100%",
   minWidth: 0,
+  height: "100%",
 });
 
 export const trigger = style({
   width: "100%",
-  height: 32,
+  height: "100%",
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
   background: vars.color.surface,

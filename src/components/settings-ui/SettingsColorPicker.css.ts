@@ -19,6 +19,7 @@ export const label = style([srOnly]);
 export const control = style({
   display: "grid",
   placeItems: "center",
+  height: "100%",
 });
 
 export const trigger = recipe({
@@ -39,7 +40,7 @@ export const trigger = recipe({
     variant: {
       default: {
         width: "100%",
-        height: 24,
+        height: "100%",
         background:
           "conic-gradient(oklch(0.82 0 0) 25%, oklch(0.96 0 0) 0 50%, oklch(0.82 0 0) 0 75%, oklch(0.96 0 0) 0) 0 0 / 10px 10px",
         boxShadow: `inset 0 0 0 1px ${vars.color.border}`,
@@ -50,9 +51,9 @@ export const trigger = recipe({
         },
       },
       compact: {
+        height: "auto",
         position: "relative",
         width: 20,
-        height: 20,
         background: vars.color.background,
         selectors: {
           "&:hover": {
@@ -68,7 +69,6 @@ export const trigger = recipe({
 });
 
 export const valueSwatch = style({
-  position: "relative",
   width: "100%",
   height: "100%",
 });
