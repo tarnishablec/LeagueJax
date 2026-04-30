@@ -29,6 +29,9 @@ export const settingsAboutI18n: Resource = {
               "Runtime state machine and behavior-tree framework used to model app workflows and state transitions.",
             react: "User interface runtime",
             reactRouter: "App routing",
+            rust: "Native backend language for performance-sensitive desktop integration and system access.",
+            serde:
+              "Rust serialization framework used for typed data exchange across backend APIs and persisted payloads.",
             sled: "Embedded ordered key-value database used on the Rust side for local persistence.",
             snafu:
               "Rust error handling library used to build structured, context-rich application errors.",
@@ -36,7 +39,12 @@ export const settingsAboutI18n: Resource = {
             tauri: "Desktop shell and native bridge",
             thaterror:
               "Schema-first, type-safe error toolkit used to keep frontend error modeling and diagnostics consistent.",
+            tokio:
+              "Asynchronous Rust runtime powering backend tasks, timers, networking, and event-driven workflows.",
+            tracing:
+              "Structured Rust diagnostics framework used for backend logging and runtime observability.",
             typescript: "Type-safe frontend development",
+            tsRs: "Rust-to-TypeScript binding generator used to keep shared data models type-safe across the native bridge.",
             vanillaExtract: "Type-safe styling system",
             vite: "Frontend dev server and bundler",
             zod: "Schema validation",
@@ -139,3 +147,44 @@ export const settingsAboutI18n: Resource = {
     },
   },
 };
+
+type AboutI18nMutable = Record<
+  "zh-CN" | "ja-JP",
+  {
+    settings: {
+      about: {
+        openSource: {
+          roles: Record<string, string>;
+        };
+      };
+    };
+  }
+>;
+
+const settingsAboutI18nMutable =
+  settingsAboutI18n as unknown as AboutI18nMutable;
+
+Object.assign(
+  settingsAboutI18nMutable["zh-CN"].settings.about.openSource.roles,
+  {
+    rust: "用于性能敏感桌面集成和系统访问的原生后端语言。",
+    serde: "Rust 序列化框架，用于后端 API 和持久化数据的类型化交换。",
+    tokio: "Rust 异步运行时，支撑后端任务、计时器、网络和事件驱动工作流。",
+    tracing: "Rust 结构化诊断框架，用于后端日志和运行时观测。",
+    tsRs: "Rust 到 TypeScript 的绑定生成工具，用于保持原生桥接两侧共享数据模型的类型安全。",
+  },
+);
+
+Object.assign(
+  settingsAboutI18nMutable["ja-JP"].settings.about.openSource.roles,
+  {
+    rust: "性能重視のデスクトップ統合とシステムアクセスを支えるネイティブバックエンド言語。",
+    serde:
+      "Rust のシリアライズ基盤で、バックエンド API と永続化データの型付き交換に使用。",
+    tokio:
+      "バックエンドのタスク、タイマー、ネットワーク、イベント駆動処理を支える Rust 非同期ランタイム。",
+    tracing:
+      "バックエンドログと実行時の観測性に使う Rust の構造化診断フレームワーク。",
+    tsRs: "Rust から TypeScript へのバインディング生成で、ネイティブブリッジ両側の共有モデルを型安全に保つ。",
+  },
+);

@@ -3,6 +3,7 @@ import { vars } from "@/styles/theme.css";
 
 export const root = style({
   minWidth: 0,
+  height: "100%",
 });
 
 export const control = style({

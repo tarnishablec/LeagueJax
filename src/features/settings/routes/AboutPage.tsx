@@ -27,12 +27,17 @@ type OpenSourceItem = {
     | "maokai"
     | "react"
     | "reactRouter"
+    | "rust"
+    | "serde"
     | "sled"
     | "snafu"
     | "swr"
     | "tauri"
     | "thaterror"
+    | "tokio"
+    | "tracing"
     | "typescript"
+    | "tsRs"
     | "vanillaExtract"
     | "vite"
     | "zod"
@@ -130,6 +135,14 @@ const OPEN_SOURCE_SOFTWARE: OpenSourceItem[] = [
     url: "https://www.typescriptlang.org/",
   },
   {
+    name: "Rust",
+    version: null,
+    license: "MIT OR Apache-2.0",
+    linkKind: "website",
+    roleKey: "rust",
+    url: "https://www.rust-lang.org/",
+  },
+  {
     name: "Vite",
     version: normalizeVersion(devDependencyVersions.vite),
     license: "MIT",
@@ -176,6 +189,38 @@ const OPEN_SOURCE_SOFTWARE: OpenSourceItem[] = [
     linkKind: "github",
     roleKey: "zustand",
     url: "https://github.com/pmndrs/zustand",
+  },
+  {
+    name: "Tokio",
+    version: resolveCargoDependencyVersion("tokio"),
+    license: "MIT",
+    linkKind: "website",
+    roleKey: "tokio",
+    url: "https://tokio.rs",
+  },
+  {
+    name: "Serde",
+    version: resolveCargoDependencyVersion("serde"),
+    license: "MIT OR Apache-2.0",
+    linkKind: "github",
+    roleKey: "serde",
+    url: "https://github.com/serde-rs/serde",
+  },
+  {
+    name: "ts-rs",
+    version: resolveCargoDependencyVersion("ts-rs"),
+    license: "MIT",
+    linkKind: "github",
+    roleKey: "tsRs",
+    url: "https://github.com/Aleph-Alpha/ts-rs",
+  },
+  {
+    name: "tracing",
+    version: resolveCargoDependencyVersion("tracing"),
+    license: "MIT",
+    linkKind: "github",
+    roleKey: "tracing",
+    url: "https://github.com/tokio-rs/tracing",
   },
   {
     name: "sled",
