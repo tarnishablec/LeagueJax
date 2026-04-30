@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 import {
   type MouseEvent,
   type RefObject,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -37,11 +36,7 @@ function TabIcon({ summoner }: { summoner: SummonerInfo }) {
   );
 }
 
-type TabRefsMap = Record<string, HTMLDivElement | null>;
-type OverflowState = {
-  showLeftOverflow: boolean;
-  showRightOverflow: boolean;
-};
+type TabRefsMap = Record<string, HTMLLIElement | null>;
 
 function formatTabLabel(summoner: SummonerInfo): string {
   if (summoner.tagLine) {
@@ -51,93 +46,12 @@ function formatTabLabel(summoner: SummonerInfo): string {
   return summoner.gameName;
 }
 
-function computeOverflowState(viewport: HTMLDivElement): OverflowState {
-  const hasOverflow = viewport.scrollWidth > viewport.clientWidth + 1;
-  if (!hasOverflow) {
-    return {
-      showLeftOverflow: false,
-      showRightOverflow: false,
-    };
-  }
-
-  const maxScrollLeft = viewport.scrollWidth - viewport.clientWidth;
-  return {
-    showLeftOverflow: viewport.scrollLeft > 1,
-    showRightOverflow: viewport.scrollLeft < maxScrollLeft - 1,
-  };
-}
-
-function isOverflowStateEqual(
-  left: OverflowState,
-  right: OverflowState,
-): boolean {
-  return (
-    left.showLeftOverflow === right.showLeftOverflow &&
-    left.showRightOverflow === right.showRightOverflow
-  );
-}
-
 function getHorizontalWheelDelta(event: WheelEvent): number {
   if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
     return event.deltaY;
   }
 
   return event.deltaX;
-}
-
-function useOverflowIndicators(
-  containerRef: RefObject<HTMLDivElement | null>,
-  viewportRef: RefObject<HTMLDivElement | null>,
-  trackRef: RefObject<HTMLDivElement | null>,
-): OverflowState {
-  const [state, setState] = useState<OverflowState>({
-    showLeftOverflow: false,
-    showRightOverflow: false,
-  });
-
-  const updateOverflow = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) {
-      return;
-    }
-
-    const nextState = computeOverflowState(viewport);
-    setState((currentState) =>
-      isOverflowStateEqual(currentState, nextState) ? currentState : nextState,
-    );
-  }, [viewportRef]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const viewport = viewportRef.current;
-    const track = trackRef.current;
-    if (!container || !viewport || !track) {
-      return;
-    }
-
-    const onScroll = () => updateOverflow();
-    updateOverflow();
-
-    viewport.addEventListener("scroll", onScroll, { passive: true });
-
-    const resizeObserver = new ResizeObserver(updateOverflow);
-    resizeObserver.observe(container);
-    resizeObserver.observe(viewport);
-    resizeObserver.observe(track);
-
-    const mutationObserver = new MutationObserver(updateOverflow);
-    mutationObserver.observe(track, {
-      childList: true,
-    });
-
-    return () => {
-      viewport.removeEventListener("scroll", onScroll);
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-    };
-  }, [containerRef, viewportRef, trackRef, updateOverflow]);
-
-  return state;
 }
 
 function useWheelToHorizontalScroll(
@@ -197,24 +111,13 @@ function useTabBarOverflow(
   activeTabId: string | null,
   tabRefs: RefObject<TabRefsMap>,
 ) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const { showLeftOverflow, showRightOverflow } = useOverflowIndicators(
-    containerRef,
-    viewportRef,
-    trackRef,
-  );
 
   useWheelToHorizontalScroll(viewportRef);
   useAutoScrollToActiveTab(activeTabId, tabRefs);
 
   return {
-    containerRef,
     viewportRef,
-    trackRef,
-    showLeftOverflow,
-    showRightOverflow,
   };
 }
 
@@ -223,7 +126,7 @@ interface HistoryTabItemProps {
   tabId: string;
   summoner: SummonerInfo;
   onAuxClick: (e: MouseEvent, id: string) => void;
-  registerRef: (id: string, node: HTMLDivElement | null) => void;
+  registerRef: (id: string, node: HTMLLIElement | null) => void;
 }
 
 function HistoryTabItem({
@@ -233,88 +136,64 @@ function HistoryTabItem({
   onAuxClick,
   registerRef,
 }: HistoryTabItemProps) {
-  const { t } = useTranslation();
-  const {
-    setActiveTab,
-    closeTab,
-    closeTabsToRight,
-    closeOtherTabs,
-    closeAllTabs,
-  } = useTabStore();
+  const setActiveTab = useTabStore((state) => state.setActiveTab);
+  const closeTab = useTabStore((state) => state.closeTab);
 
   return (
-    <Menu.Root positioning={{ placement: "bottom-start", strategy: "fixed" }}>
-      <Menu.ContextTrigger asChild>
-        <div
-          ref={(node) => registerRef(tabId, node)}
-          className={s.tab({ active })}
-        >
-          <button
-            type="button"
-            className={s.tabMain}
-            onClick={() => setActiveTab(tabId)}
-            onAuxClick={(e) => onAuxClick(e, tabId)}
-          >
-            <TabIcon summoner={summoner} />
-            <span className={s.tabLabel}>{formatTabLabel(summoner)}</span>
-          </button>
-          <button
-            type="button"
-            className={s.closeButton}
-            aria-label="Close tab"
-            onClick={(e) => {
-              e.stopPropagation();
-              closeTab(tabId);
-            }}
-          >
-            <X size={12} />
-          </button>
-        </div>
-      </Menu.ContextTrigger>
-      <Portal>
-        <Menu.Positioner className={s.contextMenuPositioner}>
-          <Menu.Content className={s.contextMenuContent}>
-            <Menu.Item
-              className={s.contextMenuItem}
-              value={`close-right-${tabId}`}
-              onSelect={() => closeTabsToRight(tabId)}
-            >
-              {t("history.closeTabsToRight")}
-            </Menu.Item>
-            <Menu.Item
-              className={s.contextMenuItem}
-              value={`close-others-${tabId}`}
-              onSelect={() => closeOtherTabs(tabId)}
-            >
-              {t("history.closeOtherTabs")}
-            </Menu.Item>
-            <Menu.Separator className={s.contextMenuSeparator} />
-            <Menu.Item
-              className={s.contextMenuItem}
-              value="close-all"
-              onSelect={() => closeAllTabs()}
-            >
-              {t("history.closeAllTabs")}
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <li
+      ref={(node) => registerRef(tabId, node)}
+      data-history-tab-id={tabId}
+      className={s.tab({ active })}
+    >
+      <button
+        type="button"
+        className={s.tabMain}
+        onClick={() => setActiveTab(tabId)}
+        onAuxClick={(e) => onAuxClick(e, tabId)}
+      >
+        <TabIcon summoner={summoner} />
+        <span className={s.tabLabel}>{formatTabLabel(summoner)}</span>
+      </button>
+      <button
+        type="button"
+        className={s.closeButton}
+        aria-label="Close tab"
+        onClick={(e) => {
+          e.stopPropagation();
+          closeTab(tabId);
+        }}
+      >
+        <X size={12} />
+      </button>
+    </li>
+  );
+}
+
+function getContextTabId(event: MouseEvent<HTMLUListElement>): string | null {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  return (
+    target.closest<HTMLElement>("[data-history-tab-id]")?.dataset
+      .historyTabId ?? null
   );
 }
 
 export function HistoryTabBar() {
-  const { tabs, activeTabId, closeTab } = useTabStore();
+  const { t } = useTranslation();
+  const tabs = useTabStore((state) => state.tabs);
+  const activeTabId = useTabStore((state) => state.activeTabId);
+  const closeTab = useTabStore((state) => state.closeTab);
+  const closeTabsToRight = useTabStore((state) => state.closeTabsToRight);
+  const closeOtherTabs = useTabStore((state) => state.closeOtherTabs);
+  const closeAllTabs = useTabStore((state) => state.closeAllTabs);
   const tabRefs = useRef<TabRefsMap>({});
+  const [contextTabId, setContextTabId] = useState<string | null>(null);
 
   const sortedTabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
-  const {
-    containerRef,
-    viewportRef,
-    trackRef,
-    showLeftOverflow,
-    showRightOverflow,
-  } = useTabBarOverflow(activeTabId, tabRefs);
+  const { viewportRef } = useTabBarOverflow(activeTabId, tabRefs);
 
   useEffect(() => {
     const keep = new Set(sortedTabIds);
@@ -332,38 +211,74 @@ export function HistoryTabBar() {
     }
   };
 
+  const handleTrackContextMenu = (event: MouseEvent<HTMLUListElement>) => {
+    setContextTabId(getContextTabId(event));
+  };
+
+  const handleCloseTabsToRight = () => {
+    if (contextTabId) {
+      closeTabsToRight(contextTabId);
+    }
+  };
+
+  const handleCloseOtherTabs = () => {
+    if (contextTabId) {
+      closeOtherTabs(contextTabId);
+    }
+  };
+
   return (
-    <div className={s.container} ref={containerRef}>
-      <div data-tauri-drag-region className={s.viewport} ref={viewportRef}>
-        <div className={s.track} ref={trackRef}>
-          {tabs.map((tab) => (
-            <HistoryTabItem
-              key={tab.id}
-              active={tab.id === activeTabId}
-              tabId={tab.id}
-              summoner={tab.summoner}
-              onAuxClick={handleAuxClick}
-              registerRef={(id, node) => {
-                tabRefs.current[id] = node;
-              }}
-            />
-          ))}
+    <Menu.Root positioning={{ placement: "bottom-start", strategy: "fixed" }}>
+      <div className={s.container}>
+        <div data-tauri-drag-region className={s.viewport} ref={viewportRef}>
+          <Menu.ContextTrigger asChild>
+            <ul className={s.track} onContextMenu={handleTrackContextMenu}>
+              {tabs.map((tab) => (
+                <HistoryTabItem
+                  key={tab.id}
+                  active={tab.id === activeTabId}
+                  tabId={tab.id}
+                  summoner={tab.summoner}
+                  onAuxClick={handleAuxClick}
+                  registerRef={(id, node) => {
+                    tabRefs.current[id] = node;
+                  }}
+                />
+              ))}
+            </ul>
+          </Menu.ContextTrigger>
         </div>
       </div>
-      <div
-        className={s.overflowFade({
-          side: "left",
-          visible: showLeftOverflow,
-        })}
-        aria-hidden="true"
-      />
-      <div
-        className={s.overflowFade({
-          side: "right",
-          visible: showRightOverflow,
-        })}
-        aria-hidden="true"
-      />
-    </div>
+      <Portal>
+        <Menu.Positioner className={s.contextMenuPositioner}>
+          <Menu.Content className={s.contextMenuContent}>
+            <Menu.Item
+              className={s.contextMenuItem}
+              value="close-right"
+              onSelect={handleCloseTabsToRight}
+              disabled={!contextTabId}
+            >
+              {t("history.closeTabsToRight")}
+            </Menu.Item>
+            <Menu.Item
+              className={s.contextMenuItem}
+              value="close-others"
+              onSelect={handleCloseOtherTabs}
+              disabled={!contextTabId}
+            >
+              {t("history.closeOtherTabs")}
+            </Menu.Item>
+            <Menu.Separator className={s.contextMenuSeparator} />
+            <Menu.Item
+              className={s.contextMenuItem}
+              value="close-all"
+              onSelect={() => closeAllTabs()}
+            >
+              {t("history.closeAllTabs")}
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
   );
 }

@@ -31,6 +31,9 @@ export const track = style({
   alignItems: "start",
   minWidth: "max-content",
   width: "max-content",
+  margin: 0,
+  paddingLeft: "1rem",
+  listStyle: "none",
 });
 
 export const tab = recipe({
@@ -123,39 +126,6 @@ export const closeButton = style({
     "&:hover": {
       color: vars.color.foreground,
       background: vars.color.accent,
-    },
-  },
-});
-
-export const overflowFade = recipe({
-  base: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 24,
-    pointerEvents: "none",
-    opacity: 0,
-    transition: "opacity 120ms ease-out",
-    zIndex: 1,
-  },
-  variants: {
-    side: {
-      left: {
-        left: 0,
-        background: `linear-gradient(to right, oklch(from ${vars.color.background} l c h / 0.96), oklch(from ${vars.color.background} l c h / 0))`,
-      },
-      right: {
-        right: 0,
-        background: `linear-gradient(to left, oklch(from ${vars.color.background} l c h / 0.96), oklch(from ${vars.color.background} l c h / 0))`,
-      },
-    },
-    visible: {
-      true: {
-        opacity: 1,
-      },
-      false: {
-        opacity: 0,
-      },
     },
   },
 });

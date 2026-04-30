@@ -7,7 +7,12 @@ import { CloseIcon, MaximizeIcon, MinimizeIcon } from "./WindowControlIcons";
 
 export function Toolbar({ children }: { children?: React.ReactNode }) {
   return (
-    <div role="toolbar" aria-label="Application actions" className={s.toolbar}>
+    <div
+      data-tauri-drag-region
+      role="toolbar"
+      aria-label="Application actions"
+      className={s.toolbar}
+    >
       {children}
     </div>
   );

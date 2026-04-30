@@ -114,7 +114,7 @@ export const navItem = recipe({
   },
   compoundVariants: [
     {
-      variants: {active: true, collapsed: false},
+      variants: { active: true, collapsed: false },
       style: {
         background: vars.color.blurry,
         color: vars.color.accentForeground,
@@ -124,7 +124,7 @@ export const navItem = recipe({
       },
     },
     {
-      variants: {active: true, collapsed: true},
+      variants: { active: true, collapsed: true },
       style: {
         background: `oklch(from ${vars.color.primary} l c h / 0.15)`,
         color: vars.color.primary,
@@ -176,8 +176,8 @@ export const navLabel = recipe({
   },
   variants: {
     collapsed: {
-      false: {opacity: 1},
-      true: {opacity: 0},
+      false: { opacity: 1 },
+      true: { opacity: 0 },
     },
   },
   defaultVariants: {
