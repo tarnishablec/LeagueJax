@@ -272,16 +272,17 @@ export const assetIcon = style({
   height: 22,
   borderRadius: 4,
   objectFit: "cover",
-  border: `1px solid ${vars.color.border}`,
+  // border: `1px solid ${vars.color.border}`,
 });
 
 export const subRuneStyleIcon = style({
-  width: 22,
-  height: 22,
+  width: 21,
+  height: 21,
   borderRadius: 4,
   objectFit: "contain",
-  border: `1px solid ${vars.color.border}`,
-  padding: 1,
+  display: "block",
+  // outline: `1px solid ${vars.color.border}`,
+  boxSizing: "border-box",
 });
 
 export const assetIconFallback = style({
@@ -299,7 +300,7 @@ export const augmentIcon = recipe({
     borderRadius: 4,
     objectFit: "cover",
     boxSizing: "border-box",
-    border: `1px solid ${vars.color.border}`,
+    outline: `1px solid ${vars.color.border}`,
   },
   variants: {
     rarity: {
@@ -307,20 +308,20 @@ export const augmentIcon = recipe({
         background: vars.color.background,
       },
       prismatic: {
-        border: "1px solid transparent",
+        outline: "1px solid transparent",
         background:
           "linear-gradient(oklch(0.3 0.04 300), oklch(0.3 0.04 300)) padding-box, linear-gradient(135deg, oklch(0.82 0.2 322), oklch(0.56 0.23 296)) border-box",
       },
       gold: {
-        borderColor: "oklch(0.84 0.18 85)",
+        outlineColor: "oklch(0.84 0.18 85)",
         background: "oklch(0.3 0.05 85)",
       },
       silver: {
-        borderColor: "oklch(0.82 0 0)",
+        outlineColor: "oklch(0.82 0 0)",
         background: "oklch(0.3 0 0)",
       },
       bronze: {
-        borderColor: "oklch(0.55 0.12 52)",
+        outlineColor: "oklch(0.55 0.12 52)",
         background: "oklch(0.3 0.03 52)",
       },
     },
@@ -336,7 +337,7 @@ export const augmentIconFallback = recipe({
     height: 22,
     borderRadius: 4,
     boxSizing: "border-box",
-    border: `1px solid ${vars.color.border}`,
+    outline: `1px solid ${vars.color.border}`,
     background: translucentSlotAccent,
   },
   variants: {
@@ -345,20 +346,20 @@ export const augmentIconFallback = recipe({
         background: translucentSlotAccent,
       },
       prismatic: {
-        border: "1px solid transparent",
+        outlineColor: "oklch(0.691 0.189 318.789)",
         background:
           "linear-gradient(oklch(0.3 0.04 300), oklch(0.3 0.04 300)) padding-box, linear-gradient(135deg, oklch(0.82 0.2 322), oklch(0.56 0.23 296)) border-box",
       },
       gold: {
-        borderColor: "oklch(0.84 0.18 85)",
+        outlineColor: "oklch(0.84 0.18 85)",
         background: "oklch(0.3 0.05 85)",
       },
       silver: {
-        borderColor: "oklch(0.82 0 0)",
+        outlineColor: "oklch(0.82 0 0)",
         background: "oklch(0.3 0 0)",
       },
       bronze: {
-        borderColor: "oklch(0.55 0.12 52)",
+        outlineColor: "oklch(0.55 0.12 52)",
         background: "oklch(0.3 0.03 52)",
       },
     },

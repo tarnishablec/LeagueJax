@@ -1,12 +1,14 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { RankEntry, Tier } from "@/bindings/rank.ts";
+import type { RankEntry } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { useLcuStore } from "@/stores/lcu";
 import {
+  formatRankDivisionLabel,
   formatRankTierLabel,
+  isApexRankTier,
   resolveRankTierForIcon,
 } from "@/utils/rank-display";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
@@ -42,8 +44,6 @@ export type PlayerCardRankDisplayItem = {
   value: string;
 };
 
-const APEX_TIERS = new Set<Tier>(["MASTER", "GRANDMASTER", "CHALLENGER"]);
-
 function formatAverageKdaText(games: EnrichedMatch[]): string {
   const averageKda = computeAverageKda(games);
   return averageKda == null ? "--" : averageKda.toFixed(2);
@@ -61,12 +61,12 @@ function formatRankCardValue(
     return "";
   }
 
-  if (APEX_TIERS.has(entry.tier)) {
+  if (isApexRankTier(entry.tier)) {
     return `${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
   }
 
-  const division = entry.division.trim();
-  if (division.length > 0 && division !== "NA") {
+  const division = formatRankDivisionLabel(entry);
+  if (division.length > 0) {
     return division;
   }
 
@@ -82,12 +82,12 @@ function formatRankCardTooltip(
   }
 
   const tierLabel = formatRankTierLabel(t, entry.tier);
-  if (APEX_TIERS.has(entry.tier)) {
+  if (isApexRankTier(entry.tier)) {
     return `${tierLabel} ${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
   }
 
-  const division = entry.division.trim();
-  if (division.length > 0 && division !== "NA") {
+  const division = formatRankDivisionLabel(entry);
+  if (division.length > 0) {
     return `${tierLabel} ${division}`;
   }
 

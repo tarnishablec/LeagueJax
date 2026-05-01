@@ -44,6 +44,8 @@ const TIER_DEFAULT_LABEL: Record<TierKey, string> = {
   unranked: "Unranked",
 };
 
+const APEX_TIERS = new Set<Tier>(["MASTER", "GRANDMASTER", "CHALLENGER"]);
+
 function normalizeTierKey(tier: string | null | undefined): TierKey {
   if (!tier) {
     return "unranked";
@@ -100,7 +102,23 @@ export function formatRankTierLabel(
   });
 }
 
-export function formatRankEntryLabel(
+export function isApexRankTier(tier: string | null | undefined): boolean {
+  const normalized = tier?.trim().toUpperCase() as Tier | undefined;
+  return normalized ? APEX_TIERS.has(normalized) : false;
+}
+
+export function formatRankDivisionLabel(
+  entry: RankEntry | null | undefined,
+): string {
+  if (!entry || isApexRankTier(entry.tier)) {
+    return "";
+  }
+
+  const division = entry.division.trim();
+  return division.length > 0 && division !== "NA" ? division : "";
+}
+
+export function formatRankEntryTierLabel(
   t: TranslateFn,
   entry: RankEntry | null | undefined,
 ): string {
@@ -109,7 +127,22 @@ export function formatRankEntryLabel(
   }
 
   const tierLabel = formatRankTierLabel(t, entry.tier);
-  const division = entry.division.trim();
-  const suffix = division.length > 0 && division !== "NA" ? ` ${division}` : "";
-  return `${tierLabel}${suffix} ${entry.leaguePoints} LP`;
+  if (tierLabel.length === 0) {
+    return formatRankTierLabel(t, "NONE");
+  }
+
+  const division = formatRankDivisionLabel(entry);
+  return division.length > 0 ? `${tierLabel} ${division}` : tierLabel;
+}
+
+export function formatRankEntryLabel(
+  t: TranslateFn,
+  entry: RankEntry | null | undefined,
+): string {
+  if (!entry) {
+    return formatRankTierLabel(t, "NONE");
+  }
+
+  const tierLabel = formatRankEntryTierLabel(t, entry);
+  return `${tierLabel} ${entry.leaguePoints} LP`;
 }

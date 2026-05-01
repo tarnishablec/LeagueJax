@@ -78,7 +78,7 @@ export function LazyImage({
         key={src}
         src={src}
         alt={alt}
-        className={`${className} ${framedImage} ${lazyFadeIn}`}
+        className={`${framedImage} ${lazyFadeIn}`}
         decoding="async"
         onLoad={(e) => {
           e.currentTarget.dataset.loaded = "";

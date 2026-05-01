@@ -6,26 +6,9 @@ import { CopyButton } from "@/components/CopyButton";
 import { LazyImage } from "@/components/LazyImage.tsx";
 import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
-import { formatRankTierLabel } from "@/utils/rank-display";
+import { formatRankEntryTierLabel } from "@/utils/rank-display";
 import { useRankedSummary } from "../hooks/use-ranked-summary";
 import * as s from "./SummaryBar.css";
-
-function formatTier(
-  entry: RankEntry | null,
-  t: (key: string, options?: { defaultValue?: string }) => string,
-): string {
-  if (!entry) {
-    return formatRankTierLabel(t, "NONE");
-  }
-
-  const tierLabel = formatRankTierLabel(t, entry.tier);
-  if (tierLabel.length === 0) {
-    return formatRankTierLabel(t, "NONE");
-  }
-
-  const division = entry.division.trim();
-  return division.length > 0 ? `${tierLabel} ${division}` : tierLabel;
-}
 
 function formatMeta(
   entry: RankEntry | null,
@@ -113,9 +96,9 @@ export function SummaryBar({
                   })}
                 </span>
                 <span className={s.rankTier}>
-                  {formatTier(
-                    rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null,
+                  {formatRankEntryTierLabel(
                     t,
+                    rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null,
                   )}
                 </span>
                 <span className={s.rankMeta}>
@@ -151,9 +134,9 @@ export function SummaryBar({
                   })}
                 </span>
                 <span className={s.rankTier}>
-                  {formatTier(
-                    rankedSummary?.queueMap.RANKED_FLEX_SR ?? null,
+                  {formatRankEntryTierLabel(
                     t,
+                    rankedSummary?.queueMap.RANKED_FLEX_SR ?? null,
                   )}
                 </span>
                 <span className={s.rankMeta}>
