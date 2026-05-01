@@ -139,8 +139,6 @@ export type RegisteredSettingsSection = {
 export type SettingClassCtor = new () => object;
 
 export interface SettingsReader {
-  hasPersistedSnapshot(): boolean;
-  hasBootstrapSnapshotValue(id: SettingId): boolean;
   get<T = unknown>(id: SettingId): T;
   set<T = unknown>(id: SettingId, value: T): boolean;
   reset(ids?: SettingId[]): boolean;

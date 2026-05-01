@@ -273,6 +273,7 @@ pub fn run() {
             get_shards_status,
             lcu_get_platform_config_namespaces,
             lcu_get_help,
+            get_system_locale,
             toggle_mini_window,
             set_mini_pin,
             execute_setting_action,

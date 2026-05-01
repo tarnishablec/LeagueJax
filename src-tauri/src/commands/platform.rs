@@ -26,3 +26,8 @@ pub async fn lcu_get_help(jax: State<'_, Arc<Jax>>) -> Result<Value, AppError> {
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     lcu.api().get_help().await
 }
+
+#[tauri::command]
+pub fn get_system_locale() -> Option<String> {
+    tauri_plugin_os::locale()
+}

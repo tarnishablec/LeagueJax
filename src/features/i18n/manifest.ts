@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import i18n from "i18next";
 import { createElement } from "react";
 import { LanguageToggle } from "@/features/i18n/components/LanguageToggle";
@@ -9,10 +10,10 @@ import { SettingsShard } from "../settings/manifest";
 import { SHARD_IDS } from "../shard-ids";
 import { i18nShardI18n } from "./i18n";
 import {
+  createLanguageSettingDefinition,
   DEFAULT_LANGUAGE,
-  detectSystemLanguage,
-  LANGUAGE_SETTING_DEFINITION,
   type Language,
+  languageFromSystemLocale,
   SYSTEM_LANGUAGE_SETTING_ID,
 } from "./locale";
 import { collectI18nResources } from "./resources";
@@ -21,6 +22,7 @@ const logger = createLogger("i18n-shard");
 
 export class I18nShard implements WebShard {
   private unsubscribe: (() => void) | null = null;
+  private defaultLanguage: Language = DEFAULT_LANGUAGE;
 
   public label() {
     return "I18nShard";
@@ -36,8 +38,10 @@ export class I18nShard implements WebShard {
 
   public async setup(jax: Jax): Promise<void> {
     const settings = jax.getShard(SettingsShard);
-    settings.registerSetting(LANGUAGE_SETTING_DEFINITION);
-    this.applyInitialLanguagePreference(settings);
+    this.defaultLanguage = await this.resolveDefaultLanguage();
+    settings.registerSetting(
+      createLanguageSettingDefinition(this.defaultLanguage),
+    );
 
     const language = this.getLanguage(settings);
 
@@ -87,20 +91,22 @@ export class I18nShard implements WebShard {
     }
   }
 
-  private applyInitialLanguagePreference(settings: SettingsShard): void {
-    if (
-      settings.hasPersistedSnapshot() ||
-      settings.hasBootstrapSnapshotValue(SYSTEM_LANGUAGE_SETTING_ID)
-    ) {
-      return;
-    }
-
-    settings.set(SYSTEM_LANGUAGE_SETTING_ID, detectSystemLanguage());
-  }
-
   private getLanguage(settings: SettingsShard): Language {
     return (
-      settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? DEFAULT_LANGUAGE
+      settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? this.defaultLanguage
     );
+  }
+
+  private async resolveDefaultLanguage(): Promise<Language> {
+    try {
+      const systemLocale = await invoke<string | null>("get_system_locale");
+      return languageFromSystemLocale(systemLocale);
+    } catch (error) {
+      logger.warn(
+        { error },
+        "Failed to read system locale, falling back to English",
+      );
+      return DEFAULT_LANGUAGE;
+    }
   }
 }
