@@ -1,14 +1,20 @@
 import i18n from "i18next";
+import { createElement } from "react";
+import { LanguageToggle } from "@/features/i18n/components/LanguageToggle";
 import { initializeI18n } from "@/i18n";
 import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SettingsShard } from "../settings/manifest";
+import { SHARD_IDS } from "../shard-ids";
+import { i18nShardI18n } from "./i18n";
 import {
+  DEFAULT_LANGUAGE,
+  detectSystemLanguage,
+  LANGUAGE_SETTING_DEFINITION,
   type Language,
   SYSTEM_LANGUAGE_SETTING_ID,
-} from "../settings/store/general";
-import { SHARD_IDS } from "../shard-ids";
+} from "./locale";
 import { collectI18nResources } from "./resources";
 
 const logger = createLogger("i18n-shard");
@@ -30,8 +36,10 @@ export class I18nShard implements WebShard {
 
   public async setup(jax: Jax): Promise<void> {
     const settings = jax.getShard(SettingsShard);
-    const language =
-      settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? "zh-CN";
+    settings.registerSetting(LANGUAGE_SETTING_DEFINITION);
+    this.applyInitialLanguagePreference(settings);
+
+    const language = this.getLanguage(settings);
 
     logger.info({ language }, "Initializing i18n resources");
     await initializeI18n(
@@ -40,11 +48,24 @@ export class I18nShard implements WebShard {
     );
 
     this.unsubscribe = settings.subscribe(SYSTEM_LANGUAGE_SETTING_ID, () => {
-      const nextLanguage =
-        settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? "zh-CN";
+      const nextLanguage = this.getLanguage(settings);
 
       void this.changeLanguage(nextLanguage);
     });
+  }
+
+  public toolbarSlots() {
+    return [
+      {
+        id: "i18n-language-toggle",
+        node: createElement(LanguageToggle),
+        order: 99,
+      },
+    ];
+  }
+
+  public i18nResources() {
+    return i18nShardI18n;
   }
 
   public async teardown(): Promise<void> {
@@ -64,5 +85,22 @@ export class I18nShard implements WebShard {
     } catch (error) {
       logger.error({ error, language }, "Failed to change i18n language");
     }
+  }
+
+  private applyInitialLanguagePreference(settings: SettingsShard): void {
+    if (
+      settings.hasPersistedSnapshot() ||
+      settings.hasBootstrapSnapshotValue(SYSTEM_LANGUAGE_SETTING_ID)
+    ) {
+      return;
+    }
+
+    settings.set(SYSTEM_LANGUAGE_SETTING_ID, detectSystemLanguage());
+  }
+
+  private getLanguage(settings: SettingsShard): Language {
+    return (
+      settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? DEFAULT_LANGUAGE
+    );
   }
 }

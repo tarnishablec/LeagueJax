@@ -9,7 +9,6 @@ import type {
   SettingsDefinitionsChangedEventDto,
   SettingsSnapshotDto,
 } from "@/bindings/settings.ts";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BACKEND_SHARD_IDS } from "@/features/backend-shard-ids";
 import { createLogger } from "@/infra/logger";
@@ -60,6 +59,8 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   private changedUnlisten: UnlistenFn | null = null;
   private definitionsChangedUnlisten: UnlistenFn | null = null;
   private patchQueue = Promise.resolve();
+  private hasPersistedSnapshotValue = false;
+  private bootstrapSnapshotValueIds = new Set<string>();
   private readonly logger = createLogger("settings-shard");
   private readonly store = new SettingsStore();
 
@@ -134,6 +135,14 @@ export class SettingsShard implements WebShard, SettingsShardApi {
 
   public registerClass(ctor: SettingClassCtor): void {
     this.store.registerClass(ctor);
+  }
+
+  public hasPersistedSnapshot(): boolean {
+    return this.hasPersistedSnapshotValue;
+  }
+
+  public hasBootstrapSnapshotValue(id: SettingId): boolean {
+    return this.bootstrapSnapshotValueIds.has(id);
   }
 
   public get<T = unknown>(id: SettingId): T {
@@ -225,11 +234,6 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   public toolbarSlots() {
     return [
       {
-        id: "settings-language-toggle",
-        node: <LanguageToggle />,
-        order: 99,
-      },
-      {
         id: "settings-theme-toggle",
         node: <ThemeToggle />,
         order: 100,
@@ -247,6 +251,10 @@ export class SettingsShard implements WebShard, SettingsShardApi {
   }): Promise<void> {
     const bootstrap = await invoke<SettingsBootstrapDto>(
       "get_settings_bootstrap",
+    );
+    this.hasPersistedSnapshotValue = bootstrap.hasPersistedSnapshot;
+    this.bootstrapSnapshotValueIds = new Set(
+      Object.keys(bootstrap.snapshot.values),
     );
     this.store.mergeRemoteDefinitions(bootstrap.definitions);
     this.store.hydrateFromSnapshot(bootstrap.snapshot, options);

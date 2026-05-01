@@ -92,6 +92,7 @@ pub struct SettingsShard {
     db: OnceLock<Db>,
     definitions: RwLock<BTreeMap<String, SettingDefinitionDto>>,
     snapshot: RwLock<SettingsSnapshotDto>,
+    has_persisted_snapshot: RwLock<bool>,
     watch_senders: RwLock<BTreeMap<String, watch::Sender<Value>>>,
     action_handlers: RwLock<BTreeMap<String, ActionHandler>>,
     change_events: broadcast::Sender<SettingsChangedEventDto>,
@@ -111,6 +112,7 @@ impl SettingsShard {
             snapshot: RwLock::new(SettingsSnapshotDto {
                 values: BTreeMap::new(),
             }),
+            has_persisted_snapshot: RwLock::new(false),
             watch_senders: RwLock::new(BTreeMap::new()),
             action_handlers: RwLock::new(BTreeMap::new()),
             change_events,
@@ -262,10 +264,15 @@ impl SettingsShard {
             .read()
             .map_err(|_| AppError::MutexPoisoned)?
             .clone();
+        let has_persisted_snapshot = *self
+            .has_persisted_snapshot
+            .read()
+            .map_err(|_| AppError::MutexPoisoned)?;
 
         Ok(SettingsBootstrapDto {
             definitions,
             snapshot,
+            has_persisted_snapshot,
         })
     }
 
@@ -446,7 +453,7 @@ impl SettingsShard {
             .send(SettingsDefinitionsChangedEventDto { ids });
     }
 
-    fn read_snapshot_from_db(&self) -> Result<SettingsSnapshotDto, AppError> {
+    fn read_snapshot_from_db(&self) -> Result<(SettingsSnapshotDto, bool), AppError> {
         let db = self.get_db()?;
         let tree = db.open_tree(SETTINGS_TREE)?;
         let Some(bytes) = tree.get(SETTINGS_SNAPSHOT_KEY)? else {
@@ -456,9 +463,12 @@ impl SettingsShard {
                 hit = false,
                 "Read settings snapshot",
             );
-            return Ok(SettingsSnapshotDto {
-                values: BTreeMap::new(),
-            });
+            return Ok((
+                SettingsSnapshotDto {
+                    values: BTreeMap::new(),
+                },
+                false,
+            ));
         };
 
         tracing::info!(
@@ -469,7 +479,7 @@ impl SettingsShard {
             "Read settings snapshot",
         );
 
-        parse_snapshot_bytes(&bytes)
+        Ok((parse_snapshot_bytes(&bytes)?, true))
     }
 
     fn write_snapshot_to_db(&self, snapshot: &SettingsSnapshotDto) -> Result<(), AppError> {
@@ -514,11 +524,18 @@ impl Shard for SettingsShard {
             .set(db)
             .map_err(|_| "Settings DB already initialized")?;
 
-        let snapshot = self.read_snapshot_from_db()?;
+        let (snapshot, has_persisted_snapshot) = self.read_snapshot_from_db()?;
 
         {
             let mut guard = self.snapshot.write().map_err(|_| AppError::MutexPoisoned)?;
             *guard = snapshot;
+        }
+        {
+            let mut guard = self
+                .has_persisted_snapshot
+                .write()
+                .map_err(|_| AppError::MutexPoisoned)?;
+            *guard = has_persisted_snapshot;
         }
 
         Ok(())

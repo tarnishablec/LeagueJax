@@ -79,6 +79,7 @@ pub struct SettingsSnapshotDto {
 pub struct SettingsBootstrapDto {
     pub definitions: Vec<SettingDefinitionDto>,
     pub snapshot: SettingsSnapshotDto,
+    pub has_persisted_snapshot: bool,
 }
 
 #[derive(TS)]
