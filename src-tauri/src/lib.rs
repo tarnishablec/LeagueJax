@@ -205,11 +205,32 @@ fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, 
     })
 }
 
+fn present_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let Some(window) = app.get_webview_window("main") else {
+        tracing::warn!("Main window was not available for single-instance activation");
+        return;
+    };
+
+    if let Err(error) = window.unminimize() {
+        tracing::warn!(error = %error, "Failed to unminimize main window");
+    }
+
+    if let Err(error) = window.show() {
+        tracing::warn!(error = %error, "Failed to show main window");
+    }
+
+    if let Err(error) = window.set_focus() {
+        tracing::warn!(error = %error, "Failed to focus main window");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            present_main_window(app);
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
