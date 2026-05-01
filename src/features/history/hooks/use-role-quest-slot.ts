@@ -17,7 +17,10 @@ export type RoleQuestResult = {
 
 const ROLE_QUEST_ITEM_MAP: Record<
   number,
-  { lane: LanePosition; iconBase: string }
+  {
+    lane: LanePosition;
+    iconBase: string;
+  }
 > = {
   1200: { lane: "top", iconBase: "rolequest_topreward1" },
   1201: { lane: "middle", iconBase: "rolequest_midreward" },
@@ -41,6 +44,10 @@ const ROLE_QUEST_COMPLETE_KEY = "2026_S1A1_SR_RoleQuestComplete" as const;
 const SUMMONERS_RIFT_MAP_ID = 11;
 const CLASSIC_GAME_MODE = "CLASSIC";
 
+function buildItemIconUrl(fileName: string): string {
+  return `${ICON_HOST}/${fileName}`;
+}
+
 function buildQuestIconUrl(iconBase: string, completed: boolean): string {
   const state =
     iconBase === "rolequest_supportreward"
@@ -50,7 +57,7 @@ function buildQuestIconUrl(iconBase: string, completed: boolean): string {
       : completed
         ? "complete"
         : "inprogress";
-  return `${ICON_HOST}/${iconBase}_${state}.png`;
+  return buildItemIconUrl(`${iconBase}_${state}.png`);
 }
 
 export function useRoleQuestSlot({

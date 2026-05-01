@@ -1,4 +1,6 @@
-use crate::shards::settings::types::{SettingControlDto, SettingDefinitionDto, SettingScopeDto};
+use crate::shards::settings::types::{
+    SettingControlDto, SettingDefinitionDto, SettingOptionDto, SettingScopeDto,
+};
 use crate::shards::settings::SettingsShard;
 use crate::shards::tauri_host::TauriHost;
 use async_trait::async_trait;
@@ -14,6 +16,7 @@ use time::{Duration, OffsetDateTime, UtcOffset};
 use uuid::Uuid;
 
 const RECORD_TO_FILE_SETTING_ID: &str = "system.logging.recordToFile";
+const LEVEL_SETTING_ID: &str = "system.logging.level";
 const RETENTION_DAYS_SETTING_ID: &str = "system.logging.retentionDays";
 const OPEN_DIR_SETTING_ID: &str = "system.logging.openDir";
 const CLEAN_LOGS_SETTING_ID: &str = "system.logging.cleanLogs";
@@ -47,6 +50,31 @@ impl LogShard {
         DEFAULT_RETENTION_DAYS
     }
 
+    pub fn default_level() -> &'static str {
+        "info"
+    }
+
+    fn sanitize_level(value: Option<&Value>) -> &'static str {
+        match value.and_then(Value::as_str) {
+            Some("error") => "error",
+            Some("warn") => "warn",
+            Some("debug") => "debug",
+            Some("trace") => "trace",
+            _ => Self::default_level(),
+        }
+    }
+
+    fn level_options() -> Vec<SettingOptionDto> {
+        ["error", "warn", "info", "debug", "trace"]
+            .into_iter()
+            .map(|level| SettingOptionDto {
+                value: level.to_string(),
+                label_key: format!("settings.logging.level.options.{level}"),
+                display_label: None,
+            })
+            .collect()
+    }
+
     fn sanitize_retention_days(value: Option<&Value>) -> i64 {
         value
             .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|n| n.round() as i64)))
@@ -76,6 +104,18 @@ impl Shard for LogShard {
             options: None,
         })?;
 
+        let level_handle = settings.register_definition(SettingDefinitionDto {
+            id: LEVEL_SETTING_ID.to_string(),
+            label_key: "settings.logging.level.label".to_string(),
+            hint_key: Some("settings.logging.level.hint".to_string()),
+            scope: SettingScopeDto::Backend,
+            control: SettingControlDto::Select,
+            default_value: Value::from(Self::default_level()),
+            order: Some(12),
+            visible: Some(true),
+            options: Some(Self::level_options()),
+        })?;
+
         let retention_days_handle = settings.register_definition(SettingDefinitionDto {
             id: RETENTION_DAYS_SETTING_ID.to_string(),
             label_key: "settings.logging.retentionDays.label".to_string(),
@@ -93,10 +133,13 @@ impl Shard for LogShard {
             options: None,
         })?;
 
-        let file_logging = tauri_host
-            .app
-            .state::<crate::TracingState>()
-            .file_logging_handle();
+        let tracing_state = tauri_host.app.state::<crate::TracingState>();
+        let file_logging = tracing_state.file_logging_handle();
+        let log_level_filter = tracing_state.log_level_filter_handle();
+        let log_level_setting = Self::sanitize_level(Some(&level_handle.get_value()?));
+        log_level_filter
+            .set_level(log_level_setting)
+            .map_err(crate::error::AppError::other)?;
 
         let app = tauri_host.app.clone();
         let file_logging_for_action = file_logging.clone();
@@ -245,9 +288,23 @@ impl Shard for LogShard {
             }
         })?;
 
+        let log_level_filter_for_watch = log_level_filter.clone();
+        level_handle.spawn_watch(false, move |value| {
+            let log_level_filter = log_level_filter_for_watch.clone();
+            async move {
+                let log_level = LogShard::sanitize_level(Some(&value));
+                if let Err(error) = log_level_filter.set_level(log_level) {
+                    tracing::error!(error = %error, log_level, "Failed to update log level");
+                } else {
+                    tracing::info!(log_level, "Updated log level");
+                }
+            }
+        })?;
+
         tracing::info!(
             record_to_file_setting,
             record_to_file_effective = record_to_file_setting,
+            log_level = log_level_setting,
             retention_days,
             "Log shard initialized"
         );

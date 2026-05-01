@@ -11,7 +11,7 @@ use crate::shards::lcu::LcuShard;
 use crate::shards::ongoing_game::OngoingGameShard;
 use crate::shards::sgp::SgpShard;
 use crate::shards::tauri_host::TauriHost;
-use crate::utils::http_json::{pretty_json, redact_sensitive_json};
+use crate::utils::http_json::pretty_json;
 
 pub struct LeagueBridgeShard;
 
@@ -43,8 +43,7 @@ impl LeagueBridgeShard {
                 }
 
                 match serde_json::to_value(&ws_event) {
-                    Ok(mut value) => {
-                        redact_sensitive_json(&mut value);
+                    Ok(value) => {
                         tracing::debug!(
                             channel = "lcu-ws-raw",
                             "[lcu-ws-raw] {}",
