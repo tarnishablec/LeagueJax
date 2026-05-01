@@ -1,4 +1,4 @@
-import type { MatchModeTag } from "../hooks/use-match-history";
+import type { MatchModeTag } from "../types/match-mode";
 
 export const modeOptions: Array<{
   value: MatchModeTag;

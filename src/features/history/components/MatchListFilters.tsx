@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
-import type { MatchModeTag } from "../hooks/use-match-history";
+import type { MatchModeTag } from "../types/match-mode";
 
 export function MatchListFilters({
   modeTag,

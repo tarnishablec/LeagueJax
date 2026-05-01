@@ -9,7 +9,7 @@ import type {
   OngoingGameUpdated,
 } from "@/bindings/ongoing_game";
 import type { SummonerInfo } from "@/bindings/summoner";
-import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
+import type { MatchModeTag } from "@/features/history/types/match-mode";
 
 type TeamMember = OngoingGameUpdated["team_members"][number];
 const CURRENT_MODE_VALUE = "__current_mode__";
