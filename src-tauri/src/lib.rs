@@ -260,6 +260,8 @@ pub fn run() {
             lcu_get_queues,
             lcu_get_game_version,
             lcu_get_ranked_tiers,
+            lcu_get_chat_friends,
+            lcu_get_chat_friend_groups,
             ongoing_game_get_snapshot,
             ongoing_game_refresh,
             ongoing_game_refresh_match_histories,

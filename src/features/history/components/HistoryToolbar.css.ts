@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { style, styleVariants } from "@vanilla-extract/css";
 import { root as iconActionButton } from "@/components/IconActionButton.css";
 import { vars } from "@/styles/theme.css";
 
@@ -37,7 +37,7 @@ export const dialogPositioner = style({
 });
 
 export const dialogContent = style({
-  width: "min(780px, calc(100vw - 40px))",
+  width: "min(940px, calc(100vw - 40px))",
   minHeight: "min(520px, calc(100vh - 40px))",
   maxHeight: "calc(100vh - 40px)",
   borderRadius: 12,
@@ -52,6 +52,19 @@ export const dialogContent = style({
   selectors: {
     ":root.dark &": {
       boxShadow: `0 16px 36px oklch(from ${vars.color.background} 0.06 c h / 0.6)`,
+    },
+  },
+});
+
+export const contentGrid = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(220px, 260px)",
+  gap: 10,
+  minHeight: 0,
+  "@media": {
+    "screen and (max-width: 760px)": {
+      gridTemplateColumns: "minmax(0, 1fr)",
+      gridTemplateRows: "minmax(220px, 1fr) minmax(180px, 240px)",
     },
   },
 });
@@ -73,12 +86,6 @@ export const title = style({
   fontSize: "0.9rem",
   fontWeight: 700,
   color: vars.color.foreground,
-});
-
-export const subtitle = style({
-  margin: 0,
-  fontSize: "0.74rem",
-  color: vars.color.mutedForeground,
 });
 
 export const closeButton = style({
@@ -154,23 +161,6 @@ export const searchButton = style({
   },
 });
 
-export const metaRow = style({
-  display: "grid",
-  minHeight: 18,
-  alignItems: "center",
-  paddingLeft: "0.5rem",
-});
-
-export const metaText = style({
-  fontSize: "0.72rem",
-  color: vars.color.mutedForeground,
-});
-
-export const errorText = style({
-  fontSize: "0.72rem",
-  color: "oklch(0.67 0.2 29)",
-});
-
 export const resultPanel = style({
   display: "grid",
   placeItems: "center",
@@ -180,6 +170,203 @@ export const resultPanel = style({
   minHeight: 0,
   overflow: "auto",
   padding: 8,
+});
+
+export const friendPanel = style({
+  display: "grid",
+  gridTemplateRows: "auto minmax(0, 500px)",
+  minHeight: 0,
+  borderRadius: 10,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.background,
+  overflow: "hidden",
+});
+
+export const friendHeader = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(58px, 0.72fr) minmax(86px, 1fr) auto",
+  alignItems: "center",
+  gap: 6,
+  padding: "9px 10px",
+  borderBottom: `1px solid ${vars.color.border}`,
+});
+
+export const friendHeaderText = style({
+  display: "grid",
+  gap: 2,
+  minWidth: 0,
+});
+
+export const friendTitle = style({
+  fontSize: "0.78rem",
+  fontWeight: 700,
+  color: vars.color.foreground,
+});
+
+export const friendCount = style({
+  fontSize: "0.68rem",
+  color: vars.color.mutedForeground,
+});
+
+export const friendSearchInput = style({
+  width: "100%",
+  minWidth: 0,
+  height: 30,
+  borderRadius: 6,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.popupBackground,
+  color: vars.color.foreground,
+  font: "inherit",
+  fontSize: "0.68rem",
+  paddingInline: 7,
+  outline: "none",
+  selectors: {
+    "&::placeholder": {
+      color: vars.color.mutedForeground,
+    },
+    "&:focus": {
+      borderColor: vars.color.primary,
+    },
+  },
+});
+
+export const friendList = style({
+  display: "grid",
+  alignContent: "start",
+  gap: 9,
+  minHeight: 0,
+  overflow: "auto",
+  padding: 8,
+});
+
+export const friendSection = style({
+  display: "grid",
+  gap: 5,
+});
+
+export const friendSectionTitle = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gap: 8,
+  paddingInline: 2,
+  fontSize: "0.68rem",
+  fontWeight: 700,
+  color: vars.color.mutedForeground,
+});
+
+export const friendButton = style({
+  width: "100%",
+  borderRadius: 8,
+  border: `1px solid transparent`,
+  background: "transparent",
+  color: vars.color.foreground,
+  font: "inherit",
+  padding: "6px 7px",
+  cursor: "pointer",
+  display: "grid",
+  gridTemplateColumns: "28px minmax(0, 1fr) auto",
+  gap: 8,
+  alignItems: "center",
+  textAlign: "left",
+  selectors: {
+    "&:hover": {
+      borderColor: vars.color.border,
+      background: vars.color.accent,
+    },
+  },
+});
+
+export const friendAvatar = style({
+  width: 28,
+  height: 28,
+  borderRadius: 6,
+  objectFit: "cover",
+  border: `1px solid ${vars.color.border}`,
+});
+
+export const friendAvatarFallback = style({
+  width: 28,
+  height: 28,
+  borderRadius: 6,
+  background: vars.color.border,
+});
+
+export const friendInfo = style({
+  display: "grid",
+  gap: 2,
+  minWidth: 0,
+});
+
+export const friendName = style({
+  fontSize: "0.74rem",
+  fontWeight: 600,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+export const friendMeta = style({
+  display: "block",
+  fontSize: "0.66rem",
+  lineHeight: 1.2,
+  minHeight: "0.8rem",
+  color: vars.color.mutedForeground,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
+const friendStatusBase = style({
+  borderRadius: 999,
+  border: `1px solid ${vars.color.border}`,
+  padding: "2px 6px",
+  fontSize: "0.63rem",
+  lineHeight: 1.2,
+  whiteSpace: "nowrap",
+});
+
+export const friendStatus = styleVariants({
+  online: [
+    friendStatusBase,
+    {
+      color: "oklch(0.72 0.15 150)",
+      background: "oklch(0.72 0.15 150 / 0.1)",
+      borderColor: "oklch(0.72 0.15 150 / 0.28)",
+    },
+  ],
+  inGame: [
+    friendStatusBase,
+    {
+      color: "#16cae5",
+      background: "oklch(from #16cae5 l c h / 0.12)",
+      borderColor: "oklch(from #16cae5 l c h / 0.32)",
+    },
+  ],
+  away: [
+    friendStatusBase,
+    {
+      color: "oklch(0.76 0.13 78)",
+      background: "oklch(0.76 0.13 78 / 0.1)",
+      borderColor: "oklch(0.76 0.13 78 / 0.28)",
+    },
+  ],
+  offline: [
+    friendStatusBase,
+    {
+      color: vars.color.mutedForeground,
+      background: vars.color.accent,
+    },
+  ],
+});
+
+export const friendEmptyText = style({
+  minHeight: 80,
+  display: "grid",
+  placeItems: "center",
+  textAlign: "center",
+  padding: 8,
+  fontSize: "0.72rem",
+  color: vars.color.mutedForeground,
 });
 
 export const resultList = style({

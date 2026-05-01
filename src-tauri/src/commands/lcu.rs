@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::error::AppError;
+use crate::shards::lcu::concepts::chat::{LcuChatFriend, LcuChatFriendGroup};
 use crate::shards::lcu::LcuShard;
 use jax::Jax;
 use serde_json::Value;
@@ -60,4 +61,28 @@ pub async fn lcu_get_ranked_tiers(
     lcu.api()
         .get_ranked_tiers(&normalized_summoner_ids, &normalized_queue_types)
         .await
+}
+
+#[tauri::command]
+pub async fn lcu_get_chat_friends(
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Vec<LcuChatFriend>, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
+    lcu.api().get_chat_friends().await
+}
+
+#[tauri::command]
+pub async fn lcu_get_chat_friend_groups(
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Vec<LcuChatFriendGroup>, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
+    lcu.api().get_chat_friend_groups().await
 }
