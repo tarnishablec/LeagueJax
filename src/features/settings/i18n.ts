@@ -64,6 +64,17 @@ export const settingsI18n: Resource = {
           label: "Record Logs To File",
           hint: "Write backend logs to local log files.",
         },
+        level: {
+          label: "Log Level",
+          hint: "Debug and Trace write complete LCU/SGP HTTP and websocket payloads to local logs.",
+          options: {
+            error: "Error",
+            warn: "Warn",
+            info: "Info",
+            debug: "Debug",
+            trace: "Trace",
+          },
+        },
         retentionDays: {
           label: "Log Retention Days",
           hint: "Automatically remove log files older than this many days.",
@@ -218,6 +229,17 @@ export const settingsI18n: Resource = {
           label: "记录日志到文件",
           hint: "将后端日志写入本地日志文件。",
         },
+        level: {
+          label: "日志级别",
+          hint: "Debug 和 Trace 会把完整的 LCU/SGP HTTP 与 websocket payload 写入本地日志。",
+          options: {
+            error: "Error",
+            warn: "Warn",
+            info: "Info",
+            debug: "Debug",
+            trace: "Trace",
+          },
+        },
         retentionDays: {
           label: "日志保留天数",
           hint: "自动删除早于该天数的日志文件。",
@@ -371,6 +393,17 @@ export const settingsI18n: Resource = {
         recordToFile: {
           label: "ログをファイルに記録",
           hint: "バックエンドログをローカルのログファイルへ書き込みます。",
+        },
+        level: {
+          label: "ログレベル",
+          hint: "Debug と Trace では、完全な LCU/SGP HTTP と websocket payload をローカルログへ書き込みます。",
+          options: {
+            error: "Error",
+            warn: "Warn",
+            info: "Info",
+            debug: "Debug",
+            trace: "Trace",
+          },
         },
         retentionDays: {
           label: "ログ保持日数",

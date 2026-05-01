@@ -10,11 +10,11 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, RunEvent};
 use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
-use tracing_subscriber::filter::{filter_fn, FilterExt};
 use tracing_subscriber::fmt::writer::MakeWriter;
 use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::reload;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::Layer;
+use tracing_subscriber::{EnvFilter, Registry};
 
 use crate::commands::auto_accept::*;
 use crate::commands::history::*;
@@ -31,7 +31,42 @@ use crate::utils::webview::apply_release_webview_hardening;
 use jax::Jax;
 use jax_probes::TimingProbe;
 
-const DEFAULT_LOG_FILTER: &str = "league_jax_lib=info";
+const DEFAULT_LOG_LEVEL: &str = "info";
+const LOG_TARGET_PREFIX: &str = "league_jax_lib";
+
+fn normalize_log_level(value: &str) -> &'static str {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "error" => "error",
+        "warn" => "warn",
+        "debug" => "debug",
+        "trace" => "trace",
+        _ => DEFAULT_LOG_LEVEL,
+    }
+}
+
+#[derive(Clone)]
+struct LogLevelFilterHandle {
+    handle: reload::Handle<EnvFilter, Registry>,
+}
+
+impl LogLevelFilterHandle {
+    fn new(handle: reload::Handle<EnvFilter, Registry>) -> Self {
+        Self { handle }
+    }
+
+    fn set_level(&self, value: &str) -> Result<(), String> {
+        self.handle
+            .reload(log_filter(value))
+            .map_err(|error| error.to_string())
+    }
+}
+
+fn log_filter(level: &str) -> EnvFilter {
+    EnvFilter::new(format!(
+        "{LOG_TARGET_PREFIX}={}",
+        normalize_log_level(level)
+    ))
+}
 
 #[derive(Clone)]
 struct FileLoggingHandle {
@@ -123,29 +158,29 @@ impl Write for SwitchableFileWriter {
 
 struct TracingState {
     file_logging: FileLoggingHandle,
+    log_level_filter: LogLevelFilterHandle,
 }
 
 impl TracingState {
     fn file_logging_handle(&self) -> FileLoggingHandle {
         self.file_logging.clone()
     }
-}
 
-fn env_filter_from_default_env() -> tracing_subscriber::EnvFilter {
-    tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| DEFAULT_LOG_FILTER.into())
+    fn log_level_filter_handle(&self) -> LogLevelFilterHandle {
+        self.log_level_filter.clone()
+    }
 }
 
 fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, Box<dyn Error>> {
-    let env_filter = env_filter_from_default_env();
+    let (log_filter_layer, log_filter_handle) = reload::Layer::new(log_filter(DEFAULT_LOG_LEVEL));
+    let log_level_filter = LogLevelFilterHandle::new(log_filter_handle);
 
     let local_timer = tracing_subscriber::fmt::time::LocalTime::rfc_3339();
     let console_layer = tracing_subscriber::fmt::layer()
         .with_timer(local_timer)
         .with_file(true)
         .with_line_number(true)
-        .with_target(true)
-        .with_filter(env_filter);
+        .with_target(true);
 
     // File layer — enabled in all builds
     let file_logging = FileLoggingHandle::new();
@@ -156,17 +191,18 @@ fn init_tracing<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<TracingState, 
         .with_file(true)
         .with_line_number(true)
         .with_target(true)
-        .with_writer(SwitchableFileMakeWriter::new(file_logging.clone()))
-        .with_filter(env_filter_from_default_env().and(filter_fn(|metadata| {
-            metadata.target().starts_with("league_jax_lib")
-        })));
+        .with_writer(SwitchableFileMakeWriter::new(file_logging.clone()));
 
     tracing_subscriber::registry()
+        .with(log_filter_layer)
         .with(console_layer)
         .with(file_layer)
         .init();
     let _ = app;
-    Ok(TracingState { file_logging })
+    Ok(TracingState {
+        file_logging,
+        log_level_filter,
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
