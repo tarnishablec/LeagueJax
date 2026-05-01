@@ -2,14 +2,14 @@ import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { SummonerID } from "@/components/SummonerID.tsx";
 import * as s from "./OngoingGameCards.css.ts";
+import type { PlayerCardRankDisplayItem } from "./use-snapshot-player-card-state.ts";
 
 type SnapshotPlayerCardHeaderProps = {
   championId: number | null;
   identity?: Pick<SummonerInfo, "gameName" | "tagLine">;
   isBot: boolean;
   level: number;
-  rankIcon: string;
-  rankText: string;
+  rankItems: readonly PlayerCardRankDisplayItem[];
   showRank: boolean;
   squadTag?: {
     text: string;
@@ -17,16 +17,8 @@ type SnapshotPlayerCardHeaderProps = {
 };
 
 export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
-  const {
-    championId,
-    identity,
-    isBot,
-    level,
-    rankIcon,
-    rankText,
-    showRank,
-    squadTag,
-  } = props;
+  const { championId, identity, isBot, level, rankItems, showRank, squadTag } =
+    props;
   const squadBadge = squadTag ? (
     <span className={s.playerSquadBadge}>{squadTag.text}</span>
   ) : null;
@@ -73,9 +65,24 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
             </div>
 
             {showRank ? (
-              <div className={s.rankRow}>
-                <img src={rankIcon} alt="" className={s.rankMiniIcon} />
-                <span className={s.rankText}>{rankText}</span>
+              <div className={s.rankGrid}>
+                {rankItems.map((rank) => (
+                  <div key={rank.id} className={s.rankItem}>
+                    <span className={s.rankQueue}>{rank.queueLabel}</span>
+                    <span className={s.rankValue}>
+                      <img
+                        src={rank.iconUrl}
+                        alt=""
+                        className={s.rankMiniIcon({
+                          ranked: rank.isRanked,
+                        })}
+                      />
+                      {rank.value ? (
+                        <span className={s.rankText}>{rank.value}</span>
+                      ) : null}
+                    </span>
+                  </div>
+                ))}
               </div>
             ) : (
               <div></div>

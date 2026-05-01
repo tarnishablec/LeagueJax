@@ -41,8 +41,7 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
         identity={cardState.identity}
         isBot={cardState.isBot}
         level={cardState.level}
-        rankIcon={cardState.rankIcon}
-        rankText={cardState.rankText}
+        rankItems={cardState.rankItems}
         showRank={cardState.showRank}
         squadTag={cardState.squadTag}
       />
@@ -56,7 +55,6 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
           >
             {cardState.winRateStat.text}
           </span>
-          <span className={s.averageKdaText}>{cardState.averageKdaText}</span>
         </div>
         {cardState.playerTags.length > 0 ? (
           <div className={s.playerTagList}>

@@ -182,7 +182,7 @@ export const playerStats = style({
   fontSize: "0.78rem",
   color: vars.color.foreground,
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gridTemplateColumns: "minmax(0, 1fr)",
   alignItems: "center",
   gap: 6,
   minHeight: 16,
@@ -206,15 +206,6 @@ export const winRateText = recipe({
   defaultVariants: {
     tone: "neutral",
   },
-});
-
-export const averageKdaText = style({
-  color: vars.color.foreground,
-  fontSize: "0.78rem",
-  fontWeight: 750,
-  justifySelf: "end",
-  lineHeight: 1,
-  whiteSpace: "nowrap",
 });
 
 export const playerTagList = style({
@@ -245,7 +236,31 @@ export const playerTag = style({
   whiteSpace: "nowrap",
 });
 
-export const rankRow = style({
+export const rankGrid = style({
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  alignItems: "center",
+  columnGap: 6,
+  minWidth: 0,
+});
+
+export const rankItem = style({
+  display: "grid",
+  gridTemplateColumns: "auto minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 8,
+  minWidth: 0,
+});
+
+export const rankQueue = style({
+  color: vars.color.mutedForeground,
+  fontSize: "0.66rem",
+  fontWeight: 750,
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+});
+
+export const rankValue = style({
   display: "inline-grid",
   gridAutoFlow: "column",
   alignItems: "center",
@@ -254,15 +269,27 @@ export const rankRow = style({
   minWidth: 0,
 });
 
-export const rankMiniIcon = style({
-  width: 14,
-  height: 14,
-  objectFit: "contain",
+export const rankMiniIcon = recipe({
+  base: {
+    width: 14,
+    height: 14,
+    objectFit: "contain",
+  },
+  variants: {
+    ranked: {
+      true: {
+        width: 18,
+        height: 18,
+      },
+      false: {},
+    },
+  },
 });
 
 export const rankText = style({
-  fontSize: "0.72rem",
-  color: vars.color.mutedForeground,
+  fontSize: "0.7rem",
+  color: vars.color.foreground,
+  fontWeight: 700,
   lineHeight: 1.1,
   whiteSpace: "nowrap",
   overflow: "hidden",
