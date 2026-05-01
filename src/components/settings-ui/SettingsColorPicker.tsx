@@ -82,8 +82,14 @@ export function SettingsColorPicker({
   const normalizedPresets = presets.map((preset) => normalizeHexColor(preset));
 
   useEffect(() => {
-    setColorValue(toColorValue(normalizedValue));
-  }, [normalizedValue]);
+    setColorValue((currentColor) => {
+      if (toHexColor(currentColor, outputFormat) === normalizedValue) {
+        return currentColor;
+      }
+
+      return toColorValue(normalizedValue);
+    });
+  }, [normalizedValue, outputFormat]);
 
   const commitColor = (nextColor = colorValue) => {
     onValueChange(toHexColor(nextColor, outputFormat));
