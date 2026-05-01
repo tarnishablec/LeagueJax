@@ -10,15 +10,15 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import type { SummonerInfo } from "@/bindings/summoner";
+import { useSummonerInfo } from "@/features/history/hooks/use-summoner";
 import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { useTabStore } from "@/stores/tabs.ts";
 import * as s from "./HistoryTabBar.css.ts";
 
-function TabIcon({ summoner }: { summoner: SummonerInfo }) {
+function TabIcon({ profileIconId }: { profileIconId: number }) {
   const { src: avatarUrl } = useCdragonStaticData({
     type: "profile-icon",
-    profileIconId: summoner.profileIconId,
+    profileIconId,
   });
 
   if (!avatarUrl) {
@@ -38,7 +38,14 @@ function TabIcon({ summoner }: { summoner: SummonerInfo }) {
 
 type TabRefsMap = Record<string, HTMLLIElement | null>;
 
-function formatTabLabel(summoner: SummonerInfo): string {
+function formatTabLabel(
+  summoner: { gameName: string; tagLine: string } | undefined,
+  puuid: string,
+): string {
+  if (!summoner) {
+    return puuid.slice(0, 8);
+  }
+
   if (summoner.tagLine) {
     return `${summoner.gameName}#${summoner.tagLine}`;
   }
@@ -124,7 +131,7 @@ function useTabBarOverflow(
 interface HistoryTabItemProps {
   active: boolean;
   tabId: string;
-  summoner: SummonerInfo;
+  puuid: string;
   onAuxClick: (e: MouseEvent, id: string) => void;
   registerRef: (id: string, node: HTMLLIElement | null) => void;
 }
@@ -132,12 +139,13 @@ interface HistoryTabItemProps {
 function HistoryTabItem({
   active,
   tabId,
-  summoner,
+  puuid,
   onAuxClick,
   registerRef,
 }: HistoryTabItemProps) {
   const setActiveTab = useTabStore((state) => state.setActiveTab);
   const closeTab = useTabStore((state) => state.closeTab);
+  const { data: summoner } = useSummonerInfo(puuid);
 
   return (
     <li
@@ -151,8 +159,8 @@ function HistoryTabItem({
         onClick={() => setActiveTab(tabId)}
         onAuxClick={(e) => onAuxClick(e, tabId)}
       >
-        <TabIcon summoner={summoner} />
-        <span className={s.tabLabel}>{formatTabLabel(summoner)}</span>
+        <TabIcon profileIconId={summoner?.profileIconId ?? 0} />
+        <span className={s.tabLabel}>{formatTabLabel(summoner, puuid)}</span>
       </button>
       <button
         type="button"
@@ -238,7 +246,7 @@ export function HistoryTabBar() {
                   key={tab.id}
                   active={tab.id === activeTabId}
                   tabId={tab.id}
-                  summoner={tab.summoner}
+                  puuid={tab.puuid}
                   onAuxClick={handleAuxClick}
                   registerRef={(id, node) => {
                     tabRefs.current[id] = node;

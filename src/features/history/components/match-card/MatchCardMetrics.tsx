@@ -9,11 +9,13 @@ export function MatchCardMetrics({
   me,
   gameDuration,
   damageShare,
+  damageRank,
   goldRank,
 }: {
   me: RawMatchSummaryParticipant;
   gameDuration: number;
   damageShare: number;
+  damageRank: number;
   goldRank: number;
 }) {
   const { t } = useTranslation();
@@ -26,6 +28,7 @@ export function MatchCardMetrics({
   const goldEarned = Math.max(0, me.goldEarned ?? 0);
   const damage = Math.max(0, me.totalDamageDealtToChampions ?? 0);
   const damageShareText = `${(Math.max(0, Number.isFinite(damageShare) ? damageShare : 0) * 100).toFixed(1)}%`;
+  const damageShareRankText = `${damageShareText} (#${damageRank})`;
   const numberFormatter = new Intl.NumberFormat();
 
   return (
@@ -100,7 +103,7 @@ export function MatchCardMetrics({
         </span>
         <Tooltip.Root openDelay={200} closeDelay={0}>
           <Tooltip.Trigger asChild>
-            <span className={s.metricSecondary}>{damageShareText}</span>
+            <span className={s.metricSecondary}>{damageShareRankText}</span>
           </Tooltip.Trigger>
           <Portal>
             <Tooltip.Positioner className={s.tooltipPositioner}>

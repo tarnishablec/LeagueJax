@@ -22,6 +22,13 @@ export const listPlaceholder = style({
   minHeight: 0,
 });
 
+export const summaryPlaceholder = style({
+  minHeight: 82,
+  borderRadius: 8,
+  background: vars.color.surface,
+  border: `1px solid ${vars.color.border}`,
+});
+
 export const focusPicker = style({
   display: "grid",
   placeContent: "center",

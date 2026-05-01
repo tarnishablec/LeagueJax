@@ -99,11 +99,6 @@ type StatTagRule = {
 
 const STAT_TAG_RULES: StatTagRule[] = [
   {
-    tag: "highestDamage",
-    stat: (p) => p.totalDamageDealtToChampions,
-    scope: "all",
-  },
-  {
     tag: "mostTurretDamage",
     stat: (p) => p.damageDealtToBuildings ?? p.damageDealtToTurrets ?? 0,
     scope: "all",
@@ -190,12 +185,16 @@ function computeMatchPills(
   me: RawMatchSummaryParticipant,
   participants: RawMatchSummaryParticipant[],
   isVictory: boolean,
+  damageRank: number,
 ): MatchPill[] {
   const teammates = participants.filter((p) => p.teamId === me.teamId);
   const pills: MatchPill[] = [];
 
   const teamTag = getTeamTag(me, teammates, isVictory);
   if (teamTag) pills.push({ type: "tag", tag: teamTag });
+  if ((me.totalDamageDealtToChampions ?? 0) > 0 && damageRank === 1) {
+    pills.push({ type: "tag", tag: "highestDamage" });
+  }
 
   const soloKillCount = me.challenges?.soloKills ?? 0;
   if (soloKillCount > 0) {
@@ -287,7 +286,16 @@ export function useMatchCardViewModel({
   // console.log("inferredPosition", roleQuest.inferredPosition);
 
   const position = roleQuest.inferredPosition ?? fallbackPosition;
-  const pills = computeMatchPills(me, participants, gameResult === "victory");
+  const myDamage = me.totalDamageDealtToChampions ?? 0;
+  const damageRank =
+    participants.filter((p) => (p.totalDamageDealtToChampions ?? 0) > myDamage)
+      .length + 1;
+  const pills = computeMatchPills(
+    me,
+    participants,
+    gameResult === "victory",
+    damageRank,
+  );
   const myGold = me.goldEarned ?? 0;
   const goldRank =
     participants.filter((p) => (p.goldEarned ?? 0) > myGold).length + 1;
@@ -307,6 +315,7 @@ export function useMatchCardViewModel({
     primaryRuneId,
     subStyleId,
     damageShare,
+    damageRank,
     goldRank,
     position,
     pills,

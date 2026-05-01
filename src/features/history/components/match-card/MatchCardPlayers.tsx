@@ -1,12 +1,10 @@
 import { HoverCard } from "@ark-ui/react/hover-card";
 import { Portal } from "@ark-ui/react/portal";
-import { invoke } from "@tauri-apps/api/core";
 import { useMemo } from "react";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
-import type { SummonerSearchResult } from "@/bindings/summoner.ts";
 import { LazyImage } from "@/components/LazyImage";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
-import { defaultSummonerInfo, useTabStore } from "@/stores/tabs";
+import { useTabStore } from "@/stores/tabs";
 import * as s from "./MatchCard.css";
 
 const BOT_PUUID = "00000000-0000-0000-0000-000000000000";
@@ -30,49 +28,6 @@ function resolvePlayerName(participant: RawMatchSummaryParticipant): {
         : (participant.summonerName ?? participant.puuid ?? "Unknown"),
     tagLine,
   };
-}
-
-async function searchByQuery(
-  query: string,
-  sgpServerId: string | null,
-): Promise<SummonerSearchResult[]> {
-  return invoke<SummonerSearchResult[]>("search_summoners", {
-    query,
-    ...(sgpServerId ? { sgpServerId } : {}),
-  });
-}
-
-async function resolvePlayerTab(
-  participant: RawMatchSummaryParticipant,
-  gameName: string,
-  tagLine: string,
-  sgpServerId: string | null,
-): Promise<{ summoner: SummonerSearchResult } | null> {
-  if (participant.puuid) {
-    try {
-      const results = await searchByQuery(participant.puuid, sgpServerId);
-      const match = results.find((e) => e.puuid === participant.puuid);
-      if (match) return { summoner: match };
-    } catch {
-      // fallback
-    }
-  }
-
-  if (tagLine.length > 0) {
-    try {
-      const results = await searchByQuery(
-        `${gameName}#${tagLine}`,
-        sgpServerId,
-      );
-      const match =
-        results.find((e) => e.puuid === participant.puuid) ?? results[0];
-      if (match) return { summoner: match };
-    } catch {
-      // fallback
-    }
-  }
-
-  return null;
 }
 
 function PlayerIcon({ championId }: { championId: number }) {
@@ -101,48 +56,8 @@ export function MatchCardPlayers({
 }) {
   const openTab = useTabStore((state) => state.openTab);
 
-  const openPlayerTab = (
-    participant: RawMatchSummaryParticipant,
-    gameName: string,
-    tagLine: string,
-  ) => {
-    const optimisticPuuid = participant.puuid ?? "";
-
-    // Open the tab immediately with available data for instant feedback
-    openTab(
-      defaultSummonerInfo({
-        puuid: optimisticPuuid,
-        gameName,
-        tagLine,
-      }),
-      sgpServerId,
-    );
-
-    // Resolve full summoner info in the background, then update the tab
-    resolvePlayerTab(participant, gameName, tagLine, sgpServerId).then(
-      (resolved) => {
-        if (resolved) {
-          const { summoner } = resolved;
-          const samePuuid = summoner.puuid === optimisticPuuid;
-
-          // Avoid changing sgpServerId for an already-open tab with the same puuid.
-          // Otherwise, the history SWR key changes and triggers a duplicate fetch.
-          const nextSgpServerId = samePuuid ? undefined : summoner.sgpServerId;
-
-          openTab(
-            defaultSummonerInfo({
-              puuid: summoner.puuid,
-              gameName: summoner.gameName,
-              tagLine: summoner.tagLine,
-              profileIconId: summoner.profileIconId,
-              summonerLevel: summoner.summonerLevel,
-              privacy: summoner.privacy,
-            }),
-            nextSgpServerId,
-          );
-        }
-      },
-    );
+  const openPlayerTab = (participant: RawMatchSummaryParticipant) => {
+    openTab(participant.puuid ?? "", sgpServerId);
   };
 
   const teams = useMemo(() => {
@@ -186,7 +101,7 @@ export function MatchCardPlayers({
                       aria-label="Open player history tab"
                       className={s.playerNameButton}
                       onClick={() => {
-                        openPlayerTab(participant, gameName, tagLine);
+                        openPlayerTab(participant);
                       }}
                     >
                       {gameName}

@@ -113,6 +113,7 @@ export function MatchCard({
               me={vm.me}
               gameDuration={vm.gameDuration}
               damageShare={vm.damageShare}
+              damageRank={vm.damageRank}
               goldRank={vm.goldRank}
             />
 

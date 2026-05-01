@@ -1,43 +1,15 @@
 import { create } from "zustand";
-import type { SummonerInfo } from "@/bindings/summoner.ts";
-
-export function defaultSummonerInfo(
-  partial: Partial<SummonerInfo> & { puuid: string },
-): SummonerInfo {
-  return {
-    gameName: "",
-    tagLine: "",
-    profileIconId: 0,
-    summonerLevel: 0,
-    level: 0,
-    privacy: "",
-    accountId: 0,
-    id: 0,
-    name: "",
-    internalName: "",
-    expPoints: 0,
-    expToNextLevel: 0,
-    levelAndXpVersion: 0,
-    lastGameDate: 0,
-    revisionDate: 0,
-    revisionId: 0,
-    nameChangeFlag: false,
-    unnamed: false,
-    ...partial,
-  };
-}
 
 export interface HistoryTab {
   id: string;
   puuid: string;
   sgpServerId: string | null;
-  summoner: SummonerInfo;
 }
 
 interface TabState {
   tabs: HistoryTab[];
   activeTabId: string | null;
-  openTab: (summoner: SummonerInfo, sgpServerId?: string | null) => void;
+  openTab: (puuid: string, sgpServerId?: string | null) => void;
   closeTab: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   closeOtherTabs: (id: string) => void;
@@ -45,29 +17,16 @@ interface TabState {
   setActiveTab: (id: string) => void;
 }
 
-function mergeSummoner(
-  existing: SummonerInfo,
-  next: SummonerInfo,
-): SummonerInfo {
-  return {
-    ...existing,
-    gameName:
-      next.gameName.trim().length > 0 ? next.gameName : existing.gameName,
-    tagLine: next.tagLine.trim().length > 0 ? next.tagLine : existing.tagLine,
-    profileIconId:
-      next.profileIconId > 0 ? next.profileIconId : existing.profileIconId,
-    summonerLevel:
-      next.summonerLevel > 0 ? next.summonerLevel : existing.summonerLevel,
-    privacy: next.privacy.trim().length > 0 ? next.privacy : existing.privacy,
-  };
-}
-
 export const useTabStore = create<TabState>((set, get) => ({
   tabs: [],
   activeTabId: null,
 
-  openTab: (summoner, sgpServerId = null) => {
-    const id = summoner.puuid;
+  openTab: (puuid, sgpServerId = null) => {
+    const id = puuid.trim();
+    if (id.length === 0) {
+      return;
+    }
+
     const { tabs } = get();
     const existing = tabs.find((t) => t.id === id);
     if (existing) {
@@ -79,7 +38,6 @@ export const useTabStore = create<TabState>((set, get) => ({
         return {
           ...tab,
           sgpServerId: sgpServerId ?? tab.sgpServerId,
-          summoner: mergeSummoner(tab.summoner, summoner),
         };
       });
       set({ tabs: nextTabs, activeTabId: id });
@@ -87,9 +45,8 @@ export const useTabStore = create<TabState>((set, get) => ({
     }
     const tab: HistoryTab = {
       id,
-      puuid: summoner.puuid,
+      puuid: id,
       sgpServerId,
-      summoner,
     };
     set({ tabs: [...tabs, tab], activeTabId: id });
   },

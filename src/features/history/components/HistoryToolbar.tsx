@@ -4,7 +4,7 @@ import type { LcuChatFriend } from "@/bindings/lcu_chat";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
-import { defaultSummonerInfo, useTabStore } from "@/stores/tabs";
+import { useTabStore } from "@/stores/tabs";
 import sgpServersConfigJson from "../../../../resources/league-servers.json";
 import { HistorySearchDialog } from "./HistorySearchDialog";
 import * as s from "./HistoryToolbar.css";
@@ -24,17 +24,7 @@ export function HistoryToolbar() {
   }, [canOpenSearch]);
 
   const openResult = (result: SummonerSearchResult) => {
-    openTab(
-      defaultSummonerInfo({
-        puuid: result.puuid,
-        gameName: result.gameName,
-        tagLine: result.tagLine,
-        profileIconId: result.profileIconId,
-        summonerLevel: result.summonerLevel,
-        privacy: result.privacy,
-      }),
-      result.sgpServerId,
-    );
+    openTab(result.puuid, result.sgpServerId);
 
     void invoke("save_search_history", {
       puuid: result.puuid,
@@ -49,16 +39,7 @@ export function HistoryToolbar() {
     const gameName = friend.gameName.trim() || friend.name.trim();
     const tagLine = friend.gameTag.trim();
 
-    openTab(
-      defaultSummonerInfo({
-        puuid: friend.puuid,
-        gameName,
-        tagLine,
-        profileIconId: friend.icon,
-        summonerLevel: 0,
-      }),
-      sgpServerId,
-    );
+    openTab(friend.puuid, sgpServerId);
 
     void invoke("save_search_history", {
       puuid: friend.puuid,

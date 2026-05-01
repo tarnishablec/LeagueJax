@@ -5,6 +5,10 @@ import {
   style,
 } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import {
+  summonerIdGameNameColorVar,
+  summonerIdTagLineColorVar,
+} from "@/components/SummonerID";
 import { vars } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
@@ -103,6 +107,27 @@ export const playerNameRow = style({
 export const playerNameCell = style({
   minWidth: 0,
   overflow: "hidden",
+});
+
+export const playerNameButton = style({
+  display: "grid",
+  maxWidth: "100%",
+  minWidth: 0,
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  font: "inherit",
+  textAlign: "start",
+  cursor: "pointer",
+  selectors: {
+    "&:hover": {
+      vars: {
+        [summonerIdGameNameColorVar]: vars.color.primary,
+        [summonerIdTagLineColorVar]: `color-mix(in oklch, ${vars.color.primary} 72%, ${vars.color.mutedForeground})`,
+      },
+    },
+  },
 });
 
 export const playerSquadBadge = style({
@@ -269,6 +294,12 @@ export const rankValue = style({
   minWidth: 0,
 });
 
+export const rankIconTooltipTrigger = style({
+  display: "inline-grid",
+  placeItems: "center",
+  lineHeight: 1,
+});
+
 export const rankMiniIcon = recipe({
   base: {
     width: 14,
@@ -284,6 +315,23 @@ export const rankMiniIcon = recipe({
       false: {},
     },
   },
+});
+
+export const rankTooltipPositioner = style({
+  zIndex: 60,
+});
+
+export const rankTooltipContent = style({
+  padding: "5px 7px",
+  borderRadius: 4,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popupBackground,
+  color: vars.color.foreground,
+  fontSize: "0.72rem",
+  fontWeight: 650,
+  lineHeight: 1,
+  boxShadow: "0 8px 18px oklch(0% 0 0 / 0.28)",
+  whiteSpace: "nowrap",
 });
 
 export const rankText = style({

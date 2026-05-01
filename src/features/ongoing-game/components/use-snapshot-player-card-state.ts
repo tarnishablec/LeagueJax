@@ -5,7 +5,10 @@ import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { useLcuStore } from "@/stores/lcu";
-import { resolveRankTierForIcon } from "@/utils/rank-display";
+import {
+  formatRankTierLabel,
+  resolveRankTierForIcon,
+} from "@/utils/rank-display";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
@@ -35,6 +38,7 @@ export type PlayerCardRankDisplayItem = {
   iconUrl: string;
   isRanked: boolean;
   queueLabel: string;
+  tooltip: string;
   value: string;
 };
 
@@ -69,6 +73,27 @@ function formatRankCardValue(
   return `${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
 }
 
+function formatRankCardTooltip(
+  t: ReturnType<typeof useTranslation>["t"],
+  entry: RankEntry | null | undefined,
+): string {
+  if (!hasRank(entry)) {
+    return formatRankTierLabel(t, "NONE");
+  }
+
+  const tierLabel = formatRankTierLabel(t, entry.tier);
+  if (APEX_TIERS.has(entry.tier)) {
+    return `${tierLabel} ${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
+  }
+
+  const division = entry.division.trim();
+  if (division.length > 0 && division !== "NA") {
+    return `${tierLabel} ${division}`;
+  }
+
+  return tierLabel;
+}
+
 function computeWinRateStat(
   games: EnrichedMatch[],
   averageKdaText: string,
@@ -101,18 +126,15 @@ function normalizeChampionId(slot: PlayerSlot): number | null {
   return championId > 0 ? championId : null;
 }
 
-function resolveSummonerIdentity(
-  slot: PlayerSlot,
-  summoner: SummonerInfo | undefined,
-) {
-  const gameName = summoner?.gameName.trim() || slot.gameName.trim();
+function resolveSummonerIdentity(summoner: SummonerInfo | undefined) {
+  const gameName = summoner?.gameName.trim() ?? "";
   if (gameName.length === 0) {
     return undefined;
   }
 
   return {
     gameName,
-    tagLine: summoner?.tagLine.trim() || slot.tagLine.trim(),
+    tagLine: summoner?.tagLine.trim() ?? "",
   };
 }
 
@@ -195,10 +217,7 @@ export function useSnapshotPlayerCardState(
   const flexRankEntry = rankedQuery.data?.queueMap.RANKED_FLEX_SR ?? null;
   const soloRankIcon = useRankIcon(resolveRankTierForIcon(soloRankEntry), true);
   const flexRankIcon = useRankIcon(resolveRankTierForIcon(flexRankEntry), true);
-  const identity = useMemo(
-    () => resolveSummonerIdentity(slot, summoner),
-    [slot, summoner],
-  );
+  const identity = useMemo(() => resolveSummonerIdentity(summoner), [summoner]);
   const rankItems = useMemo<PlayerCardRankDisplayItem[]>(
     () => [
       {
@@ -208,6 +227,7 @@ export function useSnapshotPlayerCardState(
         queueLabel: t("ongoingGame.rank.soloShort", {
           defaultValue: "Solo",
         }),
+        tooltip: formatRankCardTooltip(t, soloRankEntry),
         value: formatRankCardValue(t, soloRankEntry),
       },
       {
@@ -217,6 +237,7 @@ export function useSnapshotPlayerCardState(
         queueLabel: t("ongoingGame.rank.flexShort", {
           defaultValue: "Flex",
         }),
+        tooltip: formatRankCardTooltip(t, flexRankEntry),
         value: formatRankCardValue(t, flexRankEntry),
       },
     ],
@@ -291,6 +312,7 @@ export function useSnapshotPlayerCardState(
     noHistoryText: t("ongoingGame.noHistory", {
       defaultValue: "No match history",
     }),
+    historyPuuid: summoner?.puuid.trim() || undefined,
     identity,
     rankItems,
     recentGames,
