@@ -273,7 +273,7 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
     if (!summoner) {
       return;
     }
-    openTab(summoner);
+    openTab(summoner.puuid);
     void navigate("/main/history");
   };
 

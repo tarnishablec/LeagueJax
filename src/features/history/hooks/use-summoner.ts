@@ -15,3 +15,13 @@ export function useSearchSummoner(
     {},
   );
 }
+
+export function useSummonerInfo(puuid: string | undefined) {
+  return useSWR(
+    puuid ? ["get_summoner_by_puuid", puuid] : null,
+    ([cmd, resolvedPuuid]) =>
+      invoke<SummonerInfo>(cmd, {
+        puuid: resolvedPuuid,
+      }),
+  );
+}

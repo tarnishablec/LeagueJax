@@ -26,7 +26,7 @@ export function useFocusSync(
     }
 
     if (connected && autoOpenOwnTab && connected.summoner) {
-      openTab(connected.summoner, null);
+      openTab(connected.summoner.puuid, null);
     }
   }, [connected, autoOpenOwnTab, openTab, closeAllTabs]);
 }

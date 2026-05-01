@@ -1,3 +1,5 @@
+import { Portal } from "@ark-ui/react/portal";
+import { Tooltip } from "@ark-ui/react/tooltip";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { SummonerID } from "@/components/SummonerID.tsx";
@@ -9,6 +11,7 @@ type SnapshotPlayerCardHeaderProps = {
   identity?: Pick<SummonerInfo, "gameName" | "tagLine">;
   isBot: boolean;
   level: number;
+  onOpenHistory?: () => void;
   rankItems: readonly PlayerCardRankDisplayItem[];
   showRank: boolean;
   squadTag?: {
@@ -17,8 +20,16 @@ type SnapshotPlayerCardHeaderProps = {
 };
 
 export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
-  const { championId, identity, isBot, level, rankItems, showRank, squadTag } =
-    props;
+  const {
+    championId,
+    identity,
+    isBot,
+    level,
+    onOpenHistory,
+    rankItems,
+    showRank,
+    squadTag,
+  } = props;
   const squadBadge = squadTag ? (
     <span className={s.playerSquadBadge}>{squadTag.text}</span>
   ) : null;
@@ -48,17 +59,24 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
             <div className={s.playerNameRow}>
               <div className={s.playerNameCell}>
                 {identity ? (
-                  <SummonerID
-                    summoner={identity}
-                    styles={{
-                      gameName: {
-                        fontSize: "0.75rem",
-                      },
-                      tagLine: {
-                        fontSize: "0.7rem",
-                      },
-                    }}
-                  />
+                  <button
+                    type="button"
+                    className={s.playerNameButton}
+                    aria-label="Open summoner match history"
+                    onClick={onOpenHistory}
+                  >
+                    <SummonerID
+                      summoner={identity}
+                      styles={{
+                        gameName: {
+                          fontSize: "0.75rem",
+                        },
+                        tagLine: {
+                          fontSize: "0.7rem",
+                        },
+                      }}
+                    />
+                  </button>
                 ) : null}
               </div>
               {squadBadge}
@@ -70,13 +88,34 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
                   <div key={rank.id} className={s.rankItem}>
                     <span className={s.rankQueue}>{rank.queueLabel}</span>
                     <span className={s.rankValue}>
-                      <img
-                        src={rank.iconUrl}
-                        alt=""
-                        className={s.rankMiniIcon({
-                          ranked: rank.isRanked,
-                        })}
-                      />
+                      <Tooltip.Root
+                        lazyMount
+                        unmountOnExit
+                        openDelay={150}
+                        closeDelay={0}
+                        positioning={{ placement: "top", gutter: 6 }}
+                      >
+                        <Tooltip.Trigger asChild>
+                          <span className={s.rankIconTooltipTrigger}>
+                            <img
+                              src={rank.iconUrl}
+                              alt=""
+                              className={s.rankMiniIcon({
+                                ranked: rank.isRanked,
+                              })}
+                            />
+                          </span>
+                        </Tooltip.Trigger>
+                        <Portal>
+                          <Tooltip.Positioner
+                            className={s.rankTooltipPositioner}
+                          >
+                            <Tooltip.Content className={s.rankTooltipContent}>
+                              {rank.tooltip}
+                            </Tooltip.Content>
+                          </Tooltip.Positioner>
+                        </Portal>
+                      </Tooltip.Root>
                       {rank.value ? (
                         <span className={s.rankText}>{rank.value}</span>
                       ) : null}

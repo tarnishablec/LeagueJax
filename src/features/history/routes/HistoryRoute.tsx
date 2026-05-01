@@ -9,7 +9,7 @@ import { ConnectionGuard } from "../components/ConnectionGuard";
 import { MatchList } from "../components/MatchList";
 import { SummaryBar } from "../components/SummaryBar";
 import { useFocusSync } from "../hooks/use-focus-sync.ts";
-import { useSummonerHydration } from "../hooks/use-summoner-hydration";
+import { useSummonerInfo } from "../hooks/use-summoner";
 import {
   HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
   HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
@@ -60,7 +60,7 @@ function OwnSummonerButton() {
       <button
         type="button"
         className={s.focusPickerCard}
-        onClick={() => openTab(summoner, null)}
+        onClick={() => openTab(summoner.puuid, null)}
       >
         <div className={s.focusPickerHeader}>
           <div className={s.focusPickerAvatarWrap}>
@@ -95,6 +95,7 @@ export function HistoryRoute() {
   const { instances } = useLcuStore();
   const { tabs, activeTabId } = useTabStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
+  const { data: activeSummoner } = useSummonerInfo(activeTab?.puuid);
   const listReady = useDeferredListMount(activeTab?.id ?? null);
 
   const settings = useSettings();
@@ -111,7 +112,6 @@ export function HistoryRoute() {
   );
 
   useFocusSync(connected, autoOpenOwnTab);
-  useSummonerHydration(!!connected, activeTab);
 
   if (!connected) {
     return <ConnectionGuard instances={instances} />;
@@ -123,10 +123,14 @@ export function HistoryRoute() {
 
   return (
     <div className={s.page}>
-      <SummaryBar
-        summoner={activeTab.summoner}
-        autoRefresh={autoRefreshOnSwitch}
-      />
+      {activeSummoner ? (
+        <SummaryBar
+          summoner={activeSummoner}
+          autoRefresh={autoRefreshOnSwitch}
+        />
+      ) : (
+        <div className={s.summaryPlaceholder} />
+      )}
       {listReady ? (
         <MatchList
           puuid={activeTab.puuid}
