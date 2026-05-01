@@ -66,7 +66,7 @@ export const settingsI18n: Resource = {
         },
         level: {
           label: "Log Level",
-          hint: "Debug and Trace write complete LCU/SGP HTTP and websocket payloads to local logs.",
+          hint: "Controls the minimum level written by backend logs.",
           options: {
             error: "Error",
             warn: "Warn",
@@ -231,7 +231,7 @@ export const settingsI18n: Resource = {
         },
         level: {
           label: "日志级别",
-          hint: "Debug 和 Trace 会把完整的 LCU/SGP HTTP 与 websocket payload 写入本地日志。",
+          hint: "控制后端日志输出的最低级别。",
           options: {
             error: "Error",
             warn: "Warn",
@@ -396,7 +396,7 @@ export const settingsI18n: Resource = {
         },
         level: {
           label: "ログレベル",
-          hint: "Debug と Trace では、完全な LCU/SGP HTTP と websocket payload をローカルログへ書き込みます。",
+          hint: "バックエンドログに出力する最小レベルを制御します。",
           options: {
             error: "Error",
             warn: "Warn",

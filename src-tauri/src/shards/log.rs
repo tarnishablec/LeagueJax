@@ -65,10 +65,16 @@ impl LogShard {
     }
 
     fn level_options() -> Vec<SettingOptionDto> {
-        ["error", "warn", "info", "debug", "trace"]
-            .into_iter()
+        let levels: &[&str] = if cfg!(debug_assertions) {
+            &["error", "warn", "info", "debug", "trace"]
+        } else {
+            &["error", "warn", "info"]
+        };
+
+        levels
+            .iter()
             .map(|level| SettingOptionDto {
-                value: level.to_string(),
+                value: (*level).to_string(),
                 label_key: format!("settings.logging.level.options.{level}"),
                 display_label: None,
             })
