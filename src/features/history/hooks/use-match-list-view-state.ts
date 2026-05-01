@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { MatchModeTag } from "./use-match-history";
+import { useMatchListViewStore } from "../stores/match-list-view-store";
+import type { MatchModeTag } from "../types/match-mode";
 
 type MatchListViewState = {
-  modeTag: MatchModeTag;
   pageSize: number;
   page: number;
 };
@@ -10,7 +10,6 @@ type MatchListViewState = {
 type PageUpdater = number | ((current: number) => number);
 
 const DEFAULT_VIEW_STATE: MatchListViewState = {
-  modeTag: "all",
   pageSize: 20,
   page: 1,
 };
@@ -43,10 +42,18 @@ function normalizePageSize(pageSize: number): number {
 
 function normalizeViewState(state: MatchListViewState): MatchListViewState {
   return {
-    modeTag: state.modeTag,
     pageSize: normalizePageSize(state.pageSize),
     page: normalizePage(state.page),
   };
+}
+
+function resetCachedPages(): void {
+  for (const [key, state] of viewStateByListKey) {
+    viewStateByListKey.set(key, {
+      ...state,
+      page: DEFAULT_VIEW_STATE.page,
+    });
+  }
 }
 
 export function useMatchListViewState(
@@ -58,9 +65,19 @@ export function useMatchListViewState(
     [puuid, sgpServerId],
   );
   const [state, setState] = useState(() => getCachedViewState(key));
+  const modeTag = useMatchListViewStore((store) => store.modeTag);
+  const setSharedModeTag = useMatchListViewStore((store) => store.setModeTag);
 
   useEffect(() => {
     setState(getCachedViewState(key));
+  }, [key]);
+
+  useEffect(() => {
+    return useMatchListViewStore.subscribe((state, previousState) => {
+      if (state.modeTag !== previousState.modeTag) {
+        setState(getCachedViewState(key));
+      }
+    });
   }, [key]);
 
   const updateState = useCallback(
@@ -75,14 +92,15 @@ export function useMatchListViewState(
   );
 
   const setModeTag = useCallback(
-    (modeTag: MatchModeTag) => {
+    (nextModeTag: MatchModeTag) => {
+      resetCachedPages();
       updateState((current) => ({
         ...current,
-        modeTag,
         page: 1,
       }));
+      setSharedModeTag(nextModeTag);
     },
-    [updateState],
+    [setSharedModeTag, updateState],
   );
 
   const setPageSize = useCallback(
@@ -107,7 +125,7 @@ export function useMatchListViewState(
   );
 
   return {
-    modeTag: state.modeTag,
+    modeTag,
     pageSize: state.pageSize,
     page: state.page,
     setModeTag,

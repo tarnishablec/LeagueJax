@@ -6,7 +6,7 @@ import { LcuImage } from "@/components/LcuImage";
 import { RefreshButton } from "@/components/RefreshButton";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
-import type { MatchModeTag } from "@/features/history/hooks/use-match-history";
+import type { MatchModeTag } from "@/features/history/types/match-mode";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
