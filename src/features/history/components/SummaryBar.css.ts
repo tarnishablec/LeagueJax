@@ -103,10 +103,37 @@ export const privacyBadge = style({
   fontWeight: 500,
   height: 20,
   width: 20,
+  padding: 0,
+  border: "none",
+  font: "inherit",
   color: vars.color.mutedForeground,
   background: vars.color.border,
   borderRadius: 4,
+  cursor: "help",
   lineHeight: 1,
+  outline: "none",
+  // selectors: {
+  //   "&:hover, &:focus-visible": {
+  //     color: vars.color.foreground,
+  //     background: vars.color.background,
+  //   },
+  //   "&:focus-visible": {
+  //     boxShadow: `0 0 0 2px ${vars.color.primary}`,
+  //   },
+  // },
+});
+
+export const tooltipPositioner = style({
+  zIndex: 40,
+});
+
+export const tooltipContent = style({
+  borderRadius: 8,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popupBackground,
+  color: vars.color.foreground,
+  padding: "4px 8px",
+  fontSize: "0.6875rem",
 });
 
 export const ranks = style({
