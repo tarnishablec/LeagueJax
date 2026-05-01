@@ -1,14 +1,11 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import type { RankEntry, Tier } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { useLcuStore } from "@/stores/lcu";
-import {
-  formatRankEntryLabel,
-  getBestRankEntry,
-  resolveRankTierForIcon,
-} from "@/utils/rank-display";
+import { resolveRankTierForIcon } from "@/utils/rank-display";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
@@ -33,12 +30,49 @@ export type WinRateStat = {
   tone: WinRateTone;
 };
 
+export type PlayerCardRankDisplayItem = {
+  id: "solo" | "flex";
+  iconUrl: string;
+  isRanked: boolean;
+  queueLabel: string;
+  value: string;
+};
+
+const APEX_TIERS = new Set<Tier>(["MASTER", "GRANDMASTER", "CHALLENGER"]);
+
 function formatAverageKdaText(games: EnrichedMatch[]): string {
   const averageKda = computeAverageKda(games);
   return averageKda == null ? "--" : averageKda.toFixed(2);
 }
 
-function computeWinRateStat(games: EnrichedMatch[]): WinRateStat {
+function hasRank(entry: RankEntry | null | undefined): entry is RankEntry {
+  return Boolean(entry?.tier && entry.tier !== "NONE");
+}
+
+function formatRankCardValue(
+  t: ReturnType<typeof useTranslation>["t"],
+  entry: RankEntry | null | undefined,
+): string {
+  if (!hasRank(entry)) {
+    return "";
+  }
+
+  if (APEX_TIERS.has(entry.tier)) {
+    return `${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
+  }
+
+  const division = entry.division.trim();
+  if (division.length > 0 && division !== "NA") {
+    return division;
+  }
+
+  return `${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
+}
+
+function computeWinRateStat(
+  games: EnrichedMatch[],
+  averageKdaText: string,
+): WinRateStat {
   let wins = 0;
   let losses = 0;
   for (const game of games) {
@@ -52,13 +86,13 @@ function computeWinRateStat(games: EnrichedMatch[]): WinRateStat {
 
   const decided = wins + losses;
   if (decided === 0) {
-    return { text: "-- (0)", tone: "neutral" };
+    return { text: `-- (${averageKdaText})`, tone: "neutral" };
   }
 
   const percentage = Math.round((wins / decided) * 100);
   const tone: WinRateTone =
     percentage < 45 ? "lose" : percentage > 60 ? "win" : "neutral";
-  return { text: `${percentage}% (${decided})`, tone };
+  return { text: `${percentage}% (${averageKdaText})`, tone };
 }
 
 function normalizeChampionId(slot: PlayerSlot): number | null {
@@ -157,24 +191,49 @@ export function useSnapshotPlayerCardState(
     return filteredGames;
   }, [historyBucket, puuid, matchHistoryCount]);
 
-  const rankEntry = getBestRankEntry(rankedQuery.data);
-  const rankIcon = useRankIcon(resolveRankTierForIcon(rankEntry), true);
+  const soloRankEntry = rankedQuery.data?.queueMap.RANKED_SOLO_5x5 ?? null;
+  const flexRankEntry = rankedQuery.data?.queueMap.RANKED_FLEX_SR ?? null;
+  const soloRankIcon = useRankIcon(resolveRankTierForIcon(soloRankEntry), true);
+  const flexRankIcon = useRankIcon(resolveRankTierForIcon(flexRankEntry), true);
   const identity = useMemo(
     () => resolveSummonerIdentity(slot, summoner),
     [slot, summoner],
   );
+  const rankItems = useMemo<PlayerCardRankDisplayItem[]>(
+    () => [
+      {
+        id: "solo",
+        iconUrl: soloRankIcon,
+        isRanked: hasRank(soloRankEntry),
+        queueLabel: t("ongoingGame.rank.soloShort", {
+          defaultValue: "Solo",
+        }),
+        value: formatRankCardValue(t, soloRankEntry),
+      },
+      {
+        id: "flex",
+        iconUrl: flexRankIcon,
+        isRanked: hasRank(flexRankEntry),
+        queueLabel: t("ongoingGame.rank.flexShort", {
+          defaultValue: "Flex",
+        }),
+        value: formatRankCardValue(t, flexRankEntry),
+      },
+    ],
+    [flexRankEntry, flexRankIcon, soloRankEntry, soloRankIcon, t],
+  );
 
-  const winRateStat = useMemo(() => {
-    const stat = computeWinRateStat(recentGames);
-    return {
-      ...stat,
-      text: `${t("ongoingGame.winRate", { defaultValue: "Win rate" })} ${stat.text}`,
-    };
-  }, [recentGames, t]);
   const averageKdaText = useMemo(
     () => formatAverageKdaText(recentGames),
     [recentGames],
   );
+  const winRateStat = useMemo(() => {
+    const stat = computeWinRateStat(recentGames, averageKdaText);
+    return {
+      ...stat,
+      text: `${t("ongoingGame.winRate", { defaultValue: "Win rate" })} ${stat.text}`,
+    };
+  }, [averageKdaText, recentGames, t]);
   const isSelf = Boolean(puuid && ownPuuid && puuid === ownPuuid);
   const wasEncountered = Boolean(
     puuid && !isSelf && hasEncounteredPlayer(ownHistoryBucket, puuid),
@@ -221,7 +280,6 @@ export function useSnapshotPlayerCardState(
   );
 
   return {
-    averageKdaText,
     championId: normalizeChampionId(slot),
     hasHistoryLoadFailed,
     historyLoadFailedText: t("ongoingGame.historyLoadFailed", {
@@ -234,8 +292,7 @@ export function useSnapshotPlayerCardState(
       defaultValue: "No match history",
     }),
     identity,
-    rankIcon,
-    rankText: formatRankEntryLabel(t, rankEntry),
+    rankItems,
     recentGames,
     showRank: !isBot && Boolean(puuid),
     squadTag,
