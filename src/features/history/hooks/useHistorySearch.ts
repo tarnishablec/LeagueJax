@@ -82,6 +82,8 @@ export function useHistorySearch({
       collection: serverCollection,
       selectedId: serverContext.selectedServerId,
       setSelectedId: serverContext.setSelectedServerId,
+      focusedServerCode: serverContext.region.focusedServerCode,
+      effectiveServerCode: serverContext.region.effectiveServerCode,
       show: serverContext.showServerSelect,
       disabled: serverContext.serverSelectDisabled,
       isBootstrapping: serverContext.isBootstrapping,

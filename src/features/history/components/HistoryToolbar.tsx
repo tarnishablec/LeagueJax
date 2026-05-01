@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
+import type { LcuChatFriend } from "@/bindings/lcu_chat";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
@@ -44,6 +45,30 @@ export function HistoryToolbar() {
     setOpen(false);
   };
 
+  const openFriend = (friend: LcuChatFriend, sgpServerId: string | null) => {
+    const gameName = friend.gameName.trim() || friend.name.trim();
+    const tagLine = friend.gameTag.trim();
+
+    openTab(
+      defaultSummonerInfo({
+        puuid: friend.puuid,
+        gameName,
+        tagLine,
+        profileIconId: friend.icon,
+        summonerLevel: 0,
+      }),
+      sgpServerId,
+    );
+
+    void invoke("save_search_history", {
+      puuid: friend.puuid,
+      gameName,
+      tagLine,
+    }).catch(() => {});
+
+    setOpen(false);
+  };
+
   return (
     <div className={s.wrapper}>
       <HistorySearchDialog
@@ -52,6 +77,7 @@ export function HistoryToolbar() {
         config={SGP_SERVERS_CONFIG}
         disabled={!canOpenSearch}
         onOpenResult={openResult}
+        onOpenFriend={openFriend}
       />
     </div>
   );

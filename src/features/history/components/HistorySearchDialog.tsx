@@ -2,9 +2,12 @@ import { Dialog } from "@ark-ui/react/dialog";
 import { Portal } from "@ark-ui/react/portal";
 import { Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { LcuChatFriend } from "@/bindings/lcu_chat";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner";
 import { useHistorySearch } from "@/features/history/hooks/useHistorySearch";
+import { useLcuFriends } from "@/features/history/hooks/useLcuFriends";
+import { FriendShortcutList } from "./FriendShortcutList";
 import * as s from "./HistoryToolbar.css";
 import { SearchForm } from "./SearchForm";
 import { SearchResultList } from "./SearchResultList";
@@ -15,6 +18,7 @@ type HistorySearchDialogProps = {
   config: SgpServersConfig;
   disabled: boolean;
   onOpenResult: (result: SummonerSearchResult) => void;
+  onOpenFriend: (friend: LcuChatFriend, sgpServerId: string | null) => void;
 };
 
 export function HistorySearchDialog({
@@ -23,12 +27,16 @@ export function HistorySearchDialog({
   config,
   disabled,
   onOpenResult,
+  onOpenFriend,
 }: HistorySearchDialogProps) {
   const { t } = useTranslation();
   const { server, search, errorMessage } = useHistorySearch({
     open,
     config,
     enabled: !disabled,
+  });
+  const friends = useLcuFriends({
+    enabled: open && !disabled,
   });
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -41,6 +49,10 @@ export function HistorySearchDialog({
       server.reset();
     }
     onOpenChange(nextOpen);
+  };
+
+  const handleOpenFriend = (friend: LcuChatFriend) => {
+    onOpenFriend(friend, server.effectiveServerCode);
   };
 
   return (
@@ -99,13 +111,22 @@ export function HistorySearchDialog({
             {/*  ) : null}*/}
             {/*</div>*/}
 
-            <div className={s.resultPanel}>
-              <SearchResultList
-                results={search.results}
-                searched={search.searched}
-                isSearching={search.isSearching}
-                hasError={!!errorMessage}
-                onOpenResult={onOpenResult}
+            <div className={s.contentGrid}>
+              <div className={s.resultPanel}>
+                <SearchResultList
+                  results={search.results}
+                  searched={search.searched}
+                  isSearching={search.isSearching}
+                  hasError={!!errorMessage}
+                  onOpenResult={onOpenResult}
+                />
+              </div>
+              <FriendShortcutList
+                friends={friends.friends}
+                isLoading={friends.isLoading}
+                errorMessage={friends.errorMessage}
+                onRefresh={friends.refresh}
+                onOpenFriend={handleOpenFriend}
               />
             </div>
           </Dialog.Content>

@@ -129,7 +129,25 @@
       "noResults": "No summoner found for this query.",
       "hint": "Search results will appear here.",
       "focused": "Current Server",
-      "noClient": "No League client connected"
+      "noClient": "No League client connected",
+      "friendsTitle": "Friends",
+      "friendsCount": "{{count}} friends",
+      "friendsSearchPlaceholder": "Search friends / tag",
+      "friendsLoading": "Loading friends...",
+      "friendsError": "Failed to load friends.",
+      "friendsEmpty": "No friends found.",
+      "friendsNoMatches": "No friends match this query.",
+      "friendsOnline": "Online",
+      "friendsOffline": "Offline",
+      "friendStatus": {
+        "online": "Online",
+        "offline": "Offline",
+        "away": "Away",
+        "dnd": "DND",
+        "mobile": "Mobile",
+        "spectating": "Watching",
+        "inGame": "In Game"
+      }
     }
   },
   "rank": {

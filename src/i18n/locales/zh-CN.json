@@ -129,7 +129,25 @@
       "noResults": "未找到匹配的召唤师",
       "hint": "搜索结果将显示在这里",
       "focused": "当前区服",
-      "noClient": "未连接到客户端"
+      "noClient": "未连接到客户端",
+      "friendsTitle": "好友",
+      "friendsCount": "{{count}} 位好友",
+      "friendsSearchPlaceholder": "搜索好友 / 标签",
+      "friendsLoading": "正在加载好友...",
+      "friendsError": "好友列表加载失败",
+      "friendsEmpty": "暂无好友",
+      "friendsNoMatches": "没有匹配的好友",
+      "friendsOnline": "在线",
+      "friendsOffline": "离线",
+      "friendStatus": {
+        "online": "在线",
+        "offline": "离线",
+        "away": "离开",
+        "dnd": "勿扰",
+        "mobile": "手机",
+        "spectating": "观战",
+        "inGame": "游戏中"
+      }
     }
   },
   "rank": {
