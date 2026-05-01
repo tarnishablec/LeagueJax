@@ -91,6 +91,7 @@ export const historyI18n: Resource = {
       summary: {
         solo: "Solo/Duo",
         flex: "Flex",
+        hiddenHistory: "Hidden match history",
         unranked: "Unranked",
         winsShort: "W",
         lossesShort: "L",
@@ -188,6 +189,7 @@ export const historyI18n: Resource = {
       summary: {
         solo: "单/双排",
         flex: "灵活排位",
+        hiddenHistory: "隐藏战绩",
         unranked: "未定级",
         winsShort: "胜",
         lossesShort: "负",
@@ -285,6 +287,7 @@ export const historyI18n: Resource = {
       summary: {
         solo: "ソロ/デュオ",
         flex: "フレックス",
+        hiddenHistory: "非公開の対戦履歴",
         unranked: "未ランク",
         winsShort: "勝",
         lossesShort: "敗",

@@ -1,3 +1,5 @@
+import { Portal } from "@ark-ui/react/portal";
+import { Tooltip } from "@ark-ui/react/tooltip";
 import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { RankEntry } from "@/bindings/rank.ts";
@@ -46,6 +48,9 @@ export function SummaryBar({
   const winsShort = t("history.summary.winsShort", { defaultValue: "W" });
   const lossesShort = t("history.summary.lossesShort", { defaultValue: "L" });
   const lpShort = t("history.summary.lpShort", { defaultValue: "LP" });
+  const hiddenHistoryText = t("history.summary.hiddenHistory", {
+    defaultValue: "Hidden match history",
+  });
   const soloIconUrl = useRankIcon(
     rankedSummary?.queueMap.RANKED_SOLO_5x5?.tier ?? "UNRANKED",
     false,
@@ -77,10 +82,24 @@ export function SummaryBar({
             aria-label={`Copy summoner id ${summonerId}`}
           />
           {summoner.privacy === "PRIVATE" && (
-            <span className={s.privacyBadge}>
-              <Lock size={12} />
-              {/*{t("history.summary.private", { defaultValue: "Private" })}*/}
-            </span>
+            <Tooltip.Root openDelay={200} closeDelay={0}>
+              <Tooltip.Trigger asChild>
+                <button
+                  type="button"
+                  className={s.privacyBadge}
+                  aria-label="Hidden match history"
+                >
+                  <Lock size={12} aria-hidden="true" />
+                </button>
+              </Tooltip.Trigger>
+              <Portal>
+                <Tooltip.Positioner className={s.tooltipPositioner}>
+                  <Tooltip.Content className={s.tooltipContent}>
+                    {hiddenHistoryText}
+                  </Tooltip.Content>
+                </Tooltip.Positioner>
+              </Portal>
+            </Tooltip.Root>
           )}
         </div>
         <div className={s.tag}>#{summoner.tagLine}</div>
