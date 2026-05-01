@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
+import { resolveJungleEggItemIdFromDetails } from "../../hooks/match-details-timeline.ts";
 import {
   OUTCOME_LABEL_KEYS,
   useMatchCardViewModel,
 } from "../../hooks/use-match-card-view-model";
+import { useMatchDetails } from "../../hooks/use-match-details.ts";
+import { hasCompletedJungleRoleQuest } from "../../hooks/use-role-quest-slot.ts";
 import * as s from "./MatchCard.css";
 import { MatchCardExpandedTeams } from "./MatchCardExpandedTeams";
 import { MatchCardHeader } from "./MatchCardHeader";
@@ -30,11 +33,50 @@ export function MatchCard({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const vm = useMatchCardViewModel({ match, me });
+  const shouldPreloadDetailsForCompletedJungleQuest =
+    hasCompletedJungleRoleQuest(me);
+  const {
+    data: matchDetails,
+    error: matchDetailsError,
+    isValidating: isMatchDetailsValidating,
+    load: loadMatchDetails,
+  } = useMatchDetails(
+    match.json.gameId,
+    sgpServerId,
+    shouldPreloadDetailsForCompletedJungleQuest,
+  );
+  const resolvedJungleEggItemId = useMemo(
+    () => resolveJungleEggItemIdFromDetails(matchDetails, me.participantId),
+    [matchDetails, me.participantId],
+  );
+  const vm = useMatchCardViewModel({
+    match,
+    me,
+    resolvedJungleEggItemId,
+  });
   const outcomeLabel = t(OUTCOME_LABEL_KEYS[vm.gameResult], {
     defaultValue: vm.gameResult,
   });
   const csShort = t("history.match.csShort", { defaultValue: "CS" });
+
+  useEffect(() => {
+    if (
+      expanded &&
+      !shouldPreloadDetailsForCompletedJungleQuest &&
+      !matchDetails &&
+      !matchDetailsError &&
+      !isMatchDetailsValidating
+    ) {
+      void loadMatchDetails();
+    }
+  }, [
+    expanded,
+    shouldPreloadDetailsForCompletedJungleQuest,
+    matchDetails,
+    matchDetailsError,
+    isMatchDetailsValidating,
+    loadMatchDetails,
+  ]);
 
   return (
     <div className={s.wrapper}>

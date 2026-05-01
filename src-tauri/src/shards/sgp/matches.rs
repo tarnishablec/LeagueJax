@@ -20,6 +20,48 @@ pub struct RawMatchSummaryGame {
 #[derive(TS)]
 #[ts(export, export_to = "matches.ts")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RawMatchDetailsGame {
+    pub json: RawMatchDetailsJson,
+    pub metadata: RawMatchSummaryMetadata,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawMatchDetailsJson {
+    pub game_id: Option<u64>,
+    #[serde(default)]
+    pub frames: Vec<RawMatchDetailsFrame>,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawMatchDetailsFrame {
+    #[serde(default)]
+    pub events: Vec<RawMatchDetailsEvent>,
+    pub timestamp: Option<i64>,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawMatchDetailsEvent {
+    #[serde(rename = "type")]
+    pub event_type: Option<String>,
+    pub timestamp: Option<i64>,
+    pub participant_id: Option<i64>,
+    pub item_id: Option<i64>,
+    pub before_id: Option<i64>,
+    pub after_id: Option<i64>,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawMatchSummaryJson {
     pub end_of_game_result: String,

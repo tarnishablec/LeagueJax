@@ -2,7 +2,9 @@
 use super::http_client::{SgpHttpClient, SgpTokenKind};
 use crate::error::AppError;
 use crate::shards::lcu::concepts::summoner::SummonerInfo;
-use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
+use crate::shards::sgp::matches::{
+    RawMatchDetailsGame, RawMatchSummariesResponse, RawMatchSummaryGame,
+};
 
 pub struct SgpApi {
     http_client: SgpHttpClient,
@@ -123,6 +125,33 @@ impl SgpApi {
         let sub_id = Self::sub_id_from_server_id(&target_server_id);
         let game_key = format!("{}_{}", sub_id.to_uppercase(), game_id);
         let path = format!("/match-history-query/v1/products/lol/{game_key}/SUMMARY");
+
+        let response = self
+            .http_client
+            .request(
+                reqwest::Method::GET,
+                &base_url,
+                &path,
+                SgpTokenKind::Access,
+                None,
+                None,
+            )
+            .await?;
+
+        Ok(serde_path_to_error::deserialize(response)?)
+    }
+
+    pub async fn get_match_details(
+        &self,
+        game_id: u64,
+        sgp_server_id: Option<&str>,
+    ) -> Result<RawMatchDetailsGame, AppError> {
+        let target_server_id = self.resolve_target_server_id(sgp_server_id);
+
+        let base_url = Self::resolve_match_history_base_url(&target_server_id)?;
+        let sub_id = Self::sub_id_from_server_id(&target_server_id);
+        let game_key = format!("{}_{}", sub_id.to_uppercase(), game_id);
+        let path = format!("/match-history-query/v1/products/lol/{game_key}/DETAILS");
 
         let response = self
             .http_client
