@@ -21,6 +21,7 @@ uuid = { workspace = true, features = ["serde", "v7"] }
 tauri-plugin-store = { workspace = true }
 tauri-plugin-updater = { workspace = true }
 tauri-plugin-opener = { workspace = true }
+tauri-plugin-os = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
 
 reqwest = { workspace = true, features = ["json", "gzip", "rustls-no-provider"] }
@@ -58,7 +59,6 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "sync
 
 [lints]
 workspace = true
-
 
 
 
