@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "../styles/theme.css";
+import { vars } from "@/styles/theme.css.ts";
 
 export const wrapper = style({
   position: "relative",

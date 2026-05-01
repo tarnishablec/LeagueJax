@@ -1,9 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { useSettings } from "@/features/settings/context";
-import {
-  type Language,
-  SYSTEM_LANGUAGE_SETTING_ID,
-} from "@/features/settings/store/general";
+import { type Language, SYSTEM_LANGUAGE_SETTING_ID } from "../locale";
 import * as s from "./LanguageToggle.css";
 
 const LANGUAGE_OPTIONS: Array<{
