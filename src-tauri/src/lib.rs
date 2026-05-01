@@ -233,6 +233,7 @@ pub fn run() {
             get_ranked_summary,
             get_match_summaries,
             get_match_summary,
+            get_match_details,
             get_cherry_augments,
             lcu_get_maps,
             lcu_get_queues,

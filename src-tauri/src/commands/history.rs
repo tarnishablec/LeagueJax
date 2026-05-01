@@ -7,7 +7,9 @@ use crate::shards::lcu::concepts::rank::RankStats;
 use crate::shards::lcu::concepts::summoner::{SummonerInfo, SummonerSearchResult};
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
-use crate::shards::sgp::matches::{RawMatchSummariesResponse, RawMatchSummaryGame};
+use crate::shards::sgp::matches::{
+    RawMatchDetailsGame, RawMatchSummariesResponse, RawMatchSummaryGame,
+};
 use crate::shards::sgp::LcuSessionSgpExt;
 use crate::shards::sgp::SgpShard;
 use crate::shards::static_cache::StaticCacheShard;
@@ -428,5 +430,31 @@ pub async fn get_match_summary(
     sgp_session
         .api()
         .get_match_summary(game_id, sgp_server_id.as_deref())
+        .await
+}
+
+#[tauri::command]
+pub async fn get_match_details(
+    game_id: u64,
+    sgp_server_id: Option<String>,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<RawMatchDetailsGame, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let focused_pid = manager
+        .focused_pid()
+        .await
+        .ok_or(AppError::LcuNotConnected)?;
+    let session = manager
+        .session_for_pid(focused_pid)
+        .ok_or(AppError::LcuNotConnected)?;
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let sgp_session = session.to_sgp(&sgp_shard).await?;
+
+    sgp_session
+        .api()
+        .get_match_details(game_id, sgp_server_id.as_deref())
         .await
 }

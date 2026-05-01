@@ -43,6 +43,27 @@ const ROLE_QUEST_COMPLETE_KEY = "2026_S1A1_SR_RoleQuestComplete" as const;
 
 const SUMMONERS_RIFT_MAP_ID = 11;
 const CLASSIC_GAME_MODE = "CLASSIC";
+const COMPLETED_JUNGLE_QUEST_ITEM_ID = 1209;
+const JUNGLE_QUEST_ITEM_IDS = new Set([1204, 1209]);
+const JUNGLE_EGG_ITEM_IDS = new Set([1101, 1102, 1103]);
+
+export function hasJungleRoleQuest(
+  participant: RawMatchSummaryParticipant,
+): boolean {
+  return JUNGLE_QUEST_ITEM_IDS.has(participant.roleBoundItem ?? 0);
+}
+
+export function hasCompletedJungleRoleQuest(
+  participant: RawMatchSummaryParticipant,
+): boolean {
+  return participant.roleBoundItem === COMPLETED_JUNGLE_QUEST_ITEM_ID;
+}
+
+function isJungleEggItemId(value: number | null | undefined): value is number {
+  return (
+    value !== null && value !== undefined && JUNGLE_EGG_ITEM_IDS.has(value)
+  );
+}
 
 function buildItemIconUrl(fileName: string): string {
   return `${ICON_HOST}/${fileName}`;
@@ -60,19 +81,27 @@ function buildQuestIconUrl(iconBase: string, completed: boolean): string {
   return buildItemIconUrl(`${iconBase}_${state}.png`);
 }
 
+function buildJungleBuffIconUrl(itemId: number): string {
+  return buildItemIconUrl(`${itemId}_buff.png`);
+}
+
 export function useRoleQuestSlot({
   participant,
   match,
+  resolvedJungleEggItemId,
 }: {
   participant: RawMatchSummaryParticipant;
   match: RawMatchSummaryGame;
+  resolvedJungleEggItemId?: number | null;
 }): RoleQuestResult {
   const roleBoundItem = participant.roleBoundItem;
   const { mapId, gameMode } = match.json;
   const supportsPosition =
     mapId === SUMMONERS_RIFT_MAP_ID ||
     gameMode.toUpperCase() === CLASSIC_GAME_MODE;
-  const completed = participant.missions?.[ROLE_QUEST_COMPLETE_KEY] === 1;
+  const completed =
+    participant.missions?.[ROLE_QUEST_COMPLETE_KEY] === 1 ||
+    roleBoundItem === COMPLETED_JUNGLE_QUEST_ITEM_ID;
 
   const itemQueryParams = useMemo(
     () => [{ type: "item" as const, itemId: roleBoundItem }],
@@ -89,12 +118,19 @@ export function useRoleQuestSlot({
     const mapping = ROLE_QUEST_ITEM_MAP[roleBoundItem];
 
     if (mapping) {
+      const iconUrl =
+        mapping.lane === "jungle" &&
+        completed &&
+        isJungleEggItemId(resolvedJungleEggItemId)
+          ? buildJungleBuffIconUrl(resolvedJungleEggItemId)
+          : buildQuestIconUrl(mapping.iconBase, completed);
+
       return {
         inferredPosition: mapping.lane,
         slot: supportsPosition
           ? {
               kind: "quest",
-              iconUrl: buildQuestIconUrl(mapping.iconBase, completed),
+              iconUrl,
             }
           : null,
       };
@@ -110,5 +146,11 @@ export function useRoleQuestSlot({
           }
         : null,
     };
-  }, [supportsPosition, roleBoundItem, completed, iconSrc]);
+  }, [
+    supportsPosition,
+    roleBoundItem,
+    completed,
+    resolvedJungleEggItemId,
+    iconSrc,
+  ]);
 }

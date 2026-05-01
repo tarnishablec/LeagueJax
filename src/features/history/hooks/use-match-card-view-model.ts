@@ -239,9 +239,11 @@ export function normalizeHistoryPosition(
 export function useMatchCardViewModel({
   match,
   me,
+  resolvedJungleEggItemId,
 }: {
   me: RawMatchSummaryParticipant;
   match: RawMatchSummaryGame;
+  resolvedJungleEggItemId?: number | null;
 }) {
   const {
     mapId,
@@ -259,7 +261,11 @@ export function useMatchCardViewModel({
   const queueName = useLcuQueueName(queueId);
   const startedAt = formatStartTime(gameCreation);
   const { items, augments, outcome } = useParticipantBrief(me);
-  const roleQuest = useRoleQuestSlot({ participant: me, match });
+  const roleQuest = useRoleQuestSlot({
+    participant: me,
+    match,
+    resolvedJungleEggItemId,
+  });
 
   const gameResult: MatchOutcome = endOfGameResult.startsWith("Abort_")
     ? "terminated"
