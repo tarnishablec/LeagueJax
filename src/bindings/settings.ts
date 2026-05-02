@@ -36,7 +36,6 @@ export type SettingScopeDto = "frontend" | "backend" | "shared";
 export type SettingsBootstrapDto = {
   definitions: Array<SettingDefinitionDto>;
   snapshot: SettingsSnapshotDto;
-  hasPersistedSnapshot: boolean;
 };
 
 export type SettingsChangedEventDto = {

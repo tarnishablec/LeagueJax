@@ -86,3 +86,32 @@ pub async fn lcu_get_chat_friend_groups(
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     lcu.api().get_chat_friend_groups().await
 }
+
+#[tauri::command]
+pub async fn lcu_champ_select_swap_bench_champion(
+    champion_id: u64,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<(), AppError> {
+    if champion_id == 0 {
+        return Err(AppError::other(
+            "lcu_champ_select_swap_bench_champion requires a champion id",
+        ));
+    }
+
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
+    lcu.api().swap_bench_champion(champion_id).await
+}
+
+#[tauri::command]
+pub async fn lcu_champ_select_quit(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
+    lcu.api().quit_champ_select().await
+}
