@@ -475,12 +475,8 @@ fn apply_seed(envo: &Envo, seed: &OngoingSessionSeed) {
         ctx.gameflow_session = seed.gameflow_session.clone();
         ctx.matchmaking_search = seed.matchmaking_search.clone();
         ctx.ready_check = seed.ready_check.clone();
-        if let Some(champ_select_session) = seed.champ_select_session.as_ref() {
-            ctx.champ_select_session = Some(champ_select_session.clone());
-        }
-        if let Some(teambuilder_payload) = seed.teambuilder_payload.as_ref() {
-            ctx.teambuilder_payload = Some(teambuilder_payload.clone());
-        }
+        ctx.champ_select_session = seed.champ_select_session.clone();
+        ctx.teambuilder_payload = seed.teambuilder_payload.clone();
     }
     sync_lifecycle_ids_from_gameflow(envo);
 }

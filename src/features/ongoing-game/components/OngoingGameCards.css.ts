@@ -223,9 +223,9 @@ export const winRateText = recipe({
   },
   variants: {
     tone: {
-      win: { color: vars.color.success },
-      lose: { color: vars.color.error },
-      neutral: { color: vars.color.mutedForeground },
+      win: {color: vars.color.success},
+      lose: {color: vars.color.error},
+      neutral: {color: vars.color.mutedForeground},
     },
   },
   defaultVariants: {
@@ -273,12 +273,13 @@ export const rankItem = style({
   display: "grid",
   gridTemplateColumns: "auto minmax(0, 1fr)",
   alignItems: "center",
-  gap: 8,
+  gap: 5,
+  lineHeight: 1,
   minWidth: 0,
 });
 
 export const rankQueue = style({
-  color: vars.color.mutedForeground,
+  color: vars.color.accentForeground,
   fontSize: "0.66rem",
   fontWeight: 750,
   lineHeight: 1,
@@ -397,7 +398,7 @@ export const historyDialogBackdrop = style({
   background: "oklch(0.06 0 0 / 0.62)",
   zIndex: 40,
   selectors: {
-    "&[hidden]": { display: "none" },
+    "&[hidden]": {display: "none"},
   },
 });
 
@@ -409,7 +410,7 @@ export const historyDialogPositioner = style({
   padding: 20,
   zIndex: 41,
   selectors: {
-    "&[hidden]": { display: "none" },
+    "&[hidden]": {display: "none"},
   },
 });
 

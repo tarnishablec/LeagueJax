@@ -2,6 +2,21 @@ import type { Resource } from "i18next";
 
 export const i18nShardI18n: Resource = {
   en: {
+    rank: {
+      tierShort: {
+        iron: "Iron",
+        bronze: "Bronze",
+        silver: "Silver",
+        gold: "Gold",
+        platinum: "Platinum",
+        emerald: "Emerald",
+        diamond: "Diamond",
+        master: "Master",
+        grandmaster: "Grandmaster",
+        challenger: "Challenger",
+        unranked: "Unranked",
+      },
+    },
     settings: {
       language: {
         label: "Language",
@@ -13,6 +28,21 @@ export const i18nShardI18n: Resource = {
     },
   },
   "zh-CN": {
+    rank: {
+      tierShort: {
+        iron: "黑铁",
+        bronze: "青铜",
+        silver: "白银",
+        gold: "黄金",
+        platinum: "铂金",
+        emerald: "翡翠",
+        diamond: "钻石",
+        master: "大师",
+        grandmaster: "宗师",
+        challenger: "王者",
+        unranked: "未定级",
+      },
+    },
     settings: {
       language: {
         label: "语言",
@@ -24,6 +54,21 @@ export const i18nShardI18n: Resource = {
     },
   },
   "ja-JP": {
+    rank: {
+      tierShort: {
+        iron: "アイアン",
+        bronze: "ブロンズ",
+        silver: "シルバー",
+        gold: "ゴールド",
+        platinum: "プラチナ",
+        emerald: "エメラルド",
+        diamond: "ダイヤモンド",
+        master: "マスター",
+        grandmaster: "グランドマスター",
+        challenger: "チャレンジャー",
+        unranked: "未ランク",
+      },
+    },
     settings: {
       language: {
         label: "言語",

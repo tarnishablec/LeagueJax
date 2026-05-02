@@ -1,7 +1,6 @@
-import { Portal } from "@ark-ui/react/portal";
-import { Tooltip } from "@ark-ui/react/tooltip";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
+import { MiniRankDisplay } from "@/components/mini-rank-display";
 import { SummonerID } from "@/components/SummonerID.tsx";
 import * as s from "./OngoingGameCards.css.ts";
 import type { PlayerCardRankDisplayItem } from "./use-snapshot-player-card-state.ts";
@@ -88,37 +87,10 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
                   <div key={rank.id} className={s.rankItem}>
                     <span className={s.rankQueue}>{rank.queueLabel}</span>
                     <span className={s.rankValue}>
-                      <Tooltip.Root
-                        lazyMount
-                        unmountOnExit
-                        openDelay={150}
-                        closeDelay={0}
-                        positioning={{ placement: "top", gutter: 6 }}
-                      >
-                        <Tooltip.Trigger asChild>
-                          <span className={s.rankIconTooltipTrigger}>
-                            <img
-                              src={rank.iconUrl}
-                              alt=""
-                              className={s.rankMiniIcon({
-                                ranked: rank.isRanked,
-                              })}
-                            />
-                          </span>
-                        </Tooltip.Trigger>
-                        <Portal>
-                          <Tooltip.Positioner
-                            className={s.rankTooltipPositioner}
-                          >
-                            <Tooltip.Content className={s.rankTooltipContent}>
-                              {rank.tooltip}
-                            </Tooltip.Content>
-                          </Tooltip.Positioner>
-                        </Portal>
-                      </Tooltip.Root>
-                      {rank.value ? (
-                        <span className={s.rankText}>{rank.value}</span>
-                      ) : null}
+                      <MiniRankDisplay
+                        entry={rank.entry}
+                        lpLabel={rank.lpLabel}
+                      />
                     </span>
                   </div>
                 ))}

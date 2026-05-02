@@ -3,6 +3,8 @@ use std::sync::Arc;
 use crate::error::AppError;
 use crate::shards::lcu::concepts::chat::{LcuChatFriend, LcuChatFriendGroup};
 use crate::shards::lcu::LcuShard;
+use crate::shards::ongoing_game::types::OngoingGameInput;
+use crate::shards::ongoing_game::OngoingGameShard;
 use jax::Jax;
 use serde_json::Value;
 use tauri::State;
@@ -129,10 +131,19 @@ pub async fn lcu_dodge_champ_select(jax: State<'_, Arc<Jax>>) -> Result<(), AppE
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let result = lcu.api().dodge_champ_select().await;
     match &result {
-        Ok(()) => tracing::info!(
-            channel = "lcu-command",
-            "lcu_dodge_champ_select command succeeded"
-        ),
+        Ok(()) => {
+            tracing::info!(
+                channel = "lcu-command",
+                "lcu_dodge_champ_select command succeeded"
+            );
+            if let Some(manager) = jax.get_shard::<OngoingGameShard>().manager() {
+                manager.post(OngoingGameInput::Refresh);
+                tracing::info!(
+                    channel = "lcu-command",
+                    "lcu_dodge_champ_select requested ongoing game refresh"
+                );
+            }
+        }
         Err(error) => tracing::error!(
             channel = "lcu-command",
             error = %error,
