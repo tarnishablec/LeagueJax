@@ -64,8 +64,8 @@ function BenchChampionPool({
           champion.championId === champSelect.selectedChampionId;
         const isPending = champion.championId === pendingChampionId;
         const isPickable =
-          champSelect.benchPoolAvailable &&
-          pickableChampionIds?.includes(champion.championId);
+          pickableChampionIds === null ||
+          pickableChampionIds.includes(champion.championId);
         const isUnavailable = !isCurrent && !isPickable;
 
         return (

@@ -20,7 +20,6 @@ export type MiniChampSelectModel = {
   queueId: number | null;
   localPlayer: TeamMember | null;
   selectedChampionId: number | null;
-  benchPoolAvailable: boolean;
   benchChampions: BenchChampion[];
 };
 
@@ -119,33 +118,6 @@ function benchChampionsFromSession(
   );
 }
 
-function isSubsetPickStageCompleted(session: ChampSelectSessionData): boolean {
-  if (!session.allowSubsetChampionPicks) {
-    return true;
-  }
-
-  const allyCellIds = new Set(session.myTeam.map((member) => member.cellId));
-  if (allyCellIds.size === 0) {
-    return false;
-  }
-
-  const completedPickActorCellIds = new Set(
-    session.actions
-      .flat()
-      .filter(
-        (action) =>
-          action.type === "pick" &&
-          allyCellIds.has(action.actorCellId) &&
-          action.completed,
-      )
-      .map((action) => action.actorCellId),
-  );
-
-  return Array.from(allyCellIds).every((cellId) =>
-    completedPickActorCellIds.has(cellId),
-  );
-}
-
 function champSelectModelFromSession(
   session: ChampSelectSessionData | null,
 ): MiniChampSelectModel | null {
@@ -164,7 +136,6 @@ function champSelectModelFromSession(
     queueId: normalizePositiveId(session.queueId),
     localPlayer,
     selectedChampionId,
-    benchPoolAvailable: isSubsetPickStageCompleted(session),
     benchChampions,
   };
 }
