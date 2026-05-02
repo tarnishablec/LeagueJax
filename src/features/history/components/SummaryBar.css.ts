@@ -153,7 +153,7 @@ export const rankCard = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
   alignItems: "center",
-  height: "80px",
+  height: "88px",
   gap: 10,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
@@ -190,7 +190,7 @@ export const rankQueue = style({
 });
 
 export const rankTier = style({
-  fontSize: "0.8125rem",
+  fontSize: "0.875rem",
   fontWeight: 600,
   color: vars.color.foreground,
 });
@@ -198,4 +198,36 @@ export const rankTier = style({
 export const rankMeta = style({
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
+});
+
+export const highestRank = style({
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  gridAutoColumns: "max-content",
+  alignItems: "center",
+  justifyContent: "start",
+  gap: 4,
+  minWidth: 0,
+  fontSize: "0.6rem",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+});
+
+export const highestRankLabel = style({
+  color: vars.color.mutedForeground,
+});
+
+export const highestRankIcon = style({
+  display: "block",
+  width: 13,
+  height: 13,
+  objectFit: "contain",
+});
+
+export const highestRankText = style({
+  minWidth: 0,
+  overflow: "hidden",
+  color: vars.color.mutedForeground,
+  fontWeight: 650,
+  textOverflow: "ellipsis",
 });

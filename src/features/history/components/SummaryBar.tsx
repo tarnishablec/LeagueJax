@@ -15,16 +15,14 @@ import * as s from "./SummaryBar.css";
 function formatMeta(
   entry: RankEntry | null,
   winsShort: string,
-  _lossesShort: string,
+  lossesShort: string,
   lpShort: string,
 ): string {
   if (!entry) {
-    // return `-- ${winsShort} / -- ${_lossesShort} / -- ${lpShort}`;
-    return `-- ${winsShort} / -- ${lpShort}`;
+    return `-- ${winsShort} / -- ${lossesShort} / -- ${lpShort}`;
   }
 
-  // return `${entry.wins}${winsShort} / ${entry.losses}${_lossesShort} / ${entry.leaguePoints} ${lpShort}`;
-  return `${entry.wins}${winsShort} / ${entry.leaguePoints} ${lpShort}`;
+  return `${entry.wins}${winsShort} / ${entry.losses}${lossesShort} / ${entry.leaguePoints} ${lpShort}`;
 }
 
 export function SummaryBar({
@@ -51,14 +49,10 @@ export function SummaryBar({
   const hiddenHistoryText = t("history.summary.hiddenHistory", {
     defaultValue: "Hidden match history",
   });
-  const soloIconUrl = useRankIcon(
-    rankedSummary?.queueMap.RANKED_SOLO_5x5?.tier ?? "UNRANKED",
-    false,
-  );
-  const flexIconUrl = useRankIcon(
-    rankedSummary?.queueMap.RANKED_FLEX_SR?.tier ?? "UNRANKED",
-    false,
-  );
+  const soloRankEntry = rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null;
+  const flexRankEntry = rankedSummary?.queueMap.RANKED_FLEX_SR ?? null;
+  const soloIconUrl = useRankIcon(soloRankEntry?.tier ?? "UNRANKED", false);
+  const flexIconUrl = useRankIcon(flexRankEntry?.tier ?? "UNRANKED", false);
 
   return (
     <div className={s.bar}>
@@ -115,19 +109,22 @@ export function SummaryBar({
                   })}
                 </span>
                 <span className={s.rankTier}>
-                  {formatRankEntryTierLabel(
-                    t,
-                    rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null,
-                  )}
+                  {formatRankEntryTierLabel(t, soloRankEntry)}
                 </span>
                 <span className={s.rankMeta}>
-                  {formatMeta(
-                    rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null,
-                    winsShort,
-                    lossesShort,
-                    lpShort,
-                  )}
+                  {formatMeta(soloRankEntry, winsShort, lossesShort, lpShort)}
                 </span>
+                {/* <span className={s.highestRank}>
+                  <span className={s.highestRankLabel}>{highestLabel}</span>
+                  <img
+                    src={soloHighestIconUrl}
+                    alt=""
+                    className={s.highestRankIcon}
+                  />
+                  <span className={s.highestRankText}>
+                    {formatRankEntryTierLabel(t, soloHighestRankEntry)}
+                  </span>
+                </span> */}
               </div>
               <div className={s.rankIconWrap}>
                 {soloIconUrl ? (
@@ -153,19 +150,22 @@ export function SummaryBar({
                   })}
                 </span>
                 <span className={s.rankTier}>
-                  {formatRankEntryTierLabel(
-                    t,
-                    rankedSummary?.queueMap.RANKED_FLEX_SR ?? null,
-                  )}
+                  {formatRankEntryTierLabel(t, flexRankEntry)}
                 </span>
                 <span className={s.rankMeta}>
-                  {formatMeta(
-                    rankedSummary?.queueMap.RANKED_FLEX_SR ?? null,
-                    winsShort,
-                    lossesShort,
-                    lpShort,
-                  )}
+                  {formatMeta(flexRankEntry, winsShort, lossesShort, lpShort)}
                 </span>
+                {/* <span className={s.highestRank}>
+                  <span className={s.highestRankLabel}>{highestLabel}</span>
+                  <img
+                    src={flexHighestIconUrl}
+                    alt=""
+                    className={s.highestRankIcon}
+                  />
+                  <span className={s.highestRankText}>
+                    {formatRankEntryTierLabel(t, flexHighestRankEntry)}
+                  </span>
+                </span> */}
               </div>
               <div className={s.rankIconWrap}>
                 {flexIconUrl ? (
