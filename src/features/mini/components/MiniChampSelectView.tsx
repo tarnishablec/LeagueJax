@@ -64,8 +64,8 @@ function BenchChampionPool({
           champion.championId === champSelect.selectedChampionId;
         const isPending = champion.championId === pendingChampionId;
         const isPickable =
-          pickableChampionIds === null ||
-          pickableChampionIds.includes(champion.championId);
+          champSelect.benchPoolAvailable &&
+          pickableChampionIds?.includes(champion.championId);
         const isUnavailable = !isCurrent && !isPickable;
 
         return (
@@ -77,7 +77,7 @@ function BenchChampionPool({
             data-current={isCurrent ? "true" : undefined}
             data-pending={isPending ? "true" : undefined}
             data-unpickable={isUnavailable ? "true" : undefined}
-            disabled={pendingChampionId !== null || isCurrent || !isPickable}
+            disabled={isPending || isCurrent || !isPickable}
             onClick={() => onSwap(champion.championId)}
           >
             <ChampionIcon championId={champion.championId} />
@@ -126,6 +126,7 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
   const champSelect = model.champSelect;
   const { data: pickableChampionIds } = useChampSelectPickableChampionIds(
     champSelect?.session.gameId || null,
+    champSelect?.session.counter ?? null,
   );
   const [pendingChampionId, setPendingChampionId] = useState<number | null>(
     null,

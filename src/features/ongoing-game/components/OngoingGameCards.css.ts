@@ -223,9 +223,9 @@ export const winRateText = recipe({
   },
   variants: {
     tone: {
-      win: {color: vars.color.success},
-      lose: {color: vars.color.error},
-      neutral: {color: vars.color.mutedForeground},
+      win: { color: vars.color.success },
+      lose: { color: vars.color.error },
+      neutral: { color: vars.color.mutedForeground },
     },
   },
   defaultVariants: {
@@ -398,7 +398,7 @@ export const historyDialogBackdrop = style({
   background: "oklch(0.06 0 0 / 0.62)",
   zIndex: 40,
   selectors: {
-    "&[hidden]": {display: "none"},
+    "&[hidden]": { display: "none" },
   },
 });
 
@@ -410,7 +410,7 @@ export const historyDialogPositioner = style({
   padding: 20,
   zIndex: 41,
   selectors: {
-    "&[hidden]": {display: "none"},
+    "&[hidden]": { display: "none" },
   },
 });
 
