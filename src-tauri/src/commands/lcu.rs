@@ -117,26 +117,52 @@ pub async fn lcu_get_pickable_champion_ids(jax: State<'_, Arc<Jax>>) -> Result<V
 }
 
 #[tauri::command]
-pub async fn lcu_champ_select_quit(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
+pub async fn lcu_dodge_champ_select(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
     tracing::info!(
         channel = "lcu-command",
-        "lcu_champ_select_quit command invoked"
+        "lcu_dodge_champ_select command invoked"
     );
     let manager = jax
         .get_shard::<LcuShard>()
         .manager()
         .ok_or(AppError::LcuNotConnected)?;
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
-    let result = lcu.api().quit_champ_select().await;
+    let result = lcu.api().dodge_champ_select().await;
     match &result {
         Ok(()) => tracing::info!(
             channel = "lcu-command",
-            "lcu_champ_select_quit command succeeded"
+            "lcu_dodge_champ_select command succeeded"
         ),
         Err(error) => tracing::error!(
             channel = "lcu-command",
             error = %error,
-            "lcu_champ_select_quit command failed"
+            "lcu_dodge_champ_select command failed"
+        ),
+    }
+    result
+}
+
+#[tauri::command]
+pub async fn lcu_kill_and_restart_ux(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
+    tracing::info!(
+        channel = "lcu-command",
+        "lcu_kill_and_restart_ux command invoked"
+    );
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
+    let result = lcu.api().kill_and_restart_ux().await;
+    match &result {
+        Ok(()) => tracing::info!(
+            channel = "lcu-command",
+            "lcu_kill_and_restart_ux command succeeded"
+        ),
+        Err(error) => tracing::error!(
+            channel = "lcu-command",
+            error = %error,
+            "lcu_kill_and_restart_ux command failed"
         ),
     }
     result
