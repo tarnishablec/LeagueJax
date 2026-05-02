@@ -122,6 +122,11 @@ export const benchChampionButton = style({
     "&:disabled": {
       cursor: "default",
     },
+    '&[data-unpickable="true"]': {
+      cursor: "not-allowed",
+      opacity: 0.46,
+      filter: "grayscale(0.85)",
+    },
   },
 });
 
