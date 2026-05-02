@@ -360,7 +360,8 @@ export const friendStatus = styleVariants({
 });
 
 export const friendEmptyText = style({
-  minHeight: 80,
+  // minHeight: 80,
+  height: "100%",
   display: "grid",
   placeItems: "center",
   textAlign: "center",
