@@ -263,6 +263,7 @@ pub fn run() {
             lcu_get_chat_friends,
             lcu_get_chat_friend_groups,
             lcu_champ_select_swap_bench_champion,
+            lcu_get_pickable_champion_ids,
             lcu_champ_select_quit,
             ongoing_game_get_snapshot,
             ongoing_game_refresh,

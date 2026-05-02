@@ -107,6 +107,16 @@ pub async fn lcu_champ_select_swap_bench_champion(
 }
 
 #[tauri::command]
+pub async fn lcu_get_pickable_champion_ids(jax: State<'_, Arc<Jax>>) -> Result<Vec<u64>, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
+    lcu.api().get_pickable_champion_ids().await
+}
+
+#[tauri::command]
 pub async fn lcu_champ_select_quit(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
     let manager = jax
         .get_shard::<LcuShard>()

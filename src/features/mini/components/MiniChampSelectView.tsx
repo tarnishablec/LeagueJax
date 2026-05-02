@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
+import { useChampSelectPickableChampionIds } from "../hooks/use-champ-select-pickable-champion-ids";
 import type { MiniWindowModel } from "../hooks/use-mini-window-model";
 import { MiniChampSelectDodgeSection } from "./MiniChampSelectDodgeSection";
 import * as s from "./MiniChampSelectView.css";
@@ -55,10 +56,12 @@ function SelectedChampion({
 
 function BenchChampionPool({
   champSelect,
+  pickableChampionIds,
   pendingChampionId,
   onSwap,
 }: {
   champSelect: ChampSelectModel;
+  pickableChampionIds: number[] | null;
   pendingChampionId: number | null;
   onSwap: (championId: number) => void;
 }) {
@@ -68,6 +71,10 @@ function BenchChampionPool({
         const isCurrent =
           champion.championId === champSelect.selectedChampionId;
         const isPending = champion.championId === pendingChampionId;
+        const isPickable =
+          pickableChampionIds === null ||
+          pickableChampionIds.includes(champion.championId);
+        const isUnavailable = !isCurrent && !isPickable;
 
         return (
           <button
@@ -77,7 +84,8 @@ function BenchChampionPool({
             className={s.benchChampionButton}
             data-current={isCurrent ? "true" : undefined}
             data-pending={isPending ? "true" : undefined}
-            disabled={pendingChampionId !== null || isCurrent}
+            data-unpickable={isUnavailable ? "true" : undefined}
+            disabled={pendingChampionId !== null || isCurrent || !isPickable}
             onClick={() => onSwap(champion.championId)}
           >
             <ChampionIcon championId={champion.championId} />
@@ -124,6 +132,9 @@ function ChampSelectStatus({
 export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
   const { t } = useTranslation();
   const champSelect = model.champSelect;
+  const { data: pickableChampionIds } = useChampSelectPickableChampionIds(
+    champSelect?.session.gameId || null,
+  );
   const [pendingChampionId, setPendingChampionId] = useState<number | null>(
     null,
   );
@@ -133,6 +144,8 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
   if (!champSelect) {
     return null;
   }
+
+  const resolvedPickableChampionIds = pickableChampionIds ?? null;
 
   const selectedLabel = champSelect.selectedChampionId
     ? t("mini.champSelect.selected", {
@@ -194,6 +207,7 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
           />
           <BenchChampionPool
             champSelect={champSelect}
+            pickableChampionIds={resolvedPickableChampionIds}
             pendingChampionId={pendingChampionId}
             onSwap={handleSwap}
           />
