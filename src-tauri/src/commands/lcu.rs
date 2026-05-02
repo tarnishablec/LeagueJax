@@ -118,10 +118,26 @@ pub async fn lcu_get_pickable_champion_ids(jax: State<'_, Arc<Jax>>) -> Result<V
 
 #[tauri::command]
 pub async fn lcu_champ_select_quit(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
+    tracing::info!(
+        channel = "lcu-command",
+        "lcu_champ_select_quit command invoked"
+    );
     let manager = jax
         .get_shard::<LcuShard>()
         .manager()
         .ok_or(AppError::LcuNotConnected)?;
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
-    lcu.api().quit_champ_select().await
+    let result = lcu.api().quit_champ_select().await;
+    match &result {
+        Ok(()) => tracing::info!(
+            channel = "lcu-command",
+            "lcu_champ_select_quit command succeeded"
+        ),
+        Err(error) => tracing::error!(
+            channel = "lcu-command",
+            error = %error,
+            "lcu_champ_select_quit command failed"
+        ),
+    }
+    result
 }

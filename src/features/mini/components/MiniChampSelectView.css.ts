@@ -73,14 +73,6 @@ export const selectedLabel = style({
   color: vars.color.mutedForeground,
 });
 
-export const selectedMiniIcon = style({
-  width: "18px",
-  height: "18px",
-  borderRadius: "4px",
-  border: `1px solid ${vars.color.border}`,
-  background: "oklch(1 0 0 / 0.06)",
-});
-
 export const benchGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, 42px)",
