@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 import { vars } from "@/styles/theme.css";
 
 const panelBackground = "oklch(0 0 0 / 0.12)";
@@ -52,14 +52,13 @@ export const selectedChampionImage = style({
   border: "1px solid color-mix(in oklch, rgb(245 130 0) 36%, transparent)",
   boxShadow: "0 0 0 3px oklch(0 0 0 / 0.18)",
   background: "oklch(1 0 0 / 0.06)",
-  selectors: {
-    "& img": {
-      objectFit: "cover",
-      objectPosition: "center",
-      transform: "scale(1.12)",
-      transformOrigin: "center",
-    },
-  },
+});
+
+globalStyle(`${selectedChampionImage} img`, {
+  objectFit: "cover",
+  objectPosition: "center",
+  transform: "scale(1.12)",
+  transformOrigin: "center",
 });
 
 export const selectedChampionFallback = style({
