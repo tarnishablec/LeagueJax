@@ -44,7 +44,27 @@ const TIER_DEFAULT_LABEL: Record<TierKey, string> = {
   unranked: "Unranked",
 };
 
+const TIER_SHORT_DEFAULT_LABEL: Record<TierKey, string> = {
+  iron: "Iron",
+  bronze: "Bronze",
+  silver: "Silver",
+  gold: "Gold",
+  platinum: "Platinum",
+  emerald: "Emerald",
+  diamond: "Diamond",
+  master: "Master",
+  grandmaster: "Grandmaster",
+  challenger: "Challenger",
+  unranked: "Unranked",
+};
+
 const APEX_TIERS = new Set<Tier>(["MASTER", "GRANDMASTER", "CHALLENGER"]);
+
+export function hasRankEntry(
+  entry: RankEntry | null | undefined,
+): entry is RankEntry {
+  return Boolean(entry?.tier && entry.tier !== "NONE");
+}
 
 function normalizeTierKey(tier: string | null | undefined): TierKey {
   if (!tier) {
@@ -102,6 +122,19 @@ export function formatRankTierLabel(
   });
 }
 
+export function formatRankTierShortLabel(
+  t: TranslateFn,
+  tier: string | null | undefined,
+): string {
+  const key = resolveTierKey(tier);
+  if (!key) {
+    return tier?.trim() || TIER_SHORT_DEFAULT_LABEL.unranked;
+  }
+  return t(`rank.tierShort.${key}`, {
+    defaultValue: TIER_SHORT_DEFAULT_LABEL[key],
+  });
+}
+
 export function isApexRankTier(tier: string | null | undefined): boolean {
   const normalized = tier?.trim().toUpperCase() as Tier | undefined;
   return normalized ? APEX_TIERS.has(normalized) : false;
@@ -110,12 +143,35 @@ export function isApexRankTier(tier: string | null | undefined): boolean {
 export function formatRankDivisionLabel(
   entry: RankEntry | null | undefined,
 ): string {
-  if (!entry || isApexRankTier(entry.tier)) {
+  if (!hasRankEntry(entry) || isApexRankTier(entry.tier)) {
     return "";
   }
 
   const division = entry.division.trim();
   return division.length > 0 && division !== "NA" ? division : "";
+}
+
+export function formatRankEntryMiniLabel(
+  t: TranslateFn,
+  entry: RankEntry | null | undefined,
+  lpLabel = "LP",
+  options: { showUnranked?: boolean } = {},
+): string {
+  if (!hasRankEntry(entry)) {
+    return options.showUnranked ? formatRankTierShortLabel(t, "NONE") : "";
+  }
+
+  const tierLabel = formatRankTierShortLabel(t, entry.tier);
+  if (tierLabel.length === 0) {
+    return options.showUnranked ? formatRankTierShortLabel(t, "NONE") : "";
+  }
+
+  if (isApexRankTier(entry.tier)) {
+    return `${tierLabel} ${entry.leaguePoints} ${lpLabel}`;
+  }
+
+  const division = formatRankDivisionLabel(entry);
+  return division.length > 0 ? `${tierLabel} ${division}` : tierLabel;
 }
 
 export function formatRankEntryTierLabel(

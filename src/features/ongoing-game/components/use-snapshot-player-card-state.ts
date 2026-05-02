@@ -3,14 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { RankEntry } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
-import { useRankIcon } from "@/hooks/use-rank-icon.ts";
 import { useLcuStore } from "@/stores/lcu";
-import {
-  formatRankDivisionLabel,
-  formatRankTierLabel,
-  isApexRankTier,
-  resolveRankTierForIcon,
-} from "@/utils/rank-display";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
@@ -37,61 +30,14 @@ export type WinRateStat = {
 
 export type PlayerCardRankDisplayItem = {
   id: "solo" | "flex";
-  iconUrl: string;
-  isRanked: boolean;
+  entry: RankEntry | null;
+  lpLabel: string;
   queueLabel: string;
-  tooltip: string;
-  value: string;
 };
 
 function formatAverageKdaText(games: EnrichedMatch[]): string {
   const averageKda = computeAverageKda(games);
   return averageKda == null ? "--" : averageKda.toFixed(2);
-}
-
-function hasRank(entry: RankEntry | null | undefined): entry is RankEntry {
-  return Boolean(entry?.tier && entry.tier !== "NONE");
-}
-
-function formatRankCardValue(
-  t: ReturnType<typeof useTranslation>["t"],
-  entry: RankEntry | null | undefined,
-): string {
-  if (!hasRank(entry)) {
-    return "";
-  }
-
-  if (isApexRankTier(entry.tier)) {
-    return `${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
-  }
-
-  const division = formatRankDivisionLabel(entry);
-  if (division.length > 0) {
-    return division;
-  }
-
-  return `${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
-}
-
-function formatRankCardTooltip(
-  t: ReturnType<typeof useTranslation>["t"],
-  entry: RankEntry | null | undefined,
-): string {
-  if (!hasRank(entry)) {
-    return formatRankTierLabel(t, "NONE");
-  }
-
-  const tierLabel = formatRankTierLabel(t, entry.tier);
-  if (isApexRankTier(entry.tier)) {
-    return `${tierLabel} ${entry.leaguePoints} ${t("ongoingGame.rank.lpShort", { defaultValue: "LP" })}`;
-  }
-
-  const division = formatRankDivisionLabel(entry);
-  if (division.length > 0) {
-    return `${tierLabel} ${division}`;
-  }
-
-  return tierLabel;
 }
 
 function computeWinRateStat(
@@ -215,33 +161,28 @@ export function useSnapshotPlayerCardState(
 
   const soloRankEntry = rankedQuery.data?.queueMap.RANKED_SOLO_5x5 ?? null;
   const flexRankEntry = rankedQuery.data?.queueMap.RANKED_FLEX_SR ?? null;
-  const soloRankIcon = useRankIcon(resolveRankTierForIcon(soloRankEntry), true);
-  const flexRankIcon = useRankIcon(resolveRankTierForIcon(flexRankEntry), true);
   const identity = useMemo(() => resolveSummonerIdentity(summoner), [summoner]);
+  const lpLabel = t("ongoingGame.rank.lpShort", { defaultValue: "LP" });
   const rankItems = useMemo<PlayerCardRankDisplayItem[]>(
     () => [
       {
         id: "solo",
-        iconUrl: soloRankIcon,
-        isRanked: hasRank(soloRankEntry),
+        entry: soloRankEntry,
+        lpLabel,
         queueLabel: t("ongoingGame.rank.soloShort", {
           defaultValue: "Solo",
         }),
-        tooltip: formatRankCardTooltip(t, soloRankEntry),
-        value: formatRankCardValue(t, soloRankEntry),
       },
       {
         id: "flex",
-        iconUrl: flexRankIcon,
-        isRanked: hasRank(flexRankEntry),
+        entry: flexRankEntry,
+        lpLabel,
         queueLabel: t("ongoingGame.rank.flexShort", {
           defaultValue: "Flex",
         }),
-        tooltip: formatRankCardTooltip(t, flexRankEntry),
-        value: formatRankCardValue(t, flexRankEntry),
       },
     ],
-    [flexRankEntry, flexRankIcon, soloRankEntry, soloRankIcon, t],
+    [flexRankEntry, lpLabel, soloRankEntry, t],
   );
 
   const averageKdaText = useMemo(
