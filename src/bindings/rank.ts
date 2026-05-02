@@ -2,12 +2,70 @@
 
 export type Division = "I" | "II" | "III" | "IV" | "NA";
 
-export type QueueType = "RANKED_SOLO_5x5" | "RANKED_FLEX_SR" | "RANKED_TFT" | "RANKED_TFT_DOUBLE_UP" | "RANKED_TFT_TURBO";
+export type QueueType =
+  | "RANKED_SOLO_5x5"
+  | "RANKED_FLEX_SR"
+  | "RANKED_TFT"
+  | "RANKED_TFT_DOUBLE_UP"
+  | "RANKED_TFT_TURBO";
 
-export type RankEntry = { climbingIndicatorActive: boolean, currentSeasonWinsForRewards: number, division: Division, highestDivision: Division, highestTier: Tier, isProvisional: boolean, leaguePoints: number, losses: number, miniSeriesProgress: string, previousSeasonEndDivision: Division, previousSeasonEndTier: Tier, previousSeasonHighestDivision: Division, previousSeasonHighestTier: Tier, previousSeasonWinsForRewards: number, provisionalGameThreshold: number, provisionalGamesRemaining: number, queueType: QueueType, ratedRating: number, ratedTier: Tier, tier: Tier, wins: number, warnings: null, };
+export type RankEntry = {
+  climbingIndicatorActive: boolean;
+  currentSeasonWinsForRewards: number;
+  division: Division;
+  highestDivision: Division;
+  highestTier: Tier;
+  isProvisional: boolean;
+  leaguePoints: number;
+  losses: number;
+  miniSeriesProgress: string;
+  previousSeasonEndDivision: Division;
+  previousSeasonEndTier: Tier;
+  previousSeasonHighestDivision: Division;
+  previousSeasonHighestTier: Tier;
+  previousSeasonWinsForRewards: number;
+  provisionalGameThreshold: number;
+  provisionalGamesRemaining: number;
+  queueType: QueueType;
+  ratedRating: number;
+  ratedTier: Tier;
+  tier: Tier;
+  wins: number;
+  warnings: null;
+};
 
-export type RankStats = { currentSeasonSplitPoints: number, earnedRegaliaRewardIds: Array<string>, highestCurrentSeasonReachedTierSr: Tier | null, highestPreviousSeasonEndDivision: Division | null, highestPreviousSeasonEndTier: Tier | null, highestRankedEntry: RankEntry | null, highestRankedEntrySr: RankEntry | null, previousSeasonSplitPoints: number, queueMap: { [key in QueueType]?: RankEntry }, queues: Array<RankEntry>, rankedRegaliaLevel: number, seasons: { [key in QueueType]?: SeasonInfo }, splitsProgress: Record<string, unknown>, };
+export type RankStats = {
+  currentSeasonSplitPoints: number;
+  earnedRegaliaRewardIds: Array<string>;
+  highestCurrentSeasonReachedTierSr: Tier | null;
+  highestPreviousSeasonEndDivision: Division | null;
+  highestPreviousSeasonEndTier: Tier | null;
+  highestRankedEntry: RankEntry | null;
+  highestRankedEntrySr: RankEntry | null;
+  previousSeasonSplitPoints: number;
+  queueMap: { [key in QueueType]?: RankEntry };
+  queues: Array<RankEntry>;
+  rankedRegaliaLevel: number;
+  seasons: { [key in QueueType]?: SeasonInfo };
+  splitsProgress: Record<string, unknown>;
+};
 
-export type SeasonInfo = { currentSeasonEnd: number, currentSeasonId: number, nextSeasonStart: number, };
+export type SeasonInfo = {
+  currentSeasonEnd: number;
+  currentSeasonId: number;
+  nextSeasonStart: number;
+};
 
-export type Tier = "IRON" | "BRONZE" | "SILVER" | "GOLD" | "PLATINUM" | "EMERALD" | "DIAMOND" | "MASTER" | "GRANDMASTER" | "CHALLENGER" | "NONE" | "";
+export type Tier =
+  | "IRON"
+  | "BRONZE"
+  | "SILVER"
+  | "GOLD"
+  | "PLATINUM"
+  | "EMERALD"
+  | "DIAMOND"
+  | "MASTER"
+  | "GRANDMASTER"
+  | "CHALLENGER"
+  | "NONE"
+  | "";
