@@ -191,14 +191,17 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
     setDodgePending(true);
     try {
       console.info(
-        "[mini-champ-select] invoke lcu_champ_select_quit start",
+        "[mini-champ-select] invoke lcu_dodge_champ_select start",
         context,
       );
-      await invoke("lcu_champ_select_quit");
-      console.info("[mini-champ-select] invoke lcu_champ_select_quit success", {
-        ...context,
-        elapsedMs: Math.round(performance.now() - startedAt),
-      });
+      await invoke("lcu_dodge_champ_select");
+      console.info(
+        "[mini-champ-select] invoke lcu_dodge_champ_select success",
+        {
+          ...context,
+          elapsedMs: Math.round(performance.now() - startedAt),
+        },
+      );
       console.info("[mini-champ-select] invoke ongoing_game_refresh start", {
         ...context,
         elapsedMs: Math.round(performance.now() - startedAt),
