@@ -10,6 +10,7 @@ import {
 } from "@/components/settings-ui";
 import { useSettings } from "@/features/settings/context";
 import type { SettingId } from "@/features/settings/types";
+import { MiniChampSelectView } from "../components/MiniChampSelectView";
 import {
   type MiniWindowModel,
   useMiniWindowModel,
@@ -144,6 +145,10 @@ export function MiniRoute() {
     acceptDelay,
     model.readyCheck,
   );
+
+  if (model.phase === "ChampSelect" && model.champSelect) {
+    return <MiniChampSelectView model={model} />;
+  }
 
   return (
     <section className={s.root}>

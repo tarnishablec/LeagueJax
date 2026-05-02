@@ -20,6 +20,8 @@ export type Bans = {
   theirTeamBans: Array<Record<string, unknown>>;
 };
 
+export type BenchChampion = { championId: number; isPriority: boolean };
+
 export type ChampSelectSessionData = {
   actions: Array<Array<Action>>;
   allowBattleBoost: boolean;
@@ -30,7 +32,7 @@ export type ChampSelectSessionData = {
   allowSkinSelection: boolean;
   allowSubsetChampionPicks: boolean;
   bans: Bans;
-  benchChampions: Array<Record<string, unknown>>;
+  benchChampions: Array<BenchChampion>;
   benchEnabled: boolean;
   boostableSkinCount: number;
   chatDetails: ChatDetails;

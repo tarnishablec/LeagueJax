@@ -1,17 +1,34 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useMemo } from "react";
-import type { MatchmakingSearchData } from "@/bindings/lcu_events";
+import type {
+  BenchChampion,
+  ChampSelectSessionData,
+  MatchmakingSearchData,
+  TeamMember,
+} from "@/bindings/lcu_events";
 import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
 import type { LcuQueue } from "@/bindings/queues";
 import { useOngoingGameStore } from "@/features/ongoing-game/store";
 import { useLcuMaps } from "@/hooks/use-lcu-maps";
 import { useLcuQueues } from "@/hooks/use-lcu-queues";
 
+export type MiniChampSelectMode = "bench" | "default";
+
+export type MiniChampSelectModel = {
+  session: ChampSelectSessionData;
+  mode: MiniChampSelectMode;
+  queueId: number | null;
+  localPlayer: TeamMember | null;
+  selectedChampionId: number | null;
+  benchChampions: BenchChampion[];
+};
+
 export type MiniWindowModel = {
   phase: OngoingGameUpdated["phase"];
   queueName: string | null;
   mapIconSrc: string | null;
   readyCheck: OngoingGameUpdated["ready_check"];
+  champSelect: MiniChampSelectModel | null;
 };
 
 const MAP_ASSET_KEYS = [
@@ -57,15 +74,70 @@ function queueNameForId(
 
 function queueIdFromState(
   effectiveQueueId: number | null,
+  champSelectSession: ChampSelectSessionData | null,
   matchmakingSearch: MatchmakingSearchData | null,
   gameflowSession: OngoingGameUpdated["gameflow_session"],
 ): number | null {
   return (
     effectiveQueueId ??
+    champSelectSession?.queueId ??
     matchmakingSearch?.queueId ??
     gameflowSession?.gameData.queue.id ??
     null
   );
+}
+
+function normalizePositiveId(value: number | null | undefined): number | null {
+  return typeof value === "number" && value > 0 ? value : null;
+}
+
+function localPlayerFromSession(
+  session: ChampSelectSessionData,
+): TeamMember | null {
+  return (
+    session.myTeam.find(
+      (member) => member.cellId === session.localPlayerCellId,
+    ) ?? null
+  );
+}
+
+function selectedChampionIdFromMember(
+  member: TeamMember | null,
+): number | null {
+  return (
+    normalizePositiveId(member?.championId) ??
+    normalizePositiveId(member?.championPickIntent)
+  );
+}
+
+function benchChampionsFromSession(
+  session: ChampSelectSessionData,
+): BenchChampion[] {
+  return session.benchChampions.filter(
+    (champion) => normalizePositiveId(champion.championId) !== null,
+  );
+}
+
+function champSelectModelFromSession(
+  session: ChampSelectSessionData | null,
+): MiniChampSelectModel | null {
+  if (!session) {
+    return null;
+  }
+
+  const localPlayer = localPlayerFromSession(session);
+  const selectedChampionId = selectedChampionIdFromMember(localPlayer);
+  const benchChampions = benchChampionsFromSession(session);
+
+  return {
+    session,
+    mode:
+      session.benchEnabled && benchChampions.length > 0 ? "bench" : "default",
+    queueId: normalizePositiveId(session.queueId),
+    localPlayer,
+    selectedChampionId,
+    benchChampions,
+  };
 }
 
 export function useMiniWindowModel(): MiniWindowModel {
@@ -81,6 +153,9 @@ export function useMiniWindowModel(): MiniWindowModel {
     (state) => state.matchmakingSearch,
   );
   const readyCheck = useOngoingGameStore((state) => state.readyCheck);
+  const champSelectSession = useOngoingGameStore(
+    (state) => state.champSelectSession,
+  );
 
   useEffect(() => {
     void invoke<OngoingGameUpdated>("ongoing_game_get_snapshot")
@@ -93,6 +168,7 @@ export function useMiniWindowModel(): MiniWindowModel {
   return useMemo(() => {
     const queueId = queueIdFromState(
       effectiveQueueId,
+      champSelectSession,
       matchmakingSearch,
       gameflowSession,
     );
@@ -106,8 +182,10 @@ export function useMiniWindowModel(): MiniWindowModel {
       queueName: queueNameForId(queues, queueId),
       mapIconSrc: preferredMapAsset(knownMap),
       readyCheck,
+      champSelect: champSelectModelFromSession(champSelectSession),
     };
   }, [
+    champSelectSession,
     effectiveQueueId,
     gameflowSession,
     maps,
