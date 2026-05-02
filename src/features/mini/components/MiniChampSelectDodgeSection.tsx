@@ -3,12 +3,10 @@ import { useTranslation } from "react-i18next";
 import * as s from "./MiniChampSelectDodgeSection.css";
 
 export function MiniChampSelectDodgeSection({
-  disabled,
   error,
   pending,
   onDodge,
 }: {
-  disabled?: boolean;
   error?: string | null;
   pending: boolean;
   onDodge: () => void;
@@ -26,7 +24,7 @@ export function MiniChampSelectDodgeSection({
         type="button"
         aria-label="Dodge champion select"
         className={s.button}
-        disabled={disabled || pending}
+        disabled={pending}
         onClick={onDodge}
       >
         <LogOut size={14} aria-hidden="true" />

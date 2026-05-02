@@ -40,14 +40,6 @@ function SelectedChampion({
     <div className={s.selectedColumn}>
       <ChampionIcon championId={championId} selected />
       <div className={s.selectedLabel}>
-        {championId ? (
-          <ChampionAvatar
-            championId={championId}
-            imageClassName={s.selectedMiniIcon}
-            fallbackClassName={s.selectedMiniIcon}
-            alt=""
-          />
-        ) : null}
         <span>{label}</span>
       </div>
     </div>
@@ -177,16 +169,51 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
   };
 
   const handleDodge = async () => {
+    const startedAt = performance.now();
+    const context = {
+      gameId: champSelect.session.gameId,
+      phase: model.phase,
+      queueId: champSelect.queueId,
+      selectedChampionId: champSelect.selectedChampionId,
+      pending: dodgePending,
+    };
+    console.info("[mini-champ-select] dodge click", context);
+
     if (dodgePending) {
+      console.info("[mini-champ-select] dodge ignored because pending", {
+        ...context,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
       return;
     }
 
     setError(null);
     setDodgePending(true);
     try {
+      console.info(
+        "[mini-champ-select] invoke lcu_champ_select_quit start",
+        context,
+      );
       await invoke("lcu_champ_select_quit");
+      console.info("[mini-champ-select] invoke lcu_champ_select_quit success", {
+        ...context,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+      console.info("[mini-champ-select] invoke ongoing_game_refresh start", {
+        ...context,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
       await invoke("ongoing_game_refresh");
-    } catch {
+      console.info("[mini-champ-select] invoke ongoing_game_refresh success", {
+        ...context,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
+    } catch (error) {
+      console.error("[mini-champ-select] dodge failed", {
+        ...context,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        error,
+      });
       setError(
         t("mini.champSelect.dodge.failed", {
           defaultValue: "退出英雄选择失败",
@@ -229,7 +256,6 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
       <div className={s.spacer} />
       <MiniChampSelectDodgeSection
         pending={dodgePending}
-        disabled={!champSelect.session.showQuitButton}
         error={error}
         onDodge={handleDodge}
       />
