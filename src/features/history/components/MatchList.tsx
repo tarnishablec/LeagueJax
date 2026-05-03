@@ -38,8 +38,9 @@ export function MatchList({
     );
 
   const matchCount = matches?.length ?? 0;
-  const canGoPrev = page > 1 && !isLoading && !isRefreshing;
-  const canGoNext = hasNextPage && !isLoading && !isRefreshing;
+  const isMatchHistoryBusy = isLoading || isRefreshing;
+  const canGoPrev = page > 1 && !isMatchHistoryBusy;
+  const canGoNext = hasNextPage && !isMatchHistoryBusy;
 
   const modeSelectOptions = modeOptions.map((option) => ({
     value: option.value,
@@ -50,7 +51,7 @@ export function MatchList({
     label: String(option),
   }));
 
-  const canRefresh = !isLoading && !isRefreshing;
+  const canRefresh = !isMatchHistoryBusy;
 
   return (
     <div className={s.panel}>
@@ -58,7 +59,7 @@ export function MatchList({
         <MatchListFilters
           modeTag={modeTag}
           pageSize={pageSize}
-          disabled={isLoading || isRefreshing}
+          disabled={isMatchHistoryBusy}
           modeSelectOptions={modeSelectOptions}
           pageSizeSelectOptions={pageSizeSelectOptions}
           onModeChange={(value) => {
@@ -74,7 +75,7 @@ export function MatchList({
           canGoPrev={canGoPrev}
           canGoNext={canGoNext}
           canRefresh={canRefresh}
-          refreshing={isRefreshing}
+          refreshing={isMatchHistoryBusy}
           onPrev={() => setPage((current) => Math.max(1, current - 1))}
           onNext={() => setPage((current) => current + 1)}
           onRefresh={() => {
