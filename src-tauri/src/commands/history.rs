@@ -1,11 +1,14 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::error::AppError;
+use crate::shards::lcu::api::LcuApi;
 use crate::shards::lcu::concepts::cherry::CherryAugment;
 use crate::shards::lcu::concepts::rank::RankStats;
 use crate::shards::lcu::concepts::summoner::{SummonerInfo, SummonerSearchResult};
+use crate::shards::lcu::riot_client::{PlayerAccountAliasEntry, RiotClientHttpClient};
 use crate::shards::lcu::LcuShard;
+use crate::shards::sgp::api::SgpApi;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
 use crate::shards::sgp::matches::{
     RawMatchDetailsGame, RawMatchSummariesResponse, RawMatchSummaryGame,
@@ -24,20 +27,42 @@ enum ParsedSummonerSearchQuery {
     Fuzzy { game_name: String },
 }
 
+fn is_invisible_search_char(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0x0000..=0x001F
+            | 0x007F..=0x009F
+            | 0x200B..=0x200D
+            | 0x202A..=0x202E
+            | 0x2060..=0x2069
+            | 0xFEFF
+            | 0xFFF9..=0xFFFB
+    )
+}
+
+fn normalize_search_query(query: &str) -> String {
+    query
+        .chars()
+        .filter(|ch| !is_invisible_search_char(*ch))
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 fn parse_summoner_search_query(query: &str) -> Result<ParsedSummonerSearchQuery, AppError> {
-    let trimmed = query.trim();
+    let trimmed = normalize_search_query(query);
     if trimmed.is_empty() {
         return Err(AppError::other("Search query is empty".to_string()));
     }
 
-    if Uuid::parse_str(trimmed).is_ok() {
-        return Ok(ParsedSummonerSearchQuery::Puuid(trimmed.to_string()));
+    if Uuid::parse_str(&trimmed).is_ok() {
+        return Ok(ParsedSummonerSearchQuery::Puuid(trimmed));
     }
 
     if let Some((game_name, tag_line)) = trimmed.split_once('#') {
         let game_name = game_name.trim();
         let tag_line = tag_line.trim();
-        if game_name.is_empty() || tag_line.is_empty() {
+        if game_name.is_empty() || tag_line.is_empty() || tag_line.contains('#') {
             return Err(AppError::other(
                 "Invalid exact query, expected gameName#tagLine".to_string(),
             ));
@@ -48,9 +73,7 @@ fn parse_summoner_search_query(query: &str) -> Result<ParsedSummonerSearchQuery,
         });
     }
 
-    Ok(ParsedSummonerSearchQuery::Fuzzy {
-        game_name: trimmed.to_string(),
-    })
+    Ok(ParsedSummonerSearchQuery::Fuzzy { game_name: trimmed })
 }
 
 fn normalize_sgp_server_id(server_id: Option<String>, fallback: &str) -> String {
@@ -138,58 +161,131 @@ fn resolve_target_sgp_server_id(
     )))
 }
 
+fn first_non_empty(values: &[&str]) -> String {
+    values
+        .iter()
+        .map(|value| value.trim())
+        .find(|value| !value.is_empty())
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn summoner_level(summoner: &SummonerInfo) -> i64 {
+    if summoner.summoner_level > 0 {
+        summoner.summoner_level
+    } else {
+        summoner.level
+    }
+}
+
+fn summoner_search_result(
+    summoner: &SummonerInfo,
+    target_sgp_server_id: &str,
+    game_name_override: Option<&str>,
+    tag_line_override: Option<&str>,
+) -> SummonerSearchResult {
+    SummonerSearchResult {
+        puuid: summoner.puuid.clone(),
+        game_name: first_non_empty(&[
+            game_name_override.unwrap_or_default(),
+            &summoner.game_name,
+            &summoner.name,
+        ]),
+        tag_line: first_non_empty(&[tag_line_override.unwrap_or_default(), &summoner.tag_line]),
+        profile_icon_id: summoner.profile_icon_id,
+        summoner_level: summoner_level(summoner),
+        sgp_server_id: target_sgp_server_id.to_string(),
+        privacy: summoner.privacy.clone(),
+    }
+}
+
+async fn resolve_nameset_identity(
+    riot_client: &RiotClientHttpClient,
+    puuid: &str,
+) -> Option<(String, String)> {
+    let response = riot_client
+        .get_player_account_namesets(&[puuid.to_string()])
+        .await
+        .ok()?;
+
+    response.namesets.into_iter().find_map(|nameset| {
+        if !nameset.puuid.eq_ignore_ascii_case(puuid) {
+            return None;
+        }
+
+        let game_name = nameset.gnt.game_name.trim().to_string();
+        let tag_line = nameset.gnt.tag_line.trim().to_string();
+        if game_name.is_empty() || tag_line.is_empty() {
+            None
+        } else {
+            Some((game_name, tag_line))
+        }
+    })
+}
+
 async fn search_aliases_with_target_server(
-    aliases: Vec<crate::shards::lcu::api::SummonerAliasEntry>,
+    aliases: Vec<PlayerAccountAliasEntry>,
     target_sgp_server_id: &str,
     same_server: bool,
-    sgp_api: &crate::shards::sgp::api::SgpApi,
+    use_sgp_validation: bool,
+    lcu_api: &LcuApi,
+    sgp_api: &SgpApi,
 ) -> Result<Vec<SummonerSearchResult>, AppError> {
     let mut dedupe = HashSet::new();
     let aliases: Vec<_> = aliases
         .into_iter()
-        .filter(|entry| dedupe.insert(entry.puuid.clone()))
+        .filter_map(|mut entry| {
+            let puuid = entry.puuid.trim().to_string();
+            let puuid_key = puuid.to_ascii_lowercase();
+            if puuid.is_empty() || !dedupe.insert(puuid_key) {
+                return None;
+            }
+            entry.puuid = puuid;
+            Some(entry)
+        })
         .collect();
 
     if aliases.is_empty() {
         return Ok(Vec::new());
     }
 
-    // The aliases response already contains gameName, tagLine, profileIconId,
-    // summonerLevel 鈥?use them directly for same-server searches.
-    if same_server {
+    // Alias lookup only identifies account candidates; validate server membership separately.
+    if use_sgp_validation || !same_server {
+        let puuids: Vec<String> = aliases.iter().map(|alias| alias.puuid.clone()).collect();
+        let summoners = sgp_api
+            .get_summoners_by_puuids(target_sgp_server_id, &puuids)
+            .await?;
+        let summoners_by_puuid: HashMap<_, _> = summoners
+            .into_iter()
+            .map(|summoner| (summoner.puuid.to_ascii_lowercase(), summoner))
+            .collect();
+
         return Ok(aliases
             .into_iter()
-            .map(|alias| SummonerSearchResult {
-                puuid: alias.puuid,
-                game_name: alias.game_name,
-                tag_line: alias.tag_line,
-                profile_icon_id: alias.profile_icon_id,
-                summoner_level: alias.summoner_level,
-                sgp_server_id: target_sgp_server_id.to_string(),
-                privacy: alias.privacy,
+            .filter_map(|alias| {
+                let summoner = summoners_by_puuid.get(&alias.puuid.to_ascii_lowercase())?;
+                Some(summoner_search_result(
+                    summoner,
+                    target_sgp_server_id,
+                    Some(&alias.alias.game_name),
+                    Some(&alias.alias.tag_line),
+                ))
             })
             .collect());
     }
-
-    // Cross-region: verify the summoner exists on the target server via SGP.
+    // summonerLevel 鈥?use them directly for same-server searches.
     let mut results = Vec::new();
     for alias in aliases {
-        let Ok(Some(summoner)) = sgp_api
-            .get_summoner_by_puuid(target_sgp_server_id, &alias.puuid)
-            .await
-        else {
+        let Ok(Some(summoner)) = lcu_api.get_summoner_by_puuid_optional(&alias.puuid).await else {
             continue;
         };
 
-        results.push(SummonerSearchResult {
-            puuid: summoner.puuid,
-            game_name: alias.game_name,
-            tag_line: alias.tag_line,
-            profile_icon_id: summoner.profile_icon_id,
-            summoner_level: summoner.summoner_level,
-            sgp_server_id: target_sgp_server_id.to_string(),
-            privacy: summoner.privacy,
-        });
+        results.push(summoner_search_result(
+            &summoner,
+            target_sgp_server_id,
+            Some(&alias.alias.game_name),
+            Some(&alias.alias.tag_line),
+        ));
     }
 
     Ok(results)
@@ -235,12 +331,48 @@ pub async fn search_summoner(
     tag_line: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerSearchResult, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
+    let game_name = normalize_search_query(&game_name);
+    let tag_line = normalize_search_query(&tag_line);
+    if game_name.is_empty() || tag_line.is_empty() {
+        return Err(AppError::other(
+            "Invalid exact query, expected gameName#tagLine".to_string(),
+        ));
+    }
+
+    let lcu_shard = jax.get_shard::<LcuShard>();
+    let network_config = lcu_shard
+        .network_config()
+        .ok_or_else(|| AppError::other("LCU network config is not initialized"))?;
+    let manager = lcu_shard.manager().ok_or(AppError::LcuNotConnected)?;
     let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
-    session.api().search_summoner(&game_name, &tag_line).await
+    let lcu_api = session.api();
+    let riot_client = RiotClientHttpClient::new(session.auth(), network_config)?;
+    let sgp_shard = jax.get_shard::<SgpShard>();
+    let sgp_session = session.to_sgp(&sgp_shard).await?;
+    let sgp_api = sgp_session.api();
+    let config = sgp_servers_config()?;
+    let tencent_servers = tencent_server_set(config);
+    let current_sgp_server_id =
+        to_tencent_canonical_server_id(sgp_api.sgp_server_id(), &tencent_servers);
+    let use_sgp_validation = is_tencent_server_id(&current_sgp_server_id, &tencent_servers);
+
+    let aliases = riot_client
+        .get_player_account_aliases(&game_name, Some(&tag_line))
+        .await?;
+    let results = search_aliases_with_target_server(
+        aliases,
+        &current_sgp_server_id,
+        true,
+        use_sgp_validation,
+        lcu_api,
+        sgp_api,
+    )
+    .await?;
+
+    results
+        .into_iter()
+        .next()
+        .ok_or_else(|| AppError::other("Summoner not found".to_string()))
 }
 
 #[tauri::command]
@@ -250,57 +382,84 @@ pub async fn search_summoners(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Vec<SummonerSearchResult>, AppError> {
     let parsed_query = parse_summoner_search_query(&query)?;
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
+    let lcu_shard = jax.get_shard::<LcuShard>();
+    let network_config = lcu_shard
+        .network_config()
+        .ok_or_else(|| AppError::other("LCU network config is not initialized"))?;
+    let manager = lcu_shard.manager().ok_or(AppError::LcuNotConnected)?;
     let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let lcu_api = session.api();
+    let riot_client = RiotClientHttpClient::new(session.auth(), network_config)?;
     let sgp_shard = jax.get_shard::<SgpShard>();
     let sgp_session = session.to_sgp(&sgp_shard).await?;
     let sgp_api = sgp_session.api();
     let current_sgp_server_id = sgp_api.sgp_server_id();
     let config = sgp_servers_config()?;
+    let tencent_servers = tencent_server_set(config);
 
     let target_sgp_server_id =
         resolve_target_sgp_server_id(current_sgp_server_id, sgp_server_id, config)?;
     let current_sgp_server_id_canonical =
-        to_tencent_canonical_server_id(current_sgp_server_id, &tencent_server_set(config));
+        to_tencent_canonical_server_id(current_sgp_server_id, &tencent_servers);
     let same_server = target_sgp_server_id == current_sgp_server_id_canonical;
+    let use_sgp_validation = is_tencent_server_id(&target_sgp_server_id, &tencent_servers);
 
     match parsed_query {
         ParsedSummonerSearchQuery::Puuid(puuid) => {
-            let Some(sgp_summoner) = sgp_api
-                .get_summoner_by_puuid(&target_sgp_server_id, &puuid)
-                .await?
-            else {
-                return Ok(Vec::new());
+            let mut result = if use_sgp_validation || !same_server {
+                let Some(summoner) = sgp_api
+                    .get_summoner_by_puuid(&target_sgp_server_id, &puuid)
+                    .await?
+                else {
+                    return Ok(Vec::new());
+                };
+                summoner_search_result(&summoner, &target_sgp_server_id, None, None)
+            } else {
+                let Some(summoner) = lcu_api.get_summoner_by_puuid_optional(&puuid).await? else {
+                    return Ok(Vec::new());
+                };
+                summoner_search_result(&summoner, &target_sgp_server_id, None, None)
             };
 
-            Ok(vec![SummonerSearchResult {
-                puuid: sgp_summoner.puuid.clone(),
-                game_name: sgp_summoner.game_name.clone(),
-                tag_line: sgp_summoner.tag_line.clone(),
-                profile_icon_id: sgp_summoner.profile_icon_id,
-                summoner_level: sgp_summoner.summoner_level,
-                sgp_server_id: target_sgp_server_id,
-                privacy: sgp_summoner.privacy.clone(),
-            }])
+            if let Some((game_name, tag_line)) =
+                resolve_nameset_identity(&riot_client, &puuid).await
+            {
+                result.game_name = game_name;
+                result.tag_line = tag_line;
+            }
+
+            Ok(vec![result])
         }
         ParsedSummonerSearchQuery::Exact {
             game_name,
             tag_line,
         } => {
-            let aliases = lcu_api
-                .get_summoner_aliases(&game_name, Some(&tag_line))
+            let aliases = riot_client
+                .get_player_account_aliases(&game_name, Some(&tag_line))
                 .await?;
-            search_aliases_with_target_server(aliases, &target_sgp_server_id, same_server, sgp_api)
-                .await
+            search_aliases_with_target_server(
+                aliases,
+                &target_sgp_server_id,
+                same_server,
+                use_sgp_validation,
+                lcu_api,
+                sgp_api,
+            )
+            .await
         }
         ParsedSummonerSearchQuery::Fuzzy { game_name } => {
-            let aliases = lcu_api.get_summoner_aliases(&game_name, None).await?;
-            search_aliases_with_target_server(aliases, &target_sgp_server_id, same_server, sgp_api)
-                .await
+            let aliases = riot_client
+                .get_player_account_aliases(&game_name, None)
+                .await?;
+            search_aliases_with_target_server(
+                aliases,
+                &target_sgp_server_id,
+                same_server,
+                use_sgp_validation,
+                lcu_api,
+                sgp_api,
+            )
+            .await
         }
     }
 }

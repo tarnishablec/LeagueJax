@@ -1,3 +1,4 @@
+import { Loader } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SettingsSelect } from "@/components/settings-ui";
 import type { useHistorySearch } from "@/features/history/hooks/useHistorySearch";
@@ -42,16 +43,30 @@ export function SearchForm({ server, search }: SearchFormProps) {
       />
       <button
         type="submit"
+        aria-busy={search.isSearching}
         className={s.searchButton}
+        data-loading={search.isSearching ? "true" : undefined}
         disabled={
           search.isSearching ||
           server.isBootstrapping ||
           search.query.trim().length === 0
         }
       >
-        {search.isSearching
-          ? t("common.loading")
-          : t("history.searchDialog.submit")}
+        <span
+          className={`${s.searchButtonLabel} ${
+            search.isSearching ? s.searchButtonLabelHidden : ""
+          }`}
+        >
+          {t("history.searchDialog.submit")}
+        </span>
+        <span
+          className={`${s.searchButtonLoader} ${
+            search.isSearching ? s.searchButtonLoaderVisible : ""
+          }`}
+          aria-hidden="true"
+        >
+          <Loader size={14} className={s.searchButtonIconSpin} />
+        </span>
       </button>
     </form>
   );

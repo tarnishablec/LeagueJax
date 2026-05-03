@@ -1,6 +1,17 @@
-import { style, styleVariants } from "@vanilla-extract/css";
+import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { root as iconActionButton } from "@/components/IconActionButton.css";
 import { vars } from "@/styles/theme.css";
+
+const searchButtonWidth = "80px";
+
+const spin = keyframes({
+  from: {
+    transform: "rotate(0deg)",
+  },
+  to: {
+    transform: "rotate(360deg)",
+  },
+});
 
 export const wrapper = style({
   display: "grid",
@@ -39,7 +50,7 @@ export const dialogPositioner = style({
 export const dialogContent = style({
   width: "min(940px, calc(100vw - 40px))",
   minHeight: "min(520px, calc(100vh - 40px))",
-  maxHeight: "calc(100vh - 40px)",
+  maxHeight: "70vh",
   borderRadius: 12,
   border: `1px solid ${vars.color.popoverBorder}`,
   background: vars.color.popupBackground,
@@ -107,14 +118,14 @@ export const closeButton = style({
 
 export const searchRow = style({
   display: "grid",
-  gridTemplateColumns: "minmax(190px, 220px) minmax(0, 1fr) auto",
+  gridTemplateColumns: `minmax(190px, 220px) minmax(0, 1fr) ${searchButtonWidth}`,
   gap: 8,
   alignItems: "center",
 });
 
 export const searchRowNoServer = style({
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gridTemplateColumns: `minmax(0, 1fr) ${searchButtonWidth}`,
   gap: 8,
   alignItems: "center",
 });
@@ -141,6 +152,10 @@ export const searchInput = style({
 });
 
 export const searchButton = style({
+  position: "relative",
+  display: "inline-grid",
+  placeItems: "center",
+  width: searchButtonWidth,
   height: 32,
   borderRadius: 8,
   border: `1px solid ${vars.color.border}`,
@@ -148,8 +163,9 @@ export const searchButton = style({
   color: vars.color.foreground,
   font: "inherit",
   fontSize: "0.75rem",
-  paddingInline: 12,
+  paddingInline: 0,
   cursor: "pointer",
+  userSelect: "none",
   selectors: {
     "&:hover": {
       borderColor: vars.color.primary,
@@ -158,7 +174,42 @@ export const searchButton = style({
       opacity: 0.6,
       cursor: "not-allowed",
     },
+    "&[data-loading='true']": {
+      cursor: "wait",
+    },
   },
+});
+
+export const searchButtonLabel = style({
+  gridArea: "1 / 1",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  whiteSpace: "nowrap",
+  transition: "opacity 180ms ease-in-out",
+});
+
+export const searchButtonLabelHidden = style({
+  opacity: 0,
+});
+
+export const searchButtonLoader = style({
+  gridArea: "1 / 1",
+  display: "inline-grid",
+  placeItems: "center",
+  opacity: 0,
+  transform: "scale(0.88)",
+  transition: "opacity 180ms ease-in-out, transform 180ms ease-in-out",
+  pointerEvents: "none",
+});
+
+export const searchButtonLoaderVisible = style({
+  opacity: 1,
+  transform: "scale(1)",
+});
+
+export const searchButtonIconSpin = style({
+  animation: `${spin} 900ms linear infinite`,
 });
 
 export const resultPanel = style({
@@ -174,7 +225,7 @@ export const resultPanel = style({
 
 export const friendPanel = style({
   display: "grid",
-  gridTemplateRows: "auto minmax(0, 500px)",
+  gridTemplateRows: "auto 1fr",
   minHeight: 0,
   borderRadius: 10,
   border: `1px solid ${vars.color.border}`,

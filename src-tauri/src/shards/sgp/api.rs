@@ -1,4 +1,4 @@
-﻿use super::config::{sgp_servers_config, SgpServerEndpoints};
+use super::config::{sgp_servers_config, SgpServerEndpoints};
 use super::http_client::{SgpHttpClient, SgpTokenKind};
 use crate::error::AppError;
 use crate::shards::lcu::concepts::summoner::SummonerInfo;
@@ -173,6 +173,20 @@ impl SgpApi {
         sgp_server_id: &str,
         puuid: &str,
     ) -> Result<Option<SummonerInfo>, AppError> {
+        let puuids = vec![puuid.to_string()];
+        let entries = self.get_summoners_by_puuids(sgp_server_id, &puuids).await?;
+        Ok(entries.into_iter().next())
+    }
+
+    pub async fn get_summoners_by_puuids(
+        &self,
+        sgp_server_id: &str,
+        puuids: &[String],
+    ) -> Result<Vec<SummonerInfo>, AppError> {
+        if puuids.is_empty() {
+            return Ok(Vec::new());
+        }
+
         let target_server = Self::normalize_server_id(sgp_server_id);
         let base_url = Self::resolve_common_base_url(&target_server)?;
         let sub_id = Self::sub_id_from_server_id(&target_server).to_lowercase();
@@ -186,20 +200,22 @@ impl SgpApi {
                 &path,
                 SgpTokenKind::LeagueSession,
                 None,
-                Some(serde_json::json!([puuid])),
+                Some(serde_json::json!(puuids)),
             )
             .await?;
 
         tracing::debug!(
-            "[SGP] get_summoner_by_puuid raw response puuid={puuid} payload={response}"
+            "[SGP] get_summoners_by_puuids raw response count={} payload={response}",
+            puuids.len()
         );
 
-        let entries: Vec<SummonerInfo> = serde_path_to_error::deserialize(response)?;
-        Ok(entries.into_iter().next().map(|mut info| {
+        let mut entries: Vec<SummonerInfo> = serde_path_to_error::deserialize(response)?;
+        for info in &mut entries {
             if info.summoner_level == 0 && info.level > 0 {
                 info.summoner_level = info.level;
             }
-            info
-        }))
+        }
+
+        Ok(entries)
     }
 }

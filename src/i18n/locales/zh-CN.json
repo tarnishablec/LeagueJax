@@ -122,8 +122,8 @@
     "searchDialog": {
       "open": "搜索",
       "title": "搜索召唤师",
-      "subtitle": "支持 puuid / gameName#tagLine ",
-      "placeholder": "输入游戏名称#标签 或 puuid",
+      "subtitle": "支持游戏名称、gameName#tagLine 或 puuid",
+      "placeholder": "输入游戏名称、游戏名称#标签 或 puuid",
       "submit": "搜索",
       "loadingServers": "正在加载区服信息...",
       "noResults": "未找到匹配的召唤师",
