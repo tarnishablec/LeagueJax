@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { LazyImage } from "@/components/LazyImage";
 import { useSummonerInfo } from "@/features/history/hooks/use-summoner";
 import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { useTabStore } from "@/stores/tabs.ts";
@@ -22,16 +23,16 @@ function TabIcon({ profileIconId }: { profileIconId: number }) {
   });
 
   if (!avatarUrl) {
-    return <div className={s.tabIconFallback} />;
+    return <span className={s.tabIconFallback} aria-hidden="true" />;
   }
 
   return (
-    <img
+    <LazyImage
       src={avatarUrl}
       alt="Profile icon"
       className={s.tabIcon}
-      loading="lazy"
-      decoding="async"
+      fallbackClassName={s.tabIconFallback}
+      loadingClassName={s.tabIconFallback}
     />
   );
 }

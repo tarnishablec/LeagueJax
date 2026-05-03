@@ -14,6 +14,10 @@ import {
   HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
   HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
 } from "../manifest";
+import {
+  deriveSgpServerIdFromClientArgs,
+  formatHistoryServerBadgeLabel,
+} from "../utils/server-display";
 import * as s from "./HistoryRoute.css";
 
 function useDeferredListMount(key: string | null): boolean {
@@ -97,6 +101,16 @@ export function HistoryRoute() {
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const { data: activeSummoner } = useSummonerInfo(activeTab?.puuid);
   const listReady = useDeferredListMount(activeTab?.id ?? null);
+  const activeTabServerId = activeTab?.sgpServerId?.trim() || null;
+  const activeOwnSummoner =
+    activeTab?.puuid !== undefined &&
+    connected?.summoner?.puuid === activeTab.puuid;
+  const derivedOwnServerId = activeOwnSummoner
+    ? deriveSgpServerIdFromClientArgs(connected?.cmdArgs)
+    : null;
+  const summaryServerLabel = formatHistoryServerBadgeLabel(
+    activeTabServerId ?? derivedOwnServerId,
+  );
 
   const settings = useSettings();
   const autoOpenOwnTab = useSyncExternalStore(
@@ -126,6 +140,7 @@ export function HistoryRoute() {
       {activeSummoner ? (
         <SummaryBar
           summoner={activeSummoner}
+          serverLabel={summaryServerLabel}
           autoRefresh={autoRefreshOnSwitch}
         />
       ) : (

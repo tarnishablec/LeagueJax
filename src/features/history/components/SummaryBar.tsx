@@ -27,9 +27,11 @@ function formatMeta(
 
 export function SummaryBar({
   summoner,
+  serverLabel,
   autoRefresh = true,
 }: {
   summoner: SummonerInfo;
+  serverLabel?: string | null;
   autoRefresh?: boolean;
 }) {
   const { t } = useTranslation();
@@ -63,6 +65,8 @@ export function SummaryBar({
               src={avatarUrl}
               alt="Profile icon"
               className={s.profileIcon}
+              fallbackClassName={s.iconFallback}
+              loadingClassName={s.iconFallback}
             />
           ) : null}
         </div>
@@ -96,7 +100,12 @@ export function SummaryBar({
             </Tooltip.Root>
           )}
         </div>
-        <div className={s.tag}>#{summoner.tagLine}</div>
+        <div className={s.tagRow}>
+          <span className={s.tag}>#{summoner.tagLine}</span>
+          {serverLabel ? (
+            <span className={s.serverBadge}>{serverLabel}</span>
+          ) : null}
+        </div>
       </div>
       <div className={s.ranks}>
         <div className={s.rankCard}>

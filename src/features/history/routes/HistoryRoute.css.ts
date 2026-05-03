@@ -3,7 +3,7 @@ import { vars } from "@/styles/theme.css";
 
 export const page = style({
   display: "grid",
-  gridTemplateRows: "auto 1fr",
+  gridTemplateRows: "minmax(115px, auto) 1fr",
   gap: 16,
   height: "100%",
   padding: "12px",
