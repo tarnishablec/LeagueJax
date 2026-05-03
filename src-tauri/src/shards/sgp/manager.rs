@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 use super::session::SgpSession;
 use crate::error::AppError;
@@ -10,12 +10,14 @@ use crate::shards::network::NetworkConfig;
 
 pub struct SgpManager {
     sessions: RwLock<HashMap<u32, Arc<SgpSession>>>,
+    create_lock: Mutex<()>,
 }
 
 impl SgpManager {
     pub fn new() -> Self {
         Self {
             sessions: RwLock::new(HashMap::new()),
+            create_lock: Mutex::new(()),
         }
     }
 
@@ -25,6 +27,15 @@ impl SgpManager {
         network_config: Arc<NetworkConfig>,
     ) -> Result<Arc<SgpSession>, AppError> {
         let pid = lcu_session.auth().pid;
+
+        {
+            let sessions = self.sessions.read().await;
+            if let Some(session) = sessions.get(&pid) {
+                return Ok(session.clone());
+            }
+        }
+
+        let _create_guard = self.create_lock.lock().await;
 
         {
             let sessions = self.sessions.read().await;

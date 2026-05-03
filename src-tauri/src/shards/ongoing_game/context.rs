@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use maokai_gears::ops::task::TaskHandle;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, Semaphore};
 
 use crate::shards::lcu::concepts::champ_select_session::{ChampSelectSessionData, TeamMember};
 use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
@@ -19,6 +19,8 @@ use super::types::{
     OngoingGameEvent, OngoingGameInput, OngoingGameMatchHistoryState, OngoingGamePhase,
     OngoingGameSummonerState, OngoingGameUpdated,
 };
+
+pub(crate) const MAX_MATCH_HISTORY_FETCH_CONCURRENCY: usize = 5;
 
 fn idle_snapshot() -> OngoingGameUpdated {
     OngoingGameUpdated {
@@ -97,6 +99,7 @@ pub struct OngoingGameCtx {
     // Task tracking
     pub summoner_tasks: HashMap<String, TaskHandle>,
     pub history_tasks: HashMap<String, TaskHandle>,
+    pub history_fetch_semaphore: Arc<Semaphore>,
 
     // Services
     pub lcu_shard: Arc<LcuShard>,
@@ -130,6 +133,7 @@ impl OngoingGameCtx {
             history_states: HashMap::new(),
             summoner_tasks: HashMap::new(),
             history_tasks: HashMap::new(),
+            history_fetch_semaphore: Arc::new(Semaphore::new(MAX_MATCH_HISTORY_FETCH_CONCURRENCY)),
             lcu_shard,
             sgp_shard,
             settings,
