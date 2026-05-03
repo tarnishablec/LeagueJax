@@ -10,7 +10,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { LoaderCircle, Unlink, Unplug } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
@@ -22,6 +22,7 @@ import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
 
 type ClientDisplayState = Exclude<LcuInstanceInfo["state"], "idle">;
+const DETECTED_BADGE_EXPAND_DELAY_MS = 200;
 
 function normalizeState(state: LcuInstanceInfo["state"]): ClientDisplayState {
   return state === "idle" ? "authenticating" : state;
@@ -253,6 +254,7 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
     st.instances.find((i) => i.isFocused),
   );
   const instances = useLcuStore((st) => st.instances);
+  const detectedClientCount = instances.length;
   const connectingInstance = useLcuStore((st) =>
     st.instances.find((i) => i.state !== "ready" && i.state !== "closing"),
   );
@@ -268,6 +270,27 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
     profileIconId: hasFocusedSummoner ? (summoner?.profileIconId ?? 0) : 0,
   });
   const isConnecting = !!activeInstance && !hasFocusedSummoner;
+  const [canShowDetectedBadge, setCanShowDetectedBadge] = useState(false);
+
+  useEffect(() => {
+    if (collapsed) {
+      setCanShowDetectedBadge(false);
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => setCanShowDetectedBadge(true),
+      DETECTED_BADGE_EXPAND_DELAY_MS,
+    );
+
+    return () => window.clearTimeout(timer);
+  }, [collapsed]);
+
+  const shouldShowDetectedBadge =
+    !collapsed &&
+    canShowDetectedBadge &&
+    !hasFocusedSummoner &&
+    detectedClientCount > 0;
 
   const handleClick = () => {
     if (!summoner) {
@@ -314,6 +337,9 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
               focusedState={focusedDisplayState}
             />
           </span>
+          {shouldShowDetectedBadge ? (
+            <span className={s.detectedBadge}>{detectedClientCount}</span>
+          ) : null}
         </button>
       </div>
 
