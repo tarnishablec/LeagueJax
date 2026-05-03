@@ -2,7 +2,7 @@ import { Portal } from "@ark-ui/react/portal";
 import { Tooltip } from "@ark-ui/react/tooltip";
 import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { RankEntry } from "@/bindings/rank.ts";
+import type { RankEntry, RankStats } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { CopyButton } from "@/components/CopyButton";
 import { LazyImage } from "@/components/LazyImage.tsx";
@@ -24,12 +24,100 @@ function formatMeta(
   return `${entry.wins}${winsShort} / ${entry.leaguePoints} ${lpShort}`;
 }
 
+function RankCard({
+  label,
+  entry,
+  iconUrl,
+  isLoading,
+  winsShort,
+  lpShort,
+}: {
+  label: string;
+  entry: RankEntry | null;
+  iconUrl: string | null;
+  isLoading: boolean;
+  winsShort: string;
+  lpShort: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className={s.rankCard}>
+      {!isLoading && (
+        <div className={s.rankCardInner}>
+          <div className={s.rankContent}>
+            <span className={s.rankQueue}>{label}</span>
+            <span className={s.rankTier}>
+              {formatRankEntryTierLabel(t, entry)}
+            </span>
+            <span className={s.rankMeta}>
+              {formatMeta(entry, winsShort, lpShort)}
+            </span>
+          </div>
+          <div className={s.rankIconWrap}>
+            {iconUrl ? (
+              <LazyImage src={iconUrl} alt={label} className={s.rankIcon} />
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RankCards({
+  rankedSummary,
+  rankedLoading,
+}: {
+  rankedSummary: RankStats | undefined;
+  rankedLoading: boolean;
+}) {
+  const { t } = useTranslation();
+  const winsShort = t("history.summary.winsShort", { defaultValue: "W" });
+  const lpShort = t("history.summary.lpShort", { defaultValue: "LP" });
+  const soloLabel = t("history.summary.solo", {
+    defaultValue: "Solo/Duo",
+  });
+  const flexLabel = t("history.summary.flex", {
+    defaultValue: "Flex",
+  });
+  const soloRankEntry = rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null;
+  const flexRankEntry = rankedSummary?.queueMap.RANKED_FLEX_SR ?? null;
+  const soloIconUrl = useRankIcon(soloRankEntry?.tier ?? "UNRANKED", false);
+  const flexIconUrl = useRankIcon(flexRankEntry?.tier ?? "UNRANKED", false);
+
+  return (
+    <>
+      <RankCard
+        label={soloLabel}
+        entry={soloRankEntry}
+        iconUrl={soloIconUrl}
+        isLoading={rankedLoading}
+        winsShort={winsShort}
+        lpShort={lpShort}
+      />
+      <RankCard
+        label={flexLabel}
+        entry={flexRankEntry}
+        iconUrl={flexIconUrl}
+        isLoading={rankedLoading}
+        winsShort={winsShort}
+        lpShort={lpShort}
+      />
+    </>
+  );
+}
+
 export function SummaryBar({
   summoner,
+  rankedPuuid,
+  rankUnavailable = false,
   serverLabel,
   autoRefresh = true,
 }: {
   summoner: SummonerInfo;
+  rankedPuuid?: string;
+  rankUnavailable?: boolean;
   serverLabel?: string | null;
   autoRefresh?: boolean;
 }) {
@@ -38,21 +126,24 @@ export function SummaryBar({
     type: "profile-icon",
     profileIconId: summoner.profileIconId,
   });
+  const rankedTargetPuuid = rankUnavailable
+    ? undefined
+    : (rankedPuuid ?? summoner.puuid);
   const { data: rankedSummary, isLoading: rankedLoading } = useRankedSummary(
-    summoner.puuid,
+    rankedTargetPuuid,
     autoRefresh,
   );
-  const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
+  const gameName =
+    summoner.gameName || summoner.name || summoner.puuid.slice(0, 8);
+  const tagLine = summoner.tagLine.trim();
+  const summonerId = tagLine ? `${gameName}#${tagLine}` : gameName;
 
-  const winsShort = t("history.summary.winsShort", { defaultValue: "W" });
-  const lpShort = t("history.summary.lpShort", { defaultValue: "LP" });
   const hiddenHistoryText = t("history.summary.hiddenHistory", {
     defaultValue: "Hidden match history",
   });
-  const soloRankEntry = rankedSummary?.queueMap.RANKED_SOLO_5x5 ?? null;
-  const flexRankEntry = rankedSummary?.queueMap.RANKED_FLEX_SR ?? null;
-  const soloIconUrl = useRankIcon(soloRankEntry?.tier ?? "UNRANKED", false);
-  const flexIconUrl = useRankIcon(flexRankEntry?.tier ?? "UNRANKED", false);
+  const rankUnavailableText = t("history.summary.crossRegionRankUnavailable", {
+    defaultValue: "跨区无法查询段位",
+  });
 
   return (
     <div className={s.bar}>
@@ -71,7 +162,7 @@ export function SummaryBar({
       </div>
       <div className={s.identity}>
         <div className={s.nameRow}>
-          <span className={s.name}>{summoner.gameName}</span>
+          <span className={s.name}>{gameName}</span>
           <CopyButton
             text={summonerId}
             className={s.copyButton}
@@ -99,95 +190,21 @@ export function SummaryBar({
           )}
         </div>
         <div className={s.tagRow}>
-          <span className={s.tag}>#{summoner.tagLine}</span>
+          {tagLine ? <span className={s.tag}>#{tagLine}</span> : null}
           {serverLabel ? (
             <span className={s.serverBadge}>{serverLabel}</span>
           ) : null}
         </div>
       </div>
       <div className={s.ranks}>
-        <div className={s.rankCard}>
-          {!rankedLoading && (
-            <div className={s.rankCardInner}>
-              <div className={s.rankContent}>
-                <span className={s.rankQueue}>
-                  {t("history.summary.solo", {
-                    defaultValue: "Solo/Duo",
-                  })}
-                </span>
-                <span className={s.rankTier}>
-                  {formatRankEntryTierLabel(t, soloRankEntry)}
-                </span>
-                <span className={s.rankMeta}>
-                  {formatMeta(soloRankEntry, winsShort, lpShort)}
-                </span>
-                {/* <span className={s.highestRank}>
-                  <span className={s.highestRankLabel}>{highestLabel}</span>
-                  <img
-                    src={soloHighestIconUrl}
-                    alt=""
-                    className={s.highestRankIcon}
-                  />
-                  <span className={s.highestRankText}>
-                    {formatRankEntryTierLabel(t, soloHighestRankEntry)}
-                  </span>
-                </span> */}
-              </div>
-              <div className={s.rankIconWrap}>
-                {soloIconUrl ? (
-                  <LazyImage
-                    src={soloIconUrl}
-                    alt={t("history.summary.solo", {
-                      defaultValue: "Solo/Duo",
-                    })}
-                    className={s.rankIcon}
-                  />
-                ) : null}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className={s.rankCard}>
-          {!rankedLoading && (
-            <div className={s.rankCardInner}>
-              <div className={s.rankContent}>
-                <span className={s.rankQueue}>
-                  {t("history.summary.flex", {
-                    defaultValue: "Flex",
-                  })}
-                </span>
-                <span className={s.rankTier}>
-                  {formatRankEntryTierLabel(t, flexRankEntry)}
-                </span>
-                <span className={s.rankMeta}>
-                  {formatMeta(flexRankEntry, winsShort, lpShort)}
-                </span>
-                {/* <span className={s.highestRank}>
-                  <span className={s.highestRankLabel}>{highestLabel}</span>
-                  <img
-                    src={flexHighestIconUrl}
-                    alt=""
-                    className={s.highestRankIcon}
-                  />
-                  <span className={s.highestRankText}>
-                    {formatRankEntryTierLabel(t, flexHighestRankEntry)}
-                  </span>
-                </span> */}
-              </div>
-              <div className={s.rankIconWrap}>
-                {flexIconUrl ? (
-                  <LazyImage
-                    src={flexIconUrl}
-                    alt={t("history.summary.flex", {
-                      defaultValue: "Flex",
-                    })}
-                    className={s.rankIcon}
-                  />
-                ) : null}
-              </div>
-            </div>
-          )}
-        </div>
+        {rankUnavailable ? (
+          <div className={s.rankUnavailable}>{rankUnavailableText}</div>
+        ) : (
+          <RankCards
+            rankedSummary={rankedSummary}
+            rankedLoading={rankedLoading}
+          />
+        )}
       </div>
     </div>
   );

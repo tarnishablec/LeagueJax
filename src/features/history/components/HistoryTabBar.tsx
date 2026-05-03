@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { LazyImage } from "@/components/LazyImage";
 import { useSummonerInfo } from "@/features/history/hooks/use-summoner";
 import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
-import { useTabStore } from "@/stores/tabs.ts";
+import { type HistoryTabIdentity, useTabStore } from "@/stores/tabs.ts";
 import * as s from "./HistoryTabBar.css.ts";
 
 function TabIcon({ profileIconId }: { profileIconId: number }) {
@@ -133,6 +133,8 @@ interface HistoryTabItemProps {
   active: boolean;
   tabId: string;
   puuid: string;
+  sgpServerId: string | null;
+  identity?: HistoryTabIdentity;
   onAuxClick: (e: MouseEvent, id: string) => void;
   registerRef: (id: string, node: HTMLLIElement | null) => void;
 }
@@ -141,12 +143,14 @@ function HistoryTabItem({
   active,
   tabId,
   puuid,
+  sgpServerId,
+  identity,
   onAuxClick,
   registerRef,
 }: HistoryTabItemProps) {
   const setActiveTab = useTabStore((state) => state.setActiveTab);
   const closeTab = useTabStore((state) => state.closeTab);
-  const { data: summoner } = useSummonerInfo(puuid);
+  const { data: summoner } = useSummonerInfo(puuid, sgpServerId, identity);
 
   return (
     <li
@@ -248,6 +252,8 @@ export function HistoryTabBar() {
                   active={tab.id === activeTabId}
                   tabId={tab.id}
                   puuid={tab.puuid}
+                  sgpServerId={tab.sgpServerId}
+                  identity={tab.identity}
                   onAuxClick={handleAuxClick}
                   registerRef={(id, node) => {
                     tabRefs.current[id] = node;

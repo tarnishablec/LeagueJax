@@ -467,19 +467,51 @@ pub async fn search_summoners(
 #[tauri::command]
 pub async fn get_summoner_by_puuid(
     puuid: String,
+    sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<SummonerInfo, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    manager
-        .focused()
-        .await
-        .ok_or(AppError::LcuNotConnected)?
-        .api()
-        .get_summoner_by_puuid(&puuid)
-        .await
+    let lcu_shard = jax.get_shard::<LcuShard>();
+    let manager = lcu_shard.manager().ok_or(AppError::LcuNotConnected)?;
+    let session = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
+
+    if let Some(raw_sgp_server_id) = sgp_server_id {
+        let requested = raw_sgp_server_id.trim();
+        if !requested.is_empty() {
+            let config = sgp_servers_config()?;
+            let tencent_servers = tencent_server_set(config);
+            let target_sgp_server_id = to_tencent_canonical_server_id(requested, &tencent_servers);
+
+            if is_tencent_server_id(&target_sgp_server_id, &tencent_servers) {
+                let sgp_shard = jax.get_shard::<SgpShard>();
+                let sgp_session = session.to_sgp(&sgp_shard).await?;
+                let Some(summoner) = sgp_session
+                    .api()
+                    .get_summoner_by_puuid(&target_sgp_server_id, &puuid)
+                    .await?
+                else {
+                    return Err(AppError::other(format!(
+                        "Summoner not found on server {target_sgp_server_id}: {puuid}"
+                    )));
+                };
+
+                let mut summoner = summoner;
+                let network_config = lcu_shard
+                    .network_config()
+                    .ok_or_else(|| AppError::other("LCU network config is not initialized"))?;
+                let riot_client = RiotClientHttpClient::new(session.auth(), network_config)?;
+                if let Some((game_name, tag_line)) =
+                    resolve_nameset_identity(&riot_client, &puuid).await
+                {
+                    summoner.game_name = game_name;
+                    summoner.tag_line = tag_line;
+                }
+
+                return Ok(summoner);
+            }
+        }
+    }
+
+    session.api().get_summoner_by_puuid(&puuid).await
 }
 
 #[tauri::command]

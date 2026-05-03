@@ -48,6 +48,19 @@ function resolveKnownServerId(serverId: string): string {
   return matches.length === 1 ? matches[0] : serverId;
 }
 
+export function resolveHistoryServerId(
+  serverId: string | null | undefined,
+): string | null {
+  const normalized = normalizeServerId(serverId);
+  return normalized ? resolveKnownServerId(normalized) : null;
+}
+
+export function deriveSgpServerIdFromRegion(
+  region: string | null | undefined,
+): string | null {
+  return resolveHistoryServerId(region);
+}
+
 export function deriveSgpServerIdFromClientArgs(
   cmdArgs: LeagueClientCmdArgs | null | undefined,
 ): string | null {
@@ -67,7 +80,7 @@ export function deriveSgpServerIdFromClientArgs(
     }
   }
 
-  return resolveKnownServerId(region);
+  return resolveHistoryServerId(region);
 }
 
 export function formatHistoryServerBadgeLabel(

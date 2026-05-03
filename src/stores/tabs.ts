@@ -4,12 +4,25 @@ export interface HistoryTab {
   id: string;
   puuid: string;
   sgpServerId: string | null;
+  identity?: HistoryTabIdentity;
+}
+
+export interface HistoryTabIdentity {
+  gameName: string;
+  tagLine: string;
+  profileIconId?: number;
+  summonerLevel?: number;
+  privacy?: string;
 }
 
 interface TabState {
   tabs: HistoryTab[];
   activeTabId: string | null;
-  openTab: (puuid: string, sgpServerId?: string | null) => void;
+  openTab: (
+    puuid: string,
+    sgpServerId?: string | null,
+    identity?: HistoryTabIdentity,
+  ) => void;
   closeTab: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   closeOtherTabs: (id: string) => void;
@@ -21,7 +34,7 @@ export const useTabStore = create<TabState>((set, get) => ({
   tabs: [],
   activeTabId: null,
 
-  openTab: (puuid, sgpServerId = null) => {
+  openTab: (puuid, sgpServerId = null, identity) => {
     const id = puuid.trim();
     if (id.length === 0) {
       return;
@@ -35,9 +48,11 @@ export const useTabStore = create<TabState>((set, get) => ({
           return tab;
         }
 
+        const nextIdentity = identity ?? tab.identity;
         return {
           ...tab,
           sgpServerId: sgpServerId ?? tab.sgpServerId,
+          ...(nextIdentity ? { identity: nextIdentity } : {}),
         };
       });
       set({ tabs: nextTabs, activeTabId: id });
@@ -47,6 +62,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       id,
       puuid: id,
       sgpServerId,
+      ...(identity ? { identity } : {}),
     };
     set({ tabs: [...tabs, tab], activeTabId: id });
   },

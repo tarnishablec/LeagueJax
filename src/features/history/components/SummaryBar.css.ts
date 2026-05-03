@@ -184,6 +184,20 @@ export const rankCard = style({
   padding: "10px 12px",
 });
 
+export const rankUnavailable = style({
+  display: "grid",
+  gridColumn: "1 / -1",
+  alignItems: "center",
+  minHeight: 88,
+  padding: "10px 12px",
+  borderRadius: 8,
+  border: `1px solid ${vars.color.border}`,
+  background: vars.color.surface,
+  color: vars.color.mutedForeground,
+  fontSize: "0.8125rem",
+  fontWeight: 600,
+});
+
 export const rankIconWrap = style({
   width: 56,
   height: 56,

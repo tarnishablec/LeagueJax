@@ -24,7 +24,13 @@ export function HistoryToolbar() {
   }, [canOpenSearch]);
 
   const openResult = (result: SummonerSearchResult) => {
-    openTab(result.puuid, result.sgpServerId);
+    openTab(result.puuid, result.sgpServerId, {
+      gameName: result.gameName,
+      tagLine: result.tagLine,
+      profileIconId: result.profileIconId,
+      summonerLevel: result.summonerLevel,
+      privacy: result.privacy,
+    });
 
     void invoke("save_search_history", {
       puuid: result.puuid,
@@ -39,7 +45,11 @@ export function HistoryToolbar() {
     const gameName = friend.gameName.trim() || friend.name.trim();
     const tagLine = friend.gameTag.trim();
 
-    openTab(friend.puuid, sgpServerId);
+    openTab(friend.puuid, sgpServerId, {
+      gameName,
+      tagLine,
+      profileIconId: friend.icon,
+    });
 
     void invoke("save_search_history", {
       puuid: friend.puuid,
