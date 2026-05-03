@@ -22,7 +22,7 @@ import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
 
 type ClientDisplayState = Exclude<LcuInstanceInfo["state"], "idle">;
-const DETECTED_BADGE_EXPAND_DELAY_MS = 200;
+const DETECTED_BADGE_TRANSITION_DELAY_MS = 200;
 
 function normalizeState(state: LcuInstanceInfo["state"]): ClientDisplayState {
   return state === "idle" ? "authenticating" : state;
@@ -46,11 +46,15 @@ function TriggerIcon({
   hasSummoner,
   isConnecting,
   collapsed,
+  detectedClientCount,
+  showCollapsedDetectedBadge,
 }: {
   avatarUrl: string | null;
   hasSummoner: boolean;
   isConnecting: boolean;
   collapsed: boolean;
+  detectedClientCount: number;
+  showCollapsedDetectedBadge: boolean;
 }) {
   const [imageErrored, setImageErrored] = useState(false);
   const iconScaleClassName = s.iconScale({ collapsed });
@@ -84,7 +88,21 @@ function TriggerIcon({
 
   return (
     <span className={`${s.triggerIconFrame} ${iconScaleClassName}`}>
-      <Unplug size={16} aria-hidden="true" />
+      <Unplug
+        size={16}
+        aria-hidden="true"
+        className={s.unplugIcon({ dimmed: showCollapsedDetectedBadge })}
+      />
+      {collapsed && detectedClientCount > 0 ? (
+        <span
+          className={s.collapsedDetectedBadge({
+            visible: showCollapsedDetectedBadge,
+          })}
+          aria-hidden={!showCollapsedDetectedBadge}
+        >
+          {detectedClientCount}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -270,27 +288,36 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
     profileIconId: hasFocusedSummoner ? (summoner?.profileIconId ?? 0) : 0,
   });
   const isConnecting = !!activeInstance && !hasFocusedSummoner;
-  const [canShowDetectedBadge, setCanShowDetectedBadge] = useState(false);
+  const [canShowExpandedDetectedBadge, setCanShowExpandedDetectedBadge] =
+    useState(false);
+  const [canShowCollapsedDetectedBadge, setCanShowCollapsedDetectedBadge] =
+    useState(false);
 
   useEffect(() => {
-    if (collapsed) {
-      setCanShowDetectedBadge(false);
-      return;
-    }
+    setCanShowExpandedDetectedBadge(false);
+    setCanShowCollapsedDetectedBadge(false);
 
-    const timer = window.setTimeout(
-      () => setCanShowDetectedBadge(true),
-      DETECTED_BADGE_EXPAND_DELAY_MS,
-    );
+    const timer = window.setTimeout(() => {
+      if (collapsed) {
+        setCanShowCollapsedDetectedBadge(true);
+        return;
+      }
+
+      setCanShowExpandedDetectedBadge(true);
+    }, DETECTED_BADGE_TRANSITION_DELAY_MS);
 
     return () => window.clearTimeout(timer);
   }, [collapsed]);
 
+  const hasDetectedClientWithoutFocus =
+    !hasFocusedSummoner && detectedClientCount > 0;
   const shouldShowDetectedBadge =
-    !collapsed &&
-    canShowDetectedBadge &&
-    !hasFocusedSummoner &&
-    detectedClientCount > 0;
+    !collapsed && canShowExpandedDetectedBadge && hasDetectedClientWithoutFocus;
+  const shouldShowCollapsedDetectedBadge =
+    collapsed &&
+    canShowCollapsedDetectedBadge &&
+    hasDetectedClientWithoutFocus &&
+    !isConnecting;
 
   const handleClick = () => {
     if (!summoner) {
@@ -329,6 +356,8 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
             hasSummoner={hasFocusedSummoner}
             isConnecting={isConnecting}
             collapsed={collapsed}
+            detectedClientCount={detectedClientCount}
+            showCollapsedDetectedBadge={shouldShowCollapsedDetectedBadge}
           />
           <span className={s.label({ collapsed })}>
             <TriggerLabel
