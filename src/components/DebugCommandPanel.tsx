@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { RawMatchSummariesResponse } from "@/bindings/matches.ts";
+import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { showUpdateSettingsToast } from "@/features/updater/toasts";
 import type { HistoryTab } from "@/stores/tabs";
 import { useTabStore } from "@/stores/tabs";
@@ -57,7 +58,7 @@ function firstGameIdFromRawSummary(
 }
 
 function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
-  // const defaultRankedQueueTypes = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"];
+  const defaultRankedQueueTypes = ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"];
 
   return [
     {
@@ -93,6 +94,20 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
         const tab = requireActiveTab(activeTab);
         return invoke<unknown>("get_ranked_summary", {
           puuid: tab.puuid,
+        });
+      },
+    },
+    {
+      id: "lcu-get-ranked-tiers-active-tab",
+      label: "lcu_get_ranked_tiers(active tab)",
+      run: async () => {
+        const tab = requireActiveTab(activeTab);
+        const summoner = await invoke<SummonerInfo>("get_summoner_by_puuid", {
+          puuid: tab.puuid,
+        });
+        return invoke<unknown>("lcu_get_ranked_tiers", {
+          summonerIds: [summoner.summonerId],
+          queueTypes: defaultRankedQueueTypes,
         });
       },
     },
