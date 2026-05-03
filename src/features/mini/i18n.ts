@@ -9,6 +9,7 @@ export const miniI18n: Resource = {
         readyCheck: "Ready Check",
         champSelect: "Champion Select",
         inGame: "In Game",
+        spectating: "Watching",
       },
       queue: {
         empty: "No active queue",
@@ -50,6 +51,7 @@ export const miniI18n: Resource = {
         readyCheck: "接受对局",
         champSelect: "英雄选择",
         inGame: "游戏中",
+        spectating: "观战中",
       },
       queue: {
         empty: "暂无活动",
@@ -91,6 +93,7 @@ export const miniI18n: Resource = {
         readyCheck: "準備確認",
         champSelect: "チャンピオン選択",
         inGame: "ゲーム中",
+        spectating: "観戦中",
       },
       queue: {
         empty: "アクティブなキューなし",

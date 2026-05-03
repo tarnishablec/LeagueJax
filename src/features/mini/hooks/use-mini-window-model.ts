@@ -27,6 +27,7 @@ export type MiniWindowModel = {
   phase: OngoingGameUpdated["phase"];
   queueName: string | null;
   mapIconSrc: string | null;
+  isSpectating: boolean;
   readyCheck: OngoingGameUpdated["ready_check"];
   champSelect: MiniChampSelectModel | null;
 };
@@ -94,6 +95,10 @@ function normalizePositiveId(value: number | null | undefined): number | null {
 function localPlayerFromSession(
   session: ChampSelectSessionData,
 ): TeamMember | null {
+  if (session.localPlayerCellId < 0) {
+    return null;
+  }
+
   return (
     session.myTeam.find(
       (member) => member.cellId === session.localPlayerCellId,
@@ -121,11 +126,15 @@ function benchChampionsFromSession(
 function champSelectModelFromSession(
   session: ChampSelectSessionData | null,
 ): MiniChampSelectModel | null {
-  if (!session) {
+  if (!session || session.isSpectating) {
     return null;
   }
 
   const localPlayer = localPlayerFromSession(session);
+  if (!localPlayer) {
+    return null;
+  }
+
   const selectedChampionId = selectedChampionIdFromMember(localPlayer);
   const benchChampions = benchChampionsFromSession(session);
 
@@ -138,6 +147,18 @@ function champSelectModelFromSession(
     selectedChampionId,
     benchChampions,
   };
+}
+
+function isSpectatingFromState(
+  champSelectSession: ChampSelectSessionData | null,
+  gameflowSession: OngoingGameUpdated["gameflow_session"],
+): boolean {
+  if (champSelectSession?.isSpectating) {
+    return true;
+  }
+
+  const gameClient = gameflowSession?.gameClient;
+  return Boolean(gameClient?.observerServerIp && !gameClient.serverIp);
 }
 
 export function useMiniWindowModel(): MiniWindowModel {
@@ -181,6 +202,7 @@ export function useMiniWindowModel(): MiniWindowModel {
       phase,
       queueName: queueNameForId(queues, queueId),
       mapIconSrc: preferredMapAsset(knownMap),
+      isSpectating: isSpectatingFromState(champSelectSession, gameflowSession),
       readyCheck,
       champSelect: champSelectModelFromSession(champSelectSession),
     };
