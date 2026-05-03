@@ -8,6 +8,7 @@ let lastSyncedPid: number | undefined;
 export function useFocusSync(
   connected: LcuInstanceInfo | null | undefined,
   autoOpenOwnTab: boolean,
+  focusedServerId: string | null,
 ) {
   const { openTab, closeAllTabs } = useTabStore();
 
@@ -26,7 +27,7 @@ export function useFocusSync(
     }
 
     if (connected && autoOpenOwnTab && connected.summoner) {
-      openTab(connected.summoner.puuid, null);
+      openTab(connected.summoner.puuid, focusedServerId);
     }
-  }, [connected, autoOpenOwnTab, openTab, closeAllTabs]);
+  }, [connected, autoOpenOwnTab, focusedServerId, openTab, closeAllTabs]);
 }

@@ -73,6 +73,29 @@ export function useHistorySearch({
     t,
   ]);
 
+  const serverGroups = useMemo(() => {
+    const focused = serverContext.region.focusedServerCode;
+    if (!focused) {
+      return undefined;
+    }
+
+    const focusedItem = serverCollection.items.find(
+      (item) => item.value === focused,
+    );
+    const otherItems = serverCollection.items.filter(
+      (item) => item.value !== focused,
+    );
+
+    if (!focusedItem || otherItems.length === 0) {
+      return undefined;
+    }
+
+    return [
+      { id: "focused-server", items: [focusedItem] },
+      { id: "other-servers", items: otherItems },
+    ];
+  }, [serverCollection.items, serverContext.region.focusedServerCode]);
+
   const errorMessage =
     search.searchError ??
     (serverContext.bootstrapError ? t("history.searchDialog.noClient") : null);
@@ -80,6 +103,7 @@ export function useHistorySearch({
   return {
     server: {
       collection: serverCollection,
+      groups: serverGroups,
       selectedId: serverContext.selectedServerId,
       setSelectedId: serverContext.setSelectedServerId,
       focusedServerCode: serverContext.region.focusedServerCode,
@@ -87,7 +111,6 @@ export function useHistorySearch({
       show: serverContext.showServerSelect,
       disabled: serverContext.serverSelectDisabled,
       isBootstrapping: serverContext.isBootstrapping,
-      reset: serverContext.resetServerContext,
     },
     search: {
       query: search.query,

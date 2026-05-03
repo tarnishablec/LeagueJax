@@ -24,6 +24,21 @@ const INTERNATIONAL_SERVER_LABELS: Record<string, string> = {
   VN2: "VN",
 };
 
+const TENCENT_SERVER_LABEL_DEFAULTS: Record<string, string> = {
+  TENCENT_HN1: "Ionia",
+  TENCENT_HN10: "Black Rose",
+  TENCENT_TJ100: "TENCENT 4",
+  TENCENT_TJ101: "TENCENT 5",
+  TENCENT_NJ100: "TENCENT 1",
+  TENCENT_GZ100: "TENCENT 2",
+  TENCENT_CQ100: "TENCENT 3",
+  TENCENT_BGP2: "Super Server",
+  TENCENT_PBE: "TENCENT PBE",
+  TENCENT_PREPBE: "TENCENT PREPBE",
+};
+
+type TranslateFn = (key: string, options?: { defaultValue?: string }) => string;
+
 function normalizeServerId(serverId: string | null | undefined): string | null {
   const normalized = serverId?.trim().toUpperCase() ?? "";
   return normalized.length > 0 ? normalized : null;
@@ -85,6 +100,7 @@ export function deriveSgpServerIdFromClientArgs(
 
 export function formatHistoryServerBadgeLabel(
   serverId: string | null | undefined,
+  t?: TranslateFn,
 ): string | null {
   const normalized = normalizeServerId(serverId);
   if (!normalized) {
@@ -93,11 +109,12 @@ export function formatHistoryServerBadgeLabel(
 
   const knownServerId = resolveKnownServerId(normalized);
   if (knownServerId.startsWith(TENCENT_PREFIX)) {
-    return (
-      SGP_SERVERS_CONFIG.serverNames["zh-CN"]?.[knownServerId] ??
-      SGP_SERVERS_CONFIG.serverNames.en?.[knownServerId] ??
-      knownServerId.slice(TENCENT_PREFIX.length)
-    );
+    const fallback =
+      TENCENT_SERVER_LABEL_DEFAULTS[knownServerId] ??
+      knownServerId.slice(TENCENT_PREFIX.length);
+    return t
+      ? t(`history.serverLabels.${knownServerId}`, { defaultValue: fallback })
+      : fallback;
   }
 
   return INTERNATIONAL_SERVER_LABELS[knownServerId] ?? knownServerId;

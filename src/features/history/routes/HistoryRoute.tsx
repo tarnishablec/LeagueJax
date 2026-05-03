@@ -15,6 +15,7 @@ import {
   HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
 } from "../manifest";
 import {
+  deriveSgpServerIdFromClientArgs,
   deriveSgpServerIdFromRegion,
   formatHistoryServerBadgeLabel,
   resolveHistoryServerId,
@@ -43,7 +44,7 @@ function useDeferredListMount(key: string | null): boolean {
   return ready;
 }
 
-function OwnSummonerButton() {
+function OwnSummonerButton({ serverId }: { serverId: string | null }) {
   const { t } = useTranslation();
   const connected = useLcuStore(selectIsFocused);
   const openTab = useTabStore((state) => state.openTab);
@@ -66,7 +67,7 @@ function OwnSummonerButton() {
         type="button"
         className={s.focusPickerCard}
         onClick={() =>
-          openTab(summoner.puuid, null, {
+          openTab(summoner.puuid, serverId, {
             gameName,
             tagLine,
             profileIconId: summoner.profileIconId,
@@ -104,13 +105,16 @@ function OwnSummonerButton() {
 }
 
 export function HistoryRoute() {
+  const { t } = useTranslation();
   const connected = useLcuStore(selectIsFocused);
   const { instances } = useLcuStore();
   const { tabs, activeTabId } = useTabStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const listReady = useDeferredListMount(activeTab?.id ?? null);
   const activeTabServerId = resolveHistoryServerId(activeTab?.sgpServerId);
-  const focusedServerId = deriveSgpServerIdFromRegion(connected?.region);
+  const focusedServerId =
+    deriveSgpServerIdFromClientArgs(connected?.cmdArgs) ??
+    deriveSgpServerIdFromRegion(connected?.region);
   const { data: activeSummoner } = useSummonerInfo(
     activeTab?.puuid,
     activeTabServerId,
@@ -120,12 +124,14 @@ export function HistoryRoute() {
     activeTab?.puuid !== undefined &&
     connected?.summoner?.puuid === activeTab.puuid;
   const derivedOwnServerId = activeOwnSummoner ? focusedServerId : null;
+  const effectiveActiveTabServerId = activeTabServerId ?? derivedOwnServerId;
   const rankUnavailable =
     activeTabServerId !== null &&
     focusedServerId !== null &&
     activeTabServerId !== focusedServerId;
   const summaryServerLabel = formatHistoryServerBadgeLabel(
-    activeTabServerId ?? derivedOwnServerId,
+    effectiveActiveTabServerId,
+    t,
   );
 
   const settings = useSettings();
@@ -141,14 +147,14 @@ export function HistoryRoute() {
       false,
   );
 
-  useFocusSync(connected, autoOpenOwnTab);
+  useFocusSync(connected, autoOpenOwnTab, focusedServerId);
 
   if (!connected) {
     return <ConnectionGuard instances={instances} />;
   }
 
   if (!activeTab) {
-    return <OwnSummonerButton />;
+    return <OwnSummonerButton serverId={focusedServerId} />;
   }
 
   return (
@@ -167,7 +173,7 @@ export function HistoryRoute() {
       {listReady ? (
         <MatchList
           puuid={activeTab.puuid}
-          sgpServerId={activeTab.sgpServerId}
+          sgpServerId={effectiveActiveTabServerId}
         />
       ) : (
         <div className={s.listPlaceholder} />

@@ -17,7 +17,6 @@ type UseHistorySearchServerContextResult = {
   showServerSelect: boolean;
   serverSelectDisabled: boolean;
   region: ReturnType<typeof useLeagueClientRegion>;
-  resetServerContext: () => void;
 };
 
 export function useHistorySearchServerContext({
@@ -44,11 +43,6 @@ export function useHistorySearchServerContext({
     [region.availableServerCodes.length],
   );
 
-  const resetServerContext = () => {
-    bootstrap.reset();
-    setSelectedServerId("");
-  };
-
   useEffect(() => {
     if (!region.focusedServerCode) {
       setSelectedServerId("");
@@ -72,6 +66,5 @@ export function useHistorySearchServerContext({
     showServerSelect,
     serverSelectDisabled,
     region,
-    resetServerContext,
   };
 }

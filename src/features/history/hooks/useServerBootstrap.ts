@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type UseServerBootstrapParams = {
   enabled: boolean;
@@ -10,6 +10,7 @@ type UseServerBootstrapResult = {
   isBootstrapping: boolean;
   bootstrapError: string | null;
   reset: () => void;
+  refresh: () => void;
 };
 
 export function useServerBootstrap({
@@ -20,17 +21,7 @@ export function useServerBootstrap({
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
-  const reset = () => {
-    setFocusedServerId(null);
-    setIsBootstrapping(false);
-    setBootstrapError(null);
-  };
-
-  useEffect(() => {
-    if (!enabled || focusedServerId) {
-      return;
-    }
-
+  const refresh = useCallback(() => {
     const currentRequestId = ++requestIdRef.current;
     setIsBootstrapping(true);
     setBootstrapError(null);
@@ -54,7 +45,22 @@ export function useServerBootstrap({
           setIsBootstrapping(false);
         }
       });
-  }, [enabled, focusedServerId]);
+  }, []);
 
-  return { focusedServerId, isBootstrapping, bootstrapError, reset };
+  const reset = useCallback(() => {
+    requestIdRef.current += 1;
+    setFocusedServerId(null);
+    setIsBootstrapping(false);
+    setBootstrapError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    refresh();
+  }, [enabled, refresh]);
+
+  return { focusedServerId, isBootstrapping, bootstrapError, reset, refresh };
 }
