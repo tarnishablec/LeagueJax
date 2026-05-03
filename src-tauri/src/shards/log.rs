@@ -1,8 +1,13 @@
 use crate::shards::settings::types::{
     SettingControlDto, SettingDefinitionDto, SettingOptionDto, SettingScopeDto,
 };
+#[cfg(debug_assertions)]
+use crate::shards::settings::SettingHandle;
 use crate::shards::settings::SettingsShard;
 use crate::shards::tauri_host::TauriHost;
+use crate::utils::http_log::{response_body_log, HttpBodyLogMode, DEFAULT_HTTP_BODY_PREVIEW_BYTES};
+#[cfg(debug_assertions)]
+use crate::utils::http_log::{sanitize_preview_bytes, MAX_HTTP_BODY_PREVIEW_BYTES};
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
@@ -27,11 +32,71 @@ const MIN_RETENTION_DAYS: i64 = 1;
 const MAX_RETENTION_DAYS: i64 = 7;
 static STARTUP_LOG_ID: OnceLock<Uuid> = OnceLock::new();
 
-pub struct LogShard;
+#[cfg(debug_assertions)]
+const HTTP_BODY_MODE_SETTING_ID: &str = "system.logging.httpBodyMode";
+#[cfg(debug_assertions)]
+const HTTP_BODY_PREVIEW_BYTES_SETTING_ID: &str = "system.logging.httpBodyPreviewBytes";
+
+#[derive(Clone, Default)]
+pub struct HttpLogPolicy {
+    #[cfg(debug_assertions)]
+    body_mode: Option<SettingHandle>,
+    #[cfg(debug_assertions)]
+    preview_bytes: Option<SettingHandle>,
+}
+
+impl HttpLogPolicy {
+    #[cfg(debug_assertions)]
+    fn with_debug_settings(body_mode: SettingHandle, preview_bytes: SettingHandle) -> Self {
+        Self {
+            body_mode: Some(body_mode),
+            preview_bytes: Some(preview_bytes),
+        }
+    }
+
+    pub fn body_mode(&self) -> HttpBodyLogMode {
+        #[cfg(debug_assertions)]
+        {
+            if let Some(handle) = &self.body_mode {
+                return sanitize_http_body_mode(handle.get_value().ok().as_ref());
+            }
+        }
+
+        HttpBodyLogMode::ErrorPreview
+    }
+
+    pub fn preview_bytes(&self) -> usize {
+        #[cfg(debug_assertions)]
+        {
+            if let Some(handle) = &self.preview_bytes {
+                return sanitize_http_body_preview_bytes(handle.get_value().ok().as_ref());
+            }
+        }
+
+        DEFAULT_HTTP_BODY_PREVIEW_BYTES
+    }
+
+    pub fn response_body_log(&self, body_bytes: &[u8], is_error: bool) -> Value {
+        response_body_log(body_bytes, self.body_mode(), is_error, self.preview_bytes())
+    }
+}
+
+pub struct LogShard {
+    http_log_policy: OnceLock<Arc<HttpLogPolicy>>,
+}
 
 impl LogShard {
     pub fn new() -> Self {
-        Self
+        Self {
+            http_log_policy: OnceLock::new(),
+        }
+    }
+
+    pub fn http_log_policy(&self) -> Result<Arc<HttpLogPolicy>, crate::error::AppError> {
+        self.http_log_policy
+            .get()
+            .cloned()
+            .ok_or_else(|| crate::error::AppError::other("HTTP log policy is not initialized"))
     }
 
     pub fn current_log_id() -> Uuid {
@@ -87,6 +152,91 @@ impl LogShard {
             .unwrap_or_else(Self::default_retention_days)
             .clamp(MIN_RETENTION_DAYS, MAX_RETENTION_DAYS)
     }
+
+    #[cfg(debug_assertions)]
+    fn http_body_mode_options() -> Vec<SettingOptionDto> {
+        [
+            ("off", "Off"),
+            ("errorPreview", "Error Preview"),
+            ("full", "Full Body"),
+        ]
+        .iter()
+        .map(|(value, label)| SettingOptionDto {
+            value: (*value).to_string(),
+            label_key: (*label).to_string(),
+            display_label: Some((*label).to_string()),
+        })
+        .collect()
+    }
+
+    #[cfg(debug_assertions)]
+    fn register_http_log_policy(
+        settings: &Arc<SettingsShard>,
+    ) -> Result<HttpLogPolicy, crate::error::AppError> {
+        let body_mode = settings.register_definition(SettingDefinitionDto {
+            id: HTTP_BODY_MODE_SETTING_ID.to_string(),
+            label_key: "HTTP Body Logging".to_string(),
+            hint_key: Some("Debug builds only. Controls HTTP response body capture.".to_string()),
+            scope: SettingScopeDto::Backend,
+            control: SettingControlDto::Select,
+            default_value: Value::from("errorPreview"),
+            order: Some(13),
+            visible: Some(true),
+            options: Some(Self::http_body_mode_options()),
+        })?;
+
+        let preview_bytes = settings.register_definition(SettingDefinitionDto {
+            id: HTTP_BODY_PREVIEW_BYTES_SETTING_ID.to_string(),
+            label_key: "HTTP Body Preview Bytes".to_string(),
+            hint_key: Some("Debug builds only. Caps captured error response previews.".to_string()),
+            scope: SettingScopeDto::Backend,
+            control: SettingControlDto::Number {
+                placeholder_key: None,
+                min: Some(0.0),
+                max: Some(MAX_HTTP_BODY_PREVIEW_BYTES as f64),
+                step: Some(1024.0),
+            },
+            default_value: Value::from(DEFAULT_HTTP_BODY_PREVIEW_BYTES as u64),
+            order: Some(14),
+            visible: Some(true),
+            options: None,
+        })?;
+
+        Ok(HttpLogPolicy::with_debug_settings(body_mode, preview_bytes))
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn register_http_log_policy(
+        _settings: &Arc<SettingsShard>,
+    ) -> Result<HttpLogPolicy, crate::error::AppError> {
+        Ok(HttpLogPolicy::default())
+    }
+}
+
+#[cfg(debug_assertions)]
+fn sanitize_http_body_mode(value: Option<&Value>) -> HttpBodyLogMode {
+    match value.and_then(Value::as_str) {
+        Some("off") => HttpBodyLogMode::Off,
+        Some("full") => HttpBodyLogMode::Full,
+        _ => HttpBodyLogMode::ErrorPreview,
+    }
+}
+
+#[cfg(debug_assertions)]
+fn sanitize_http_body_preview_bytes(value: Option<&Value>) -> usize {
+    let raw = value
+        .and_then(|value| {
+            value.as_u64().or_else(|| {
+                value
+                    .as_f64()
+                    .filter(|n| n.is_finite() && *n >= 0.0)
+                    .map(|n| n.round() as u64)
+            })
+        })
+        .and_then(|value| usize::try_from(value).ok())
+        .unwrap_or(DEFAULT_HTTP_BODY_PREVIEW_BYTES);
+
+    sanitize_preview_bytes(raw)
 }
 
 #[async_trait]
@@ -97,6 +247,13 @@ impl Shard for LogShard {
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
         let tauri_host = jax.get_shard::<TauriHost>();
+
+        let http_log_policy = Arc::new(Self::register_http_log_policy(&settings)?);
+        if self.http_log_policy.set(http_log_policy).is_err() {
+            return Err(
+                crate::error::AppError::other("HTTP log policy is already initialized").into(),
+            );
+        }
 
         let record_to_file_handle = settings.register_definition(SettingDefinitionDto {
             id: RECORD_TO_FILE_SETTING_ID.to_string(),
