@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use crate::error::AppError;
 use crate::shards::lcu::concepts::chat::{LcuChatFriend, LcuChatFriendGroup};
+use crate::shards::lcu::concepts::rank::RankedTierSummary;
 use crate::shards::lcu::LcuShard;
 use crate::shards::ongoing_game::types::OngoingGameInput;
 use crate::shards::ongoing_game::OngoingGameShard;
 use jax::Jax;
-use serde_json::Value;
 use tauri::State;
 
 #[tauri::command]
@@ -36,7 +36,7 @@ pub async fn lcu_get_ranked_tiers(
     summoner_ids: Vec<i64>,
     queue_types: Vec<String>,
     jax: State<'_, Arc<Jax>>,
-) -> Result<Value, AppError> {
+) -> Result<Vec<RankedTierSummary>, AppError> {
     let normalized_summoner_ids: Vec<i64> = summoner_ids.into_iter().filter(|id| *id > 0).collect();
     if normalized_summoner_ids.is_empty() {
         return Err(AppError::other(
