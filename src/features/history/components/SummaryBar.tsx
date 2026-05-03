@@ -15,14 +15,13 @@ import * as s from "./SummaryBar.css";
 function formatMeta(
   entry: RankEntry | null,
   winsShort: string,
-  lossesShort: string,
   lpShort: string,
 ): string {
   if (!entry) {
-    return `-- ${winsShort} / -- ${lossesShort} / -- ${lpShort}`;
+    return `-- ${winsShort} / -- ${lpShort}`;
   }
 
-  return `${entry.wins}${winsShort} / ${entry.losses}${lossesShort} / ${entry.leaguePoints} ${lpShort}`;
+  return `${entry.wins}${winsShort} / ${entry.leaguePoints} ${lpShort}`;
 }
 
 export function SummaryBar({
@@ -46,7 +45,6 @@ export function SummaryBar({
   const summonerId = `${summoner.gameName}#${summoner.tagLine}`;
 
   const winsShort = t("history.summary.winsShort", { defaultValue: "W" });
-  const lossesShort = t("history.summary.lossesShort", { defaultValue: "L" });
   const lpShort = t("history.summary.lpShort", { defaultValue: "LP" });
   const hiddenHistoryText = t("history.summary.hiddenHistory", {
     defaultValue: "Hidden match history",
@@ -121,7 +119,7 @@ export function SummaryBar({
                   {formatRankEntryTierLabel(t, soloRankEntry)}
                 </span>
                 <span className={s.rankMeta}>
-                  {formatMeta(soloRankEntry, winsShort, lossesShort, lpShort)}
+                  {formatMeta(soloRankEntry, winsShort, lpShort)}
                 </span>
                 {/* <span className={s.highestRank}>
                   <span className={s.highestRankLabel}>{highestLabel}</span>
@@ -162,7 +160,7 @@ export function SummaryBar({
                   {formatRankEntryTierLabel(t, flexRankEntry)}
                 </span>
                 <span className={s.rankMeta}>
-                  {formatMeta(flexRankEntry, winsShort, lossesShort, lpShort)}
+                  {formatMeta(flexRankEntry, winsShort, lpShort)}
                 </span>
                 {/* <span className={s.highestRank}>
                   <span className={s.highestRankLabel}>{highestLabel}</span>

@@ -293,7 +293,7 @@ fn spawn_seed_task(envo: &Envo) {
                 teambuilder_message,
             ) = tokio::join!(
                 api.get_gameflow_phase_typed(),
-                api.get_gameflow_session_typed(),
+                api.get_gameflow_session_typed_optional(),
                 api.get_matchmaking_search_typed_optional(),
                 api.get_ready_check_typed_optional(),
                 api.get_champ_select_session_typed(),
@@ -308,7 +308,7 @@ fn spawn_seed_task(envo: &Envo) {
                 | GameflowPhase::ChampSelect
                 | GameflowPhase::GameStart
                 | GameflowPhase::InProgress
-                | GameflowPhase::InGame => gameflow_session.ok(),
+                | GameflowPhase::InGame => gameflow_session.ok().flatten(),
                 _ => None,
             };
 
