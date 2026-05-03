@@ -108,7 +108,7 @@ export const tabIconFallback = style({
   width: 16,
   height: 16,
   borderRadius: "50%",
-  background: vars.color.accent,
+  background: vars.color.blurry,
 });
 
 export const closeButton = style({

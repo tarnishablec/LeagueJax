@@ -21,6 +21,7 @@ export const bar = style({
   gap: 16,
   padding: 12,
   borderRadius: 8,
+  minHeight: 115,
   background: vars.color.surface,
   border: `1px solid ${vars.color.border}`,
   "@media": {
@@ -36,12 +37,13 @@ export const avatarSlot = style({
   height: 56,
   borderRadius: 8,
   overflow: "hidden",
-  background: vars.color.border,
+  background: vars.color.blurry,
 });
 
 export const iconFallback = style({
   width: "100%",
   height: "100%",
+  background: vars.color.blurry,
 });
 
 export const profileIcon = style({
@@ -54,7 +56,7 @@ export const profileIcon = style({
 export const identity = style({
   display: "grid",
   alignContent: "center",
-  gap: 2,
+  gap: 3,
 });
 
 export const nameRow = style({
@@ -93,6 +95,27 @@ export const copyButton = style({
 export const tag = style({
   fontSize: "0.75rem",
   color: vars.color.mutedForeground,
+});
+
+export const tagRow = style({
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  justifyContent: "start",
+  alignItems: "center",
+  gap: 6,
+});
+
+export const serverBadge = style({
+  display: "inline-grid",
+  alignItems: "center",
+  minHeight: 18,
+  padding: "0 7px",
+  borderRadius: 4,
+  background: "oklch(0.58 0.13 215)",
+  color: "white",
+  fontSize: "0.6875rem",
+  fontWeight: 650,
+  lineHeight: 1,
 });
 
 export const privacyBadge = style({
