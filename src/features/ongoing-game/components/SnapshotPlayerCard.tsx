@@ -11,6 +11,7 @@ import { useSnapshotPlayerCardState } from "./use-snapshot-player-card-state.ts"
 
 export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
   enabledPlayerCardTagIds: readonly string[];
+  excellentKdaThreshold: number;
   playerCardTagColors: Readonly<Record<string, string>>;
   squadAssignment?: PlayerSquadAssignment;
   slot: PlayerSlot;
@@ -18,6 +19,7 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
 }) {
   const {
     enabledPlayerCardTagIds,
+    excellentKdaThreshold,
     playerCardTagColors,
     squadAssignment,
     slot,
@@ -30,6 +32,7 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
     matchHistoryCount,
     enabledPlayerCardTagIds,
     playerCardTagColors,
+    excellentKdaThreshold,
     squadAssignment,
   );
   const playerCardStyle = cardState.squadTag
