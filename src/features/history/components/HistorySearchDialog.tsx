@@ -45,9 +45,6 @@ export function HistorySearchDialog({
       return;
     }
 
-    if (nextOpen) {
-      server.reset();
-    }
     onOpenChange(nextOpen);
   };
 

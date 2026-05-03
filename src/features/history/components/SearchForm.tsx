@@ -23,6 +23,7 @@ export function SearchForm({ server, search }: SearchFormProps) {
       {server.show ? (
         <SettingsSelect
           collection={server.collection}
+          groups={server.groups}
           value={[server.selectedId]}
           onValueChange={(details) => {
             const next = details.value[0];

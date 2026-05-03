@@ -16,7 +16,8 @@ type SelectItem = {
 };
 
 type SelectGroup = {
-  label: string;
+  id?: string;
+  label?: string;
   items: SelectItem[];
 };
 
@@ -78,7 +79,7 @@ function GroupedItems({
   return (
     <>
       {groups.map((group) => (
-        <Select.ItemGroup key={group.label} className={s.group}>
+        <Select.ItemGroup key={group.id ?? group.label} className={s.group}>
           {group.items.map((groupItem) => {
             const item = collection.items.find(
               (i) => i.value === groupItem.value,
