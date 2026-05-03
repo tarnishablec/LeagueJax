@@ -236,7 +236,7 @@ fn spawn_summoner_task(envo: &Envo, puuid: &str) {
 fn spawn_history_task(envo: &Envo, puuid: &str) {
     let puuid_owned = puuid.to_owned();
     let handle = envo.send().start_task(move |envo| async move {
-        let (lcu, sgp, count, tag, input_tx, game_id) = {
+        let (lcu, sgp, count, tag, input_tx, game_id, history_fetch_semaphore) = {
             let ctx = envo.context();
             (
                 ctx.lcu_shard.clone(),
@@ -245,6 +245,7 @@ fn spawn_history_task(envo: &Envo, puuid: &str) {
                 ctx.match_history_mode.effective_tag(ctx.effective_queue_id),
                 ctx.input_tx.clone(),
                 ctx.lifecycle_game_id,
+                ctx.history_fetch_semaphore.clone(),
             )
         };
 
@@ -252,6 +253,8 @@ fn spawn_history_task(envo: &Envo, puuid: &str) {
             let manager = lcu.manager()?;
             let session = manager.focused().await?;
             let sgp_session = session.to_sgp(&sgp).await.ok()?;
+            let permit = history_fetch_semaphore.acquire_owned().await.ok()?;
+            let _permit = permit;
             let resp = sgp_session
                 .api()
                 .get_match_summaries(&puuid_owned, 0, count, tag.as_deref(), None)
