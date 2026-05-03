@@ -89,6 +89,7 @@ export function useSnapshotPlayerCardState(
   matchHistoryCount: number,
   enabledPlayerCardTagIds: readonly string[],
   playerCardTagColors: Readonly<Record<string, string>>,
+  excellentKdaThreshold: number,
   squadAssignment: PlayerSquadAssignment | undefined,
 ) {
   const { t } = useTranslation();
@@ -216,6 +217,7 @@ export function useSnapshotPlayerCardState(
           enabledPlayerCardTagIds,
           playerCardTagColors,
           slot,
+          excellentKdaThreshold,
           t,
         ),
         ...collectSpecialPlayerCardTags({
@@ -234,6 +236,7 @@ export function useSnapshotPlayerCardState(
       hasHistoryLoadFailed,
       isSelf,
       playerCardTagColors,
+      excellentKdaThreshold,
       recentGames,
       slot,
       t,

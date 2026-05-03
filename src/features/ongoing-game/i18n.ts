@@ -47,6 +47,10 @@ export const ongoingGameI18n: Resource = {
         playerCardTags: {
           description: "Choose which tags can appear on player cards.",
           savedColors: "Saved Colors",
+          excellentKdaThreshold: {
+            label: "Excellent KDA threshold",
+            hint: "Show the excellent mark when average KDA is at least this value.",
+          },
           squadDetection: {
             enabled: {
               label: "Enable squad detection",
@@ -166,6 +170,10 @@ export const ongoingGameI18n: Resource = {
         playerCardTags: {
           description: "这些标签会展示在玩家卡片上",
           savedColors: "保存的颜色",
+          excellentKdaThreshold: {
+            label: "优异检测阈值",
+            hint: "平均 KDA 大于等于该值时，在玩家卡片上显示优异标记。",
+          },
           squadDetection: {
             enabled: {
               label: "启用小队检测",
@@ -285,6 +293,10 @@ export const ongoingGameI18n: Resource = {
         playerCardTags: {
           description: "プレイヤーカードに表示するタグを選択します",
           savedColors: "保存した色",
+          excellentKdaThreshold: {
+            label: "優秀判定KDAしきい値",
+            hint: "平均KDAがこの値以上の場合、プレイヤーカードに優秀マークを表示します。",
+          },
           squadDetection: {
             enabled: {
               label: "パーティー検出を有効化",

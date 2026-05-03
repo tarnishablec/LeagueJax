@@ -16,6 +16,8 @@ import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
 import { PlayerCardTagsSettings } from "./components/PlayerCardTagsSettings";
 import { DEFAULT_MIN_SHARED_SQUAD_GAMES } from "./components/player-card-squads.ts";
 import {
+  DEFAULT_EXCELLENT_KDA_THRESHOLD,
+  EXCELLENT_KDA_THRESHOLD_SETTING_ID,
   getPlayerCardTagColorSettingItems,
   getPlayerCardTagEnabledSettingItems,
   isPlayerCardTagColor,
@@ -160,6 +162,17 @@ export class OngoingGameShard implements WebShard {
       zod: z.number().int().min(1).max(200),
       defaultValue: DEFAULT_MIN_SHARED_SQUAD_GAMES,
       order: 6,
+      onSet: () => {},
+    });
+    settings.registerSetting({
+      id: EXCELLENT_KDA_THRESHOLD_SETTING_ID,
+      labelKey: "settings.ongoing.playerCardTags.excellentKdaThreshold.label",
+      hintKey: "settings.ongoing.playerCardTags.excellentKdaThreshold.hint",
+      scope: "frontend",
+      control: { kind: "number", min: 0, max: 100, step: 0.1 },
+      zod: z.number().min(0).max(100),
+      defaultValue: DEFAULT_EXCELLENT_KDA_THRESHOLD,
+      order: 7,
       onSet: () => {},
     });
     for (const enabledSetting of getPlayerCardTagEnabledSettingItems()) {
