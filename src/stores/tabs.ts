@@ -114,5 +114,11 @@ export const useTabStore = create<TabState>((set, get) => ({
     });
   },
 
-  setActiveTab: (id) => set({ activeTabId: id }),
+  setActiveTab: (id) => {
+    if (get().activeTabId === id) {
+      return;
+    }
+
+    set({ activeTabId: id });
+  },
 }));
