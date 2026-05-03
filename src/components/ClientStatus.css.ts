@@ -6,6 +6,20 @@ import { vars } from "@/styles/theme.css";
 const tooltipSurface = `color-mix(in srgb, ${vars.color.primary}, transparent 0.75)`;
 const tooltipSurfaceDark = `color-mix(in srgb, ${vars.color.primary}, transparent 0.875)`;
 const tooltipShadowColor = `oklch(from ${vars.color.background} 0.05 c h / 0.46)`;
+const detectedBadgeBackground = `
+  radial-gradient(
+     circle, 
+     ${vars.color.success} 0%, 
+     color-mix(in srgb, ${vars.color.success}, transparent 40%) 40%,
+     color-mix(in srgb, ${vars.color.success}, transparent 80%) 70%,
+     transparent 100%
+  )
+`;
+
+const badgeFadeIn = keyframes({
+  "0%": { opacity: 0 },
+  "100%": { opacity: 1 },
+});
 
 // ─── Trigger area (unchanged) ───────────────────────────────────────────────
 
@@ -66,6 +80,7 @@ export const triggerIconFrame = style({
   justifySelf: "center",
   width: 16,
   height: 16,
+  position: "relative",
 });
 
 export const iconScale = recipe({
@@ -124,6 +139,26 @@ globalStyle(`${connectingIcon} circle`, {
   transformOrigin: "center",
 });
 
+export const unplugIcon = recipe({
+  base: {
+    gridArea: "1 / 1",
+    transition: "opacity 160ms ease-out",
+  },
+  variants: {
+    dimmed: {
+      false: {
+        opacity: 1,
+      },
+      true: {
+        opacity: 0,
+      },
+    },
+  },
+  defaultVariants: {
+    dimmed: false,
+  },
+});
+
 export const label = recipe({
   base: {
     display: "inline-block",
@@ -157,20 +192,45 @@ export const detectedBadge = style({
   justifySelf: "end",
   marginRight: 10,
   borderRadius: "50%",
-  background: `
-    radial-gradient(
-       circle, 
-       ${vars.color.success} 0%, 
-       color-mix(in srgb, ${vars.color.success}, transparent 40%) 40%,
-       color-mix(in srgb, ${vars.color.success}, transparent 80%) 70%,
-       transparent 100%
-    )
-  `,
+  background: detectedBadgeBackground,
   color: "rgb(7 35 8)",
   fontSize: "0.6875rem",
   fontWeight: 700,
   lineHeight: 1,
   fontVariantNumeric: "tabular-nums",
+  animation: `${badgeFadeIn} 160ms ease-out both`,
+});
+
+export const collapsedDetectedBadge = recipe({
+  base: {
+    gridArea: "1 / 1",
+    width: 14.4,
+    height: 14.4,
+    display: "grid",
+    placeItems: "center",
+    borderRadius: "50%",
+    background: detectedBadgeBackground,
+    color: "rgb(7 35 8)",
+    fontSize: "0.55rem",
+    fontWeight: 700,
+    lineHeight: 1,
+    fontVariantNumeric: "tabular-nums",
+    pointerEvents: "none",
+    transition: "opacity 160ms ease-out",
+  },
+  variants: {
+    visible: {
+      false: {
+        opacity: 0,
+      },
+      true: {
+        opacity: 1,
+      },
+    },
+  },
+  defaultVariants: {
+    visible: false,
+  },
 });
 
 // ─── Tooltip container ──────────────────────────────────────────────────────
