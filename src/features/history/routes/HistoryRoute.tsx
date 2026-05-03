@@ -23,17 +23,16 @@ import {
 import * as s from "./HistoryRoute.css";
 
 function useDeferredListMount(key: string | null): boolean {
-  const [ready, setReady] = useState(false);
+  const [readyKey, setReadyKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!key) {
-      setReady(false);
+      setReadyKey(null);
       return;
     }
 
-    setReady(false);
     const frameId = requestAnimationFrame(() => {
-      setReady(true);
+      setReadyKey(key);
     });
 
     return () => {
@@ -41,7 +40,7 @@ function useDeferredListMount(key: string | null): boolean {
     };
   }, [key]);
 
-  return ready;
+  return readyKey === key;
 }
 
 function OwnSummonerButton({ serverId }: { serverId: string | null }) {
