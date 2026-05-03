@@ -37,7 +37,7 @@ export const trigger = recipe({
   variants: {
     collapsed: {
       false: {
-        gridTemplateColumns: `${iconCol} minmax(0, 1fr)`,
+        gridTemplateColumns: `${iconCol} minmax(0, 1fr) auto`,
       },
       true: {
         gridTemplateColumns: `${iconCol} minmax(0, 1fr)`,
@@ -147,6 +147,30 @@ export const label = recipe({
   defaultVariants: {
     collapsed: false,
   },
+});
+
+export const detectedBadge = style({
+  width: 18,
+  height: 18,
+  display: "grid",
+  placeItems: "center",
+  justifySelf: "end",
+  marginRight: 10,
+  borderRadius: "50%",
+  background: `
+    radial-gradient(
+       circle, 
+       ${vars.color.success} 0%, 
+       color-mix(in srgb, ${vars.color.success}, transparent 40%) 40%,
+       color-mix(in srgb, ${vars.color.success}, transparent 80%) 70%,
+       transparent 100%
+    )
+  `,
+  color: "rgb(7 35 8)",
+  fontSize: "0.6875rem",
+  fontWeight: 700,
+  lineHeight: 1,
+  fontVariantNumeric: "tabular-nums",
 });
 
 // ─── Tooltip container ──────────────────────────────────────────────────────
