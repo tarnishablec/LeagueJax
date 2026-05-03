@@ -57,7 +57,11 @@ export function MatchCardPlayers({
   const openTab = useTabStore((state) => state.openTab);
 
   const openPlayerTab = (participant: RawMatchSummaryParticipant) => {
-    openTab(participant.puuid ?? "", sgpServerId);
+    const { gameName, tagLine } = resolvePlayerName(participant);
+    openTab(participant.puuid ?? "", sgpServerId, {
+      gameName,
+      tagLine,
+    });
   };
 
   const teams = useMemo(() => {

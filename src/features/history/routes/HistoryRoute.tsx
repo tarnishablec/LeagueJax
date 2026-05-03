@@ -15,8 +15,9 @@ import {
   HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
 } from "../manifest";
 import {
-  deriveSgpServerIdFromClientArgs,
+  deriveSgpServerIdFromRegion,
   formatHistoryServerBadgeLabel,
+  resolveHistoryServerId,
 } from "../utils/server-display";
 import * as s from "./HistoryRoute.css";
 
@@ -64,7 +65,15 @@ function OwnSummonerButton() {
       <button
         type="button"
         className={s.focusPickerCard}
-        onClick={() => openTab(summoner.puuid, null)}
+        onClick={() =>
+          openTab(summoner.puuid, null, {
+            gameName,
+            tagLine,
+            profileIconId: summoner.profileIconId,
+            summonerLevel: summoner.summonerLevel,
+            privacy: summoner.privacy,
+          })
+        }
       >
         <div className={s.focusPickerHeader}>
           <div className={s.focusPickerAvatarWrap}>
@@ -99,15 +108,22 @@ export function HistoryRoute() {
   const { instances } = useLcuStore();
   const { tabs, activeTabId } = useTabStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
-  const { data: activeSummoner } = useSummonerInfo(activeTab?.puuid);
   const listReady = useDeferredListMount(activeTab?.id ?? null);
-  const activeTabServerId = activeTab?.sgpServerId?.trim() || null;
+  const activeTabServerId = resolveHistoryServerId(activeTab?.sgpServerId);
+  const focusedServerId = deriveSgpServerIdFromRegion(connected?.region);
+  const { data: activeSummoner } = useSummonerInfo(
+    activeTab?.puuid,
+    activeTabServerId,
+    activeTab?.identity,
+  );
   const activeOwnSummoner =
     activeTab?.puuid !== undefined &&
     connected?.summoner?.puuid === activeTab.puuid;
-  const derivedOwnServerId = activeOwnSummoner
-    ? deriveSgpServerIdFromClientArgs(connected?.cmdArgs)
-    : null;
+  const derivedOwnServerId = activeOwnSummoner ? focusedServerId : null;
+  const rankUnavailable =
+    activeTabServerId !== null &&
+    focusedServerId !== null &&
+    activeTabServerId !== focusedServerId;
   const summaryServerLabel = formatHistoryServerBadgeLabel(
     activeTabServerId ?? derivedOwnServerId,
   );
@@ -140,6 +156,8 @@ export function HistoryRoute() {
       {activeSummoner ? (
         <SummaryBar
           summoner={activeSummoner}
+          rankedPuuid={activeTab.puuid}
+          rankUnavailable={rankUnavailable}
           serverLabel={summaryServerLabel}
           autoRefresh={autoRefreshOnSwitch}
         />

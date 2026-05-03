@@ -84,6 +84,7 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
         const tab = requireActiveTab(activeTab);
         return invoke<unknown>("get_summoner_by_puuid", {
           puuid: tab.puuid,
+          sgpServerId: tab.sgpServerId,
         });
       },
     },
@@ -104,11 +105,23 @@ function buildDebugCommands(activeTab: HistoryTab | undefined): DebugCommand[] {
         const tab = requireActiveTab(activeTab);
         const summoner = await invoke<SummonerInfo>("get_summoner_by_puuid", {
           puuid: tab.puuid,
+          sgpServerId: tab.sgpServerId,
         });
-        return invoke<unknown>("lcu_get_ranked_tiers", {
-          summonerIds: [summoner.summonerId],
+        const rankedSummonerId =
+          summoner.summonerId || summoner.id || summoner.accountId;
+        const rankedTiers = await invoke<unknown>("lcu_get_ranked_tiers", {
+          summonerIds: [rankedSummonerId],
           queueTypes: defaultRankedQueueTypes,
         });
+        return {
+          puuid: tab.puuid,
+          sgpServerId: tab.sgpServerId,
+          summonerId: summoner.summonerId,
+          id: summoner.id,
+          accountId: summoner.accountId,
+          rankedSummonerId,
+          rankedTiers,
+        };
       },
     },
     {
