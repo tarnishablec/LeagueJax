@@ -16,11 +16,13 @@ use self::session::SgpSession;
 use crate::error::AppError;
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::LcuShard;
+use crate::shards::log::{HttpLogPolicy, LogShard};
 use crate::shards::network::{NetworkConfig, NetworkShard};
 
 pub struct SgpShard {
     pub manager: SgpManager,
     network_config: OnceLock<Arc<NetworkConfig>>,
+    http_log_policy: OnceLock<Arc<HttpLogPolicy>>,
 }
 
 impl SgpShard {
@@ -28,11 +30,16 @@ impl SgpShard {
         Self {
             manager: SgpManager::new(),
             network_config: OnceLock::new(),
+            http_log_policy: OnceLock::new(),
         }
     }
 
     pub fn network_config(&self) -> Option<Arc<NetworkConfig>> {
         self.network_config.get().cloned()
+    }
+
+    pub fn http_log_policy(&self) -> Option<Arc<HttpLogPolicy>> {
+        self.http_log_policy.get().cloned()
     }
 }
 
@@ -47,19 +54,29 @@ impl LcuSessionSgpExt for Arc<LcuSession> {
         let network_config = sgp_shard
             .network_config()
             .ok_or_else(|| AppError::other("SGP network config is not initialized"))?;
-        sgp_shard.manager.get_or_create(self, network_config).await
+        let http_log_policy = sgp_shard
+            .http_log_policy()
+            .ok_or_else(|| AppError::other("SGP HTTP log policy is not initialized"))?;
+        sgp_shard
+            .manager
+            .get_or_create(self, network_config, http_log_policy)
+            .await
     }
 }
 
 #[async_trait]
 impl Shard for SgpShard {
     shard_id!("3f2a39a7-e3f4-4a76-85ef-1ca8a6f72514");
-    depends![LcuShard, NetworkShard];
+    depends![LcuShard, NetworkShard, LogShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let network = jax.get_shard::<NetworkShard>();
+        let log = jax.get_shard::<LogShard>();
         if self.network_config.set(network.config()?).is_err() {
             return Err(AppError::other("SGP network config is already initialized").into());
+        }
+        if self.http_log_policy.set(log.http_log_policy()?).is_err() {
+            return Err(AppError::other("SGP HTTP log policy is already initialized").into());
         }
         Ok(())
     }

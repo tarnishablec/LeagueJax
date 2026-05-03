@@ -6,6 +6,7 @@ use tokio::sync::{Mutex, RwLock};
 use super::session::SgpSession;
 use crate::error::AppError;
 use crate::shards::lcu::session::LcuSession;
+use crate::shards::log::HttpLogPolicy;
 use crate::shards::network::NetworkConfig;
 
 pub struct SgpManager {
@@ -25,6 +26,7 @@ impl SgpManager {
         &self,
         lcu_session: &Arc<LcuSession>,
         network_config: Arc<NetworkConfig>,
+        http_log_policy: Arc<HttpLogPolicy>,
     ) -> Result<Arc<SgpSession>, AppError> {
         let pid = lcu_session.auth().pid;
 
@@ -44,7 +46,8 @@ impl SgpManager {
             }
         }
 
-        let sgp_session = Arc::new(SgpSession::new(lcu_session, network_config).await?);
+        let sgp_session =
+            Arc::new(SgpSession::new(lcu_session, network_config, http_log_policy).await?);
 
         {
             let mut sessions = self.sessions.write().await;
