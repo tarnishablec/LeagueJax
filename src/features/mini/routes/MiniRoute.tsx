@@ -134,6 +134,14 @@ function MiniAutoAcceptSettings() {
   );
 }
 
+function phaseLabelKey(model: MiniWindowModel): string {
+  if (model.isSpectating) {
+    return "mini.phase.spectating";
+  }
+
+  return `mini.phase.${uncapitalize(model.phase)}`;
+}
+
 export function MiniRoute() {
   const model = useMiniWindowModel();
   const { t } = useTranslation();
@@ -170,7 +178,7 @@ export function MiniRoute() {
             {model.queueName ?? t("mini.queue.empty")}
           </strong>
           <span className={s.phase}>
-            {t(`mini.phase.${uncapitalize(model.phase)}`)}
+            {t(phaseLabelKey(model))}
           </span>
           {autoAcceptCountdown != null ? (
             <span className={s.autoAcceptCountdown}>
