@@ -8,8 +8,11 @@ export const physicalSegmentWidthVar = createVar();
 export const magicSegmentWidthVar = createVar();
 export const trueSegmentWidthVar = createVar();
 
-const tableColumns =
-  "34px minmax(auto, 200px) repeat(4, auto) 144px 144px 76px 64px 58px 58px";
+const scoreColumns = "repeat(4, auto)";
+const tableColumns = `34px minmax(auto, 200px) repeat(4, auto) 144px 144px ${scoreColumns}`;
+const tableColumnsWithoutPosition = `minmax(auto, 200px) repeat(4, auto) 144px 144px ${scoreColumns}`;
+const tableColumnsWithoutQuest = `34px minmax(auto, 200px) repeat(3, auto) 144px 144px ${scoreColumns}`;
+const tableColumnsWithoutPositionAndQuest = `minmax(auto, 200px) repeat(3, auto) 144px 144px ${scoreColumns}`;
 
 export const root = style({
   display: "grid",
@@ -152,9 +155,48 @@ export const tableScroller = style({
   overflowX: "auto",
 });
 
-export const table = style({
-  minWidth: 1124,
-  display: "grid",
+export const table = recipe({
+  base: {
+    display: "grid",
+  },
+  variants: {
+    positionColumn: {
+      shown: {
+        minWidth: 1124,
+      },
+      hidden: {
+        minWidth: 1090,
+      },
+    },
+    questColumn: {
+      shown: {},
+      hidden: {},
+    },
+  },
+  compoundVariants: [
+    {
+      variants: {
+        positionColumn: "shown",
+        questColumn: "hidden",
+      },
+      style: {
+        minWidth: 1090,
+      },
+    },
+    {
+      variants: {
+        positionColumn: "hidden",
+        questColumn: "hidden",
+      },
+      style: {
+        minWidth: 1056,
+      },
+    },
+  ],
+  defaultVariants: {
+    positionColumn: "shown",
+    questColumn: "shown",
+  },
 });
 
 // export const tableHeader = style({
@@ -171,24 +213,63 @@ export const table = style({
 //   borderBottom: `1px solid ${vars.color.border}`,
 // });
 
-export const participantRow = style({
-  display: "grid",
-  gridTemplateColumns: tableColumns,
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
-  minHeight: 42,
-  padding: "5px 8px",
-  color: theme.color.foreground,
-  fontSize: "0.75rem",
-  lineHeight: 1,
-  selectors: {
-    "&:not(:last-child)": {
-      borderBottom: `1px solid ${theme.color.border}`,
+export const participantRow = recipe({
+  base: {
+    display: "grid",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    minHeight: 42,
+    padding: "5px 8px",
+    color: theme.color.foreground,
+    fontSize: "0.75rem",
+    lineHeight: 1,
+    selectors: {
+      "&:not(:last-child)": {
+        borderBottom: `1px solid ${theme.color.border}`,
+      },
+      "&:hover": {
+        background: `color-mix(in srgb, ${theme.color.accent} 54%, transparent)`,
+      },
     },
-    "&:hover": {
-      background: `color-mix(in srgb, ${theme.color.accent} 54%, transparent)`,
+  },
+  variants: {
+    positionColumn: {
+      shown: {
+        gridTemplateColumns: tableColumns,
+      },
+      hidden: {
+        gridTemplateColumns: tableColumnsWithoutPosition,
+      },
     },
+    questColumn: {
+      shown: {},
+      hidden: {},
+    },
+  },
+  compoundVariants: [
+    {
+      variants: {
+        positionColumn: "shown",
+        questColumn: "hidden",
+      },
+      style: {
+        gridTemplateColumns: tableColumnsWithoutQuest,
+      },
+    },
+    {
+      variants: {
+        positionColumn: "hidden",
+        questColumn: "hidden",
+      },
+      style: {
+        gridTemplateColumns: tableColumnsWithoutPositionAndQuest,
+      },
+    },
+  ],
+  defaultVariants: {
+    positionColumn: "shown",
+    questColumn: "shown",
   },
 });
 
@@ -202,12 +283,12 @@ export const summonerCell = style({
   display: "grid",
   gridTemplateColumns: "28px minmax(0, 1fr)",
   alignItems: "center",
-  gap: 7,
+  gap: 10,
 });
 
 export const championIcon = style({
-  width: 28,
-  height: 28,
+  width: 32,
+  height: 32,
   borderRadius: 6,
   objectFit: "cover",
   border: `1px solid ${theme.color.border}`,
@@ -228,11 +309,41 @@ export const summonerText = style({
 });
 
 export const summonerName = style({
+  width: "100%",
+  minWidth: 0,
+  border: "none",
+  background: "transparent",
+  color: theme.color.foreground,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  textAlign: "left",
+  fontWeight: 650,
+  fontSize: "0.75rem",
+  lineHeight: 1,
+  padding: 0,
+  cursor: "pointer",
+  selectors: {
+    "&:focus-visible": {
+      outline: `2px solid ${theme.color.primary}`,
+      outlineOffset: 1,
+      borderRadius: 4,
+    },
+    "&:hover": {
+      color: theme.color.primary,
+    },
+  },
+});
+
+export const summonerBotName = style({
   minWidth: 0,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+  color: theme.color.mutedForeground,
   fontWeight: 650,
+  fontSize: "0.75rem",
+  lineHeight: 1,
 });
 
 export const championName = style({
@@ -267,6 +378,21 @@ export const damageCell = style({
   minWidth: 0,
   display: "grid",
   gap: 4,
+});
+
+export const damageNumberRow = style({
+  display: "grid",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 6,
+  lineHeight: 1,
+});
+
+export const damageLabel = style({
+  color: theme.color.mutedForeground,
+  fontSize: "0.6875rem",
+  fontWeight: 650,
+  lineHeight: 1,
 });
 
 export const damageNumber = style({
@@ -324,6 +450,49 @@ export const mutedNumberCell = style({
   fontWeight: 650,
   lineHeight: 1,
   textAlign: "right",
+});
+
+export const scoreCell = recipe({
+  base: {
+    display: "grid",
+    gridTemplateColumns: "14px max-content",
+    justifySelf: "center",
+    justifyContent: "end",
+    alignItems: "center",
+    gap: 4,
+    fontSize: "0.75rem",
+    fontWeight: 700,
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+  },
+  variants: {
+    tone: {
+      default: {
+        color: theme.color.foreground,
+      },
+      muted: {
+        color: theme.color.mutedForeground,
+        fontWeight: 650,
+      },
+    },
+  },
+  defaultVariants: {
+    tone: "default",
+  },
+});
+
+export const scoreCellIcon = style({
+  width: 14,
+  height: 14,
+  objectFit: "contain",
+  opacity: 0.78,
+});
+
+export const scoreCellIconFallback = style({
+  width: 14,
+  height: 14,
+  borderRadius: 4,
+  background: theme.color.accent,
 });
 
 export const tooltipPositioner = style({

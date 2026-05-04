@@ -506,6 +506,9 @@ export const playerNameButton = style({
       outlineOffset: 1,
       borderRadius: 4,
     },
+    "&:hover": {
+      color: theme.color.primary,
+    },
   },
 });
 

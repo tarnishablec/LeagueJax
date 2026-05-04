@@ -13,9 +13,11 @@ const DETAILS_TAB_ID = "details";
 export function MatchCardExpandedContent({
   summary,
   detail,
+  sgpServerId,
 }: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
+  sgpServerId: string | null;
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string[]>([DETAILS_TAB_ID]);
@@ -42,7 +44,11 @@ export function MatchCardExpandedContent({
 
       <div className={s.tabPanel}>
         {activeTab.includes(DETAILS_TAB_ID) ? (
-          <MatchDetailsTab summary={summary} detail={detail} />
+          <MatchDetailsTab
+            summary={summary}
+            detail={detail}
+            sgpServerId={sgpServerId}
+          />
         ) : null}
       </div>
     </div>

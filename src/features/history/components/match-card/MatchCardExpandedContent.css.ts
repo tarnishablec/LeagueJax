@@ -3,10 +3,10 @@ import { theme } from "@/styles/theme.css.ts";
 
 export const expandedRoot = style({
   display: "grid",
-  gap: 10,
+  gap: 6,
   padding: 10,
   borderRadius: 8,
-  border: `1px solid ${theme.color.border}`,
+  outline: `1px solid ${theme.color.border}`,
   background: `color-mix(in srgb, ${theme.color.surface} 72%, transparent)`,
 });
 
@@ -17,9 +17,9 @@ export const tabList = style({
   gridAutoFlow: "column",
   gridAutoColumns: "max-content",
   gap: 4,
-  padding: 3,
+  // padding: 3,
   borderRadius: 7,
-  border: `1px solid ${theme.color.border}`,
+  outline: `1px solid ${theme.color.border}`,
   background: `color-mix(in srgb, ${theme.color.deep} 28%, transparent)`,
   overflowX: "auto",
 });
@@ -44,7 +44,7 @@ export const tabTrigger = style({
     },
     "&[data-state='on']": {
       color: theme.color.accentForeground,
-      background: theme.color.primary,
+      background: theme.color.blurry,
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
