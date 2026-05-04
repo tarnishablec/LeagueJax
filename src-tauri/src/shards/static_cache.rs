@@ -1,22 +1,18 @@
 use std::future::Future;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use std::fs;
+use std::io::ErrorKind;
 use std::sync::Arc;
-use tauri::AppHandle;
-use tauri_plugin_store::StoreExt;
+use tauri::{AppHandle, Manager};
 
 use crate::error::AppError;
 
 use crate::shards::tauri_host::TauriHost;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct CacheEntry<T> {
-    version: String,
-    data: T,
-}
 
 pub struct StaticCacheShard {
     app: OnceLock<AppHandle>,
@@ -29,54 +25,116 @@ impl StaticCacheShard {
         }
     }
 
-    pub fn get<T: DeserializeOwned>(
+    pub async fn get_json_file_or_init<T, F, Fut>(
         &self,
-        store_file: &str,
-        key: &str,
-        version: &str,
-    ) -> Option<T> {
-        let app = self.app.get()?;
-        let store = app.store(store_file).ok()?;
-        let entry: CacheEntry<T> = serde_json::from_value(store.get(key)?).ok()?;
-        if entry.version == version {
-            Some(entry.data)
-        } else {
-            None
-        }
-    }
-
-    pub async fn get_or_init<T, F, Fut>(
-        &self,
-        store_file: &str,
-        key: &str,
-        version: &str,
+        namespace: &str,
+        file_name: &str,
         init: F,
     ) -> Result<T, AppError>
     where
-        T: Serialize + DeserializeOwned,
+        T: DeserializeOwned,
         F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<T, AppError>>,
+        Fut: Future<Output = Result<Vec<u8>, AppError>>,
     {
-        if let Some(cached) = self.get::<T>(store_file, key, version) {
-            return Ok(cached);
+        let cache_file = self.cache_file_path(namespace, file_name);
+        if let Ok(path) = &cache_file {
+            if let Some(cached) = read_json_cache_file::<T>(path) {
+                return Ok(cached);
+            }
         }
-        let data = init().await?;
-        self.set(store_file, key, version, &data);
+
+        let raw = init().await?;
+        let data = serde_json::from_slice::<T>(&raw)?;
+
+        if let Ok(path) = cache_file {
+            if let Err(error) = write_json_cache_file(&path, &raw) {
+                tracing::warn!(
+                    path = %path.display(),
+                    error = %error,
+                    "Failed to write static JSON cache file"
+                );
+            }
+        }
+
         Ok(data)
     }
 
-    pub fn set<T: Serialize>(&self, store_file: &str, key: &str, version: &str, data: &T) {
-        let Some(app) = self.app.get() else { return };
-        let Ok(store) = app.store(store_file) else {
-            return;
-        };
-        if let Ok(value) = serde_json::to_value(&CacheEntry {
-            version: version.to_string(),
-            data,
-        }) {
-            store.set(key, value);
+    fn cache_file_path(&self, namespace: &str, file_name: &str) -> Result<PathBuf, AppError> {
+        let app = self
+            .app
+            .get()
+            .ok_or_else(|| AppError::other("static cache app handle is not initialized"))?;
+        Ok(app
+            .path()
+            .app_data_dir()
+            .map_err(|error| AppError::other(format!("failed to resolve app data dir: {error}")))?
+            .join("cache")
+            .join(sanitize_cache_segment(namespace))
+            .join(sanitize_cache_segment(file_name)))
+    }
+}
+
+fn sanitize_cache_segment(value: &str) -> String {
+    let sanitized = value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_') {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+    if sanitized.is_empty() {
+        "unknown".to_string()
+    } else {
+        sanitized
+    }
+}
+
+fn read_json_cache_file<T: DeserializeOwned>(path: &Path) -> Option<T> {
+    let raw = match fs::read(path) {
+        Ok(raw) => raw,
+        Err(error) if error.kind() == ErrorKind::NotFound => return None,
+        Err(error) => {
+            tracing::warn!(
+                path = %path.display(),
+                error = %error,
+                "Failed to read static JSON cache file"
+            );
+            return None;
+        }
+    };
+
+    match serde_json::from_slice::<T>(&raw) {
+        Ok(data) => Some(data),
+        Err(error) => {
+            tracing::warn!(
+                path = %path.display(),
+                error = %error,
+                "Static JSON cache file is invalid; refetching"
+            );
+            None
         }
     }
+}
+
+fn write_json_cache_file(path: &Path, raw: &[u8]) -> Result<(), AppError> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let tmp_path = path.with_extension(format!(
+        "{}.tmp",
+        path.extension()
+            .and_then(|extension| extension.to_str())
+            .unwrap_or("json")
+    ));
+    fs::write(&tmp_path, raw)?;
+    if path.exists() {
+        fs::remove_file(path)?;
+    }
+    fs::rename(&tmp_path, path)?;
+    Ok(())
 }
 
 #[async_trait]

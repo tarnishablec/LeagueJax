@@ -7,6 +7,9 @@ use crate::shards::lcu::concepts::cherry::CherryAugment;
 use crate::shards::lcu::concepts::rank::RankStats;
 use crate::shards::lcu::concepts::summoner::{SummonerInfo, SummonerSearchResult};
 use crate::shards::lcu::riot_client::{PlayerAccountAliasEntry, RiotClientHttpClient};
+use crate::shards::lcu::static_data_cache::{
+    lcu_static_data_cache_namespace, LCU_CHERRY_AUGMENTS_CACHE_FILE,
+};
 use crate::shards::lcu::LcuShard;
 use crate::shards::sgp::api::SgpApi;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
@@ -582,19 +585,11 @@ pub async fn get_cherry_augments(
         .ok_or(AppError::LcuNotConnected)?;
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let api = lcu.api();
-    let version = lcu
-        .cache()
-        .get_or_try_init("game_version", || api.get_game_version())
-        .await?;
-    let region = lcu.auth().region.clone().unwrap_or_default();
-    let cache_version = format!("{version}_{region}");
+    let cache_namespace = lcu_static_data_cache_namespace(&lcu).await?;
     jax.get_shard::<StaticCacheShard>()
-        .get_or_init(
-            "lcu-cache.json",
-            "lcu_cherry_augments",
-            &cache_version,
-            || api.get_cherry_augments(),
-        )
+        .get_json_file_or_init(&cache_namespace, LCU_CHERRY_AUGMENTS_CACHE_FILE, || {
+            api.get_cherry_augments_json_bytes()
+        })
         .await
 }
 
