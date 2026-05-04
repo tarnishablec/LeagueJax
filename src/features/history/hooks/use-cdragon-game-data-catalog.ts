@@ -1001,6 +1001,7 @@ export function normalizeCdragonGameAssetPath(
 
 export function useCdragonGameDataCatalog(
   gameMode?: string | null,
+  includeAugmentDetails = false,
 ): CdragonGameDataCatalog {
   const { i18n } = useTranslation();
   const focused = useLcuStore(selectIsFocused);
@@ -1025,14 +1026,14 @@ export function useCdragonGameDataCatalog(
   );
   const modeAugmentsKey = useMemo(
     () =>
-      focusedPid !== null && augmentGameMode !== null
+      includeAugmentDetails && focusedPid !== null && augmentGameMode !== null
         ? ([
             "history:cdragon-mode-augments",
             augmentGameMode,
             focusedPid,
           ] as const)
         : null,
-    [focusedPid, augmentGameMode],
+    [focusedPid, augmentGameMode, includeAugmentDetails],
   );
 
   const { data: perksById = EMPTY_PERKS_BY_ID } = useSWR(
