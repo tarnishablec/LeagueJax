@@ -38,7 +38,9 @@ function getViewportOverflowStyle(
   return { overflow: "auto" };
 }
 
-function getContentBaseStyle(orientation: ScrollAreaOrientation): CSSProperties {
+function getContentBaseStyle(
+  orientation: ScrollAreaOrientation,
+): CSSProperties {
   if (orientation === "vertical") {
     return { minWidth: 0, width: "100%" };
   }
@@ -62,7 +64,8 @@ export function ScrollArea({
   const showHorizontalScrollbar =
     orientation === "horizontal" || orientation === "both";
   const reserveVerticalGutter = gutter === "stable" && showVerticalScrollbar;
-  const reserveHorizontalGutter = gutter === "stable" && showHorizontalScrollbar;
+  const reserveHorizontalGutter =
+    gutter === "stable" && showHorizontalScrollbar;
 
   return (
     <ArkScrollArea.Root className={joinClassNames(s.root({ size }), className)}>
