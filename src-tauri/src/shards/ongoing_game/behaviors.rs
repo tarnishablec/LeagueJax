@@ -472,6 +472,12 @@ fn clear_matchmaking_context(envo: &Envo) {
     ctx.ready_check = None;
 }
 
+fn clear_champ_select_context(envo: &Envo) {
+    let mut ctx = envo.context_mut();
+    ctx.champ_select_session = None;
+    ctx.teambuilder_payload = None;
+}
+
 fn apply_seed(envo: &Envo, seed: &OngoingSessionSeed) {
     {
         let mut ctx = envo.context_mut();
@@ -1058,6 +1064,7 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                         }
                     }
                     _ => {
+                        clear_champ_select_context(envo);
                         request_transition_for_context(
                             phase,
                             envo,

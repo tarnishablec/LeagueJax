@@ -11,6 +11,7 @@ import type { LcuQueue } from "@/bindings/queues";
 import { useOngoingGameStore } from "@/features/ongoing-game/store";
 import { useLcuMaps } from "@/hooks/use-lcu-maps";
 import { useLcuQueues } from "@/hooks/use-lcu-queues";
+import { preferredLcuMapAsset } from "@/utils/lcu-map-assets";
 
 export type MiniChampSelectMode = "bench" | "default";
 
@@ -31,35 +32,6 @@ export type MiniWindowModel = {
   readyCheck: OngoingGameUpdated["ready_check"];
   champSelect: MiniChampSelectModel | null;
 };
-
-const MAP_ASSET_KEYS = [
-  "game-select-icon-active",
-  "game-select-icon-hover",
-  "game-select-icon-disabled",
-  "icon-v2",
-  "icon",
-];
-
-function preferredMapAsset(
-  map: { assets: Record<string, unknown> } | null | undefined,
-): string | null {
-  if (!map) {
-    return null;
-  }
-
-  for (const key of MAP_ASSET_KEYS) {
-    const asset = map.assets[key];
-    if (typeof asset === "string" && asset.length > 0) {
-      return asset;
-    }
-  }
-
-  return (
-    Object.values(map.assets).find(
-      (asset): asset is string => typeof asset === "string" && asset.length > 0,
-    ) ?? null
-  );
-}
 
 function queueNameForId(
   queues: LcuQueue[] | undefined,
@@ -201,7 +173,7 @@ export function useMiniWindowModel(): MiniWindowModel {
     return {
       phase,
       queueName: queueNameForId(queues, queueId),
-      mapIconSrc: preferredMapAsset(knownMap),
+      mapIconSrc: preferredLcuMapAsset(knownMap),
       isSpectating: isSpectatingFromState(champSelectSession, gameflowSession),
       readyCheck,
       champSelect: champSelectModelFromSession(champSelectSession),

@@ -45,14 +45,14 @@ export const queueIcon = style({
   height: 18,
   borderRadius: 4,
   objectFit: "cover",
-  border: `1px solid color-mix(in oklch, ${theme.color.border} 80%, transparent)`,
+  outline: `1px solid color-mix(in oklch, ${theme.color.border} 80%, transparent)`,
 });
 
 export const queueIconFallback = style({
   width: 18,
   height: 18,
   borderRadius: 4,
-  border: `1px solid color-mix(in oklch, ${theme.color.border} 80%, transparent)`,
+  outline: `1px solid color-mix(in oklch, ${theme.color.border} 80%, transparent)`,
   background: `color-mix(in oklch, ${theme.color.foreground} 12%, transparent)`,
 });
 

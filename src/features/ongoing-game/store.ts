@@ -214,14 +214,8 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
 
       if (payload.phase === "Idle") {
         return {
-          ...state,
-          ...shared,
-          teamMembers,
-          lifecycleGameId: null,
-          summonerStatesByPuuid: {},
-          historyStatesByPuuid: {},
-          summonersByPuuid: {},
-          matchHistoriesByPuuid: {},
+          ...initialState,
+          phase: shared.phase,
         };
       }
 

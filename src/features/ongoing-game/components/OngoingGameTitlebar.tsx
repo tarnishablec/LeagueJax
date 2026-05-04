@@ -7,6 +7,8 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/types/match-mode";
+import { useLcuMaps } from "@/hooks/use-lcu-maps";
+import { preferredLcuMapAsset } from "@/utils/lcu-map-assets";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
@@ -43,7 +45,9 @@ function resolveSelectedValue(
 
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
+  const { data: maps } = useLcuMaps();
   const phase = useOngoingGameStore((state) => state.phase);
+  const isOngoingVisible = isVisibleOngoingPhase(phase);
 
   const modeTag = useOngoingGameStore((state) => state.modeTag);
   const matchHistoriesPending = useOngoingGameStore((state) =>
@@ -51,16 +55,10 @@ export function OngoingGameTitlebar() {
       (s) => s.status === "loading",
     ),
   );
-  const queueIconPath = useOngoingGameStore((state) => {
-    const iconPath = state.gameflowSession?.map.assets["icon-v2"];
-    if (typeof iconPath !== "string") {
-      return null;
-    }
-
-    const normalizedPath = iconPath.replace(/\\/g, "/").trim();
-    return normalizedPath.length > 0 ? normalizedPath : null;
-  });
-  const queueDetailedDescription = useOngoingGameStore((state) => {
+  const gameflowMap = useOngoingGameStore(
+    (state) => state.gameflowSession?.map ?? null,
+  );
+  const rawQueueDetailedDescription = useOngoingGameStore((state) => {
     const session = state.gameflowSession;
     if (!session) return null;
     // Some queues (e.g., Hextech ARAM, queue 2400) leave `detailedDescription`
@@ -80,6 +78,18 @@ export function OngoingGameTitlebar() {
   });
 
   const setModeTag = useOngoingGameStore((state) => state.setModeTag);
+
+  const queueIconPath = useMemo(() => {
+    if (!isOngoingVisible || !gameflowMap) {
+      return null;
+    }
+
+    const knownMap = maps?.find((map) => map.id === gameflowMap.id);
+    return preferredLcuMapAsset(knownMap ?? gameflowMap);
+  }, [gameflowMap, isOngoingVisible, maps]);
+  const queueDetailedDescription = isOngoingVisible
+    ? rawQueueDetailedDescription
+    : null;
 
   const currentModeLabel = t("ongoingGame.titlebar.filterCurrentMode", {
     defaultValue: "Current Mode",
@@ -126,26 +136,27 @@ export function OngoingGameTitlebar() {
     [currentModeLabel, queueGroupLabel, t],
   );
 
-  const selectedValue = resolveSelectedValue(modeTag, selectableValues);
+  const activeModeTag = isOngoingVisible ? modeTag : null;
+  const selectedValue = resolveSelectedValue(activeModeTag, selectableValues);
+
+  if (!isOngoingVisible) {
+    return null;
+  }
 
   return (
     <div className={s.root} data-tauri-drag-region>
       <div className={s.labels}>
-        {!isVisibleOngoingPhase(phase) ? (
-          <span className={s.idleText} />
-        ) : (
-          <span className={s.queueMeta}>
-            {queueIconPath ? (
-              <LcuImage
-                src={queueIconPath}
-                alt=""
-                className={s.queueIcon}
-                fallbackClassName={s.queueIconFallback}
-              />
-            ) : null}
-            <span className={s.queueDesc}>{queueDetailedDescription}</span>
-          </span>
-        )}
+        <span className={s.queueMeta}>
+          {queueIconPath ? (
+            <LcuImage
+              src={queueIconPath}
+              alt=""
+              className={s.queueIcon}
+              fallbackClassName={s.queueIconFallback}
+            />
+          ) : null}
+          <span className={s.queueDesc}>{queueDetailedDescription}</span>
+        </span>
       </div>
 
       <div className={s.controls}>
@@ -171,7 +182,6 @@ export function OngoingGameTitlebar() {
 
         <RefreshButton
           loading={matchHistoriesPending}
-          disabled={!isVisibleOngoingPhase(phase)}
           ariaLabel={t("ongoingGame.titlebar.refreshAria", {
             defaultValue: "Refresh ongoing game",
           })}
