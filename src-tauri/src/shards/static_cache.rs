@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use std::fs;
 use std::io::ErrorKind;
 use std::sync::Arc;
@@ -32,9 +32,9 @@ impl StaticCacheShard {
         init: F,
     ) -> Result<T, AppError>
     where
-        T: DeserializeOwned,
+        T: DeserializeOwned + Serialize,
         F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<Vec<u8>, AppError>>,
+        Fut: Future<Output = Result<T, AppError>>,
     {
         let cache_file = self.cache_file_path(namespace, file_name);
         if let Ok(path) = &cache_file {
@@ -43,11 +43,10 @@ impl StaticCacheShard {
             }
         }
 
-        let raw = init().await?;
-        let data = serde_json::from_slice::<T>(&raw)?;
+        let data = init().await?;
 
         if let Ok(path) = cache_file {
-            if let Err(error) = write_json_cache_file(&path, &raw) {
+            if let Err(error) = write_json_cache_file(&path, &data) {
                 tracing::warn!(
                     path = %path.display(),
                     error = %error,
@@ -119,7 +118,7 @@ fn read_json_cache_file<T: DeserializeOwned>(path: &Path) -> Option<T> {
     }
 }
 
-fn write_json_cache_file(path: &Path, raw: &[u8]) -> Result<(), AppError> {
+fn write_json_cache_file<T: Serialize>(path: &Path, data: &T) -> Result<(), AppError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -129,7 +128,7 @@ fn write_json_cache_file(path: &Path, raw: &[u8]) -> Result<(), AppError> {
             .and_then(|extension| extension.to_str())
             .unwrap_or("json")
     ));
-    fs::write(&tmp_path, raw)?;
+    fs::write(&tmp_path, serde_json::to_vec(data)?)?;
     if path.exists() {
         fs::remove_file(path)?;
     }

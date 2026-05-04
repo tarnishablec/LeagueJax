@@ -588,7 +588,7 @@ pub async fn get_cherry_augments(
     let cache_namespace = lcu_static_data_cache_namespace(&lcu).await?;
     jax.get_shard::<StaticCacheShard>()
         .get_json_file_or_init(&cache_namespace, LCU_CHERRY_AUGMENTS_CACHE_FILE, || {
-            api.get_cherry_augments_json_bytes()
+            api.get_cherry_augments_json()
         })
         .await
 }
