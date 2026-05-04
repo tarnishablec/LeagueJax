@@ -30,8 +30,6 @@ use uuid::Uuid;
 
 const CDRAGON_ARENA_CACHE_FILE: &str = "arena.json";
 const CDRAGON_CHERRY_AUGMENTS_CACHE_FILE: &str = "cherry-augments.json";
-const CDRAGON_KIWI_CACHE_FILE: &str = "kiwi.bin.json";
-const CDRAGON_LOL_STRINGTABLE_CACHE_FILE: &str = "lol.stringtable.json";
 
 #[derive(Debug, Clone)]
 enum ParsedSummonerSearchQuery {
@@ -659,74 +657,6 @@ pub async fn get_cdragon_arena_json(
         &jax,
         &context.namespace,
         CDRAGON_ARENA_CACHE_FILE,
-        urls,
-        force_refresh.unwrap_or(false),
-    )
-    .await
-}
-
-#[tauri::command]
-pub async fn get_cdragon_kiwi_json(
-    force_refresh: Option<bool>,
-    locale: String,
-    jax: State<'_, Arc<Jax>>,
-) -> Result<Value, AppError> {
-    get_cdragon_mode_specific_json(
-        &jax,
-        CDRAGON_KIWI_CACHE_FILE,
-        CDRAGON_KIWI_CACHE_FILE,
-        &locale,
-        force_refresh.unwrap_or(false),
-    )
-    .await
-}
-
-async fn get_cdragon_mode_specific_json(
-    jax: &Arc<Jax>,
-    file_name: &str,
-    cache_file: &str,
-    locale: &str,
-    force_refresh: bool,
-) -> Result<Value, AppError> {
-    let context = cdragon_static_data_context(jax, locale).await?;
-    let url = format!(
-        "{}/{}/game/maps/modespecificdata/{}",
-        CDRAGON_RAW_ROOT, context.version, file_name
-    );
-
-    get_cached_cdragon_json(
-        jax,
-        &context.namespace,
-        cache_file,
-        vec![url],
-        force_refresh,
-    )
-    .await
-}
-
-#[tauri::command]
-pub async fn get_cdragon_lol_stringtable_json(
-    force_refresh: Option<bool>,
-    locale: String,
-    jax: State<'_, Arc<Jax>>,
-) -> Result<Value, AppError> {
-    let context = cdragon_static_data_context(&jax, &locale).await?;
-    let mut urls = vec![format!(
-        "{}/{}/game/{}/data/menu/en_us/lol.stringtable.json",
-        CDRAGON_RAW_ROOT, context.version, context.locale
-    )];
-
-    if context.locale != "en_us" {
-        urls.push(format!(
-            "{}/{}/game/en_us/data/menu/en_us/lol.stringtable.json",
-            CDRAGON_RAW_ROOT, context.version
-        ));
-    }
-
-    get_cached_cdragon_json(
-        &jax,
-        &context.namespace,
-        CDRAGON_LOL_STRINGTABLE_CACHE_FILE,
         urls,
         force_refresh.unwrap_or(false),
     )

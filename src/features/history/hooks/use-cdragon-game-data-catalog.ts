@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
+import { getJaxRuntime } from "@/features/registry";
+import { StaticCacheShard } from "@/features/static-cache/manifest";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
 import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
@@ -122,13 +124,20 @@ export type CdragonGameDataCatalog = {
 
 type CdragonAugmentGameMode = "CHERRY" | "KIWI";
 
+interface CdragonGameDataCatalogOptions {
+  gameVersion?: string | null;
+  augmentIds?: readonly number[];
+}
+
 const CDRAGON_GAME_DATA_ROOT =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global";
 const CDRAGON_GAME_DATA_ASSET_BASE = `${CDRAGON_GAME_DATA_ROOT}/default`;
+const CDRAGON_RAW_ROOT = "https://raw.communitydragon.org";
 const CDRAGON_GAME_ASSET_BASE = "https://raw.communitydragon.org/latest/game";
 const CDRAGON_ARENA_AUGMENT_COMMAND = "get_cdragon_arena_json";
 const CDRAGON_CHERRY_AUGMENTS_COMMAND = "get_cdragon_cherry_augments_json";
-const CDRAGON_KIWI_AUGMENT_COMMAND = "get_cdragon_kiwi_json";
+const CDRAGON_KIWI_CACHE_FILE = "kiwi.bin.json";
+const CDRAGON_LOL_STRINGTABLE_CACHE_FILE = "lol.stringtable.json";
 
 const EMPTY_GAME_DATA_CATALOG: CdragonGameDataCatalog = {
   perksById: {},
@@ -146,6 +155,35 @@ function cdragonGameDataBase(locale: string): string {
 
 function cdragonGameDataLocalePath(locale: string): string {
   return locale === "default" || locale === "en_us" ? "en_gb" : locale;
+}
+
+function normalizeCdragonVersion(
+  gameVersion: string | null | undefined,
+): string {
+  const [major, minor] = (gameVersion ?? "")
+    .trim()
+    .split(".")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+
+  if (major && minor) {
+    return `${major}.${minor}`;
+  }
+
+  return "latest";
+}
+
+function cdragonCacheLocale(locale: string): string {
+  const [language, region, ...rest] = locale.split("_");
+  if (!language || !region || rest.length > 0) {
+    return locale;
+  }
+
+  return `${language}_${region.toUpperCase()}`;
+}
+
+function cdragonCacheNamespace(version: string, locale: string): string {
+  return `${version}__${cdragonCacheLocale(locale)}`;
 }
 
 function normalizeAugmentGameMode(
@@ -207,6 +245,50 @@ async function fetchCachedCdragonJson<T>(
   }
 }
 
+async function fetchCachedFrontendStaticJson<T>({
+  enabled,
+  namespace,
+  fileName,
+  urls,
+}: {
+  enabled: boolean;
+  namespace: string;
+  fileName: string;
+  urls: readonly string[];
+}): Promise<T | null> {
+  if (!enabled) {
+    return null;
+  }
+
+  try {
+    return await getJaxRuntime().getShard(StaticCacheShard).getJson<T>({
+      namespace,
+      fileName,
+      urls,
+    });
+  } catch {
+    return null;
+  }
+}
+
+function cdragonModeSpecificDataUrl(version: string, fileName: string): string {
+  return `${CDRAGON_RAW_ROOT}/${version}/game/maps/modespecificdata/${fileName}`;
+}
+
+function cdragonLolStringTableUrls(version: string, locale: string): string[] {
+  const urls = [
+    `${CDRAGON_RAW_ROOT}/${version}/game/${locale}/data/menu/en_us/lol.stringtable.json`,
+  ];
+
+  if (locale !== "en_us") {
+    urls.push(
+      `${CDRAGON_RAW_ROOT}/${version}/game/en_us/data/menu/en_us/lol.stringtable.json`,
+    );
+  }
+
+  return urls;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -246,11 +328,21 @@ function cdragonTextToPlainText(value: string | null | undefined): string {
     .trim();
 }
 
-function stringTableEntries(
+type CdragonStringTableIndex = {
+  entries: Record<string, string>;
+  lowerEntries: Map<string, string> | null;
+};
+
+type CdragonModeSpecificDataIndex = {
+  byKey: Map<string, unknown>;
+  augmentsById: Map<number, CdragonModeSpecificAugment>;
+};
+
+function stringTableIndex(
   stringTable: CdragonLolStringTable | Record<string, string> | null,
-): Record<string, string> {
+): CdragonStringTableIndex {
   if (!stringTable) {
-    return {};
+    return { entries: {}, lowerEntries: null };
   }
 
   const rawEntries = isRecord(stringTable.entries)
@@ -260,15 +352,15 @@ function stringTableEntries(
 
   for (const [key, value] of Object.entries(rawEntries)) {
     if (typeof value === "string") {
-      entries[key.toLowerCase()] = value;
+      entries[key] = value;
     }
   }
 
-  return entries;
+  return { entries, lowerEntries: null };
 }
 
 function stringTableValue(
-  entries: Record<string, string>,
+  index: CdragonStringTableIndex,
   key: string | null | undefined,
 ): string | null {
   const normalizedKey = key?.trim().toLowerCase();
@@ -276,7 +368,21 @@ function stringTableValue(
     return null;
   }
 
-  return entries[normalizedKey] ?? null;
+  const direct =
+    index.entries[key?.trim() ?? ""] ??
+    index.entries[normalizedKey] ??
+    index.entries[normalizedKey.toUpperCase()];
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  index.lowerEntries ??= new Map(
+    Object.entries(index.entries).map(([entryKey, value]) => [
+      entryKey.toLowerCase(),
+      value,
+    ]),
+  );
+  return index.lowerEntries.get(normalizedKey) ?? null;
 }
 
 function augmentRarityToCdragonRarity(
@@ -320,8 +426,31 @@ function finiteDataValue(
   return finiteValues.find((value) => value !== 0) ?? finiteValues[0] ?? null;
 }
 
-function modeSpecificObjectByKey(
+function modeSpecificDataIndex(
   modeSpecificData: CdragonModeSpecificBinJson,
+): CdragonModeSpecificDataIndex {
+  const byKey = new Map<string, unknown>();
+  const augmentsById = new Map<number, CdragonModeSpecificAugment>();
+
+  for (const [key, value] of Object.entries(modeSpecificData)) {
+    byKey.set(key, value);
+    byKey.set(key.toLowerCase(), value);
+
+    if (!looksLikeModeSpecificAugment(value)) {
+      continue;
+    }
+
+    const id = asNumber(value.AugmentPlatformId);
+    if (id !== null) {
+      augmentsById.set(id, value);
+    }
+  }
+
+  return { byKey, augmentsById };
+}
+
+function modeSpecificObjectByKey(
+  modeSpecificData: CdragonModeSpecificDataIndex,
   key: string | null | undefined,
 ): unknown {
   const normalizedKey = key?.trim();
@@ -330,11 +459,8 @@ function modeSpecificObjectByKey(
   }
 
   return (
-    modeSpecificData[normalizedKey] ??
-    modeSpecificData[normalizedKey.toLowerCase()] ??
-    Object.entries(modeSpecificData).find(
-      ([entryKey]) => entryKey.toLowerCase() === normalizedKey.toLowerCase(),
-    )?.[1] ??
+    modeSpecificData.byKey.get(normalizedKey) ??
+    modeSpecificData.byKey.get(normalizedKey.toLowerCase()) ??
     null
   );
 }
@@ -352,7 +478,7 @@ function modeSpecificDataValueNumbers(
 }
 
 function modeSpecificDataValues(
-  modeSpecificData: CdragonModeSpecificBinJson,
+  modeSpecificData: CdragonModeSpecificDataIndex,
   rootSpell: string | null | undefined,
 ): Record<string, number> {
   const spellObject = modeSpecificObjectByKey(modeSpecificData, rootSpell);
@@ -614,7 +740,7 @@ function resolveArenaAugmentText(
 }
 
 function resolveAugmentText(
-  entries: Record<string, string>,
+  entries: CdragonStringTableIndex,
   key: string | null | undefined,
   dataValues: Record<string, number>,
 ): string {
@@ -780,28 +906,28 @@ function mapArenaAugmentsById(
 function mapModeSpecificAugmentsById(
   modeSpecificData: CdragonModeSpecificBinJson | null,
   stringTable: CdragonLolStringTable | Record<string, string> | null,
+  requestedAugmentIds: ReadonlySet<number> | null,
 ): Record<number, CdragonGameDataCatalogAugment> {
   if (!modeSpecificData) {
     return {};
   }
 
-  const entries = stringTableEntries(stringTable);
+  const dataIndex = modeSpecificDataIndex(modeSpecificData);
+  const entries = stringTableIndex(stringTable);
   const mapped: Record<number, CdragonGameDataCatalogAugment> = {};
+  const augmentEntries = requestedAugmentIds
+    ? [...requestedAugmentIds]
+        .map((id) => dataIndex.augmentsById.get(id))
+        .filter((entry): entry is CdragonModeSpecificAugment => Boolean(entry))
+    : [...dataIndex.augmentsById.values()];
 
-  for (const entry of Object.values(modeSpecificData)) {
-    if (!looksLikeModeSpecificAugment(entry)) {
-      continue;
-    }
-
+  for (const entry of augmentEntries) {
     const id = asNumber(entry.AugmentPlatformId);
     if (id === null) {
       continue;
     }
 
-    const dataValues = modeSpecificDataValues(
-      modeSpecificData,
-      entry.RootSpell,
-    );
+    const dataValues = modeSpecificDataValues(dataIndex, entry.RootSpell);
     const name = resolveAugmentText(entries, entry.NameTra, dataValues);
     const tooltip = resolveAugmentText(
       entries,
@@ -876,25 +1002,34 @@ async function fetchBaseAugmentsById(
 async function fetchModeSpecificAugmentsById(
   hasFocusedClient: boolean,
   locale: string,
+  version: string,
+  augmentIds: readonly number[],
 ): Promise<Record<number, CdragonGameDataCatalogAugment>> {
+  const namespace = cdragonCacheNamespace(version, locale);
   const [modeSpecificData, lolStringTable] = await Promise.all([
-    fetchCachedCdragonJson<CdragonModeSpecificBinJson>(
-      CDRAGON_KIWI_AUGMENT_COMMAND,
-      hasFocusedClient,
-      locale,
-    ),
-    fetchCachedCdragonJson<CdragonLolStringTable>(
-      "get_cdragon_lol_stringtable_json",
-      hasFocusedClient,
-      locale,
-    ),
+    fetchCachedFrontendStaticJson<CdragonModeSpecificBinJson>({
+      enabled: hasFocusedClient,
+      namespace,
+      fileName: CDRAGON_KIWI_CACHE_FILE,
+      urls: [cdragonModeSpecificDataUrl(version, CDRAGON_KIWI_CACHE_FILE)],
+    }),
+    fetchCachedFrontendStaticJson<CdragonLolStringTable>({
+      enabled: hasFocusedClient,
+      namespace,
+      fileName: CDRAGON_LOL_STRINGTABLE_CACHE_FILE,
+      urls: cdragonLolStringTableUrls(version, locale),
+    }),
   ]);
 
   if (!modeSpecificData || !lolStringTable) {
     return {};
   }
 
-  return mapModeSpecificAugmentsById(modeSpecificData, lolStringTable);
+  return mapModeSpecificAugmentsById(
+    modeSpecificData,
+    lolStringTable,
+    augmentIds.length > 0 ? new Set(augmentIds) : null,
+  );
 }
 
 async function fetchArenaAugmentsById(
@@ -973,11 +1108,23 @@ export function normalizeCdragonGameAssetPath(
 export function useCdragonGameDataCatalog(
   gameMode?: string | null,
   includeAugmentDetails = false,
+  options: CdragonGameDataCatalogOptions = {},
 ): CdragonGameDataCatalog {
   const { i18n } = useTranslation();
   const focused = useLcuStore(selectIsFocused);
   const language = i18n.resolvedLanguage ?? i18n.language;
   const locale = useMemo(() => normalizeCdragonLocale(language), [language]);
+  const version = useMemo(
+    () => normalizeCdragonVersion(options.gameVersion),
+    [options.gameVersion],
+  );
+  const augmentIds = useMemo(
+    () =>
+      [...new Set(options.augmentIds ?? [])]
+        .filter((id) => Number.isFinite(id) && id > 0)
+        .sort((left, right) => left - right),
+    [options.augmentIds],
+  );
   const augmentGameMode = useMemo(
     () => normalizeAugmentGameMode(gameMode),
     [gameMode],
@@ -1002,10 +1149,19 @@ export function useCdragonGameDataCatalog(
             "history:cdragon-mode-augments",
             augmentGameMode,
             locale,
+            version,
+            augmentIds.join(","),
             focusedPid,
           ] as const)
         : null,
-    [focusedPid, augmentGameMode, locale, includeAugmentDetails],
+    [
+      focusedPid,
+      augmentGameMode,
+      locale,
+      version,
+      augmentIds,
+      includeAugmentDetails,
+    ],
   );
 
   const { data: perksById = EMPTY_PERKS_BY_ID } = useSWR(
@@ -1038,10 +1194,18 @@ export function useCdragonGameDataCatalog(
   );
   const { data: modeSpecificAugmentsById = EMPTY_AUGMENTS_BY_ID } = useSWR(
     modeAugmentsKey,
-    ([, selectedGameMode, cdragonLocale]) =>
+    ([, selectedGameMode, cdragonLocale, cdragonVersion, augmentIdList]) =>
       selectedGameMode === "CHERRY"
         ? fetchArenaAugmentsById(true, cdragonLocale)
-        : fetchModeSpecificAugmentsById(true, cdragonLocale),
+        : fetchModeSpecificAugmentsById(
+            true,
+            cdragonLocale,
+            cdragonVersion,
+            augmentIdList
+              .split(",")
+              .map((id) => Number(id))
+              .filter((id) => Number.isFinite(id) && id > 0),
+          ),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
       fallbackData: EMPTY_AUGMENTS_BY_ID,

@@ -228,6 +228,7 @@ fn present_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             present_main_window(app);
         }))
@@ -258,8 +259,6 @@ pub fn run() {
             get_cherry_augments,
             get_cdragon_cherry_augments_json,
             get_cdragon_arena_json,
-            get_cdragon_kiwi_json,
-            get_cdragon_lol_stringtable_json,
             lcu_get_maps,
             lcu_get_queues,
             lcu_get_game_version,

@@ -139,6 +139,21 @@ function matchUsesAugments(summary: RawMatchSummaryGame): boolean {
   );
 }
 
+function matchAugmentIds(
+  participants: readonly RawMatchSummaryParticipant[],
+): number[] {
+  return [
+    ...new Set(
+      participants
+        .flatMap((participant) => [...getParticipantAugments(participant)])
+        .filter(
+          (augmentId): augmentId is number =>
+            typeof augmentId === "number" && augmentId > 0,
+        ),
+    ),
+  ].sort((left, right) => left - right);
+}
+
 function primaryStyle(
   participant: RawMatchSummaryParticipant,
 ): RawMatchSummaryStyle | null {
@@ -836,11 +851,19 @@ export function MatchRunesTab({
       settings.subscribe(HISTORY_SHOW_AUGMENT_DETAILS_SETTING, callback),
     () => settings.get<boolean>(HISTORY_SHOW_AUGMENT_DETAILS_SETTING) ?? false,
   );
+  const participants = summary.json.participants;
+  const augmentIds = useMemo(
+    () => matchAugmentIds(participants),
+    [participants],
+  );
   const catalog = useCdragonGameDataCatalog(
     summary.json.gameMode,
     showAugmentDetails,
+    {
+      gameVersion: summary.json.gameVersion,
+      augmentIds,
+    },
   );
-  const participants = summary.json.participants;
   const participantEntries = useMemo(
     () =>
       participants.map((participant, index) => ({
