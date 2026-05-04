@@ -14,10 +14,13 @@ export const page = style({
 
 export const outlet = style({
   minHeight: 0,
-  overflowX: "hidden",
-  overflowY: "auto",
-  alignContent: "start",
   height: "100%",
+});
+
+export const outletContent = style({
+  display: "grid",
+  alignContent: "start",
+  minHeight: "100%",
 });
 
 export const title = style({

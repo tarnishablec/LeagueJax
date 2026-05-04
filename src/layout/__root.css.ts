@@ -64,8 +64,7 @@ export const sidebar = style({
 });
 
 export const navList = style({
-  overflowY: "auto",
-  overflowX: "hidden",
+  overflow: "hidden",
   paddingBlock: 12,
   paddingInline: navPad,
   display: "grid",
@@ -214,6 +213,6 @@ export const navTooltipContent = style({
 });
 
 export const main = style({
-  overflow: "auto",
+  overflow: "hidden",
   // padding: 16,
 });

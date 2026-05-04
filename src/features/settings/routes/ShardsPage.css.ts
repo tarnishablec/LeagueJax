@@ -61,5 +61,13 @@ export const carouselItemGroup = style({
 
 export const carouselItem = style({
   height: "100%",
-  overflow: "auto",
+  overflow: "hidden",
+});
+
+export const carouselItemScroller = style({
+  height: "100%",
+});
+
+export const carouselItemContent = style({
+  minHeight: "100%",
 });

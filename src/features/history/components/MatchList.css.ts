@@ -83,9 +83,10 @@ export const list = style({
   display: "grid",
   gap: 8,
   alignContent: "start",
-  overflowY: "auto",
+});
+
+export const listScroller = style({
   minHeight: 0,
-  paddingRight: 4,
 });
 
 export const emptyState = style({

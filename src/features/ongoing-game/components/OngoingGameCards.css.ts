@@ -1,7 +1,6 @@
 import {
   createVar,
   fallbackVar,
-  globalStyle,
   style,
 } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
@@ -19,30 +18,10 @@ export const playerTagColorVar = createVar();
 export const teamSection = style({
   height: "calc(100% + 6px)",
   marginBottom: -6,
-  overflowX: "scroll",
-  overflowY: "hidden",
 });
 
-globalStyle(`${teamSection}::-webkit-scrollbar`, {
-  height: 6,
-  background: "transparent",
-});
-
-globalStyle(`${teamSection}::-webkit-scrollbar-thumb`, {
-  background: "transparent",
-  borderRadius: 3,
-});
-
-globalStyle(`${teamSection}:hover::-webkit-scrollbar-thumb`, {
-  background: "oklch(0% 0 0 / 0.25)",
-});
-
-globalStyle(`${teamSection}:hover::-webkit-scrollbar-thumb:hover`, {
-  background: "oklch(0% 0 0 / 0.4)",
-});
-
-globalStyle(`${teamSection}::-webkit-scrollbar-track`, {
-  background: "transparent",
+export const teamSectionContent = style({
+  height: "100%",
 });
 
 export const teamRow = style({
@@ -359,12 +338,14 @@ export const botLabel = style({
 export const historyList = style({
   display: "grid",
   gap: 4,
-  overflowY: "auto",
-  height: "100%",
   justifyItems: "stretch",
   alignItems: "center",
   alignContent: "start",
-  scrollbarWidth: "none",
+});
+
+export const historyListScroller = style({
+  minHeight: 0,
+  height: "100%",
 });
 
 export const historyRow = style({
@@ -418,11 +399,20 @@ export const historyDialogPositioner = style({
 export const historyDialogContent = style({
   width: "min(820px, calc(100vw - 40px))",
   maxHeight: "calc(100vh - 40px)",
-  overflow: "auto",
+  overflow: "hidden",
   borderRadius: 12,
   border: `1px solid ${theme.color.popoverBorder}`,
   background: theme.color.popupBackground,
   color: theme.color.foreground,
+  padding: 0,
+  display: "grid",
+});
+
+export const historyDialogScroller = style({
+  maxHeight: "calc(100vh - 40px)",
+});
+
+export const historyDialogScrollerContent = style({
   padding: 14,
 });
 

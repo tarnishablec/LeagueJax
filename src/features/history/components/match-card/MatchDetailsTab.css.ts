@@ -8,11 +8,18 @@ export const physicalSegmentWidthVar = createVar();
 export const magicSegmentWidthVar = createVar();
 export const trueSegmentWidthVar = createVar();
 
-const scoreColumns = "repeat(4, auto)";
-const tableColumns = `34px minmax(auto, 200px) repeat(4, auto) 144px 144px ${scoreColumns}`;
-const tableColumnsWithoutPosition = `minmax(auto, 200px) repeat(4, auto) 144px 144px ${scoreColumns}`;
-const tableColumnsWithoutQuest = `34px minmax(auto, 200px) repeat(3, auto) 144px 144px ${scoreColumns}`;
-const tableColumnsWithoutPositionAndQuest = `minmax(auto, 200px) repeat(3, auto) 144px 144px ${scoreColumns}`;
+const positionColumn = "34px";
+const summonerColumn = "minmax(190px, 220px)";
+const spellsColumn = "minmax(52px, max-content)";
+const runesColumn = "minmax(152px, max-content)";
+const itemsColumn = "minmax(178px, max-content)";
+const questColumn = "minmax(32px, max-content)";
+const damageColumn = "144px";
+const scoreColumns = "repeat(4, minmax(58px, max-content))";
+const tableColumns = `${positionColumn} ${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
+const tableColumnsWithoutPosition = `${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
+const tableColumnsWithoutQuest = `${positionColumn} ${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
+const tableColumnsWithoutPositionAndQuest = `${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
 
 export const root = style({
   display: "grid",
@@ -105,19 +112,23 @@ export const scoreboardIconFallback = style({
   background: theme.color.accent,
 });
 
+export const objectiveScroller = style({
+  minWidth: 0,
+  maxWidth: "100%",
+  justifySelf: "end",
+  "@media": {
+    "screen and (max-width: 760px)": {
+      justifySelf: "start",
+    },
+  },
+});
+
 export const objectiveList = style({
   display: "grid",
   gridAutoFlow: "column",
   gridAutoColumns: "max-content",
-  justifyContent: "end",
   alignItems: "center",
   gap: 6,
-  overflowX: "auto",
-  "@media": {
-    "screen and (max-width: 760px)": {
-      justifyContent: "start",
-    },
-  },
 });
 
 export const objectiveStat = style({
@@ -152,7 +163,6 @@ export const objectiveIconFallback = style({
 
 export const tableScroller = style({
   minWidth: 0,
-  overflowX: "auto",
 });
 
 export const table = recipe({
@@ -162,10 +172,10 @@ export const table = recipe({
   variants: {
     positionColumn: {
       shown: {
-        minWidth: 1124,
+        minWidth: 1302,
       },
       hidden: {
-        minWidth: 1090,
+        minWidth: 1256,
       },
     },
     questColumn: {
@@ -180,7 +190,7 @@ export const table = recipe({
         questColumn: "hidden",
       },
       style: {
-        minWidth: 1090,
+        minWidth: 1258,
       },
     },
     {
@@ -189,7 +199,7 @@ export const table = recipe({
         questColumn: "hidden",
       },
       style: {
-        minWidth: 1056,
+        minWidth: 1212,
       },
     },
   ],
