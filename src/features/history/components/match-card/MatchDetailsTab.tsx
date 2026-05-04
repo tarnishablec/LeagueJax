@@ -23,6 +23,11 @@ import {
   type RoleQuestSlot,
   useRoleQuestSlot,
 } from "../../hooks/use-role-quest-slot.ts";
+import {
+  type MatchParticipantGroup,
+  resolveMatchParticipantGroups,
+  type TeamSide,
+} from "../../utils/match-participant-groups";
 import * as matchCardStyles from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { MatchCardAugments } from "./MatchCardAugments";
@@ -32,11 +37,6 @@ import { MatchCardRunes } from "./MatchCardRunes";
 import { MatchCardSpells } from "./MatchCardSpells";
 import * as s from "./MatchDetailsTab.css";
 import { formatDamage } from "./match-card-display";
-import {
-  type MatchParticipantGroup,
-  resolveMatchParticipantGroups,
-  type TeamSide,
-} from "./match-card-team-groups";
 
 type TeamTotals = {
   kills: number;
@@ -769,6 +769,18 @@ function TeamBlock({
             number: group.labelNumber,
             defaultValue: `Team ${group.labelNumber}`,
           });
+  const placementLabel =
+    group.placement !== null
+      ? t("history.matchDetails.placement", {
+          placement: group.placement,
+          defaultValue: `#${group.placement}`,
+        })
+      : null;
+  const teamName = group.nameKey
+    ? t(group.nameKey, {
+        defaultValue: teamLabel,
+      })
+    : null;
   // const headerLabels = {
   //   position: t("history.matchDetails.columns.position", {
   //     defaultValue: "Position",
@@ -809,10 +821,26 @@ function TeamBlock({
   // };
 
   return (
-    <section className={s.teamBlock({ team: group.tone })}>
+    <section
+      className={s.teamBlock({ team: group.tone })}
+      style={assignInlineVars({
+        [s.teamAccentColorVar]: group.accentColor,
+      })}
+    >
       <header className={s.teamHeader}>
         <div className={s.teamTitleGroup}>
-          <span className={s.teamTitle({ team: group.tone })}>{teamLabel}</span>
+          <span className={s.teamTitle({ team: group.tone })}>
+            {placementLabel ? (
+              <>
+                <span className={s.teamPlacement}>{placementLabel}</span>
+                {teamName ? (
+                  <span className={s.teamName}>{teamName}</span>
+                ) : null}
+              </>
+            ) : (
+              teamLabel
+            )}
+          </span>
           <span className={s.teamHeaderMetric}>
             <ScoreboardIcon
               type="record"

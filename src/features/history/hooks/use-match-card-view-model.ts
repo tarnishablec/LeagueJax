@@ -5,6 +5,10 @@ import type {
 import { formatStartTime } from "@/features/history/components/match-card";
 import { useLcuMapQuery } from "@/hooks/use-lcu-maps.ts";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
+import {
+  matchUsesSubteams,
+  resolveMatchParticipantGroups,
+} from "../utils/match-participant-groups.ts";
 import { useParticipantBrief } from "./use-participant-brief.ts";
 import { useRoleQuestSlot } from "./use-role-quest-slot.ts";
 
@@ -35,11 +39,12 @@ function getPerkIds(me: RawMatchSummaryParticipant): {
 
 function computeDamageShare(
   me: RawMatchSummaryParticipant,
-  participants: RawMatchSummaryParticipant[],
+  teammates: RawMatchSummaryParticipant[],
 ): number {
-  const teamTotal = participants
-    .filter((p) => p.teamId === me.teamId)
-    .reduce((sum, p) => sum + p.totalDamageDealtToChampions, 0);
+  const teamTotal = teammates.reduce(
+    (sum, p) => sum + p.totalDamageDealtToChampions,
+    0,
+  );
   if (teamTotal === 0) return 0;
   return me.totalDamageDealtToChampions / teamTotal;
 }
@@ -184,10 +189,10 @@ function collectStatTags(
 function computeMatchPills(
   me: RawMatchSummaryParticipant,
   participants: RawMatchSummaryParticipant[],
+  teammates: RawMatchSummaryParticipant[],
   isVictory: boolean,
   damageRank: number,
 ): MatchPill[] {
-  const teammates = participants.filter((p) => p.teamId === me.teamId);
   const pills: MatchPill[] = [];
 
   const teamTag = getTeamTag(me, teammates, isVictory);
@@ -273,9 +278,14 @@ export function useMatchCardViewModel({
   const hasAugments =
     gameMode === "CHERRY" || gameMode === "KIWI" || gameMode === "STRAWBERRY";
   const supportsPosition = mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
+  const participantGroups = resolveMatchParticipantGroups(match);
+  const meGroup =
+    participantGroups.find((group) => group.participants.includes(me)) ?? null;
+  const teammates = meGroup?.participants ?? participants;
+  const isSubteamMatch = matchUsesSubteams(match);
 
   const { primaryRuneId, subStyleId } = getPerkIds(me);
-  const damageShare = computeDamageShare(me, participants);
+  const damageShare = computeDamageShare(me, teammates);
   const fallbackPosition = supportsPosition
     ? (normalizeHistoryPosition(me.teamPosition) ??
       normalizeHistoryPosition(me.individualPosition) ??
@@ -293,6 +303,7 @@ export function useMatchCardViewModel({
   const pills = computeMatchPills(
     me,
     participants,
+    teammates,
     gameResult === "victory",
     damageRank,
   );
@@ -305,12 +316,16 @@ export function useMatchCardViewModel({
     gameId,
     gameDuration,
     participants,
+    participantGroups,
+    meGroup,
     queueName: queueName ?? "",
     mapName: map?.name ?? "",
     startedAt,
     items,
     augments,
     gameResult,
+    isSubteamMatch,
+    placement: meGroup?.placement ?? null,
     hasAugments,
     primaryRuneId,
     subStyleId,

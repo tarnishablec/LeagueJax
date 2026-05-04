@@ -5,6 +5,7 @@ import { formatDuration } from "./match-card-display";
 export function MatchCardHeader({
   gameResult,
   outcomeLabel,
+  placementLabel,
   queueName,
   mapName,
   gameDuration,
@@ -14,6 +15,7 @@ export function MatchCardHeader({
 }: {
   gameResult: MatchOutcome;
   outcomeLabel: string;
+  placementLabel?: string | null;
   queueName: string;
   mapName: string;
   gameDuration: number;
@@ -23,9 +25,13 @@ export function MatchCardHeader({
 }) {
   return (
     <div className={s.headerRow}>
-      <span className={s.resultPill({ outcome: gameResult })}>
-        {outcomeLabel}
-      </span>
+      {placementLabel ? (
+        <span className={s.placementPill}>{placementLabel}</span>
+      ) : (
+        <span className={s.resultPill({ outcome: gameResult })}>
+          {outcomeLabel}
+        </span>
+      )}
       <span className={s.metaPill}>{queueName}</span>
       <span className={s.metaPill}>{mapName}</span>
       <span className={s.metaPill}>

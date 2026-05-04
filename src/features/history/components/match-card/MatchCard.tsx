@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
@@ -57,6 +58,22 @@ export function MatchCard({
   const outcomeLabel = t(OUTCOME_LABEL_KEYS[vm.gameResult], {
     defaultValue: vm.gameResult,
   });
+  const placementLabel =
+    vm.isSubteamMatch && vm.placement !== null
+      ? t("history.matchDetails.placement", {
+          placement: vm.placement,
+          defaultValue: `#${vm.placement}`,
+        })
+      : null;
+  const layout = vm.isSubteamMatch ? "subteam" : "side";
+
+  const toggleExpanded = () => setExpanded((value) => !value);
+  const handleMainKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    toggleExpanded();
+  };
 
   useEffect(() => {
     if (
@@ -80,22 +97,27 @@ export function MatchCard({
   return (
     <div className={s.wrapper}>
       <div className={s.card({ outcome: vm.gameResult })}>
-        <button
-          type="button"
-          className={s.cardMainButton}
+        {/* biome-ignore lint/a11y/useSemanticElements: this container includes player name buttons, so a native button would be invalid HTML. */}
+        <div
+          role="button"
+          tabIndex={0}
+          className={s.cardMainButton({ layout })}
           aria-expanded={expanded}
-          onClick={() => setExpanded((value) => !value)}
+          onClick={toggleExpanded}
+          onKeyDown={handleMainKeyDown}
         >
           <ChampionAvatar
             championId={vm.me.championId}
+            wrapperClassName={s.championAvatarSlot({ layout })}
             imageClassName={s.championIcon}
             fallbackClassName={s.championIconFallback}
           />
 
-          <div className={s.info}>
+          <div className={s.info({ layout })}>
             <MatchCardHeader
               gameResult={vm.gameResult}
               outcomeLabel={outcomeLabel}
+              placementLabel={placementLabel}
               queueName={vm.queueName}
               mapName={vm.mapName}
               gameDuration={vm.gameDuration}
@@ -128,13 +150,17 @@ export function MatchCard({
               questSlot={vm.roleQuestSlot}
             />
           </div>
-          <MatchCardPills pills={vm.pills} className={s.pillsSlot} />
-        </button>
 
-        <MatchCardPlayers
-          participants={vm.participants}
-          sgpServerId={sgpServerId}
-        />
+          <MatchCardPills
+            pills={vm.pills}
+            className={s.pillsSlot({ layout })}
+          />
+
+          <MatchCardPlayers
+            groups={vm.participantGroups}
+            sgpServerId={sgpServerId}
+          />
+        </div>
       </div>
 
       {expanded && (

@@ -1,8 +1,10 @@
-import { style } from "@vanilla-extract/css";
+import { createVar, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { gameColorVars } from "@/styles/game-colors.css.ts";
 import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
+
+export const playerTeamAccentVar = createVar();
 
 const translucentSlotAccent = `color-mix(in srgb, ${theme.color.accent} 42%, transparent)`;
 const cardWinBackground = gameColorVars.outcome.winSurface;
@@ -20,6 +22,8 @@ const cardWinHoverBackgroundMica = `color-mix(in srgb, ${gameColorVars.outcome.w
 const cardLoseHoverBackgroundMica = `color-mix(in srgb, ${gameColorVars.outcome.loseSurfaceHover} 60%, transparent)`;
 const cardNeutralEndedBackground = cardNeutralHoverBackground;
 const cardNeutralEndedHoverBackground = `color-mix(in srgb, ${theme.color.accent} 68%, ${theme.color.foreground})`;
+const desktopCardColumns = "max-content minmax(0, 2fr) minmax(0, 1fr) 220px";
+const cardStackMediaQuery = "screen and (max-width: 980px)";
 
 export const wrapper = style({
   display: "grid",
@@ -29,10 +33,7 @@ export const wrapper = style({
 export const card = recipe({
   base: {
     width: "100%",
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) 220px",
-    alignItems: "start",
-    gap: 12,
+    display: "block",
     padding: 12,
     borderRadius: 8,
     border: `1px solid ${theme.color.border}`,
@@ -41,11 +42,6 @@ export const card = recipe({
     selectors: {
       "&:hover": {
         background: theme.color.surface,
-      },
-    },
-    "@media": {
-      "screen and (max-width: 980px)": {
-        gridTemplateColumns: "1fr",
       },
     },
   },
@@ -111,45 +107,104 @@ export const card = recipe({
   },
 });
 
-export const cardMainButton = style({
-  width: "100%",
-  minWidth: 0,
-  border: "none",
-  padding: 0,
-  background: "transparent",
-  textAlign: "left",
-  display: "grid",
-  gridTemplateColumns: "max-content 2fr 1fr",
-  alignItems: "start",
-  gap: 12,
-  cursor: "pointer",
-  height: "100%",
-  selectors: {
-    "&:focus-visible": {
-      outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
-      borderRadius: 6,
+export const cardMainButton = recipe({
+  base: {
+    width: "100%",
+    minWidth: 0,
+    border: "none",
+    padding: 0,
+    background: "transparent",
+    color: "inherit",
+    font: "inherit",
+    textAlign: "left",
+    display: "grid",
+    alignItems: "start",
+    gap: 12,
+    cursor: "pointer",
+    height: "100%",
+    selectors: {
+      "&:focus-visible": {
+        outline: `2px solid ${theme.color.primary}`,
+        outlineOffset: 2,
+        borderRadius: 6,
+      },
     },
   },
-  "@media": {
-    "screen and (max-width: 980px)": {
-      gridTemplateColumns: "max-content 2fr",
-      gridTemplateRows: "max-content max-content",
+  variants: {
+    layout: {
+      side: {
+        gridTemplateColumns: desktopCardColumns,
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridTemplateColumns: "max-content minmax(0, 1fr)",
+            gridTemplateRows: "max-content max-content max-content",
+          },
+        },
+      },
+      subteam: {
+        gridTemplateColumns: desktopCardColumns,
+        gridTemplateRows: "max-content max-content",
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridTemplateColumns: "max-content minmax(0, 1fr)",
+            gridTemplateRows: "max-content max-content max-content",
+          },
+        },
+      },
     },
   },
 });
 
-export const pillsSlot = style({
-  paddingLeft: 10,
-  borderLeft: `1px solid ${theme.color.border}`,
-  "@media": {
-    "screen and (max-width: 980px)": {
-      gridColumn: "2 / -1",
-      gridRow: 2,
-      paddingLeft: 0,
-      paddingTop: 10,
-      borderLeft: "none",
-      borderTop: `1px solid ${theme.color.border}`,
+export const pillsSlot = recipe({
+  base: {
+    paddingLeft: 10,
+    borderLeft: `1px solid ${theme.color.border}`,
+  },
+  variants: {
+    layout: {
+      side: {
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridColumn: "2 / -1",
+            gridRow: 2,
+            paddingLeft: 0,
+            paddingTop: 10,
+            borderLeft: "none",
+            borderTop: `1px solid ${theme.color.border}`,
+          },
+        },
+      },
+      subteam: {
+        gridColumn: "3 / -1",
+        gridRow: 1,
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridColumn: "2 / -1",
+            gridRow: 2,
+            paddingLeft: 0,
+            paddingTop: 10,
+            borderLeft: "none",
+            borderTop: `1px solid ${theme.color.border}`,
+          },
+        },
+      },
+    },
+  },
+});
+
+export const championAvatarSlot = recipe({
+  variants: {
+    layout: {
+      side: {},
+      subteam: {
+        gridColumn: 1,
+        gridRow: "1 / 3",
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridRow: 1,
+          },
+        },
+      },
     },
   },
 });
@@ -170,12 +225,29 @@ export const championIconFallback = style({
   background: theme.color.accent,
 });
 
-export const info = style({
-  display: "grid",
-  justifyContent: "space-between",
-  height: "100%",
-  gap: 8,
-  minWidth: 0,
+export const info = recipe({
+  base: {
+    display: "grid",
+    justifyContent: "space-between",
+    height: "100%",
+    gap: 8,
+    minWidth: 0,
+  },
+  variants: {
+    layout: {
+      side: {},
+      subteam: {
+        gridColumn: 2,
+        gridRow: "1 / 3",
+        alignContent: "space-between",
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridRow: 1,
+          },
+        },
+      },
+    },
+  },
 });
 
 export const headerRow = style({
@@ -219,6 +291,18 @@ export const resultPill = recipe({
       },
     },
   },
+});
+
+export const placementPill = style({
+  fontSize: "0.6875rem",
+  fontWeight: 800,
+  lineHeight: 1,
+  padding: "4px 8px",
+  borderRadius: 999,
+  outline: `1px solid color-mix(in srgb, ${theme.color.primary} 58%, transparent)`,
+  background: `color-mix(in srgb, ${theme.color.accent} 74%, transparent)`,
+  color: theme.color.primary,
+  whiteSpace: "nowrap",
 });
 
 export const metaPill = style({
@@ -434,28 +518,70 @@ export const teamHeader = style({
   paddingBlock: 4,
 });
 
-export const playersPanel = style({
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: 8,
-  alignContent: "start",
-  paddingLeft: 10,
-  borderLeft: `1px solid ${theme.color.border}`,
-  "@media": {
-    "screen and (max-width: 980px)": {
-      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-      paddingLeft: 0,
-      paddingTop: 10,
-      borderLeft: "none",
-      borderTop: `1px solid ${theme.color.border}`,
+export const playersPanel = recipe({
+  base: {
+    display: "grid",
+    alignContent: "start",
+    paddingLeft: 10,
+    borderLeft: `1px solid ${theme.color.border}`,
+  },
+  variants: {
+    layout: {
+      side: {
+        gridColumn: 4,
+        gridRow: "1 / -1",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: 8,
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridColumn: "1 / -1",
+            gridRow: 3,
+            paddingLeft: 0,
+            paddingTop: 10,
+            borderLeft: "none",
+            borderTop: `1px solid ${theme.color.border}`,
+          },
+        },
+      },
+      subteam: {
+        gridColumn: "3 / -1",
+        gridRow: 2,
+        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+        gap: "8px 10px",
+        "@media": {
+          [cardStackMediaQuery]: {
+            gridColumn: "1 / -1",
+            gridRow: 3,
+            paddingLeft: 0,
+            paddingTop: 10,
+            borderLeft: "none",
+            borderTop: `1px solid ${theme.color.border}`,
+          },
+          "screen and (max-width: 760px)": {
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          },
+        },
+      },
     },
   },
 });
 
-export const playerTeamColumn = style({
-  display: "grid",
-  gap: 4,
-  alignContent: "start",
+export const playerTeamColumn = recipe({
+  base: {
+    position: "relative",
+    display: "grid",
+    gap: 4,
+    alignContent: "start",
+    vars: {
+      [playerTeamAccentVar]: theme.color.border,
+    },
+  },
+  variants: {
+    layout: {
+      side: {},
+      subteam: {},
+    },
+  },
 });
 
 export const playerRow = style({

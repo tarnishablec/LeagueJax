@@ -8,6 +8,7 @@ export const meterFillWidthVar = createVar();
 export const physicalSegmentWidthVar = createVar();
 export const magicSegmentWidthVar = createVar();
 export const trueSegmentWidthVar = createVar();
+export const teamAccentColorVar = createVar();
 
 const positionColumn = "34px";
 const summonerColumn = "minmax(100px, 150px)";
@@ -36,6 +37,9 @@ export const teamBlock = recipe({
     borderRadius: 8,
     outline: `1px solid ${theme.color.border}`,
     background: `color-mix(in srgb, ${theme.color.background} 16%, transparent)`,
+    vars: {
+      [teamAccentColorVar]: theme.color.border,
+    },
   },
   variants: {
     team: {
@@ -46,7 +50,7 @@ export const teamBlock = recipe({
         outline: `1px solid ${gameColorVars.team.redAccent}`,
       },
       neutral: {
-        outline: `1px solid ${theme.color.border}`,
+        outline: `1px solid color-mix(in srgb, ${teamAccentColorVar} 76%, transparent)`,
       },
     },
   },
@@ -74,6 +78,11 @@ export const teamTitleGroup = style({
 
 export const teamTitle = recipe({
   base: {
+    display: "inline-grid",
+    gridAutoFlow: "column",
+    gridAutoColumns: "max-content",
+    alignItems: "baseline",
+    gap: 6,
     fontSize: "0.8125rem",
     fontWeight: 700,
     lineHeight: 1.2,
@@ -87,10 +96,19 @@ export const teamTitle = recipe({
         color: gameColorVars.team.red,
       },
       neutral: {
-        color: theme.color.foreground,
+        color: teamAccentColorVar,
       },
     },
   },
+});
+
+export const teamPlacement = style({
+  color: teamAccentColorVar,
+  fontWeight: 800,
+});
+
+export const teamName = style({
+  color: theme.color.foreground,
 });
 
 export const teamHeaderMetric = style({
