@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
+import { ScrollArea } from "@/components/scroll-area";
 import { MatchCard } from "@/features/history/components/match-card/MatchCard";
 import { normalizeHistoryPosition } from "@/features/history/hooks/use-match-card-view-model";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
@@ -104,12 +105,18 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
         <Dialog.Backdrop className={s.historyDialogBackdrop} />
         <Dialog.Positioner className={s.historyDialogPositioner}>
           <Dialog.Content className={s.historyDialogContent}>
-            <MatchCard
-              match={game}
-              me={game.me}
-              sgpServerId={null}
-              defaultExpanded
-            />
+            <ScrollArea
+              size="content"
+              className={s.historyDialogScroller}
+              contentClassName={s.historyDialogScrollerContent}
+            >
+              <MatchCard
+                match={game}
+                me={game.me}
+                sgpServerId={null}
+                defaultExpanded
+              />
+            </ScrollArea>
           </Dialog.Content>
         </Dialog.Positioner>
       </Portal>
@@ -124,7 +131,10 @@ function HistoryLoadingState() {
       highlightColor={`color-mix(in oklch, ${theme.color.foreground} 16%, transparent)`}
       duration={1.2}
     >
-      <div className={s.historyList} style={{ alignContent: "start" }}>
+      <ScrollArea
+        className={s.historyListScroller}
+        contentClassName={s.historyList}
+      >
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
@@ -134,7 +144,7 @@ function HistoryLoadingState() {
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
         <Skeleton width="100%" height={35} borderRadius={6} />
-      </div>
+      </ScrollArea>
     </SkeletonTheme>
   );
 }
@@ -145,11 +155,14 @@ function SnapshotPlayerCardHistoryList(props: {
   const { recentGames } = props;
 
   return (
-    <div className={s.historyList}>
+    <ScrollArea
+      className={s.historyListScroller}
+      contentClassName={s.historyList}
+    >
       {recentGames.map((game) => (
         <HistoryRow key={game.json.gameId} game={game} />
       ))}
-    </div>
+    </ScrollArea>
   );
 }
 

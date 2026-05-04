@@ -12,6 +12,7 @@ import type {
 } from "@/bindings/matches.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
+import { ScrollArea } from "@/components/scroll-area";
 import {
   ScoreboardIcon,
   type ScoreboardIconType,
@@ -824,7 +825,12 @@ function TeamBlock({
             {formatDamage(totals.gold)}
           </span>
         </div>
-        <div className={s.objectiveList}>
+        <ScrollArea
+          orientation="horizontal"
+          size="content"
+          className={s.objectiveScroller}
+          contentClassName={s.objectiveList}
+        >
           {visibleObjectives.map((objective) => (
             <ObjectiveStat
               key={`${teamId}-${objective.key}`}
@@ -833,10 +839,14 @@ function TeamBlock({
               side={side}
             />
           ))}
-        </div>
+        </ScrollArea>
       </header>
 
-      <div className={s.tableScroller}>
+      <ScrollArea
+        orientation="horizontal"
+        size="content"
+        className={s.tableScroller}
+      >
         <div
           className={s.table({
             positionColumn: showPositionColumn ? "shown" : "hidden",
@@ -867,7 +877,7 @@ function TeamBlock({
             />
           ))}
         </div>
-      </div>
+      </ScrollArea>
     </section>
   );
 }
