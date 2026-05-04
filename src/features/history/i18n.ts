@@ -103,6 +103,7 @@ export const historyI18n: Resource = {
       matchDetails: {
         tabs: {
           details: "Details",
+          runes: "Runes",
         },
         perfectKda: "Perfect",
         columns: {
@@ -127,6 +128,28 @@ export const historyI18n: Resource = {
           atakhan: "Atakhan",
           tower: "Tower",
           inhibitor: "Inhibitor",
+        },
+      },
+      matchRunes: {
+        primaryStyle: "Primary",
+        subStyle: "Secondary",
+        statPerks: "Stat Shards",
+        augments: "Augments",
+        noData: "No rune data",
+        noAugmentData: "No augment data",
+        unknownRune: "Rune #{{id}}",
+        unknownAugment: "Augment #{{id}}",
+        statSlots: {
+          offense: "Offense",
+          flex: "Flex",
+          defense: "Defense",
+        },
+        rarity: {
+          kBronze: "Bronze",
+          kSilver: "Silver",
+          kGold: "Gold",
+          kPrismatic: "Prismatic",
+          null: "Unknown",
         },
       },
       summary: {
@@ -244,6 +267,7 @@ export const historyI18n: Resource = {
       matchDetails: {
         tabs: {
           details: "详情",
+          runes: "符文",
         },
         perfectKda: "完美",
         columns: {
@@ -268,6 +292,28 @@ export const historyI18n: Resource = {
           atakhan: "厄塔汗",
           tower: "防御塔",
           inhibitor: "水晶",
+        },
+      },
+      matchRunes: {
+        primaryStyle: "主系",
+        subStyle: "副系",
+        statPerks: "属性碎片",
+        augments: "海克斯强化",
+        noData: "暂无符文数据",
+        noAugmentData: "暂无强化数据",
+        unknownRune: "符文 #{{id}}",
+        unknownAugment: "强化 #{{id}}",
+        statSlots: {
+          offense: "进攻",
+          flex: "灵活",
+          defense: "防守",
+        },
+        rarity: {
+          kBronze: "青铜",
+          kSilver: "白银",
+          kGold: "黄金",
+          kPrismatic: "棱彩",
+          null: "未知",
         },
       },
       summary: {
@@ -385,6 +431,7 @@ export const historyI18n: Resource = {
       matchDetails: {
         tabs: {
           details: "詳細",
+          runes: "ルーン",
         },
         perfectKda: "Perfect",
         columns: {
@@ -409,6 +456,28 @@ export const historyI18n: Resource = {
           atakhan: "アタカン",
           tower: "タワー",
           inhibitor: "インヒビター",
+        },
+      },
+      matchRunes: {
+        primaryStyle: "メイン",
+        subStyle: "サブ",
+        statPerks: "ステータスシャード",
+        augments: "オーグメント",
+        noData: "ルーンデータがありません",
+        noAugmentData: "オーグメントデータがありません",
+        unknownRune: "ルーン #{{id}}",
+        unknownAugment: "オーグメント #{{id}}",
+        statSlots: {
+          offense: "攻撃",
+          flex: "フレックス",
+          defense: "防御",
+        },
+        rarity: {
+          kBronze: "ブロンズ",
+          kSilver: "シルバー",
+          kGold: "ゴールド",
+          kPrismatic: "プリズム",
+          null: "不明",
         },
       },
       summary: {

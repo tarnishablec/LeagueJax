@@ -7,8 +7,10 @@ import type {
 } from "@/bindings/matches.ts";
 import * as s from "./MatchCardExpandedContent.css";
 import { MatchDetailsTab } from "./MatchDetailsTab";
+import { MatchRunesTab } from "./MatchRunesTab";
 
 const DETAILS_TAB_ID = "details";
+const RUNES_TAB_ID = "runes";
 
 export function MatchCardExpandedContent({
   summary,
@@ -40,6 +42,11 @@ export function MatchCardExpandedContent({
             defaultValue: "Details",
           })}
         </ToggleGroup.Item>
+        <ToggleGroup.Item value={RUNES_TAB_ID} className={s.tabTrigger}>
+          {t("history.matchDetails.tabs.runes", {
+            defaultValue: "Runes",
+          })}
+        </ToggleGroup.Item>
       </ToggleGroup.Root>
 
       <div className={s.tabPanel}>
@@ -49,6 +56,9 @@ export function MatchCardExpandedContent({
             detail={detail}
             sgpServerId={sgpServerId}
           />
+        ) : null}
+        {activeTab.includes(RUNES_TAB_ID) ? (
+          <MatchRunesTab summary={summary} detail={detail} />
         ) : null}
       </div>
     </div>
