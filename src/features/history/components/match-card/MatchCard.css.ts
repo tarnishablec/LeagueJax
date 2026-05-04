@@ -18,6 +18,8 @@ const cardWinBackgroundMica = `color-mix(in srgb, ${gameColorVars.outcome.winSur
 const cardLoseBackgroundMica = `color-mix(in srgb, ${gameColorVars.outcome.loseSurface} 58%, transparent)`;
 const cardWinHoverBackgroundMica = `color-mix(in srgb, ${gameColorVars.outcome.winSurfaceHover} 60%, transparent)`;
 const cardLoseHoverBackgroundMica = `color-mix(in srgb, ${gameColorVars.outcome.loseSurfaceHover} 60%, transparent)`;
+const cardNeutralEndedBackground = cardNeutralHoverBackground;
+const cardNeutralEndedHoverBackground = `color-mix(in srgb, ${theme.color.accent} 68%, ${theme.color.foreground})`;
 
 export const wrapper = style({
   display: "grid",
@@ -90,18 +92,18 @@ export const card = recipe({
         },
       },
       remake: {
-        background: theme.color.surface,
+        background: cardNeutralEndedBackground,
         selectors: {
           "&:hover": {
-            background: cardNeutralHoverBackground,
+            background: cardNeutralEndedHoverBackground,
           },
         },
       },
       terminated: {
-        background: theme.color.surface,
+        background: cardNeutralEndedBackground,
         selectors: {
           "&:hover": {
-            background: cardNeutralHoverBackground,
+            background: cardNeutralEndedHoverBackground,
           },
         },
       },

@@ -326,16 +326,16 @@ export const augmentEntry = recipe({
     rarity: {
       default: {},
       bronze: {
-        outlineColor: "oklch(0.62 0.08 66 / 0.72)",
+        outlineColor: gameColorVars.augmentRarity.bronzeAccent,
       },
       silver: {
-        outlineColor: "oklch(0.74 0.02 250 / 0.72)",
+        outlineColor: gameColorVars.augmentRarity.silverAccent,
       },
       gold: {
-        outlineColor: "oklch(0.78 0.13 84 / 0.78)",
+        outlineColor: gameColorVars.augmentRarity.goldAccent,
       },
       prismatic: {
-        outlineColor: "oklch(0.72 0.18 294 / 0.82)",
+        outlineColor: gameColorVars.augmentRarity.prismaticAccent,
       },
     },
   },
@@ -411,4 +411,27 @@ export const tooltipStats = style({
   fontSize: "0.6875rem",
   fontWeight: 650,
   whiteSpace: "pre-line",
+});
+
+export const tooltipStatLine = recipe({
+  base: {
+    color: "inherit",
+  },
+  variants: {
+    rarity: {
+      default: {},
+      bronze: {
+        color: gameColorVars.augmentRarity.bronze,
+      },
+      silver: {
+        color: gameColorVars.augmentRarity.silver,
+      },
+      gold: {
+        color: gameColorVars.augmentRarity.gold,
+      },
+      prismatic: {
+        color: gameColorVars.augmentRarity.prismatic,
+      },
+    },
+  },
 });
