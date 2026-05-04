@@ -21,7 +21,7 @@ pub async fn lcu_get_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppEr
     let cache_namespace = lcu_static_data_cache_namespace(&lcu).await?;
     jax.get_shard::<StaticCacheShard>()
         .get_json_file_or_init(&cache_namespace, LCU_MAPS_CACHE_FILE, || {
-            api.get_maps_json_bytes()
+            api.get_maps_json()
         })
         .await
 }
@@ -37,7 +37,7 @@ pub async fn lcu_get_queues(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuQueue>, A
     let cache_namespace = lcu_static_data_cache_namespace(&lcu).await?;
     jax.get_shard::<StaticCacheShard>()
         .get_json_file_or_init(&cache_namespace, LCU_QUEUES_CACHE_FILE, || {
-            api.get_queues_json_bytes()
+            api.get_queues_json()
         })
         .await
 }
