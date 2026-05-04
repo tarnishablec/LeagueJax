@@ -36,7 +36,7 @@ type AugmentRarityVariant =
   | "silver"
   | "bronze";
 
-const AUGMENT_GAME_MODES = new Set(["CHERRY", "KIWI", "STRAWBERRY"]);
+const AUGMENT_GAME_MODES = new Set(["CHERRY", "KIWI"]);
 const STAT_PERK_SLOTS = ["offense", "flex", "defense"] as const;
 const AUGMENT_SLOT_KEYS = [
   "slot1",
@@ -680,13 +680,15 @@ function AugmentPanel({
             augment?.nameTRA?.trim() ||
             augment?.simpleNameTRA?.trim() ||
             t("history.matchRunes.unknownAugment", {
-              id: augmentId,
-              defaultValue: `Augment #${augmentId}`,
+              defaultValue: "Unknown augment",
             });
           const rarity = augment?.rarity ?? null;
-          const rarityLabel = t(`history.matchRunes.rarity.${rarity}`, {
-            defaultValue: rarityDefaultLabel(rarity),
-          });
+          const rarityLabel =
+            rarity === null
+              ? null
+              : t(`history.matchRunes.rarity.${rarity}`, {
+                  defaultValue: rarityDefaultLabel(rarity),
+                });
           const iconSources = augmentIconSources(augment?.augmentSmallIconPath);
           const description =
             augment?.tooltip?.trim() || augment?.description?.trim() || null;
@@ -696,7 +698,7 @@ function AugmentPanel({
               key={`${slotKey}-${augmentId}`}
               title={name}
               description={description}
-              stats={[rarityLabel]}
+              stats={rarityLabel ? [rarityLabel] : []}
               statsRarity={rarityVariant(rarity)}
             >
               <span
@@ -713,7 +715,9 @@ function AugmentPanel({
                 />
                 <span className={s.runeText}>
                   <span className={s.runeName}>{name}</span>
-                  <span className={s.runeMeta}>{rarityLabel}</span>
+                  {rarityLabel ? (
+                    <span className={s.runeMeta}>{rarityLabel}</span>
+                  ) : null}
                 </span>
               </span>
             </GameDataTooltip>
@@ -824,7 +828,7 @@ export function MatchRunesTab({
 }) {
   void _detail;
   const { t } = useTranslation();
-  const catalog = useCdragonGameDataCatalog();
+  const catalog = useCdragonGameDataCatalog(summary.json.gameMode);
   const participants = summary.json.participants;
   const participantEntries = useMemo(
     () =>

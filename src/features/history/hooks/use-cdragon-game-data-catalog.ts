@@ -42,7 +42,7 @@ type CdragonAugment = {
   description?: string;
   tooltip?: string;
   summary?: string;
-  dataValues?: Record<string, number>;
+  dataValues?: Record<string, unknown>;
   augmentNameId?: string;
 };
 
@@ -50,20 +50,20 @@ type CdragonLolStringTable = {
   entries?: Record<string, string>;
 };
 
-type CdragonKiwiDataValue = {
+type CdragonModeSpecificDataValue = {
   name?: string;
   mName?: string;
   values?: Array<number | null>;
   mValues?: Array<number | null>;
 };
 
-type CdragonKiwiSpellObject = {
+type CdragonModeSpecificSpellObject = {
   mSpell?: {
-    DataValues?: CdragonKiwiDataValue[];
+    DataValues?: CdragonModeSpecificDataValue[];
   };
 };
 
-type CdragonKiwiAugment = {
+type CdragonModeSpecificAugment = {
   AugmentNameId?: string;
   NameTra?: string;
   DescriptionTra?: string;
@@ -74,10 +74,31 @@ type CdragonKiwiAugment = {
   AugmentPlatformId?: string | number;
 };
 
-type CdragonKiwiBinJson = Record<
+type CdragonModeSpecificBinJson = Record<
   string,
-  CdragonKiwiAugment | CdragonKiwiSpellObject | Record<string, unknown>
+  | CdragonModeSpecificAugment
+  | CdragonModeSpecificSpellObject
+  | Record<string, unknown>
 >;
+
+type CdragonArenaAugment = {
+  id?: number | string;
+  name?: string;
+  desc?: string;
+  tooltip?: string;
+  rarity?: string | number;
+  augmentSmallIconPath?: string;
+  iconPath?: string;
+  iconSmall?: string;
+  iconLarge?: string;
+  dataValues?: Record<string, unknown>;
+  calculations?: Record<string, unknown>;
+  apiName?: string;
+};
+
+type CdragonArenaJson = {
+  augments?: CdragonArenaAugment[];
+};
 
 export type CdragonGameDataCatalogPerk = CdragonPerk & {
   id: number;
@@ -98,10 +119,14 @@ export type CdragonGameDataCatalog = {
   augmentsById: Record<number, CdragonGameDataCatalogAugment>;
 };
 
+type CdragonAugmentGameMode = "CHERRY" | "KIWI";
+
 const CDRAGON_GAME_DATA_ROOT =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global";
 const CDRAGON_GAME_DATA_ASSET_BASE = `${CDRAGON_GAME_DATA_ROOT}/default`;
 const CDRAGON_GAME_ASSET_BASE = "https://raw.communitydragon.org/latest/game";
+const CDRAGON_ARENA_AUGMENT_COMMAND = "get_cdragon_arena_json";
+const CDRAGON_KIWI_AUGMENT_COMMAND = "get_cdragon_kiwi_json";
 
 const EMPTY_GAME_DATA_CATALOG: CdragonGameDataCatalog = {
   perksById: {},
@@ -111,6 +136,7 @@ const EMPTY_GAME_DATA_CATALOG: CdragonGameDataCatalog = {
 const EMPTY_PERKS_BY_ID = EMPTY_GAME_DATA_CATALOG.perksById;
 const EMPTY_PERK_STYLES_BY_ID = EMPTY_GAME_DATA_CATALOG.perkStylesById;
 const EMPTY_AUGMENTS_BY_ID = EMPTY_GAME_DATA_CATALOG.augmentsById;
+const UNRESOLVED_AUGMENT_VALUE = "--";
 
 function cdragonGameDataBase(locale: string): string {
   return `${CDRAGON_GAME_DATA_ROOT}/${locale}`;
@@ -157,6 +183,19 @@ function normalizeCdragonLocale(language: string | undefined): string {
   }
 
   return "en_us";
+}
+
+function normalizeAugmentGameMode(
+  gameMode: string | null | undefined,
+): CdragonAugmentGameMode | null {
+  const normalized = gameMode?.trim().toUpperCase();
+  switch (normalized) {
+    case "CHERRY":
+    case "KIWI":
+      return normalized;
+    default:
+      return null;
+  }
 }
 
 async function fetchJsonByUrl<T>(url: string): Promise<T | null> {
@@ -274,7 +313,7 @@ function stringTableValue(
   return entries[normalizedKey] ?? null;
 }
 
-function kiwiRarityToCdragonRarity(
+function augmentRarityToCdragonRarity(
   rarity: string | number | null | undefined,
 ): string | undefined {
   if (typeof rarity === "string") {
@@ -291,6 +330,7 @@ function kiwiRarityToCdragonRarity(
 
   const rarityId = asNumber(rarity);
   switch (rarityId) {
+    case 4:
     case 2:
       return "kPrismatic";
     case 1:
@@ -314,8 +354,8 @@ function finiteDataValue(
   return finiteValues.find((value) => value !== 0) ?? finiteValues[0] ?? null;
 }
 
-function kiwiObjectByKey(
-  kiwi: CdragonKiwiBinJson,
+function modeSpecificObjectByKey(
+  modeSpecificData: CdragonModeSpecificBinJson,
   key: string | null | undefined,
 ): unknown {
   const normalizedKey = key?.trim();
@@ -324,32 +364,32 @@ function kiwiObjectByKey(
   }
 
   return (
-    kiwi[normalizedKey] ??
-    kiwi[normalizedKey.toLowerCase()] ??
-    Object.entries(kiwi).find(
+    modeSpecificData[normalizedKey] ??
+    modeSpecificData[normalizedKey.toLowerCase()] ??
+    Object.entries(modeSpecificData).find(
       ([entryKey]) => entryKey.toLowerCase() === normalizedKey.toLowerCase(),
     )?.[1] ??
     null
   );
 }
 
-function kiwiDataValueName(dataValue: Record<string, unknown>): string {
+function modeSpecificDataValueName(dataValue: Record<string, unknown>): string {
   const name = dataValue.mName ?? dataValue.name;
   return typeof name === "string" ? name.trim() : "";
 }
 
-function kiwiDataValueNumbers(
+function modeSpecificDataValueNumbers(
   dataValue: Record<string, unknown>,
 ): Array<number | null> {
   const values = dataValue.mValues ?? dataValue.values;
   return Array.isArray(values) ? values : [];
 }
 
-function kiwiDataValues(
-  kiwi: CdragonKiwiBinJson,
+function modeSpecificDataValues(
+  modeSpecificData: CdragonModeSpecificBinJson,
   rootSpell: string | null | undefined,
 ): Record<string, number> {
-  const spellObject = kiwiObjectByKey(kiwi, rootSpell);
+  const spellObject = modeSpecificObjectByKey(modeSpecificData, rootSpell);
   if (!isRecord(spellObject) || !isRecord(spellObject.mSpell)) {
     return {};
   }
@@ -365,8 +405,8 @@ function kiwiDataValues(
       continue;
     }
 
-    const name = kiwiDataValueName(dataValue);
-    const value = finiteDataValue(kiwiDataValueNumbers(dataValue));
+    const name = modeSpecificDataValueName(dataValue);
+    const value = finiteDataValue(modeSpecificDataValueNumbers(dataValue));
 
     if (name.length > 0 && value !== null) {
       mapped[name.toLowerCase()] = value;
@@ -407,6 +447,7 @@ function formatAugmentVariableValue(value: number): string {
 function replaceAugmentVariables(
   value: string,
   dataValues: Record<string, number>,
+  options: { unresolvedValue?: string } = {},
 ): string {
   return value.replace(/@([^@]+)@/g, (match: string, token: string) => {
     const key = augmentVariableKey(token);
@@ -416,7 +457,7 @@ function replaceAugmentVariables(
 
     const dataValue = dataValues[key];
     if (typeof dataValue !== "number") {
-      return match;
+      return options.unresolvedValue ?? match;
     }
 
     return formatAugmentVariableValue(
@@ -428,13 +469,182 @@ function replaceAugmentVariables(
 function cleanAugmentDescription(value: string): string {
   return cdragonTextToPlainText(value)
     .replace(/%i:[^%]+%/gi, "")
+    .replace(/\{\{\s*[^}]+\s*\}\}/g, "")
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !/@[^@]+@/.test(line))
     .filter((line) => !line.endsWith(":"))
     .filter((line) => !/[：:]$/.test(line))
-    .filter((line) => !/[：:]$/.test(line))
     .join("\n");
+}
+
+function normalizeArenaAugmentDataValues(
+  dataValues: Record<string, unknown> | undefined,
+): Record<string, number> {
+  const mapped: Record<string, number> = {};
+
+  for (const [key, value] of Object.entries(dataValues ?? {})) {
+    const name = key.trim().toLowerCase();
+    const numberValue = arenaAugmentDataValueNumber(value);
+
+    if (name.length > 0 && numberValue !== null) {
+      mapped[name] = numberValue;
+    }
+  }
+
+  return mapped;
+}
+
+function arenaAugmentDataValueNumber(value: unknown): number | null {
+  const direct = asNumber(value);
+  if (direct !== null) {
+    return direct;
+  }
+
+  if (Array.isArray(value)) {
+    return finiteDataValue(value.map((entry) => asNumber(entry)));
+  }
+
+  if (isRecord(value)) {
+    const singleValue = asNumber(value.value ?? value.mValue);
+    if (singleValue !== null) {
+      return singleValue;
+    }
+
+    const values = value.values ?? value.mValues;
+    if (Array.isArray(values)) {
+      return finiteDataValue(values.map((entry) => asNumber(entry)));
+    }
+  }
+
+  return null;
+}
+
+function normalizeArenaAugmentValues(
+  entry: CdragonArenaAugment,
+): Record<string, number> {
+  const dataValues = normalizeArenaAugmentDataValues(entry.dataValues);
+  const calculationValues = normalizeArenaAugmentStaticCalculations(
+    entry.calculations,
+    dataValues,
+  );
+
+  return {
+    ...dataValues,
+    ...calculationValues,
+  };
+}
+
+function normalizeArenaAugmentStaticCalculations(
+  calculations: Record<string, unknown> | undefined,
+  dataValues: Record<string, number>,
+): Record<string, number> {
+  const mapped: Record<string, number> = {};
+
+  for (const [key, calculation] of Object.entries(calculations ?? {})) {
+    const name = key.trim().toLowerCase();
+    const value = arenaStaticCalculationValue(calculation, dataValues);
+
+    if (name.length > 0 && value !== null) {
+      mapped[name] = value;
+    }
+  }
+
+  return mapped;
+}
+
+function arenaStaticCalculationValue(
+  calculation: unknown,
+  dataValues: Record<string, number>,
+): number | null {
+  if (!isRecord(calculation)) {
+    return null;
+  }
+
+  const formulaParts = calculation.mFormulaParts;
+  if (!Array.isArray(formulaParts) || formulaParts.length !== 1) {
+    return null;
+  }
+
+  const [formulaPart] = formulaParts;
+  if (!isRecord(formulaPart)) {
+    return null;
+  }
+
+  const baseValue = arenaStaticCalculationPartValue(formulaPart, dataValues);
+  if (baseValue === null) {
+    return null;
+  }
+
+  const multiplier = arenaCalculationMultiplier(calculation.mMultiplier);
+  if (multiplier === null) {
+    return null;
+  }
+
+  const precision = asNumber(calculation.mPrecision);
+  return applyArenaCalculationPrecision(baseValue * multiplier, precision);
+}
+
+function arenaStaticCalculationPartValue(
+  formulaPart: Record<string, unknown>,
+  dataValues: Record<string, number>,
+): number | null {
+  const type = firstStringValue(formulaPart.__type);
+
+  if (type === "NamedDataValueCalculationPart") {
+    const dataValueName = firstStringValue(formulaPart.mDataValue);
+    if (!dataValueName) {
+      return null;
+    }
+
+    return dataValues[dataValueName.toLowerCase()] ?? null;
+  }
+
+  return null;
+}
+
+function arenaCalculationMultiplier(value: unknown): number | null {
+  if (value === undefined) {
+    return 1;
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const type = firstStringValue(value.__type);
+  if (type !== "NumberCalculationPart") {
+    return null;
+  }
+
+  return asNumber(value.mNumber);
+}
+
+function applyArenaCalculationPrecision(
+  value: number,
+  precision: number | null,
+): number {
+  if (precision === null || precision < 0) {
+    return value;
+  }
+
+  const scale = 10 ** precision;
+  return Math.round(value * scale) / scale;
+}
+
+function resolveArenaAugmentText(
+  value: string | null | undefined,
+  dataValues: Record<string, number>,
+): string {
+  if (!value) {
+    return "";
+  }
+
+  return cleanAugmentDescription(
+    replaceAugmentVariables(value, dataValues, {
+      unresolvedValue: UNRESOLVED_AUGMENT_VALUE,
+    }),
+  );
 }
 
 function resolveAugmentText(
@@ -450,7 +660,9 @@ function resolveAugmentText(
   return cleanAugmentDescription(replaceAugmentVariables(raw, dataValues));
 }
 
-function looksLikeKiwiAugment(value: unknown): value is CdragonKiwiAugment {
+function looksLikeModeSpecificAugment(
+  value: unknown,
+): value is CdragonModeSpecificAugment {
   return (
     isRecord(value) &&
     (value.AugmentPlatformId !== undefined ||
@@ -487,6 +699,21 @@ function collectionEntries<T>(
   }
 
   return [];
+}
+
+function firstStringValue(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+
+  return undefined;
 }
 
 function mapPerksById(
@@ -534,26 +761,69 @@ function mapAugmentsById(
     mapped[id] = {
       ...entry,
       id,
-      rarity: kiwiRarityToCdragonRarity(entry.rarity),
+      rarity: augmentRarityToCdragonRarity(entry.rarity),
     };
   }
 
   return mapped;
 }
 
-function mapKiwiAugmentsById(
-  kiwi: CdragonKiwiBinJson | null,
+function mapArenaAugmentsById(
+  arenaData: CdragonArenaJson | null,
+): Record<number, CdragonGameDataCatalogAugment> {
+  const mapped: Record<number, CdragonGameDataCatalogAugment> = {};
+
+  for (const entry of arenaData?.augments ?? []) {
+    const id = asNumber(entry.id);
+    if (id === null) {
+      continue;
+    }
+
+    const name = firstStringValue(entry.name);
+    const augmentValues = normalizeArenaAugmentValues(entry);
+    const description = resolveArenaAugmentText(entry.desc, augmentValues);
+    const tooltip =
+      resolveArenaAugmentText(entry.tooltip, augmentValues) || description;
+    const mappedAugment: CdragonGameDataCatalogAugment = {
+      id,
+      augmentSmallIconPath: firstStringValue(
+        entry.augmentSmallIconPath,
+        entry.iconSmall,
+        entry.iconLarge,
+        entry.iconPath,
+      ),
+      rarity: augmentRarityToCdragonRarity(entry.rarity),
+      description,
+      tooltip,
+      summary: description,
+      dataValues: augmentValues,
+      augmentNameId: entry.apiName,
+    };
+
+    if (name) {
+      mappedAugment.nameTRA = name;
+      mappedAugment.simpleNameTRA = name;
+    }
+
+    mapped[id] = mappedAugment;
+  }
+
+  return mapped;
+}
+
+function mapModeSpecificAugmentsById(
+  modeSpecificData: CdragonModeSpecificBinJson | null,
   stringTable: CdragonLolStringTable | Record<string, string> | null,
 ): Record<number, CdragonGameDataCatalogAugment> {
-  if (!kiwi) {
+  if (!modeSpecificData) {
     return {};
   }
 
   const entries = stringTableEntries(stringTable);
   const mapped: Record<number, CdragonGameDataCatalogAugment> = {};
 
-  for (const entry of Object.values(kiwi)) {
-    if (!looksLikeKiwiAugment(entry)) {
+  for (const entry of Object.values(modeSpecificData)) {
+    if (!looksLikeModeSpecificAugment(entry)) {
       continue;
     }
 
@@ -562,7 +832,10 @@ function mapKiwiAugmentsById(
       continue;
     }
 
-    const dataValues = kiwiDataValues(kiwi, entry.RootSpell);
+    const dataValues = modeSpecificDataValues(
+      modeSpecificData,
+      entry.RootSpell,
+    );
     const name = resolveAugmentText(entries, entry.NameTra, dataValues);
     const tooltip = resolveAugmentText(
       entries,
@@ -578,7 +851,7 @@ function mapKiwiAugmentsById(
     const mappedAugment: CdragonGameDataCatalogAugment = {
       id,
       augmentSmallIconPath: entry.AugmentSmallIconPath,
-      rarity: kiwiRarityToCdragonRarity(entry.rarity),
+      rarity: augmentRarityToCdragonRarity(entry.rarity),
       description,
       tooltip,
       summary: description,
@@ -634,12 +907,12 @@ async function fetchBaseAugmentsById(
   return mapAugmentsById(augments);
 }
 
-async function fetchKiwiAugmentsById(
+async function fetchModeSpecificAugmentsById(
   hasFocusedClient: boolean,
 ): Promise<Record<number, CdragonGameDataCatalogAugment>> {
-  const [kiwi, lolStringTable] = await Promise.all([
-    fetchCachedCdragonJson<CdragonKiwiBinJson>(
-      "get_cdragon_kiwi_json",
+  const [modeSpecificData, lolStringTable] = await Promise.all([
+    fetchCachedCdragonJson<CdragonModeSpecificBinJson>(
+      CDRAGON_KIWI_AUGMENT_COMMAND,
       hasFocusedClient,
     ),
     fetchCachedCdragonJson<CdragonLolStringTable>(
@@ -648,27 +921,42 @@ async function fetchKiwiAugmentsById(
     ),
   ]);
 
-  if (!kiwi || !lolStringTable) {
+  if (!modeSpecificData || !lolStringTable) {
     return {};
   }
 
-  return mapKiwiAugmentsById(kiwi, lolStringTable);
+  return mapModeSpecificAugmentsById(modeSpecificData, lolStringTable);
+}
+
+async function fetchArenaAugmentsById(
+  hasFocusedClient: boolean,
+): Promise<Record<number, CdragonGameDataCatalogAugment>> {
+  const arenaData = await fetchCachedCdragonJson<CdragonArenaJson>(
+    CDRAGON_ARENA_AUGMENT_COMMAND,
+    hasFocusedClient,
+  );
+
+  return mapArenaAugmentsById(arenaData);
 }
 
 function mergeAugmentsById(
   baseAugmentsById: Record<number, CdragonGameDataCatalogAugment>,
-  kiwiAugmentsById: Record<number, CdragonGameDataCatalogAugment>,
+  modeSpecificAugmentsById: Record<number, CdragonGameDataCatalogAugment>,
 ): Record<number, CdragonGameDataCatalogAugment> {
   const merged = { ...baseAugmentsById };
 
-  for (const [id, kiwiAugment] of Object.entries(kiwiAugmentsById)) {
+  for (const [id, modeSpecificAugment] of Object.entries(
+    modeSpecificAugmentsById,
+  )) {
     const augmentId = Number(id);
     const baseAugment = merged[augmentId];
     merged[augmentId] = {
       ...baseAugment,
-      ...kiwiAugment,
+      ...modeSpecificAugment,
       augmentSmallIconPath:
-        baseAugment?.augmentSmallIconPath ?? kiwiAugment.augmentSmallIconPath,
+        baseAugment?.augmentSmallIconPath ??
+        modeSpecificAugment.augmentSmallIconPath,
+      rarity: modeSpecificAugment.rarity ?? baseAugment?.rarity,
     };
   }
 
@@ -711,11 +999,17 @@ export function normalizeCdragonGameAssetPath(
   return `${CDRAGON_GAME_DATA_ASSET_BASE}/${encoded}`;
 }
 
-export function useCdragonGameDataCatalog(): CdragonGameDataCatalog {
+export function useCdragonGameDataCatalog(
+  gameMode?: string | null,
+): CdragonGameDataCatalog {
   const { i18n } = useTranslation();
   const focused = useLcuStore(selectIsFocused);
   const language = i18n.resolvedLanguage ?? i18n.language;
   const locale = useMemo(() => normalizeCdragonLocale(language), [language]);
+  const augmentGameMode = useMemo(
+    () => normalizeAugmentGameMode(gameMode),
+    [gameMode],
+  );
   const focusedPid = focused?.pid ?? null;
   const perksKey = useMemo(
     () => ["history:cdragon-perks", locale] as const,
@@ -729,12 +1023,16 @@ export function useCdragonGameDataCatalog(): CdragonGameDataCatalog {
     () => ["history:cdragon-base-augments", locale, focusedPid] as const,
     [locale, focusedPid],
   );
-  const kiwiAugmentsKey = useMemo(
+  const modeAugmentsKey = useMemo(
     () =>
-      focusedPid !== null
-        ? (["history:cdragon-kiwi-augments", focusedPid] as const)
+      focusedPid !== null && augmentGameMode !== null
+        ? ([
+            "history:cdragon-mode-augments",
+            augmentGameMode,
+            focusedPid,
+          ] as const)
         : null,
-    [focusedPid],
+    [focusedPid, augmentGameMode],
   );
 
   const { data: perksById = EMPTY_PERKS_BY_ID } = useSWR(
@@ -765,9 +1063,12 @@ export function useCdragonGameDataCatalog(): CdragonGameDataCatalog {
       keepPreviousData: true,
     },
   );
-  const { data: kiwiAugmentsById = EMPTY_AUGMENTS_BY_ID } = useSWR(
-    kiwiAugmentsKey,
-    () => fetchKiwiAugmentsById(true),
+  const { data: modeSpecificAugmentsById = EMPTY_AUGMENTS_BY_ID } = useSWR(
+    modeAugmentsKey,
+    ([, selectedGameMode]) =>
+      selectedGameMode === "CHERRY"
+        ? fetchArenaAugmentsById(true)
+        : fetchModeSpecificAugmentsById(true),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
       fallbackData: EMPTY_AUGMENTS_BY_ID,
@@ -779,8 +1080,11 @@ export function useCdragonGameDataCatalog(): CdragonGameDataCatalog {
     () => ({
       perksById,
       perkStylesById,
-      augmentsById: mergeAugmentsById(baseAugmentsById, kiwiAugmentsById),
+      augmentsById: mergeAugmentsById(
+        baseAugmentsById,
+        modeSpecificAugmentsById,
+      ),
     }),
-    [perksById, perkStylesById, baseAugmentsById, kiwiAugmentsById],
+    [perksById, perkStylesById, baseAugmentsById, modeSpecificAugmentsById],
   );
 }

@@ -67,7 +67,7 @@ type ObjectiveConfig = {
   defaultLabel: string;
 };
 
-const AUGMENT_GAME_MODES = new Set(["CHERRY", "KIWI", "STRAWBERRY"]);
+const AUGMENT_GAME_MODES = new Set(["CHERRY", "KIWI"]);
 const CDRAGON_LATEST_BASE = "https://raw.communitydragon.org/latest";
 const CDRAGON_GAME_CHARACTERS_BASE = `${CDRAGON_LATEST_BASE}/game/assets/characters`;
 const CDRAGON_POSTGAME_BASE = `${CDRAGON_LATEST_BASE}/plugins/rcp-fe-lol-postgame/global/default`;
