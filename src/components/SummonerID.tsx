@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const summonerIdGameNameColorVar = "--summoner-id-game-name-color";
 export const summonerIdTagLineColorVar = "--summoner-id-tag-line-color";
@@ -36,7 +36,7 @@ export const SummonerID = ({
         style={{
           lineHeight: 1,
           fontWeight: 600,
-          color: `var(${summonerIdGameNameColorVar}, ${vars.color.foreground})`,
+          color: `var(${summonerIdGameNameColorVar}, ${theme.color.foreground})`,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -54,7 +54,7 @@ export const SummonerID = ({
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
             fontWeight: 400,
-            color: `var(${summonerIdTagLineColorVar}, ${vars.color.mutedForeground})`,
+            color: `var(${summonerIdTagLineColorVar}, ${theme.color.mutedForeground})`,
             textBoxTrim: "trim-both",
             ...styles?.tagLine,
           }}

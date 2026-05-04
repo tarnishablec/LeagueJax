@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "../styles/theme.css";
+import { theme } from "../styles/theme.css";
 
 export const header = style({
   display: "grid",
@@ -32,7 +32,7 @@ export const divider = style({
   alignSelf: "center",
   height: 16,
   width: 1,
-  background: vars.color.border,
+  background: theme.color.border,
   marginInline: 4,
 });
 

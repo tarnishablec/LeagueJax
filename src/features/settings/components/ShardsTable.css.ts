@@ -1,9 +1,9 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const rowHighlight = style({
-  background: vars.color.accent,
+  background: theme.color.accent,
 });
 
 export const status = recipe({
@@ -16,9 +16,9 @@ export const status = recipe({
   },
   variants: {
     kind: {
-      running: { color: vars.color.success },
-      failed: { color: vars.color.error },
-      skipped: { color: vars.color.mutedForeground },
+      running: { color: theme.color.success },
+      failed: { color: theme.color.error },
+      skipped: { color: theme.color.mutedForeground },
     },
   },
 });
@@ -32,7 +32,7 @@ export const copyCell = style({
 });
 
 export const copyText = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   overflow: "hidden",
   textWrap: "nowrap",
   whiteSpace: "nowrap",
@@ -47,7 +47,7 @@ export const copyButton = style({
   height: 18,
   border: "none",
   background: "none",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   borderRadius: 4,
   opacity: 0,
@@ -59,8 +59,8 @@ export const copyButton = style({
       opacity: 1,
     },
     "&:hover": {
-      color: vars.color.foreground,
-      background: vars.color.accent,
+      color: theme.color.foreground,
+      background: theme.color.accent,
     },
   },
 });
@@ -72,12 +72,12 @@ export const depList = style({
 
 export const depItem = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   textAlign: "start",
   selectors: {
     "&:hover": {
-      color: vars.color.primary,
+      color: theme.color.primary,
       textDecoration: "underline",
     },
   },

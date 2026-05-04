@@ -1,17 +1,17 @@
 import { createVar, globalStyle, keyframes, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { iconCol } from "@/layout/__root.css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
-const tooltipSurface = `color-mix(in srgb, ${vars.color.primary}, transparent 0.75)`;
-const tooltipSurfaceDark = `color-mix(in srgb, ${vars.color.primary}, transparent 0.875)`;
-const tooltipShadowColor = `oklch(from ${vars.color.background} 0.05 c h / 0.46)`;
+const tooltipSurface = `color-mix(in srgb, ${theme.color.primary}, transparent 0.75)`;
+const tooltipSurfaceDark = `color-mix(in srgb, ${theme.color.primary}, transparent 0.875)`;
+const tooltipShadowColor = `oklch(from ${theme.color.background} 0.05 c h / 0.46)`;
 const detectedBadgeBackground = `
   radial-gradient(
      circle, 
-     ${vars.color.success} 0%, 
-     color-mix(in srgb, ${vars.color.success}, transparent 40%) 40%,
-     color-mix(in srgb, ${vars.color.success}, transparent 80%) 70%,
+     ${theme.color.success} 0%, 
+     color-mix(in srgb, ${theme.color.success}, transparent 40%) 40%,
+     color-mix(in srgb, ${theme.color.success}, transparent 80%) 70%,
      transparent 100%
   )
 `;
@@ -35,7 +35,7 @@ export const trigger = recipe({
     borderRadius: 6,
     height: 36,
     fontSize: "0.95rem",
-    color: vars.color.mutedForeground,
+    color: theme.color.mutedForeground,
     transition: "all 150ms",
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -44,7 +44,7 @@ export const trigger = recipe({
     selectors: {
       "&:hover": {
         background: `rgba(0, 0, 0, 0.2)`,
-        color: vars.color.foreground,
+        color: theme.color.foreground,
       },
     },
   },
@@ -123,8 +123,8 @@ export const avatarLoading = style({
   width: avatarSizeVar,
   height: avatarSizeVar,
   borderRadius: "50%",
-  border: `2px solid ${vars.color.mutedForeground}`,
-  borderTopColor: vars.color.primary,
+  border: `2px solid ${theme.color.mutedForeground}`,
+  borderTopColor: theme.color.primary,
   justifySelf: "center",
   animation: `${spin} 1s linear infinite`,
 });
@@ -254,7 +254,7 @@ export const tooltip = style({
     ":root.dark &": {
       background: tooltipSurfaceDark,
       boxShadow: `
-        0 12px 30px oklch(from ${vars.color.background} 0.06 c h / 0.72),
+        0 12px 30px oklch(from ${theme.color.background} 0.06 c h / 0.72),
         inset 0 1px 0 oklch(1 0 0 / 0.04)
       `,
     },
@@ -265,7 +265,7 @@ export const emptyTooltip = style({
   borderRadius: 6,
   // border: `1px solid color-mix(in oklch, ${vars.color.primary} 34%, ${vars.color.popoverBorder})`,
   background: tooltipSurface,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   padding: "6px 11px",
   fontSize: "0.9rem",
   lineHeight: 1,
@@ -279,7 +279,7 @@ export const emptyTooltip = style({
     ":root.dark &": {
       background: tooltipSurfaceDark,
       boxShadow: `
-        0 12px 30px oklch(from ${vars.color.background} 0.06 c h / 0.72),
+        0 12px 30px oklch(from ${theme.color.background} 0.06 c h / 0.72),
         inset 0 1px 0 oklch(1 0 0 / 0.04)
       `,
     },
@@ -294,13 +294,13 @@ export const unfocusButton = style({
   borderRadius: 4,
   border: "none",
   background: "transparent",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   alignSelf: "center",
   transition: "color 150ms, background 150ms",
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
+      color: theme.color.foreground,
       // background: vars.color.accent,
     },
   },
@@ -348,16 +348,16 @@ export const instanceRow = recipe({
     focused: {
       true: {
         // borderLeft: `2px solid ${vars.color.primary}`,
-        background: `color-mix(in srgb, ${vars.color.primary} 15%, ${vars.color.background})`,
+        background: `color-mix(in srgb, ${theme.color.primary} 15%, ${theme.color.background})`,
       },
     },
     clickable: {
       true: {
         cursor: "pointer",
-        background: `color-mix(in srgb, ${vars.color.accent} 5%, ${vars.color.background})`,
+        background: `color-mix(in srgb, ${theme.color.accent} 5%, ${theme.color.background})`,
         selectors: {
           "&:hover": {
-            background: `color-mix(in srgb, ${vars.color.accent} 30%, ${vars.color.background})`,
+            background: `color-mix(in srgb, ${theme.color.accent} 30%, ${theme.color.background})`,
           },
         },
       },
@@ -388,7 +388,7 @@ export const instanceIconFallback = style({
   height: 24,
   display: "grid",
   placeItems: "center",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const instanceInfo = style({
@@ -405,7 +405,7 @@ export const instancePath = style({
 });
 
 export const instancePid = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.84rem",
   textBoxTrim: "trim-end",
 });
@@ -428,14 +428,14 @@ export const stateIndicator = recipe({
   variants: {
     state: {
       ready: {
-        background: vars.color.success,
+        background: theme.color.success,
       },
       authenticating: {
-        background: vars.color.primary,
+        background: theme.color.primary,
         animation: `${pulse} 1.5s ease-in-out infinite`,
       },
       closing: {
-        background: vars.color.mutedForeground,
+        background: theme.color.mutedForeground,
       },
     },
   },

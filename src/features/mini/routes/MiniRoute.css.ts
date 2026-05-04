@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const root = style({
   display: "grid",
@@ -38,7 +38,7 @@ export const mapImage = style({
 export const mapFallback = style({
   width: "52px",
   height: "52px",
-  color: vars.color.primary,
+  color: theme.color.primary,
 });
 
 export const meta = style({
@@ -52,20 +52,20 @@ export const queueName = style({
   fontSize: "19px",
   lineHeight: 1.15,
   fontWeight: 700,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   textWrap: "balance",
 });
 
 export const phase = style({
   fontSize: "13px",
   lineHeight: 1.35,
-  color: vars.color.primary,
+  color: theme.color.primary,
 });
 
 export const autoAcceptCountdown = style({
   fontSize: "12px",
   lineHeight: 1.35,
-  color: vars.color.success,
+  color: theme.color.success,
 });
 
 export const footer = style({

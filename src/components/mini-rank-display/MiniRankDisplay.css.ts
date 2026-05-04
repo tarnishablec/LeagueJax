@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const root = style({
   display: "inline-grid",
@@ -9,7 +9,7 @@ export const root = style({
   justifyContent: "start",
   gap: 4,
   minWidth: 0,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   lineHeight: 1,
 });
 
@@ -38,7 +38,7 @@ export const text = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.7rem",
   fontWeight: 700,
   lineHeight: 1.1,
@@ -51,9 +51,9 @@ export const tooltipPositioner = style({
 export const tooltipContent = style({
   padding: "5px 7px",
   borderRadius: 4,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   fontSize: "0.72rem",
   fontWeight: 650,
   lineHeight: 1,

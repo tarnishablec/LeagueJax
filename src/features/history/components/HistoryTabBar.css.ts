@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const container = style({
   position: "relative",
@@ -46,7 +46,7 @@ export const tab = recipe({
     maxWidth: 140,
     paddingInline: 8,
     fontSize: "0.75rem",
-    color: vars.color.mutedForeground,
+    color: theme.color.mutedForeground,
     cursor: "default",
     background: "transparent",
     whiteSpace: "nowrap",
@@ -55,16 +55,16 @@ export const tab = recipe({
     borderRadius: "4px 4px 0 0",
     selectors: {
       "&:hover": {
-        color: vars.color.foreground,
-        background: vars.color.accent,
+        color: theme.color.foreground,
+        background: theme.color.accent,
       },
     },
   },
   variants: {
     active: {
       true: {
-        color: vars.color.foreground,
-        borderBottomColor: vars.color.primary,
+        color: theme.color.foreground,
+        borderBottomColor: theme.color.primary,
       },
     },
   },
@@ -108,7 +108,7 @@ export const tabIconFallback = style({
   width: 16,
   height: 16,
   borderRadius: "50%",
-  background: vars.color.blurry,
+  background: theme.color.blurry,
 });
 
 export const closeButton = style({
@@ -119,13 +119,13 @@ export const closeButton = style({
   borderRadius: 4,
   border: "none",
   background: "transparent",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   padding: 0,
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
-      background: vars.color.accent,
+      color: theme.color.foreground,
+      background: theme.color.accent,
     },
   },
 });
@@ -137,14 +137,14 @@ export const contextMenuPositioner = style({
 export const contextMenuContent = style({
   minWidth: 180,
   borderRadius: 10,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  boxShadow: `0 10px 24px oklch(from ${theme.color.foreground} 0.25 c h / 0.2)`,
   overflow: "hidden",
   padding: 4,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 10px 24px oklch(from ${vars.color.background} 0.06 c h / 0.6)`,
+      boxShadow: `0 10px 24px oklch(from ${theme.color.background} 0.06 c h / 0.6)`,
     },
   },
 });
@@ -156,21 +156,21 @@ export const contextMenuItem = style({
   display: "grid",
   alignItems: "center",
   cursor: "pointer",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.8125rem",
   selectors: {
     "&[data-highlighted]": {
-      background: `oklch(from ${vars.color.accent} 0.9 c h)`,
+      background: `oklch(from ${theme.color.accent} 0.9 c h)`,
     },
     ":root.dark &[data-highlighted]": {
-      background: `oklch(from ${vars.color.accent} 0.36 c h / 0.45)`,
+      background: `oklch(from ${theme.color.accent} 0.36 c h / 0.45)`,
     },
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: -1,
     },
     "&[data-disabled]": {
-      color: vars.color.mutedForeground,
+      color: theme.color.mutedForeground,
       cursor: "not-allowed",
     },
   },
@@ -179,5 +179,5 @@ export const contextMenuItem = style({
 export const contextMenuSeparator = style({
   height: 1,
   margin: "4px 2px",
-  background: vars.color.popoverBorder,
+  background: theme.color.popoverBorder,
 });

@@ -1,5 +1,5 @@
 import { createVar, style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const root = style({
   display: "grid",
@@ -16,7 +16,7 @@ export const root = style({
 export const icon = style({
   width: 88,
   height: 88,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   opacity: 0.82,
 });
 
@@ -24,7 +24,7 @@ export const titleWeightVar = createVar();
 
 export const title = style({
   fontSize: "1rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   textAlign: "center",
   letterSpacing: "0.02em",
   fontWeight: titleWeightVar,
@@ -32,6 +32,6 @@ export const title = style({
 
 export const subtitle = style({
   fontSize: "0.85rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   textAlign: "center",
 });

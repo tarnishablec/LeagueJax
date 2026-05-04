@@ -1,6 +1,6 @@
 import { createVar, type StyleRule, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "../styles/theme.css";
+import { theme } from "../styles/theme.css";
 
 export const sidebarWidth = createVar();
 export const iconCol = createVar();
@@ -16,7 +16,7 @@ export const shell = style({
   gridTemplateRows: "3rem 1fr",
   gridTemplateColumns: sidebarWidth,
   background: "transparent",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   transition: "grid-template-columns 200ms ease-in-out",
   overflow: "hidden",
 });
@@ -44,7 +44,7 @@ export const logoIcon = style({
 
 export const collapseIcon = style({
   position: "absolute",
-  color: `oklch(from ${vars.color.foreground} l c h / 0.6)`,
+  color: `oklch(from ${theme.color.foreground} l c h / 0.6)`,
   opacity: 0,
   transition: "all 200ms",
   transform: "scale(0.75)",
@@ -80,16 +80,16 @@ const navBase: StyleRule = {
   borderRadius: 6,
   height: 36,
   fontSize: "0.95rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   transition: "color 80ms ease-out",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textDecoration: "none",
 } as const;
 
-const tooltipSurface = `oklch(from ${vars.color.foreground} 0.26 0.012 h / 0.96)`;
-const tooltipSurfaceDark = `oklch(from ${vars.color.background} 0.18 0.012 h / 0.98)`;
-const tooltipShadowColor = `oklch(from ${vars.color.background} 0.05 c h / 0.46)`;
+const tooltipSurface = `oklch(from ${theme.color.foreground} 0.26 0.012 h / 0.96)`;
+const tooltipSurfaceDark = `oklch(from ${theme.color.background} 0.18 0.012 h / 0.98)`;
+const tooltipShadowColor = `oklch(from ${theme.color.background} 0.05 c h / 0.46)`;
 
 export const navItem = recipe({
   base: {
@@ -97,8 +97,8 @@ export const navItem = recipe({
     gridTemplateColumns: `${iconCol} minmax(0, 1fr)`,
     selectors: {
       "&:hover": {
-        background: vars.color.blurry,
-        color: vars.color.foreground,
+        background: theme.color.blurry,
+        color: theme.color.foreground,
       },
     },
   },
@@ -116,23 +116,23 @@ export const navItem = recipe({
     {
       variants: { active: true, collapsed: false },
       style: {
-        background: vars.color.blurry,
-        color: vars.color.accentForeground,
+        background: theme.color.blurry,
+        color: theme.color.accentForeground,
         fontWeight: 500,
         borderLeft: "2px solid",
-        borderLeftColor: vars.color.primary,
+        borderLeftColor: theme.color.primary,
       },
     },
     {
       variants: { active: true, collapsed: true },
       style: {
-        background: `oklch(from ${vars.color.primary} l c h / 0.15)`,
-        color: vars.color.primary,
+        background: `oklch(from ${theme.color.primary} l c h / 0.15)`,
+        color: theme.color.primary,
         fontWeight: 500,
         selectors: {
           "&:hover": {
-            background: `oklch(from ${vars.color.primary} l c h / 0.15)`,
-            color: vars.color.primary,
+            background: `oklch(from ${theme.color.primary} l c h / 0.15)`,
+            color: theme.color.primary,
           },
         },
       },
@@ -206,7 +206,7 @@ export const navTooltipContent = style({
     ":root.dark &": {
       background: tooltipSurfaceDark,
       boxShadow: `
-        0 12px 30px oklch(from ${vars.color.background} 0.04 c h / 0.76),
+        0 12px 30px oklch(from ${theme.color.background} 0.04 c h / 0.76),
         inset 0 1px 0 oklch(1 0 0 / 0.04)
       `,
     },

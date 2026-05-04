@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const keyCell = style({
   display: "grid",
@@ -10,7 +10,7 @@ export const keyCell = style({
 });
 
 export const keyText = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   textWrap: "nowrap",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
@@ -25,7 +25,7 @@ export const copyButton = style({
   height: 18,
   border: "none",
   background: "none",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   borderRadius: 4,
   opacity: 0,
@@ -34,14 +34,14 @@ export const copyButton = style({
       opacity: 1,
     },
     "&:hover": {
-      color: vars.color.foreground,
-      background: vars.color.accent,
+      color: theme.color.foreground,
+      background: theme.color.accent,
     },
   },
 });
 
 export const scope = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.75rem",
   textTransform: "uppercase",
 });

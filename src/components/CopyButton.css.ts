@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const copyButton = style({
   display: "grid",
@@ -9,13 +9,13 @@ export const copyButton = style({
   border: "none",
   background: "none",
   borderRadius: 4,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   transition: "color 120ms, background-color 120ms",
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
-      background: vars.color.background,
+      color: theme.color.foreground,
+      background: theme.color.background,
     },
   },
 });

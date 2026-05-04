@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const container = style({
   width: "100%",
@@ -17,15 +17,15 @@ export const fitButton = style({
   placeItems: "center",
   width: 28,
   height: 28,
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 6,
-  background: vars.color.background,
-  color: vars.color.mutedForeground,
+  background: theme.color.background,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
-      borderColor: vars.color.primary,
+      color: theme.color.foreground,
+      borderColor: theme.color.primary,
     },
   },
 });

@@ -1,6 +1,6 @@
 import { style, styleVariants } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const row = style({
   display: "grid",
@@ -11,7 +11,7 @@ export const row = style({
 });
 
 export const label = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.875rem",
   lineHeight: 1,
   display: "grid",
@@ -41,13 +41,13 @@ export const hintTrigger = style({
 
 export const hintTriggerTone = styleVariants({
   info: {
-    color: vars.color.mutedForeground,
+    color: theme.color.mutedForeground,
   },
   warning: {
-    color: `color-mix(in oklch, ${vars.color.primary} 72%, ${vars.color.mutedForeground})`,
+    color: `color-mix(in oklch, ${theme.color.primary} 72%, ${theme.color.mutedForeground})`,
   },
   error: {
-    color: `color-mix(in oklch, ${vars.color.error} 72%, ${vars.color.mutedForeground})`,
+    color: `color-mix(in oklch, ${theme.color.error} 72%, ${theme.color.mutedForeground})`,
   },
 });
 
@@ -73,24 +73,24 @@ export const hintContent = style({
 
 export const hintContentTone = styleVariants({
   info: {
-    border: `1px solid ${vars.color.popoverBorder}`,
-    background: vars.color.popupBackground,
-    color: vars.color.foreground,
+    border: `1px solid ${theme.color.popoverBorder}`,
+    background: theme.color.popupBackground,
+    color: theme.color.foreground,
   },
   warning: {
-    border: `1px solid color-mix(in oklch, ${vars.color.primary} 42%, ${vars.color.popoverBorder})`,
-    background: `color-mix(in oklch, ${vars.color.primary} 12%, ${vars.color.popupBackground})`,
-    color: `color-mix(in oklch, ${vars.color.primary} 52%, ${vars.color.foreground})`,
+    border: `1px solid color-mix(in oklch, ${theme.color.primary} 42%, ${theme.color.popoverBorder})`,
+    background: `color-mix(in oklch, ${theme.color.primary} 12%, ${theme.color.popupBackground})`,
+    color: `color-mix(in oklch, ${theme.color.primary} 52%, ${theme.color.foreground})`,
   },
   error: {
-    border: `1px solid color-mix(in oklch, ${vars.color.error} 42%, ${vars.color.popoverBorder})`,
-    background: `color-mix(in oklch, ${vars.color.error} 12%, ${vars.color.popupBackground})`,
-    color: `color-mix(in oklch, ${vars.color.error} 58%, ${vars.color.foreground})`,
+    border: `1px solid color-mix(in oklch, ${theme.color.error} 42%, ${theme.color.popoverBorder})`,
+    background: `color-mix(in oklch, ${theme.color.error} 12%, ${theme.color.popupBackground})`,
+    color: `color-mix(in oklch, ${theme.color.error} 58%, ${theme.color.foreground})`,
   },
 });
 
 export const scopeBadge = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   display: "block",
   fontSize: "0.75rem",
   textAlign: "center",

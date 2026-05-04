@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const wrapper = style({
   display: "grid",
@@ -12,18 +12,18 @@ export const input = style({
   height: 36,
   paddingInline: 12,
   borderRadius: 6,
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   background: "transparent",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.875rem",
   outline: "none",
   transition: "border-color 150ms",
   selectors: {
     "&:focus": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
     "&::placeholder": {
-      color: vars.color.mutedForeground,
+      color: theme.color.mutedForeground,
     },
   },
 });
@@ -32,7 +32,7 @@ export const searchButton = style({
   height: 36,
   paddingInline: 16,
   borderRadius: 6,
-  background: vars.color.primary,
+  background: theme.color.primary,
   color: "oklch(1 0 0)",
   fontSize: "0.875rem",
   fontWeight: 500,

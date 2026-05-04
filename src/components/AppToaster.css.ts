@@ -1,5 +1,5 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 const controlSize = 24;
 
@@ -21,8 +21,8 @@ export const root = style({
   gap: 10,
   padding: "12px",
   borderRadius: 10,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.background,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.background,
   boxShadow: "0 10px 24px oklch(0 0 0 / 0.22)",
 });
 
@@ -46,11 +46,11 @@ export const rootClickable = style({
   transition: "border-color 140ms ease, background 140ms ease",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
-      background: vars.color.accent,
+      borderColor: theme.color.primary,
+      background: theme.color.accent,
     },
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 2,
     },
   },
@@ -65,19 +65,19 @@ export const iconSlot = style({
 
 export const iconTone = styleVariants({
   error: {
-    color: vars.color.error,
+    color: theme.color.error,
   },
   info: {
-    color: vars.color.mutedForeground,
+    color: theme.color.mutedForeground,
   },
   loading: {
-    color: vars.color.primary,
+    color: theme.color.primary,
   },
   success: {
-    color: vars.color.success,
+    color: theme.color.success,
   },
   warning: {
-    color: vars.color.primary,
+    color: theme.color.primary,
   },
 });
 
@@ -100,14 +100,14 @@ export const body = style({
 });
 
 export const title = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.875rem",
   fontWeight: 600,
   lineHeight: 1.35,
 });
 
 export const description = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.75rem",
   lineHeight: 1.45,
   whiteSpace: "pre-wrap",
@@ -119,16 +119,16 @@ export const actionButton = style({
   marginTop: 2,
   borderRadius: 6,
   padding: "4px 8px",
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
+  color: theme.color.foreground,
   fontSize: "0.75rem",
   lineHeight: 1,
   transition: "border-color 140ms ease, background 140ms ease",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
-      background: vars.color.accent,
+      borderColor: theme.color.primary,
+      background: theme.color.accent,
     },
   },
 });
@@ -139,13 +139,13 @@ export const closeButton = style({
   borderRadius: 6,
   display: "grid",
   placeItems: "center",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   transition:
     "background 140ms ease, color 140ms ease, border-color 140ms ease",
   selectors: {
     "&:hover": {
-      background: vars.color.accent,
-      color: vars.color.foreground,
+      background: theme.color.accent,
+      color: theme.color.foreground,
     },
   },
 });

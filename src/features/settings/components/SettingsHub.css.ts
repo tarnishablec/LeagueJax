@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const page = style({
   display: "grid",
@@ -23,7 +23,7 @@ export const outlet = style({
 export const title = style({
   fontSize: "1.125rem",
   fontWeight: 600,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 export const sections = style({
@@ -66,7 +66,7 @@ export const primaryTabsList = style({
   minHeight: 34,
   overflowX: "auto",
   overflowY: "hidden",
-  borderBottom: `1px solid ${vars.color.border}`,
+  borderBottom: `1px solid ${theme.color.border}`,
   scrollbarWidth: "none",
   selectors: {
     "&::-webkit-scrollbar": {
@@ -84,7 +84,7 @@ export const primaryTab = style({
   border: "none",
   borderRadius: "6px 6px 0 0",
   padding: "0 12px",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   textDecoration: "none",
   background: "transparent",
   cursor: "pointer",
@@ -94,11 +94,11 @@ export const primaryTab = style({
   transition: "color 120ms ease-out, background 120ms ease-out",
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
-      background: vars.color.surface,
+      color: theme.color.foreground,
+      background: theme.color.surface,
     },
     "&[data-selected]": {
-      color: vars.color.foreground,
+      color: theme.color.foreground,
     },
     "&[data-selected]::after": {
       content: '""',
@@ -108,10 +108,10 @@ export const primaryTab = style({
       bottom: -1,
       height: 2,
       borderRadius: 999,
-      background: vars.color.primary,
+      background: theme.color.primary,
     },
     "&:focus-visible": {
-      outline: `1px solid ${vars.color.primary}`,
+      outline: `1px solid ${theme.color.primary}`,
       outlineOffset: -1,
     },
   },

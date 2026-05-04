@@ -1,13 +1,15 @@
 import { createVar, style, styleVariants } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css.ts";
+import { gameColorVars } from "@/styles/game-colors.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const meterFillWidthVar = createVar();
 export const physicalSegmentWidthVar = createVar();
 export const magicSegmentWidthVar = createVar();
 export const trueSegmentWidthVar = createVar();
 
-const tableColumns = "34px minmax(auto, 200px) repeat(4, auto) 144px 144px 76px 64px 58px 58px";
+const tableColumns =
+  "34px minmax(auto, 200px) repeat(4, auto) 144px 144px 76px 64px 58px 58px";
 
 export const root = style({
   display: "grid",
@@ -21,18 +23,16 @@ export const teamBlock = recipe({
     gap: 8,
     padding: 10,
     borderRadius: 8,
-    outline: `1px solid ${vars.color.border}`,
-    background: `color-mix(in srgb, ${vars.color.background} 16%, transparent)`,
+    outline: `1px solid ${theme.color.border}`,
+    background: `color-mix(in srgb, ${theme.color.background} 16%, transparent)`,
   },
   variants: {
     team: {
       blue: {
-        outline: `1px solid oklch(0.68 0.13 242 / 0.7)`,
-        // boxShadow: "inset 2px 0 0 oklch(0.68 0.13 242 / 0.7)",
+        outline: `1px solid ${gameColorVars.team.blueAccent}`,
       },
       red: {
-        outline: `1px solid oklch(0.66 0.16 24 / 0.72)`,
-        // boxShadow: "inset 2px 0 0 oklch(0.66 0.16 24 / 0.72)",
+        outline: `1px solid ${gameColorVars.team.redAccent}`,
       },
     },
   },
@@ -67,10 +67,10 @@ export const teamTitle = recipe({
   variants: {
     team: {
       blue: {
-        color: "oklch(0.78 0.12 242)",
+        color: gameColorVars.team.blue,
       },
       red: {
-        color: "oklch(0.78 0.15 24)",
+        color: gameColorVars.team.red,
       },
     },
   },
@@ -82,7 +82,7 @@ export const teamHeaderMetric = style({
   gridAutoColumns: "max-content",
   alignItems: "center",
   gap: 4,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.75rem",
   fontWeight: 700,
   lineHeight: 1,
@@ -99,7 +99,7 @@ export const scoreboardIconFallback = style({
   width: 16,
   height: 16,
   borderRadius: 4,
-  background: vars.color.accent,
+  background: theme.color.accent,
 });
 
 export const objectiveList = style({
@@ -125,9 +125,9 @@ export const objectiveStat = style({
   gap: 4,
   padding: "0 6px",
   borderRadius: 6,
-  border: `1px solid ${vars.color.border}`,
-  background: `color-mix(in srgb, ${vars.color.surface} 68%, transparent)`,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: `color-mix(in srgb, ${theme.color.surface} 68%, transparent)`,
+  color: theme.color.foreground,
   fontSize: "0.6875rem",
   fontWeight: 700,
   lineHeight: 1,
@@ -144,7 +144,7 @@ export const objectiveIconFallback = style({
   width: 16,
   height: 16,
   borderRadius: 3,
-  background: vars.color.accent,
+  background: theme.color.accent,
 });
 
 export const tableScroller = style({
@@ -179,15 +179,15 @@ export const participantRow = style({
   gap: 12,
   minHeight: 42,
   padding: "5px 8px",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.75rem",
   lineHeight: 1,
   selectors: {
     "&:not(:last-child)": {
-      borderBottom: `1px solid ${vars.color.border}`,
+      borderBottom: `1px solid ${theme.color.border}`,
     },
     "&:hover": {
-      background: `color-mix(in srgb, ${vars.color.accent} 54%, transparent)`,
+      background: `color-mix(in srgb, ${theme.color.accent} 54%, transparent)`,
     },
   },
 });
@@ -210,15 +210,15 @@ export const championIcon = style({
   height: 28,
   borderRadius: 6,
   objectFit: "cover",
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
 });
 
 export const championIconFallback = style({
   width: 28,
   height: 28,
   borderRadius: 6,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.accent,
 });
 
 export const summonerText = style({
@@ -240,7 +240,7 @@ export const championName = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.6875rem",
 });
 
@@ -259,8 +259,8 @@ export const emptyQuestSlot = style({
   width: 22,
   height: 22,
   borderRadius: 5,
-  border: `1px solid ${vars.color.border}`,
-  background: `color-mix(in srgb, ${vars.color.accent} 42%, transparent)`,
+  border: `1px solid ${theme.color.border}`,
+  background: `color-mix(in srgb, ${theme.color.accent} 42%, transparent)`,
 });
 
 export const damageCell = style({
@@ -270,7 +270,7 @@ export const damageCell = style({
 });
 
 export const damageNumber = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.6875rem",
   fontWeight: 700,
   lineHeight: 1,
@@ -281,7 +281,7 @@ export const damageMeterTrack = style({
   width: "100%",
   height: 7,
   borderRadius: 999,
-  background: `color-mix(in srgb, ${vars.color.deep} 40%, transparent)`,
+  background: `color-mix(in srgb, ${theme.color.deep} 40%, transparent)`,
   overflow: "hidden",
 });
 
@@ -298,20 +298,20 @@ export const damageMeterFill = style({
 export const damageSegment = styleVariants({
   physical: {
     width: physicalSegmentWidthVar,
-    background: "oklch(0.62 0.18 24)",
+    background: gameColorVars.damage.physical,
   },
   magic: {
     width: magicSegmentWidthVar,
-    background: "oklch(0.66 0.14 244)",
+    background: gameColorVars.damage.magic,
   },
   trueDamage: {
     width: trueSegmentWidthVar,
-    background: "oklch(0.72 0 0)",
+    background: gameColorVars.damage.trueDamage,
   },
 });
 
 export const numberCell = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.75rem",
   fontWeight: 700,
   lineHeight: 1,
@@ -319,7 +319,7 @@ export const numberCell = style({
 });
 
 export const mutedNumberCell = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.75rem",
   fontWeight: 650,
   lineHeight: 1,
@@ -334,10 +334,10 @@ export const tooltipContent = style({
   maxWidth: 260,
   padding: "4px 6px",
   borderRadius: 8,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   fontSize: "0.6875rem",
   lineHeight: 1.25,
-  boxShadow: `0 8px 24px ${vars.color.blurry}`,
+  boxShadow: `0 8px 24px ${theme.color.blurry}`,
 });

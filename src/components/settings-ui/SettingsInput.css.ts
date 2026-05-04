@@ -1,20 +1,20 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const input = style({
   minWidth: 180,
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.surface,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.surface,
+  color: theme.color.foreground,
   paddingInline: 10,
   fontSize: "0.875rem",
   selectors: {
     "&:hover": {
-      borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
+      borderColor: `oklch(from ${theme.color.primary} l c h / 0.45)`,
     },
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 1,
     },
   },
@@ -22,19 +22,19 @@ export const input = style({
 
 export const numberRoot = style({
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.surface,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.surface,
+  color: theme.color.foreground,
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
   alignItems: "stretch",
   overflow: "hidden",
   selectors: {
     "&:hover": {
-      borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
+      borderColor: `oklch(from ${theme.color.primary} l c h / 0.45)`,
     },
     "&:focus-within": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 1,
     },
   },
@@ -47,7 +47,7 @@ export const numberInput = style({
   border: "none",
   outline: "none",
   background: "transparent",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.875rem",
   paddingInline: 10,
 });
@@ -56,14 +56,14 @@ export const numberControl = style({
   height: "100%",
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  borderLeft: `1px solid ${vars.color.border}`,
+  borderLeft: `1px solid ${theme.color.border}`,
 });
 
 export const numberTrigger = style({
   minWidth: 24,
   border: "none",
   background: "transparent",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   display: "grid",
   placeItems: "center",
   lineHeight: 1,
@@ -72,13 +72,13 @@ export const numberTrigger = style({
   userSelect: "none",
   selectors: {
     "&:hover": {
-      background: `oklch(from ${vars.color.accent} 0.9 c h)`,
+      background: `oklch(from ${theme.color.accent} 0.9 c h)`,
     },
     ":root.dark &:hover": {
-      background: `oklch(from ${vars.color.accent} 0.36 c h / 0.45)`,
+      background: `oklch(from ${theme.color.accent} 0.36 c h / 0.45)`,
     },
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: -1,
     },
     "&[data-disabled]": {
@@ -89,7 +89,7 @@ export const numberTrigger = style({
 });
 
 export const numberTriggerDecrement = style({
-  borderRight: `1px solid ${vars.color.border}`,
+  borderRight: `1px solid ${theme.color.border}`,
 });
 
 export const numberTriggerIncrement = style({});

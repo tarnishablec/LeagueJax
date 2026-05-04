@@ -1,5 +1,5 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const labelFadeDurationMs = 180;
 
@@ -29,7 +29,7 @@ const buttonBase = style({
     "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
   selectors: {
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 1,
     },
     "&:active": {
@@ -46,13 +46,13 @@ export const tone = styleVariants({
   accent: [
     buttonBase,
     {
-      borderColor: vars.color.primary,
-      background: vars.color.primary,
+      borderColor: theme.color.primary,
+      background: theme.color.primary,
       color: "oklch(0.18 0.01 60)",
       selectors: {
         "&:hover:not(:disabled)": {
-          borderColor: `color-mix(in oklch, ${vars.color.primary} 92%, oklch(1 0 0))`,
-          background: `color-mix(in oklch, ${vars.color.primary} 88%, oklch(1 0 0))`,
+          borderColor: `color-mix(in oklch, ${theme.color.primary} 92%, oklch(1 0 0))`,
+          background: `color-mix(in oklch, ${theme.color.primary} 88%, oklch(1 0 0))`,
         },
       },
     },
@@ -60,13 +60,13 @@ export const tone = styleVariants({
   quiet: [
     buttonBase,
     {
-      borderColor: `color-mix(in oklch, ${vars.color.primary} 88%, ${vars.color.border})`,
-      background: `color-mix(in oklch, ${vars.color.primary} 90%, ${vars.color.background})`,
+      borderColor: `color-mix(in oklch, ${theme.color.primary} 88%, ${theme.color.border})`,
+      background: `color-mix(in oklch, ${theme.color.primary} 90%, ${theme.color.background})`,
       color: "oklch(0.18 0.01 60)",
       selectors: {
         "&:hover:not(:disabled)": {
-          borderColor: `color-mix(in oklch, ${vars.color.primary} 96%, ${vars.color.border})`,
-          background: `color-mix(in oklch, ${vars.color.primary} 97%, ${vars.color.background})`,
+          borderColor: `color-mix(in oklch, ${theme.color.primary} 96%, ${theme.color.border})`,
+          background: `color-mix(in oklch, ${theme.color.primary} 97%, ${theme.color.background})`,
         },
       },
     },
@@ -74,13 +74,13 @@ export const tone = styleVariants({
   neutral: [
     buttonBase,
     {
-      borderColor: vars.color.border,
-      background: vars.color.surface,
-      color: vars.color.foreground,
+      borderColor: theme.color.border,
+      background: theme.color.surface,
+      color: theme.color.foreground,
       selectors: {
         "&:hover:not(:disabled)": {
-          borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
-          background: `color-mix(in oklch, ${vars.color.primary} 10%, ${vars.color.background})`,
+          borderColor: `oklch(from ${theme.color.primary} l c h / 0.45)`,
+          background: `color-mix(in oklch, ${theme.color.primary} 10%, ${theme.color.background})`,
         },
       },
     },

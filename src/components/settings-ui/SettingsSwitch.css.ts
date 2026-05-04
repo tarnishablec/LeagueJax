@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const button = recipe({
   base: {
@@ -9,17 +9,17 @@ export const button = recipe({
     alignItems: "center",
     gap: 8,
     borderRadius: 8,
-    border: `1px solid ${vars.color.border}`,
-    background: vars.color.surface,
+    border: `1px solid ${theme.color.border}`,
+    background: theme.color.surface,
     padding: "0 10px",
     cursor: "pointer",
-    color: vars.color.foreground,
+    color: theme.color.foreground,
     selectors: {
       "&:hover": {
-        borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
+        borderColor: `oklch(from ${theme.color.primary} l c h / 0.45)`,
       },
       "&:focus-visible": {
-        outline: `2px solid ${vars.color.primary}`,
+        outline: `2px solid ${theme.color.primary}`,
         outlineOffset: 1,
       },
       "&[data-disabled]": {
@@ -49,16 +49,16 @@ export const track = recipe({
   variants: {
     checked: {
       true: {
-        background: `oklch(from ${vars.color.primary} l c h / 0.3)`,
+        background: `oklch(from ${theme.color.primary} l c h / 0.3)`,
         justifyItems: "end",
         selectors: {
           ":root.dark &": {
-            background: `oklch(from ${vars.color.primary} l c h / 0.82)`,
+            background: `oklch(from ${theme.color.primary} l c h / 0.82)`,
           },
         },
       },
       false: {
-        background: vars.color.accent,
+        background: theme.color.accent,
         justifyItems: "start",
       },
     },
@@ -72,10 +72,10 @@ export const thumb = style({
   width: 16,
   height: 16,
   borderRadius: "50%",
-  background: vars.color.foreground,
+  background: theme.color.foreground,
 });
 
 export const text = style({
   fontSize: "0.875rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });

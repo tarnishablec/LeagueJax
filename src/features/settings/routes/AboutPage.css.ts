@@ -1,5 +1,5 @@
 import { globalStyle, style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const page = style({
   display: "grid",
@@ -12,8 +12,8 @@ export const overviewCard = style({
   gap: 12,
   padding: 14,
   borderRadius: 10,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.blurry,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.blurry,
 });
 
 export const overview = style({
@@ -45,12 +45,12 @@ globalStyle(`${markdownShell} h1`, {
   fontSize: "1.52rem",
   lineHeight: 1.12,
   fontWeight: "700",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 globalStyle(`${markdownShell} p`, {
   margin: 0,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.95rem",
   lineHeight: "1.65",
 });
@@ -63,9 +63,9 @@ export const versionPill = style({
   marginInline: "0.34rem 0.42rem",
   paddingInline: 10,
   borderRadius: 999,
-  border: `1px solid oklch(from ${vars.color.primary} l c h / 0.28)`,
-  background: `oklch(from ${vars.color.primary} l c h / 0.12)`,
-  color: vars.color.primary,
+  border: `1px solid oklch(from ${theme.color.primary} l c h / 0.28)`,
+  background: `oklch(from ${theme.color.primary} l c h / 0.12)`,
+  color: theme.color.primary,
   fontSize: "0.8rem",
   fontWeight: "600",
   letterSpacing: "0.02em",
@@ -80,13 +80,13 @@ export const referenceRow = style({
   gap: 8,
   alignItems: "center",
   justifyContent: "start",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.86rem",
   lineHeight: "1.55",
 });
 
 export const referenceLabel = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const markdownLink = style({
@@ -95,12 +95,12 @@ export const markdownLink = style({
   background: "transparent",
   font: "inherit",
   display: "inline-block",
-  color: vars.color.primary,
+  color: theme.color.primary,
   textAlign: "left",
   cursor: "pointer",
   selectors: {
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 2,
     },
     "&:hover": {
@@ -110,11 +110,11 @@ export const markdownLink = style({
 });
 
 globalStyle(`${referenceRow} ${markdownLink}`, {
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 globalStyle(`${referenceRow} ${markdownLink}:hover`, {
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 export const markdownImage = style({
@@ -133,7 +133,7 @@ export const contentGrid = style({
 
 export const sectionText = style({
   margin: 0,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.92rem",
   lineHeight: 1.6,
 });
@@ -153,8 +153,8 @@ export const softwareItem = style({
   padding: 12,
   font: "inherit",
   borderRadius: 10,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.surface,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.surface,
   color: "inherit",
   textAlign: "left",
   cursor: "pointer",
@@ -162,12 +162,12 @@ export const softwareItem = style({
     "border-color 140ms ease, background-color 140ms ease, transform 140ms ease",
   selectors: {
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 2,
     },
     "&:hover": {
-      borderColor: `oklch(from ${vars.color.primary} l c h / 0.44)`,
-      background: `oklch(from ${vars.color.primary} l c h / 0.1)`,
+      borderColor: `oklch(from ${theme.color.primary} l c h / 0.44)`,
+      background: `oklch(from ${theme.color.primary} l c h / 0.1)`,
       transform: "translateY(-1px)",
     },
     "&:active": {
@@ -189,17 +189,17 @@ export const softwareBody = style({
 export const softwareName = style({
   fontSize: "0.98rem",
   fontWeight: 600,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   transition: "color 140ms ease",
   selectors: {
     [`${softwareItem}:hover &`]: {
-      color: vars.color.primary,
+      color: theme.color.primary,
     },
   },
 });
 
 export const softwareRole = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.88rem",
   lineHeight: 1.5,
 });
@@ -219,9 +219,9 @@ export const softwarePill = style({
   placeItems: "center",
   paddingInline: 10,
   borderRadius: 999,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.blurry,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.blurry,
+  color: theme.color.foreground,
   fontSize: "0.8rem",
   lineHeight: 1,
   minHeight: "1.5rem",
