@@ -1,5 +1,5 @@
 import { globalStyle } from "@vanilla-extract/css";
-import { vars } from "./theme.css";
+import { theme } from "./theme.css";
 
 globalStyle(":root", {
   fontFamily:
@@ -11,8 +11,8 @@ globalStyle(":root", {
   textRendering: "optimizeLegibility",
   WebkitFontSmoothing: "antialiased",
   WebkitTextSizeAdjust: "100%",
-  color: vars.color.foreground,
-  background: vars.color.backdrop,
+  color: theme.color.foreground,
+  background: theme.color.backdrop,
 });
 
 globalStyle("body", {

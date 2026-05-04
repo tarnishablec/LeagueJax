@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const metricRow = style({
   display: "grid",
@@ -13,7 +13,7 @@ export const divider = style({
   width: 1,
   alignSelf: "stretch",
   margin: "2px 0",
-  background: `color-mix(in oklch, ${vars.color.border} 60%, transparent)`,
+  background: `color-mix(in oklch, ${theme.color.border} 60%, transparent)`,
 });
 
 export const metricGroup = style({
@@ -26,7 +26,7 @@ export const metricGroup = style({
 export const metricPrimary = style({
   fontSize: "0.8rem",
   fontWeight: 600,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   lineHeight: 1,
   whiteSpace: "nowrap",
   textAlign: "center",
@@ -56,7 +56,7 @@ export const metricSecondary = style({
   height: "min-content",
   alignItems: "center",
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   whiteSpace: "nowrap",
   textAlign: "center",
   textBoxTrim: "trim-both",
@@ -74,7 +74,7 @@ export const scoreboardIconFallback = style({
   width: 14,
   height: 14,
   borderRadius: 3,
-  background: `color-mix(in oklch, ${vars.color.foreground} 22%, transparent)`,
+  background: `color-mix(in oklch, ${theme.color.foreground} 22%, transparent)`,
   flexShrink: 0,
 });
 
@@ -84,9 +84,9 @@ export const tooltipPositioner = style({
 
 export const tooltipContent = style({
   borderRadius: 8,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   padding: "4px 8px",
   fontSize: "0.6875rem",
 });

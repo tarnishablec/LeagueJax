@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const wrapper = style({
   position: "relative",
@@ -14,14 +14,14 @@ export const trigger = style({
   placeItems: "center",
   width: 36,
   height: "100%",
-  color: `oklch(from ${vars.color.foreground} l c h / 0.6)`,
+  color: `oklch(from ${theme.color.foreground} l c h / 0.6)`,
   fontSize: "0.75rem",
   fontWeight: 600,
   letterSpacing: "0.02em",
   transition: "color 100ms",
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
+      color: theme.color.foreground,
     },
   },
 });
@@ -45,8 +45,8 @@ export const dropdownOuter = style({
 });
 
 export const dropdownInner = style({
-  background: vars.color.popupBackground,
-  border: `1px solid ${vars.color.border}`,
+  background: theme.color.popupBackground,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 6,
   boxShadow:
     "0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1)",
@@ -72,15 +72,15 @@ export const dropdownItem = recipe({
   variants: {
     active: {
       true: {
-        background: vars.color.accent,
-        color: vars.color.accentForeground,
+        background: theme.color.accent,
+        color: theme.color.accentForeground,
       },
       false: {
-        color: vars.color.mutedForeground,
+        color: theme.color.mutedForeground,
         selectors: {
           "&:hover": {
-            background: vars.color.accent,
-            color: vars.color.accentForeground,
+            background: theme.color.accent,
+            color: theme.color.accentForeground,
           },
         },
       },

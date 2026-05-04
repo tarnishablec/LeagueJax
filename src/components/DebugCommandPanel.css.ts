@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const debugDock = style({
   position: "fixed",
@@ -12,17 +12,17 @@ export const debugDock = style({
 });
 
 export const debugToggle = style({
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 8,
-  background: vars.color.accent,
-  color: vars.color.foreground,
+  background: theme.color.accent,
+  color: theme.color.foreground,
   font: "inherit",
   fontSize: "0.75rem",
   padding: "6px 10px",
   cursor: "pointer",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
   },
 });
@@ -36,15 +36,15 @@ export const debugPanel = style({
   display: "grid",
   gridTemplateRows: "auto auto minmax(0, 1fr)",
   gap: 8,
-  border: `1px solid ${vars.color.popoverBorder}`,
+  border: `1px solid ${theme.color.popoverBorder}`,
   borderRadius: 10,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   padding: 10,
-  boxShadow: `0 10px 24px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
+  boxShadow: `0 10px 24px oklch(from ${theme.color.foreground} 0.25 c h / 0.2)`,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 10px 24px oklch(from ${vars.color.background} 0.06 c h / 0.6)`,
+      boxShadow: `0 10px 24px oklch(from ${theme.color.background} 0.06 c h / 0.6)`,
     },
   },
   resize: "both",
@@ -62,7 +62,7 @@ export const debugHeader = style({
 export const debugTitle = style({
   fontSize: "0.75rem",
   fontWeight: 600,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const debugButtons = style({
@@ -74,14 +74,14 @@ export const debugButtons = style({
 
 export const debugEmpty = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const debugButton = style({
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 8,
-  background: vars.color.background,
-  color: vars.color.foreground,
+  background: theme.color.background,
+  color: theme.color.foreground,
   font: "inherit",
   wordBreak: "break-word",
   fontSize: "0.75rem",
@@ -89,7 +89,7 @@ export const debugButton = style({
   cursor: "pointer",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
     "&:disabled": {
       opacity: 0.6,
@@ -115,30 +115,30 @@ export const debugOutputHeader = style({
 
 export const debugOutputTitle = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const debugCopyButton = style({
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 8,
-  background: vars.color.background,
-  color: vars.color.foreground,
+  background: theme.color.background,
+  color: theme.color.foreground,
   font: "inherit",
   fontSize: "0.6875rem",
   padding: "4px 8px",
   cursor: "pointer",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
   },
 });
 
 export const debugOutput = style({
   margin: 0,
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 8,
-  background: vars.color.background,
+  background: theme.color.background,
   padding: 10,
   overflow: "auto",
   whiteSpace: "pre",

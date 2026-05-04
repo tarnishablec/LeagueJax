@@ -1,6 +1,6 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { root as iconActionButton } from "@/components/IconActionButton.css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 const searchButtonWidth = "80px";
 
@@ -52,17 +52,17 @@ export const dialogContent = style({
   minHeight: "min(520px, calc(100vh - 40px))",
   maxHeight: "70vh",
   borderRadius: 12,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
-  boxShadow: `0 16px 36px oklch(from ${vars.color.foreground} 0.25 c h / 0.2)`,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
+  boxShadow: `0 16px 36px oklch(from ${theme.color.foreground} 0.25 c h / 0.2)`,
   padding: 14,
   display: "grid",
   gridTemplateRows: "auto auto 1fr",
   gap: 10,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 16px 36px oklch(from ${vars.color.background} 0.06 c h / 0.6)`,
+      boxShadow: `0 16px 36px oklch(from ${theme.color.background} 0.06 c h / 0.6)`,
     },
   },
 });
@@ -96,22 +96,22 @@ export const title = style({
   margin: 0,
   fontSize: "0.9rem",
   fontWeight: 700,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 export const closeButton = style({
   width: 26,
   height: 26,
   borderRadius: 7,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
+  color: theme.color.foreground,
   display: "grid",
   placeItems: "center",
   cursor: "pointer",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
   },
 });
@@ -134,19 +134,19 @@ export const searchInput = style({
   width: "100%",
   height: 32,
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
+  color: theme.color.foreground,
   font: "inherit",
   fontSize: "0.8rem",
   paddingInline: 10,
   outline: "none",
   selectors: {
     "&::placeholder": {
-      color: vars.color.mutedForeground,
+      color: theme.color.mutedForeground,
     },
     "&:focus": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
   },
 });
@@ -158,9 +158,9 @@ export const searchButton = style({
   width: searchButtonWidth,
   height: 32,
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.accent,
+  color: theme.color.foreground,
   font: "inherit",
   fontSize: "0.75rem",
   paddingInline: 0,
@@ -168,7 +168,7 @@ export const searchButton = style({
   userSelect: "none",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
     "&:disabled": {
       opacity: 0.6,
@@ -216,8 +216,8 @@ export const resultPanel = style({
   display: "grid",
   placeItems: "center",
   borderRadius: 10,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
   minHeight: 0,
   overflow: "auto",
   padding: 8,
@@ -228,8 +228,8 @@ export const friendPanel = style({
   gridTemplateRows: "auto 1fr",
   minHeight: 0,
   borderRadius: 10,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
   overflow: "hidden",
 });
 
@@ -239,7 +239,7 @@ export const friendHeader = style({
   alignItems: "center",
   gap: 6,
   padding: "9px 10px",
-  borderBottom: `1px solid ${vars.color.border}`,
+  borderBottom: `1px solid ${theme.color.border}`,
 });
 
 export const friendHeaderText = style({
@@ -251,12 +251,12 @@ export const friendHeaderText = style({
 export const friendTitle = style({
   fontSize: "0.78rem",
   fontWeight: 700,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 export const friendCount = style({
   fontSize: "0.68rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const friendSearchInput = style({
@@ -264,19 +264,19 @@ export const friendSearchInput = style({
   minWidth: 0,
   height: 30,
   borderRadius: 6,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   font: "inherit",
   fontSize: "0.68rem",
   paddingInline: 7,
   outline: "none",
   selectors: {
     "&::placeholder": {
-      color: vars.color.mutedForeground,
+      color: theme.color.mutedForeground,
     },
     "&:focus": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
   },
 });
@@ -302,7 +302,7 @@ export const friendSectionTitle = style({
   paddingInline: 2,
   fontSize: "0.68rem",
   fontWeight: 700,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const friendButton = style({
@@ -310,7 +310,7 @@ export const friendButton = style({
   borderRadius: 8,
   border: `1px solid transparent`,
   background: "transparent",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   font: "inherit",
   padding: "6px 7px",
   cursor: "pointer",
@@ -321,8 +321,8 @@ export const friendButton = style({
   textAlign: "left",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.border,
-      background: vars.color.accent,
+      borderColor: theme.color.border,
+      background: theme.color.accent,
     },
   },
 });
@@ -332,14 +332,14 @@ export const friendAvatar = style({
   height: 28,
   borderRadius: 6,
   objectFit: "cover",
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
 });
 
 export const friendAvatarFallback = style({
   width: 28,
   height: 28,
   borderRadius: 6,
-  background: vars.color.border,
+  background: theme.color.border,
 });
 
 export const friendInfo = style({
@@ -361,7 +361,7 @@ export const friendMeta = style({
   fontSize: "0.66rem",
   lineHeight: 1.2,
   minHeight: "0.8rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -369,7 +369,7 @@ export const friendMeta = style({
 
 const friendStatusBase = style({
   borderRadius: 999,
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   padding: "2px 6px",
   fontSize: "0.63rem",
   lineHeight: 1.2,
@@ -404,8 +404,8 @@ export const friendStatus = styleVariants({
   offline: [
     friendStatusBase,
     {
-      color: vars.color.mutedForeground,
-      background: vars.color.accent,
+      color: theme.color.mutedForeground,
+      background: theme.color.accent,
     },
   ],
 });
@@ -418,7 +418,7 @@ export const friendEmptyText = style({
   textAlign: "center",
   padding: 8,
   fontSize: "0.72rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const resultList = style({
@@ -432,9 +432,9 @@ export const resultList = style({
 export const resultButton = style({
   width: "100%",
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.accent,
+  color: theme.color.foreground,
   font: "inherit",
   padding: "8px 10px",
   cursor: "pointer",
@@ -447,8 +447,8 @@ export const resultButton = style({
   textAlign: "left",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
-      background: vars.color.background,
+      borderColor: theme.color.primary,
+      background: theme.color.background,
     },
   },
 });
@@ -459,7 +459,7 @@ export const resultAvatar = style({
   borderRadius: 6,
   objectFit: "cover",
   gridRow: "1 / -1",
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
 });
 
 export const resultAvatarFallback = style({
@@ -467,7 +467,7 @@ export const resultAvatarFallback = style({
   height: 35,
   borderRadius: 6,
   gridRow: "1 / -1",
-  background: vars.color.border,
+  background: theme.color.border,
 });
 
 export const resultName = style({
@@ -480,7 +480,7 @@ export const resultName = style({
 
 export const resultMeta = style({
   fontSize: "0.7rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   display: "inline-grid",
   gridAutoFlow: "column",
   justifyContent: "space-between",
@@ -489,7 +489,7 @@ export const resultMeta = style({
 
 export const emptyText = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   display: "grid",
   placeItems: "center",
   minHeight: 80,

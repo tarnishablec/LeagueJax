@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const panel = style({
   display: "grid",
@@ -36,7 +36,7 @@ export const selectWrap = style({
 
 export const selectLabel = style({
   fontSize: "0.6875rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.02em",
@@ -46,9 +46,9 @@ export const pageButton = style({
   width: 30,
   height: 30,
   borderRadius: 7,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.blurry,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.blurry,
+  color: theme.color.foreground,
   cursor: "pointer",
   display: "grid",
   placeItems: "center",
@@ -56,8 +56,8 @@ export const pageButton = style({
   transition: "border-color 120ms, color 120ms",
   selectors: {
     "&:hover": {
-      borderColor: `oklch(from ${vars.color.primary} l c h / 0.45)`,
-      color: vars.color.primary,
+      borderColor: `oklch(from ${theme.color.primary} l c h / 0.45)`,
+      color: theme.color.primary,
     },
     "&:disabled": {
       opacity: 0.45,
@@ -69,9 +69,9 @@ export const pageButton = style({
 export const pageIndicator = style({
   height: 30,
   borderRadius: 7,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.blurry,
-  color: vars.color.mutedForeground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.blurry,
+  color: theme.color.mutedForeground,
   fontSize: "0.75rem",
   display: "grid",
   placeItems: "center",
@@ -92,6 +92,6 @@ export const emptyState = style({
   display: "grid",
   placeItems: "center",
   height: "100%",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.875rem",
 });

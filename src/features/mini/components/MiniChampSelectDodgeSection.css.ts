@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const root = style({
   display: "grid",
@@ -8,7 +8,7 @@ export const root = style({
   gap: "8px",
   padding: "10px 12px",
   borderRadius: "8px",
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   background: "oklch(0 0 0 / 0.14)",
 });
 
@@ -16,7 +16,7 @@ export const title = style({
   minWidth: 0,
   fontSize: "13px",
   lineHeight: 1.35,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 export const button = style({
@@ -54,5 +54,5 @@ export const error = style({
   gridColumn: "1 / -1",
   fontSize: "12px",
   lineHeight: 1.35,
-  color: vars.color.error,
+  color: theme.color.error,
 });

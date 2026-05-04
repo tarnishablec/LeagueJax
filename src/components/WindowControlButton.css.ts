@@ -1,5 +1,5 @@
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const trafficButton = recipe({
   base: {
@@ -7,7 +7,7 @@ export const trafficButton = recipe({
     placeItems: "center",
     width: 44,
     height: "100%",
-    color: `oklch(from ${vars.color.foreground} l c h / 0.7)`,
+    color: `oklch(from ${theme.color.foreground} l c h / 0.7)`,
     transition: "color 100ms, background-color 100ms",
     ":active": {
       filter: "brightness(0.75)",
@@ -19,7 +19,7 @@ export const trafficButton = recipe({
         selectors: {
           "&:hover": {
             background: "oklch(0 0 0 / 0.162)",
-            color: vars.color.foreground,
+            color: theme.color.foreground,
           },
           ":root.dark &:hover": {
             background: "oklch(1 0 0 / 0.2)",

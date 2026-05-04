@@ -9,7 +9,8 @@ import {
   summonerIdGameNameColorVar,
   summonerIdTagLineColorVar,
 } from "@/components/SummonerID";
-import { vars } from "@/styles/theme.css";
+import { gameColorVars } from "@/styles/game-colors.css";
+import { theme } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
 export const playerCardSquadColorVar = createVar();
@@ -57,9 +58,9 @@ export const emptyState = style({
   display: "grid",
   placeItems: "center",
   height: "100%",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.8rem",
-  border: `1px dashed ${vars.color.border}`,
+  border: `1px dashed ${theme.color.border}`,
   borderRadius: 8,
   gridColumn: "1 / -1",
   width: "100%",
@@ -69,10 +70,10 @@ export const playerCard = style({
   display: "grid",
   gridTemplateRows: "auto auto 1fr",
   gap: 6,
-  border: `1px solid ${fallbackVar(playerCardSquadColorVar, vars.color.border)}`,
+  border: `1px solid ${fallbackVar(playerCardSquadColorVar, theme.color.border)}`,
   borderRadius: 10,
   padding: "10px 6px",
-  background: vars.color.surface,
+  background: theme.color.surface,
   height: "100%",
   overflow: "hidden",
   width: "100%",
@@ -123,8 +124,8 @@ export const playerNameButton = style({
   selectors: {
     "&:hover": {
       vars: {
-        [summonerIdGameNameColorVar]: vars.color.primary,
-        [summonerIdTagLineColorVar]: `color-mix(in oklch, ${vars.color.primary} 72%, ${vars.color.mutedForeground})`,
+        [summonerIdGameNameColorVar]: theme.color.primary,
+        [summonerIdTagLineColorVar]: `color-mix(in oklch, ${theme.color.primary} 72%, ${theme.color.mutedForeground})`,
       },
     },
   },
@@ -139,7 +140,7 @@ export const playerSquadBadge = style({
   padding: "0 5px",
   borderRadius: 4,
   border: `1px solid color-mix(in oklch, ${playerCardSquadColorVar} 42%, transparent)`,
-  color: `color-mix(in oklch, ${playerCardSquadColorVar} 78%, ${vars.color.foreground})`,
+  color: `color-mix(in oklch, ${playerCardSquadColorVar} 78%, ${theme.color.foreground})`,
   background: `color-mix(in oklch, ${playerCardSquadColorVar} 18%, transparent)`,
   fontSize: "0.68rem",
   fontWeight: 750,
@@ -160,14 +161,14 @@ export const championAvatar = style({
   height: "100%",
   borderRadius: 6,
   objectFit: "cover",
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
 });
 
 export const championAvatarFallback = style({
   width: 40,
   height: 40,
   borderRadius: 6,
-  background: vars.color.border,
+  background: theme.color.border,
 });
 
 export const playerMetaSingle = style({
@@ -175,7 +176,7 @@ export const playerMetaSingle = style({
   gridTemplateColumns: "minmax(0, 1fr)",
   gap: 4,
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const levelBadge = style({
@@ -194,7 +195,7 @@ export const levelBadge = style({
   lineHeight: 1,
   color: "oklch(0.98 0 0 / 0.96)",
   background: "color-mix(in oklch, oklch(0.14 0.01 260) 72%, transparent)",
-  border: `1px solid color-mix(in oklch, ${vars.color.background} 65%, transparent)`,
+  border: `1px solid color-mix(in oklch, ${theme.color.background} 65%, transparent)`,
 });
 
 export const playerOverview = style({
@@ -205,7 +206,7 @@ export const playerOverview = style({
 
 export const playerStats = style({
   fontSize: "0.78rem",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr)",
   alignItems: "center",
@@ -223,9 +224,9 @@ export const winRateText = recipe({
   },
   variants: {
     tone: {
-      win: { color: vars.color.success },
-      lose: { color: vars.color.error },
-      neutral: { color: vars.color.mutedForeground },
+      win: { color: gameColorVars.outcome.winForeground },
+      lose: { color: gameColorVars.outcome.loseForeground },
+      neutral: { color: theme.color.mutedForeground },
     },
   },
   defaultVariants: {
@@ -251,7 +252,7 @@ export const playerTag = style({
   padding: "0 5px",
   borderRadius: 4,
   border: `1px solid color-mix(in oklch, ${playerTagColorVar} 36%, transparent)`,
-  color: `color-mix(in oklch, ${playerTagColorVar} 72%, ${vars.color.foreground})`,
+  color: `color-mix(in oklch, ${playerTagColorVar} 72%, ${theme.color.foreground})`,
   background: `color-mix(in oklch, ${playerTagColorVar} 20%, transparent)`,
   fontSize: "0.68rem",
   fontWeight: 700,
@@ -279,7 +280,7 @@ export const rankItem = style({
 });
 
 export const rankQueue = style({
-  color: vars.color.accentForeground,
+  color: theme.color.accentForeground,
   fontSize: "0.66rem",
   fontWeight: 750,
   lineHeight: 1,
@@ -325,9 +326,9 @@ export const rankTooltipPositioner = style({
 export const rankTooltipContent = style({
   padding: "5px 7px",
   borderRadius: 4,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   fontSize: "0.72rem",
   fontWeight: 650,
   lineHeight: 1,
@@ -337,7 +338,7 @@ export const rankTooltipContent = style({
 
 export const rankText = style({
   fontSize: "0.7rem",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontWeight: 700,
   lineHeight: 1.1,
   whiteSpace: "nowrap",
@@ -348,7 +349,7 @@ export const rankText = style({
 export const botLabel = style({
   fontSize: "0.78rem",
   fontWeight: 700,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   lineHeight: 1.1,
   whiteSpace: "nowrap",
   overflow: "hidden",
@@ -419,30 +420,30 @@ export const historyDialogContent = style({
   maxHeight: "calc(100vh - 40px)",
   overflow: "auto",
   borderRadius: 12,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   padding: 14,
 });
 
 export const winRow = style({
-  background: `color-mix(in oklch, ${vars.color.success} 12%, transparent)`,
+  background: `color-mix(in srgb, ${gameColorVars.outcome.winSurface} 60%, transparent)`,
 });
 
 export const loseRow = style({
-  background: `color-mix(in oklch, ${vars.color.error} 12%, transparent)`,
+  background: `color-mix(in srgb, ${gameColorVars.outcome.loseSurface} 60%, transparent)`,
 });
 
 export const remakeRow = style({
-  background: `color-mix(in oklch, ${vars.color.mutedForeground} 8%, transparent)`,
+  background: `color-mix(in oklch, ${theme.color.mutedForeground} 8%, transparent)`,
 });
 
 export const terminatedRow = style({
-  background: `color-mix(in oklch, ${vars.color.mutedForeground} 8%, transparent)`,
+  background: `color-mix(in oklch, ${theme.color.mutedForeground} 8%, transparent)`,
 });
 
 export const historyEmpty = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   height: "100%",
   fontSize: "0.72rem",
   textAlign: "center",
@@ -452,33 +453,33 @@ export const historyCenteredState = style({
   display: "grid",
   placeItems: "center",
   height: "100%",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.72rem",
   textAlign: "center",
 });
 
 export const winText = style({
-  color: vars.color.success,
+  color: gameColorVars.outcome.winForeground,
   fontWeight: 700,
 });
 
 export const loseText = style({
-  color: vars.color.error,
+  color: gameColorVars.outcome.loseForeground,
   fontWeight: 700,
 });
 
 export const remakeText = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontWeight: 700,
 });
 
 export const terminatedText = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontWeight: 700,
 });
 
 export const kdaText = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -495,7 +496,7 @@ export const kdaCell = style({
 });
 
 export const positionText = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.68rem",
   fontWeight: 600,
   textTransform: "uppercase",
@@ -508,7 +509,7 @@ export const historyMeta = style({
   gridAutoFlow: "column",
   alignItems: "center",
   gap: 6,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.7rem",
   whiteSpace: "nowrap",
 });
@@ -539,7 +540,7 @@ export const matchBriefDown = style({
 });
 
 export const queueNameText = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontWeight: 600,
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -548,14 +549,14 @@ export const queueNameText = style({
 });
 
 export const gameTimeText = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.68rem",
 });
 
 export const historyMetaIcon = style({
   width: 11,
   height: 11,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const historyChampionAvatar = style({
@@ -563,12 +564,12 @@ export const historyChampionAvatar = style({
   height: 35,
   borderRadius: 4,
   objectFit: "contain",
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
 });
 
 export const historyChampionFallback = style({
   width: 35,
   height: 35,
   borderRadius: 4,
-  background: vars.color.border,
+  background: theme.color.border,
 });

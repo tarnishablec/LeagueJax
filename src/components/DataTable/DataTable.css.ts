@@ -1,8 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const tableWrap = style({
-  border: `1px solid ${vars.color.border}`,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 10,
   overflow: "hidden",
 });
@@ -15,10 +15,10 @@ export const table = style({
 
 export const headCell = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   padding: "9px 12px",
-  background: vars.color.surface,
-  borderBottom: `1px solid ${vars.color.border}`,
+  background: theme.color.surface,
+  borderBottom: `1px solid ${theme.color.border}`,
   textAlign: "left",
   verticalAlign: "top",
   overflow: "hidden",
@@ -28,9 +28,9 @@ export const headCell = style({
 
 export const bodyCell = style({
   fontSize: "0.8125rem",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   padding: "10px 12px",
-  borderBottom: `1px solid ${vars.color.border}`,
+  borderBottom: `1px solid ${theme.color.border}`,
   verticalAlign: "top",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -39,7 +39,7 @@ export const bodyCell = style({
 
 export const empty = style({
   padding: "16px 12px",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.8125rem",
 });
 
@@ -49,7 +49,7 @@ export const monospace = style({
 });
 
 export const mutedCell = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   textWrap: "nowrap",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",

@@ -9,7 +9,7 @@ import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionI
 import { MatchCard } from "@/features/history/components/match-card/MatchCard";
 import { normalizeHistoryPosition } from "@/features/history/hooks/use-match-card-view-model";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 import {
   historyResultClassName,
   historyResultLabel,
@@ -120,8 +120,8 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
 function HistoryLoadingState() {
   return (
     <SkeletonTheme
-      baseColor={`color-mix(in oklch, ${vars.color.foreground} 8%, transparent)`}
-      highlightColor={`color-mix(in oklch, ${vars.color.foreground} 16%, transparent)`}
+      baseColor={`color-mix(in oklch, ${theme.color.foreground} 8%, transparent)`}
+      highlightColor={`color-mix(in oklch, ${theme.color.foreground} 16%, transparent)`}
       duration={1.2}
     >
       <div className={s.historyList} style={{ alignContent: "start" }}>

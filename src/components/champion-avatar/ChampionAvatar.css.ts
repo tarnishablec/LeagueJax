@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const wrapper = style({
   position: "relative",
@@ -24,5 +24,5 @@ export const levelBadge = style({
   lineHeight: 1,
   color: "oklch(0.98 0 0 / 0.96)",
   background: "color-mix(in oklch, oklch(0.14 0.01 260) 72%, transparent)",
-  border: `1px solid color-mix(in oklch, ${vars.color.background} 65%, transparent)`,
+  border: `1px solid color-mix(in oklch, ${theme.color.background} 65%, transparent)`,
 });

@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const shardsPage = style({
   height: "100%",
@@ -19,20 +19,20 @@ export const segmentGroup = style({
   gap: 2,
   padding: 2,
   borderRadius: 6,
-  background: vars.color.accent,
+  background: theme.color.accent,
 });
 
 export const segment = style({
   padding: "4px 10px",
   borderRadius: 4,
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   border: "none",
   background: "none",
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
+      color: theme.color.foreground,
     },
   },
 });
@@ -40,8 +40,8 @@ export const segment = style({
 export const segmentActive = style([
   segment,
   {
-    color: vars.color.foreground,
-    background: vars.color.deep,
+    color: theme.color.foreground,
+    background: theme.color.deep,
     // boxShadow: `0 1px 2px oklch(0 0 0 / 0.06)`,
   },
 ]);

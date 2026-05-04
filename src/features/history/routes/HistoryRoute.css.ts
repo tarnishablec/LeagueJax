@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const page = style({
   display: "grid",
@@ -14,7 +14,7 @@ export const emptyState = style({
   display: "grid",
   placeItems: "center",
   height: "100%",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.875rem",
 });
 
@@ -25,8 +25,8 @@ export const listPlaceholder = style({
 export const summaryPlaceholder = style({
   minHeight: 82,
   borderRadius: 8,
-  background: vars.color.surface,
-  border: `1px solid ${vars.color.border}`,
+  background: theme.color.surface,
+  border: `1px solid ${theme.color.border}`,
 });
 
 export const focusPicker = style({
@@ -38,7 +38,7 @@ export const focusPicker = style({
 
 export const focusPickerTitle = style({
   fontSize: "0.875rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   textAlign: "center",
 });
 
@@ -46,9 +46,9 @@ export const focusPickerCard = style({
   display: "grid",
   padding: "12px 16px",
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.accent,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.accent,
+  color: theme.color.foreground,
   cursor: "pointer",
   textAlign: "start",
   font: "inherit",
@@ -56,7 +56,7 @@ export const focusPickerCard = style({
   transition: "border-color 150ms",
   selectors: {
     "&:hover": {
-      borderColor: vars.color.primary,
+      borderColor: theme.color.primary,
     },
   },
 });
@@ -87,7 +87,7 @@ export const focusPickerAvatar = style({
 export const focusPickerAvatarFallback = style({
   width: "100%",
   height: "100%",
-  background: vars.color.border,
+  background: theme.color.border,
 });
 
 export const focusPickerInfo = style({
@@ -109,12 +109,12 @@ export const focusPickerDetail = style({
   justifyContent: "space-between",
   gap: 12,
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const focusPickerPath = style({
   fontSize: "0.6875rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",

@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const scope = style({
   display: "grid",
@@ -15,14 +15,14 @@ export const content = style({
   minWidth: 190,
   outline: "none",
   borderRadius: 8,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  boxShadow: `0 4px 12px oklch(from ${vars.color.foreground} 0.26 c h / 0.2)`,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  boxShadow: `0 4px 12px oklch(from ${theme.color.foreground} 0.26 c h / 0.2)`,
   overflow: "hidden",
   padding: 4,
   selectors: {
     ":root.dark &": {
-      boxShadow: `0 4px 12px oklch(from ${vars.color.background} 0.06 c h / 0.62)`,
+      boxShadow: `0 4px 12px oklch(from ${theme.color.background} 0.06 c h / 0.62)`,
     },
   },
 });
@@ -34,19 +34,19 @@ export const item = style({
   display: "grid",
   alignItems: "center",
   cursor: "default",
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.8125rem",
   lineHeight: 1,
   userSelect: "none",
   selectors: {
     "&[data-highlighted]": {
-      background: `oklch(from ${vars.color.accent} 0.9 c h)`,
+      background: `oklch(from ${theme.color.accent} 0.9 c h)`,
     },
     ":root.dark &[data-highlighted]": {
-      background: `oklch(from ${vars.color.accent} 0.36 c h / 0.45)`,
+      background: `oklch(from ${theme.color.accent} 0.36 c h / 0.45)`,
     },
     "&:focus-visible": {
-      outline: `1px solid ${vars.color.primary}`,
+      outline: `1px solid ${theme.color.primary}`,
       outlineOffset: -1,
     },
   },
@@ -55,5 +55,5 @@ export const item = style({
 export const separator = style({
   height: 1,
   margin: "4px 2px",
-  background: vars.color.popoverBorder,
+  background: theme.color.popoverBorder,
 });

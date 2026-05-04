@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const root = style({
   display: "grid",
@@ -7,7 +7,7 @@ export const root = style({
 });
 
 export const description = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontSize: "0.875rem",
   lineHeight: 1.45,
 });
@@ -34,11 +34,11 @@ export const checkboxRoot = style({
   justifyContent: "start",
   gap: 8,
   minHeight: 28,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   cursor: "pointer",
   selectors: {
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 2,
       borderRadius: 6,
     },
@@ -49,8 +49,8 @@ export const checkboxControl = style({
   width: 18,
   height: 18,
   borderRadius: 4,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
   color: "oklch(0.18 0.02 250)",
   display: "grid",
   placeItems: "center",
@@ -58,11 +58,11 @@ export const checkboxControl = style({
     "background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out",
   selectors: {
     "&[data-state=checked]": {
-      background: vars.color.primary,
-      borderColor: vars.color.primary,
+      background: theme.color.primary,
+      borderColor: theme.color.primary,
     },
     [`${checkboxRoot}:hover &`]: {
-      borderColor: `color-mix(in oklch, ${vars.color.primary} 58%, ${vars.color.border})`,
+      borderColor: `color-mix(in oklch, ${theme.color.primary} 58%, ${theme.color.border})`,
     },
   },
 });

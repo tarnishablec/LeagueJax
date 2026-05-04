@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "../styles/theme.css";
+import { theme } from "../styles/theme.css";
 
 export { trigger } from "./ToolbarActionButton.css";
 
@@ -30,8 +30,8 @@ export const dropdownOuter = style({
 });
 
 export const dropdownInner = style({
-  background: vars.color.popupBackground,
-  border: `1px solid ${vars.color.border}`,
+  background: theme.color.popupBackground,
+  border: `1px solid ${theme.color.border}`,
   borderRadius: 6,
   boxShadow:
     "0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1)",
@@ -57,15 +57,15 @@ export const dropdownItem = recipe({
   variants: {
     active: {
       true: {
-        background: vars.color.accent,
-        color: vars.color.accentForeground,
+        background: theme.color.accent,
+        color: theme.color.accentForeground,
       },
       false: {
-        color: vars.color.mutedForeground,
+        color: theme.color.mutedForeground,
         selectors: {
           "&:hover": {
-            background: vars.color.accent,
-            color: vars.color.accentForeground,
+            background: theme.color.accent,
+            color: theme.color.accentForeground,
           },
         },
       },

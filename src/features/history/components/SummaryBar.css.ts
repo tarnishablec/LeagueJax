@@ -1,5 +1,5 @@
 import { keyframes, style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 const fadeIn = keyframes({
   from: { opacity: 0 },
@@ -22,8 +22,8 @@ export const bar = style({
   padding: 12,
   borderRadius: 8,
   minHeight: 115,
-  background: vars.color.surface,
-  border: `1px solid ${vars.color.border}`,
+  background: theme.color.surface,
+  border: `1px solid ${theme.color.border}`,
   "@media": {
     "(max-width: 1000px)": {
       gridTemplateColumns: "56px minmax(0, 1fr)",
@@ -37,13 +37,13 @@ export const avatarSlot = style({
   height: 56,
   borderRadius: 8,
   overflow: "hidden",
-  background: vars.color.blurry,
+  background: theme.color.blurry,
 });
 
 export const iconFallback = style({
   width: "100%",
   height: "100%",
-  background: vars.color.blurry,
+  background: theme.color.blurry,
 });
 
 export const profileIcon = style({
@@ -70,7 +70,7 @@ export const nameRow = style({
 export const name = style({
   fontSize: "1rem",
   fontWeight: 600,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 export const copyButton = style({
@@ -81,20 +81,20 @@ export const copyButton = style({
   border: "none",
   background: "none",
   borderRadius: 4,
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   cursor: "pointer",
   transition: "color 120ms, background-color 120ms",
   selectors: {
     "&:hover": {
-      color: vars.color.foreground,
-      background: vars.color.background,
+      color: theme.color.foreground,
+      background: theme.color.background,
     },
   },
 });
 
 export const tag = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const tagRow = style({
@@ -129,8 +129,8 @@ export const privacyBadge = style({
   padding: 0,
   border: "none",
   font: "inherit",
-  color: vars.color.mutedForeground,
-  background: vars.color.border,
+  color: theme.color.mutedForeground,
+  background: theme.color.border,
   borderRadius: 4,
   cursor: "help",
   lineHeight: 1,
@@ -152,9 +152,9 @@ export const tooltipPositioner = style({
 
 export const tooltipContent = style({
   borderRadius: 8,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   padding: "4px 8px",
   fontSize: "0.6875rem",
 });
@@ -179,8 +179,8 @@ export const rankCard = style({
   height: "88px",
   gap: 10,
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.surface,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.surface,
   padding: "10px 12px",
 });
 
@@ -191,9 +191,9 @@ export const rankUnavailable = style({
   minHeight: 88,
   padding: "10px 12px",
   borderRadius: 8,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.surface,
-  color: vars.color.mutedForeground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.surface,
+  color: theme.color.mutedForeground,
   fontSize: "0.8125rem",
   fontWeight: 600,
 });
@@ -221,7 +221,7 @@ export const rankContent = style({
 
 export const rankQueue = style({
   fontSize: "0.6875rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
 });
@@ -229,12 +229,12 @@ export const rankQueue = style({
 export const rankTier = style({
   fontSize: "0.875rem",
   fontWeight: 600,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
 });
 
 export const rankMeta = style({
   fontSize: "0.75rem",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const highestRank = style({
@@ -251,7 +251,7 @@ export const highestRank = style({
 });
 
 export const highestRankLabel = style({
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
 });
 
 export const highestRankIcon = style({
@@ -264,7 +264,7 @@ export const highestRankIcon = style({
 export const highestRankText = style({
   minWidth: 0,
   overflow: "hidden",
-  color: vars.color.mutedForeground,
+  color: theme.color.mutedForeground,
   fontWeight: 650,
   textOverflow: "ellipsis",
 });

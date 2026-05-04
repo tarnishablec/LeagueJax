@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const srOnly = style({
   position: "absolute",
@@ -33,7 +33,7 @@ export const trigger = recipe({
     cursor: "pointer",
     selectors: {
       "&:focus-visible": {
-        outline: `2px solid ${vars.color.primary}`,
+        outline: `2px solid ${theme.color.primary}`,
         outlineOffset: 1,
       },
     },
@@ -43,19 +43,19 @@ export const trigger = recipe({
       default: {
         background:
           "conic-gradient(oklch(0.82 0 0) 25%, oklch(0.96 0 0) 0 50%, oklch(0.82 0 0) 0 75%, oklch(0.96 0 0) 0) 0 0 / 10px 10px",
-        boxShadow: `inset 0 0 0 1px ${vars.color.border}`,
+        boxShadow: `inset 0 0 0 1px ${theme.color.border}`,
         selectors: {
           "&:hover": {
-            boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${vars.color.primary} 58%, ${vars.color.border})`,
+            boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${theme.color.primary} 58%, ${theme.color.border})`,
           },
         },
       },
       compact: {
         position: "relative",
-        background: vars.color.background,
+        background: theme.color.background,
         selectors: {
           "&:hover": {
-            boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${vars.color.primary} 58%, transparent)`,
+            boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${theme.color.primary} 58%, transparent)`,
           },
         },
       },
@@ -82,8 +82,8 @@ export const content = style({
   gap: 12,
   padding: "1rem",
   borderRadius: 6,
-  background: vars.color.popupBackground,
-  boxShadow: `0 12px 28px color-mix(in oklch, ${vars.color.background} 82%, transparent)`,
+  background: theme.color.popupBackground,
+  boxShadow: `0 12px 28px color-mix(in oklch, ${theme.color.background} 82%, transparent)`,
 });
 
 export const area = style({
@@ -127,18 +127,18 @@ export const eyeDropperTrigger = style({
   width: 40,
   height: 40,
   borderRadius: 5,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
+  color: theme.color.foreground,
   display: "grid",
   placeItems: "center",
   cursor: "pointer",
   selectors: {
     "&:hover": {
-      borderColor: `color-mix(in oklch, ${vars.color.primary} 58%, ${vars.color.border})`,
+      borderColor: `color-mix(in oklch, ${theme.color.primary} 58%, ${theme.color.border})`,
     },
     "&:focus-visible": {
-      outline: `2px solid ${vars.color.primary}`,
+      outline: `2px solid ${theme.color.primary}`,
       outlineOffset: 1,
     },
   },
@@ -158,7 +158,7 @@ export const sliderTrack = style({
   height: 14,
   borderRadius: 999,
   overflow: "hidden",
-  boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${vars.color.foreground} 12%, transparent)`,
+  boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${theme.color.foreground} 12%, transparent)`,
 });
 
 export const sliderThumb = style({
@@ -167,7 +167,7 @@ export const sliderThumb = style({
   height: 14,
   borderRadius: "50%",
   border: "2px solid oklch(1 0 0)",
-  background: vars.color.popupBackground,
+  background: theme.color.popupBackground,
   boxShadow: "0 0 0 1px oklch(0 0 0 / 0.42)",
   transform: "translate(-50%, -50%)",
 });
@@ -183,17 +183,17 @@ export const input = style({
   height: 30,
   MozAppearance: "textfield",
   borderRadius: 5,
-  border: `1px solid ${vars.color.border}`,
-  background: vars.color.background,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.background,
+  color: theme.color.foreground,
   padding: "0 10px",
   fontSize: "0.875rem",
   lineHeight: 1,
   outline: "none",
   selectors: {
     "&:focus-visible": {
-      borderColor: vars.color.primary,
-      boxShadow: `0 0 0 1px ${vars.color.primary}`,
+      borderColor: theme.color.primary,
+      boxShadow: `0 0 0 1px ${theme.color.primary}`,
     },
     "&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
       WebkitAppearance: "none",
@@ -203,7 +203,7 @@ export const input = style({
 });
 
 export const presetsLabel = style({
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   fontSize: "0.85rem",
   fontWeight: 700,
   lineHeight: 1,
@@ -230,7 +230,7 @@ export const swatchTrigger = recipe({
         outlineOffset: 2,
       },
       "&:focus-visible": {
-        outline: `2px solid ${vars.color.primary}`,
+        outline: `2px solid ${theme.color.primary}`,
         outlineOffset: 1,
       },
     },

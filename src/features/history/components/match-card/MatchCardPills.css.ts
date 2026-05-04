@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars } from "@/styles/theme.css.ts";
+import { theme } from "@/styles/theme.css.ts";
 
 export const root = style({
   display: "flex",
@@ -42,9 +42,9 @@ export const tagPill = recipe({
         border: "1px solid oklch(0.7 0.15 300 / 0.5)",
       },
       firstBlood: {
-        color: vars.color.error,
-        background: `color-mix(in oklch, ${vars.color.error} 12%, transparent)`,
-        border: `1px solid color-mix(in oklch, ${vars.color.error} 40%, transparent)`,
+        color: theme.color.error,
+        background: `color-mix(in oklch, ${theme.color.error} 12%, transparent)`,
+        border: `1px solid color-mix(in oklch, ${theme.color.error} 40%, transparent)`,
       },
       highestDamage: {
         color: "oklch(0.72 0.16 45)",
@@ -143,9 +143,9 @@ export const tooltipPositioner = style({
 
 export const tooltipContent = style({
   borderRadius: 8,
-  border: `1px solid ${vars.color.popoverBorder}`,
-  background: vars.color.popupBackground,
-  color: vars.color.foreground,
+  border: `1px solid ${theme.color.popoverBorder}`,
+  background: theme.color.popupBackground,
+  color: theme.color.foreground,
   padding: "4px 8px",
   fontSize: "0.6875rem",
   maxWidth: 240,

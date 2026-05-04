@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
+import { theme } from "@/styles/theme.css";
 
 export const card = style({
   display: "grid",
@@ -7,14 +7,14 @@ export const card = style({
   padding: 14,
   borderRadius: 10,
   // border: `1px solid ${vars.color.border}`,
-  background: vars.color.surface,
+  background: theme.color.surface,
   alignContent: "start",
 });
 
 export const title = style({
   fontSize: "1rem",
   fontWeight: 575,
-  color: vars.color.foreground,
+  color: theme.color.foreground,
   margin: "0.25rem 0",
 });
 
