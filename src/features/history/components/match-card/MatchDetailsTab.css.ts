@@ -45,6 +45,9 @@ export const teamBlock = recipe({
       red: {
         outline: `1px solid ${gameColorVars.team.redAccent}`,
       },
+      neutral: {
+        outline: `1px solid ${theme.color.border}`,
+      },
     },
   },
 });
@@ -82,6 +85,9 @@ export const teamTitle = recipe({
       },
       red: {
         color: gameColorVars.team.red,
+      },
+      neutral: {
+        color: theme.color.foreground,
       },
     },
   },

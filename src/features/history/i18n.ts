@@ -101,6 +101,7 @@ export const historyI18n: Resource = {
         itemAlt: "Item {{id}}",
       },
       matchDetails: {
+        team: "Team {{number}}",
         tabs: {
           details: "Details",
           runes: "Runes",
@@ -265,6 +266,7 @@ export const historyI18n: Resource = {
         itemAlt: "装备 {{id}}",
       },
       matchDetails: {
+        team: "队伍 {{number}}",
         tabs: {
           details: "详情",
           runes: "符文",
@@ -429,6 +431,7 @@ export const historyI18n: Resource = {
         itemAlt: "アイテム {{id}}",
       },
       matchDetails: {
+        team: "チーム {{number}}",
         tabs: {
           details: "詳細",
           runes: "ルーン",

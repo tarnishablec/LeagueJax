@@ -50,8 +50,8 @@ export const dialogPositioner = style({
 
 export const dialogContent = style({
   width: "min(940px, calc(100vw - 40px))",
-  minHeight: "min(520px, calc(100vh - 40px))",
-  maxHeight: "70vh",
+  // minHeight: "min(520px, calc(100vh - 40px))",
+  height: "70vh",
   borderRadius: 12,
   border: `1px solid ${theme.color.popoverBorder}`,
   background: theme.color.popupBackground,

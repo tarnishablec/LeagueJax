@@ -23,8 +23,12 @@ import {
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import * as s from "./MatchRunesTab.css";
 import { CDRAGON_PERK_STYLE_ICON_BY_ID } from "./match-card-display";
+import {
+  matchUsesSideTeams,
+  type TeamTone,
+  teamToneFromId,
+} from "./match-card-team-groups";
 
-type TeamSide = "blue" | "red";
 type AugmentRarityVariant =
   | "default"
   | "prismatic"
@@ -73,10 +77,15 @@ function participantKey(
   return `participant-${participant.puuid ?? "unknown"}-${participant.championId}-${index}`;
 }
 
-function participantTeamSide(
+function participantTeamTone(
   participant: RawMatchSummaryParticipant,
-): TeamSide {
-  return participant.teamId === 200 ? "red" : "blue";
+  summary: RawMatchSummaryGame,
+): TeamTone {
+  if (!matchUsesSideTeams(summary)) {
+    return "neutral";
+  }
+
+  return teamToneFromId(participant.teamId);
 }
 
 function participantDisplayName(
@@ -741,10 +750,12 @@ function SelectedParticipantHeader({
 }
 
 function ParticipantPicker({
+  summary,
   participants,
   selectedKey,
   onSelectedKeyChange,
 }: {
+  summary: RawMatchSummaryGame;
   participants: RawMatchSummaryParticipant[];
   selectedKey: string;
   onSelectedKeyChange: (value: string) => void;
@@ -771,7 +782,7 @@ function ParticipantPicker({
             key={key}
             value={key}
             className={s.participantTrigger({
-              team: participantTeamSide(participant),
+              team: participantTeamTone(participant, summary),
             })}
             aria-label={`Show runes for ${displayName}`}
           >
@@ -844,6 +855,7 @@ export function MatchRunesTab({
   return (
     <div className={s.root}>
       <ParticipantPicker
+        summary={summary}
         participants={participants}
         selectedKey={selectedEntry.key}
         onSelectedKeyChange={setRequestedParticipantKey}
