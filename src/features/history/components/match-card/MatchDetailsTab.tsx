@@ -1,5 +1,7 @@
+import { Portal } from "@ark-ui/react/portal";
+import { Tooltip } from "@ark-ui/react/tooltip";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   RawMatchDetailsGame,
@@ -246,7 +248,7 @@ function computeTeamTotals(
       assists: totals.assists + safeNumber(participant.assists),
       gold: totals.gold + safeNumber(participant.goldEarned),
     }),
-    {kills: 0, deaths: 0, assists: 0, gold: 0},
+    { kills: 0, deaths: 0, assists: 0, gold: 0 },
   );
 }
 
@@ -391,10 +393,31 @@ function objectiveIconSources(
   }
 }
 
+function MatchDetailsTooltip({
+  content,
+  children,
+}: {
+  content: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip.Root openDelay={180} closeDelay={0}>
+      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
+      <Portal>
+        <Tooltip.Positioner className={s.tooltipPositioner}>
+          <Tooltip.Content className={s.tooltipContent}>
+            {content}
+          </Tooltip.Content>
+        </Tooltip.Positioner>
+      </Portal>
+    </Tooltip.Root>
+  );
+}
+
 function DamageBreakdownMeter({
-                                breakdown,
-                                maxDamage,
-                              }: {
+  breakdown,
+  maxDamage,
+}: {
   breakdown: DamageBreakdown;
   maxDamage: number;
 }) {
@@ -433,9 +456,9 @@ function DamageBreakdownMeter({
             ),
           })}
         >
-          <span className={s.damageSegment.physical}/>
-          <span className={s.damageSegment.magic}/>
-          <span className={s.damageSegment.trueDamage}/>
+          <span className={s.damageSegment.physical} />
+          <span className={s.damageSegment.magic} />
+          <span className={s.damageSegment.trueDamage} />
         </div>
       </div>
     </div>
@@ -443,15 +466,15 @@ function DamageBreakdownMeter({
 }
 
 function ObjectiveStat({
-                         objective,
-                         team,
-                         side,
-                       }: {
+  objective,
+  team,
+  side,
+}: {
   objective: ObjectiveConfig;
   team: RawMatchSummaryTeam | undefined;
   side: TeamSide;
 }) {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const count = objectiveKills(team, objective.key);
   const label = t(objective.labelKey, {
     defaultValue: objective.defaultLabel,
@@ -459,22 +482,24 @@ function ObjectiveStat({
   const icon = objectiveIconSources(objective.key, side);
 
   return (
-    <span className={s.objectiveStat} title={label}>
-      <MatchCardAssetIcon
-        src={icon.src}
-        fallbacks={icon.fallbacks}
-        alt={label}
-        className={s.objectiveIcon}
-        fallbackClassName={s.objectiveIconFallback}
-      />
-      <span>{count}</span>
-    </span>
+    <MatchDetailsTooltip content={label}>
+      <span className={s.objectiveStat}>
+        <MatchCardAssetIcon
+          src={icon.src}
+          fallbacks={icon.fallbacks}
+          alt={label}
+          className={s.objectiveIcon}
+          fallbackClassName={s.objectiveIconFallback}
+        />
+        <span>{count}</span>
+      </span>
+    </MatchDetailsTooltip>
   );
 }
 
-function QuestSlot({slot}: { slot: RoleQuestSlot | null }) {
+function QuestSlot({ slot }: { slot: RoleQuestSlot | null }) {
   if (slot === null) {
-    return <span className={s.emptyQuestSlot} aria-hidden="true"/>;
+    return <span className={s.emptyQuestSlot} aria-hidden="true" />;
   }
 
   if (slot.kind === "quest") {
@@ -499,16 +524,16 @@ function QuestSlot({slot}: { slot: RoleQuestSlot | null }) {
 }
 
 function ParticipantRow({
-                          summary,
-                          detail,
-                          participant,
-                        }: {
+  summary,
+  detail,
+  participant,
+}: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   participant: RawMatchSummaryParticipant;
 }) {
-  const {t} = useTranslation();
-  const {showAugments, maxDealtDamage, maxTakenDamage} =
+  const { t } = useTranslation();
+  const { showAugments, maxDealtDamage, maxTakenDamage } =
     useMatchDetailsTabModelContext();
   const resolvedJungleEggItemId = useMemo(
     () => resolveJungleEggItemIdFromDetails(detail, participant.participantId),
@@ -523,7 +548,7 @@ function ParticipantRow({
   const position = roleQuest.inferredPosition ?? fallbackPosition;
   const itemIds = getParticipantItems(participant);
   const augmentIds = getParticipantAugments(participant);
-  const {primaryRuneId, subStyleId} = getPerkIds(participant);
+  const { primaryRuneId, subStyleId } = getPerkIds(participant);
   const summonerName = displaySummonerName(participant);
   const championName = participant.championName ?? `#${participant.championId}`;
   const record = `${safeNumber(participant.kills)}/${safeNumber(participant.deaths)}/${safeNumber(participant.assists)}`;
@@ -534,7 +559,7 @@ function ParticipantRow({
   return (
     <div className={s.participantRow}>
       <div className={s.positionCell}>
-        <LeaguePositionIcon position={position} width={18} height={18}/>
+        <LeaguePositionIcon position={position} width={18} height={18} />
       </div>
       <div className={s.summonerCell}>
         <ChampionAvatar
@@ -544,12 +569,12 @@ function ParticipantRow({
           level={participant.champLevel}
         />
         <span className={s.summonerText}>
-          <span className={s.summonerName} title={summonerName}>
-            {summonerName}
-          </span>
-          <span className={s.championName} title={championName}>
-            {championName}
-          </span>
+          <MatchDetailsTooltip content={summonerName}>
+            <span className={s.summonerName}>{summonerName}</span>
+          </MatchDetailsTooltip>
+          <MatchDetailsTooltip content={championName}>
+            <span className={s.championName}>{championName}</span>
+          </MatchDetailsTooltip>
         </span>
       </div>
       <div className={s.loadoutCell}>
@@ -560,7 +585,7 @@ function ParticipantRow({
       </div>
       <div className={s.loadoutCell}>
         {showAugments ? (
-          <MatchCardAugments augmentIds={augmentIds}/>
+          <MatchCardAugments augmentIds={augmentIds} />
         ) : (
           <MatchCardRunes
             perkPrimaryRuneId={primaryRuneId}
@@ -569,10 +594,10 @@ function ParticipantRow({
         )}
       </div>
       <div className={s.loadoutCell}>
-        <MatchCardItems gameId={summary.json.gameId} items={itemIds}/>
+        <MatchCardItems gameId={summary.json.gameId} items={itemIds} />
       </div>
       <div className={s.centeredCell}>
-        <QuestSlot slot={roleQuest.slot}/>
+        <QuestSlot slot={roleQuest.slot} />
       </div>
       <DamageBreakdownMeter
         breakdown={damageDealtBreakdown(participant)}
@@ -597,15 +622,15 @@ function ParticipantRow({
 }
 
 function TeamBlock({
-                     summary,
-                     detail,
-                     teamId,
-                   }: {
+  summary,
+  detail,
+  teamId,
+}: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   teamId: number;
 }) {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const side = teamSideFromId(teamId);
   const participants = summary.json.participants.filter(
     (participant) => participant.teamId === teamId,
@@ -655,10 +680,10 @@ function TeamBlock({
   // };
 
   return (
-    <section className={s.teamBlock({team: side})}>
+    <section className={s.teamBlock({ team: side })}>
       <header className={s.teamHeader}>
         <div className={s.teamTitleGroup}>
-          <span className={s.teamTitle({team: side})}>{teamLabel}</span>
+          <span className={s.teamTitle({ team: side })}>{teamLabel}</span>
           <span className={s.teamHeaderMetric}>
             <ScoreboardIcon
               type="record"
@@ -719,9 +744,9 @@ function TeamBlock({
 }
 
 export function MatchDetailsTab({
-                                  summary,
-                                  detail,
-                                }: {
+  summary,
+  detail,
+}: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
 }) {
