@@ -12,11 +12,11 @@ import type {
 } from "@/bindings/matches.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
-import { ScrollArea } from "@/components/scroll-area";
 import {
   ScoreboardIcon,
   type ScoreboardIconType,
 } from "@/components/ScoreboardIcon.tsx";
+import { ScrollArea } from "@/components/scroll-area";
 import { resolveJungleEggItemIdFromDetails } from "../../hooks/match-details-timeline.ts";
 import { normalizeHistoryPosition } from "../../hooks/use-match-card-view-model.ts";
 import {
