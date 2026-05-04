@@ -177,9 +177,7 @@ export function MiniRoute() {
           <strong className={s.queueName}>
             {model.queueName ?? t("mini.queue.empty")}
           </strong>
-          <span className={s.phase}>
-            {t(phaseLabelKey(model))}
-          </span>
+          <span className={s.phase}>{t(phaseLabelKey(model))}</span>
           {autoAcceptCountdown != null ? (
             <span className={s.autoAcceptCountdown}>
               {t("mini.autoAccept.countdown", {

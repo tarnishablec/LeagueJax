@@ -12,7 +12,10 @@ import type {
 } from "@/bindings/matches.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
-import { ScoreboardIcon } from "@/components/ScoreboardIcon.tsx";
+import {
+  ScoreboardIcon,
+  type ScoreboardIconType,
+} from "@/components/ScoreboardIcon.tsx";
 import { resolveJungleEggItemIdFromDetails } from "../../hooks/match-details-timeline.ts";
 import { normalizeHistoryPosition } from "../../hooks/use-match-card-view-model.ts";
 import {
@@ -23,6 +26,7 @@ import * as matchCardStyles from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { MatchCardAugments } from "./MatchCardAugments";
 import { MatchCardItems } from "./MatchCardItems";
+import { MatchCardPlayerNameButton } from "./MatchCardPlayerNameButton";
 import { MatchCardRunes } from "./MatchCardRunes";
 import { MatchCardSpells } from "./MatchCardSpells";
 import * as s from "./MatchDetailsTab.css";
@@ -46,6 +50,9 @@ type DamageBreakdown = {
 
 type MatchDetailsTabModel = {
   showAugments: boolean;
+  showPositionColumn: boolean;
+  showQuestColumn: boolean;
+  visibleObjectives: readonly ObjectiveConfig[];
   maxDealtDamage: number;
   maxTakenDamage: number;
 };
@@ -102,6 +109,11 @@ const OBJECTIVES = [
     defaultLabel: "Inhibitor",
   },
 ] as const satisfies readonly ObjectiveConfig[];
+const SUMMONERS_RIFT_OBJECTIVES = OBJECTIVES;
+const ARAM_OBJECTIVE_KEYS = new Set<keyof RawMatchSummaryObjectives>([
+  "tower",
+  "inhibitor",
+]);
 
 function safeNumber(value: number | null | undefined): number {
   return Math.max(0, value ?? 0);
@@ -121,21 +133,6 @@ function participantRowKey(
 
 function teamSideFromId(teamId: number): TeamSide {
   return teamId === 100 ? "blue" : "red";
-}
-
-function displaySummonerName(participant: RawMatchSummaryParticipant): string {
-  const gameName =
-    participant.riotIdGameName?.trim() || participant.summonerName?.trim();
-  if (!gameName) {
-    return "Unknown Summoner";
-  }
-
-  const tagline = participant.riotIdTagline?.trim();
-  if (!tagline) {
-    return gameName;
-  }
-
-  return `${gameName}#${tagline}`;
 }
 
 function participantPosition(
@@ -206,12 +203,80 @@ function matchHasAugments(summary: RawMatchSummaryGame): boolean {
   );
 }
 
+function matchSupportsPosition(summary: RawMatchSummaryGame): boolean {
+  return (
+    summary.json.mapId === 11 ||
+    summary.json.gameMode.toUpperCase() === "CLASSIC"
+  );
+}
+
+function isSummonersRiftMatch(summary: RawMatchSummaryGame): boolean {
+  return matchSupportsPosition(summary);
+}
+
+function isAramMatch(summary: RawMatchSummaryGame): boolean {
+  return summary.json.mapId === 12 || summary.json.queueId === 450;
+}
+
+function matchObjectiveKills(
+  summary: RawMatchSummaryGame,
+  key: keyof RawMatchSummaryObjectives,
+): number {
+  return summary.json.teams.reduce(
+    (total, team) => total + objectiveKills(team, key),
+    0,
+  );
+}
+
+function resolveVisibleObjectives(
+  summary: RawMatchSummaryGame,
+): readonly ObjectiveConfig[] {
+  if (isSummonersRiftMatch(summary)) {
+    return SUMMONERS_RIFT_OBJECTIVES;
+  }
+
+  if (isAramMatch(summary)) {
+    return OBJECTIVES.filter((objective) =>
+      ARAM_OBJECTIVE_KEYS.has(objective.key),
+    );
+  }
+
+  return OBJECTIVES.filter((objective) => {
+    return (
+      ARAM_OBJECTIVE_KEYS.has(objective.key) ||
+      matchObjectiveKills(summary, objective.key) > 0
+    );
+  });
+}
+
+function matchSeason(summary: RawMatchSummaryGame): number | null {
+  const majorVersion = Number(summary.json.gameVersion.split(".")[0]);
+  return Number.isFinite(majorVersion) ? majorVersion : null;
+}
+
+function participantHasRoleQuestData(
+  participant: RawMatchSummaryParticipant,
+): boolean {
+  return participant.roleBoundItem !== null && participant.roleBoundItem > 0;
+}
+
+function matchSupportsRoleQuest(summary: RawMatchSummaryGame): boolean {
+  return (
+    matchSeason(summary) === 16 &&
+    matchSupportsPosition(summary) &&
+    summary.json.participants.some(participantHasRoleQuestData)
+  );
+}
+
 function useMatchDetailsTabModel(
   summary: RawMatchSummaryGame,
 ): MatchDetailsTabModel {
   return useMemo(
     () => ({
       showAugments: matchHasAugments(summary),
+      showPositionColumn: matchSupportsPosition(summary),
+      showQuestColumn: matchSupportsRoleQuest(summary),
+      visibleObjectives: resolveVisibleObjectives(summary),
       maxDealtDamage: Math.max(
         1,
         ...summary.json.participants.map((participant) =>
@@ -415,9 +480,11 @@ function MatchDetailsTooltip({
 }
 
 function DamageBreakdownMeter({
+  label,
   breakdown,
   maxDamage,
 }: {
+  label: string;
   breakdown: DamageBreakdown;
   maxDamage: number;
 }) {
@@ -436,7 +503,10 @@ function DamageBreakdownMeter({
 
   return (
     <div className={s.damageCell}>
-      <span className={s.damageNumber}>{formatDamage(breakdown.total)}</span>
+      <span className={s.damageNumberRow}>
+        <span className={s.damageLabel}>{label}</span>
+        <span className={s.damageNumber}>{formatDamage(breakdown.total)}</span>
+      </span>
       <div className={s.damageMeterTrack}>
         <div
           className={s.damageMeterFill}
@@ -523,18 +593,46 @@ function QuestSlot({ slot }: { slot: RoleQuestSlot | null }) {
   );
 }
 
+function ScoreCell({
+  type,
+  value,
+  muted = false,
+}: {
+  type: ScoreboardIconType;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <span className={s.scoreCell({ tone: muted ? "muted" : "default" })}>
+      <ScoreboardIcon
+        type={type}
+        className={s.scoreCellIcon}
+        fallbackClassName={s.scoreCellIconFallback}
+      />
+      <span>{value}</span>
+    </span>
+  );
+}
+
 function ParticipantRow({
   summary,
   detail,
   participant,
+  sgpServerId,
 }: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   participant: RawMatchSummaryParticipant;
+  sgpServerId: string | null;
 }) {
   const { t } = useTranslation();
-  const { showAugments, maxDealtDamage, maxTakenDamage } =
-    useMatchDetailsTabModelContext();
+  const {
+    showAugments,
+    showPositionColumn,
+    showQuestColumn,
+    maxDealtDamage,
+    maxTakenDamage,
+  } = useMatchDetailsTabModelContext();
   const resolvedJungleEggItemId = useMemo(
     () => resolveJungleEggItemIdFromDetails(detail, participant.participantId),
     [detail, participant.participantId],
@@ -544,23 +642,36 @@ function ParticipantRow({
     match: summary,
     resolvedJungleEggItemId,
   });
-  const fallbackPosition = participantPosition(participant);
-  const position = roleQuest.inferredPosition ?? fallbackPosition;
+  const position = showPositionColumn
+    ? (roleQuest.inferredPosition ?? participantPosition(participant))
+    : null;
   const itemIds = getParticipantItems(participant);
   const augmentIds = getParticipantAugments(participant);
   const { primaryRuneId, subStyleId } = getPerkIds(participant);
-  const summonerName = displaySummonerName(participant);
   const championName = participant.championName ?? `#${participant.championId}`;
   const record = `${safeNumber(participant.kills)}/${safeNumber(participant.deaths)}/${safeNumber(participant.assists)}`;
   const perfectLabel = t("history.matchDetails.perfectKda", {
     defaultValue: "Perfect",
   });
+  const damageDealtLabel = t("history.matchDetails.columns.damageDealt", {
+    defaultValue: "Dealt",
+  });
+  const damageTakenLabel = t("history.matchDetails.columns.damageTaken", {
+    defaultValue: "Taken",
+  });
 
   return (
-    <div className={s.participantRow}>
-      <div className={s.positionCell}>
-        <LeaguePositionIcon position={position} width={18} height={18} />
-      </div>
+    <div
+      className={s.participantRow({
+        positionColumn: showPositionColumn ? "shown" : "hidden",
+        questColumn: showQuestColumn ? "shown" : "hidden",
+      })}
+    >
+      {showPositionColumn ? (
+        <div className={s.positionCell}>
+          <LeaguePositionIcon position={position} width={18} height={18} />
+        </div>
+      ) : null}
       <div className={s.summonerCell}>
         <ChampionAvatar
           championId={participant.championId}
@@ -569,9 +680,12 @@ function ParticipantRow({
           level={participant.champLevel}
         />
         <span className={s.summonerText}>
-          <MatchDetailsTooltip content={summonerName}>
-            <span className={s.summonerName}>{summonerName}</span>
-          </MatchDetailsTooltip>
+          <MatchCardPlayerNameButton
+            participant={participant}
+            sgpServerId={sgpServerId}
+            className={s.summonerName}
+            botClassName={s.summonerBotName}
+          />
           <MatchDetailsTooltip content={championName}>
             <span className={s.championName}>{championName}</span>
           </MatchDetailsTooltip>
@@ -596,27 +710,32 @@ function ParticipantRow({
       <div className={s.loadoutCell}>
         <MatchCardItems gameId={summary.json.gameId} items={itemIds} />
       </div>
-      <div className={s.centeredCell}>
-        <QuestSlot slot={roleQuest.slot} />
-      </div>
+      {showQuestColumn ? (
+        <div className={s.centeredCell}>
+          <QuestSlot slot={roleQuest.slot} />
+        </div>
+      ) : null}
       <DamageBreakdownMeter
+        label={damageDealtLabel}
         breakdown={damageDealtBreakdown(participant)}
         maxDamage={maxDealtDamage}
       />
       <DamageBreakdownMeter
+        label={damageTakenLabel}
         breakdown={damageTakenBreakdown(participant)}
         maxDamage={maxTakenDamage}
       />
-      <span className={s.numberCell}>
-        {formatDamage(safeNumber(participant.goldEarned))}
-      </span>
-      <span className={s.numberCell}>{record}</span>
-      <span className={s.mutedNumberCell}>
-        {formatKda(participant, perfectLabel)}
-      </span>
-      <span className={s.numberCell}>
-        {formatDamage(participantCs(participant))}
-      </span>
+      <ScoreCell
+        type="gold"
+        value={formatDamage(safeNumber(participant.goldEarned))}
+      />
+      <ScoreCell type="record" value={record} />
+      <ScoreCell
+        type="kda"
+        value={formatKda(participant, perfectLabel)}
+        muted
+      />
+      <ScoreCell type="cs" value={formatDamage(participantCs(participant))} />
     </div>
   );
 }
@@ -625,12 +744,16 @@ function TeamBlock({
   summary,
   detail,
   teamId,
+  sgpServerId,
 }: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   teamId: number;
+  sgpServerId: string | null;
 }) {
   const { t } = useTranslation();
+  const { showPositionColumn, showQuestColumn, visibleObjectives } =
+    useMatchDetailsTabModelContext();
   const side = teamSideFromId(teamId);
   const participants = summary.json.participants.filter(
     (participant) => participant.teamId === teamId,
@@ -702,7 +825,7 @@ function TeamBlock({
           </span>
         </div>
         <div className={s.objectiveList}>
-          {OBJECTIVES.map((objective) => (
+          {visibleObjectives.map((objective) => (
             <ObjectiveStat
               key={`${teamId}-${objective.key}`}
               objective={objective}
@@ -714,7 +837,12 @@ function TeamBlock({
       </header>
 
       <div className={s.tableScroller}>
-        <div className={s.table}>
+        <div
+          className={s.table({
+            positionColumn: showPositionColumn ? "shown" : "hidden",
+            questColumn: showQuestColumn ? "shown" : "hidden",
+          })}
+        >
           {/*<div className={s.tableHeader}>*/}
           {/*  <span>{headerLabels.position}</span>*/}
           {/*  <span>{headerLabels.summoner}</span>*/}
@@ -735,6 +863,7 @@ function TeamBlock({
               summary={summary}
               detail={detail}
               participant={participant}
+              sgpServerId={sgpServerId}
             />
           ))}
         </div>
@@ -746,9 +875,11 @@ function TeamBlock({
 export function MatchDetailsTab({
   summary,
   detail,
+  sgpServerId,
 }: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
+  sgpServerId?: string | null;
 }) {
   const model = useMatchDetailsTabModel(summary);
 
@@ -761,6 +892,7 @@ export function MatchDetailsTab({
             summary={summary}
             detail={detail}
             teamId={teamId}
+            sgpServerId={sgpServerId ?? null}
           />
         ))}
       </div>

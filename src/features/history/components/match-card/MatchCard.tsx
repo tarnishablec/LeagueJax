@@ -138,7 +138,11 @@ export function MatchCard({
       </div>
 
       {expanded && (
-        <MatchCardExpandedContent summary={match} detail={matchDetails} />
+        <MatchCardExpandedContent
+          summary={match}
+          detail={matchDetails}
+          sgpServerId={sgpServerId}
+        />
       )}
     </div>
   );

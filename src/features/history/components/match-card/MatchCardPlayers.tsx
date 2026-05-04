@@ -1,34 +1,9 @@
-import { HoverCard } from "@ark-ui/react/hover-card";
-import { Portal } from "@ark-ui/react/portal";
 import { useMemo } from "react";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
 import { LazyImage } from "@/components/LazyImage";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
-import { useTabStore } from "@/stores/tabs";
 import * as s from "./MatchCard.css";
-
-const BOT_PUUID = "00000000-0000-0000-0000-000000000000";
-
-function isBot(participant: RawMatchSummaryParticipant): boolean {
-  const puuid = participant.puuid?.trim() ?? "";
-  return puuid.length === 0 || puuid === BOT_PUUID;
-}
-
-function resolvePlayerName(participant: RawMatchSummaryParticipant): {
-  gameName: string;
-  tagLine: string;
-} {
-  const gameName = (participant.riotIdGameName ?? "").trim();
-  const tagLine = (participant.riotIdTagline ?? "").trim();
-
-  return {
-    gameName:
-      gameName.length > 0
-        ? gameName
-        : (participant.summonerName ?? participant.puuid ?? "Unknown"),
-    tagLine,
-  };
-}
+import { MatchCardPlayerNameButton } from "./MatchCardPlayerNameButton";
 
 function PlayerIcon({ championId }: { championId: number }) {
   const iconUrl = useChampionIcon(championId);
@@ -54,16 +29,6 @@ export function MatchCardPlayers({
   participants: RawMatchSummaryParticipant[];
   sgpServerId: string | null;
 }) {
-  const openTab = useTabStore((state) => state.openTab);
-
-  const openPlayerTab = (participant: RawMatchSummaryParticipant) => {
-    const { gameName, tagLine } = resolvePlayerName(participant);
-    openTab(participant.puuid ?? "", sgpServerId, {
-      gameName,
-      tagLine,
-    });
-  };
-
   const teams = useMemo(() => {
     const map = new Map<number, RawMatchSummaryParticipant[]>();
     for (const p of participants) {
@@ -83,10 +48,6 @@ export function MatchCardPlayers({
       {teams.map(([teamId, members]) => (
         <div key={teamId} className={s.playerTeamColumn}>
           {members.map((participant, index) => {
-            const { gameName, tagLine } = resolvePlayerName(participant);
-            const fullName = tagLine ? `${gameName}#${tagLine}` : gameName;
-            const bot = isBot(participant);
-
             return (
               <div
                 key={`${participant.puuid}-${participant.championId}-${
@@ -96,29 +57,10 @@ export function MatchCardPlayers({
                 className={s.playerRow}
               >
                 <PlayerIcon championId={participant.championId} />
-                {bot ? (
-                  <span className={s.playerNameLabel}>{gameName}</span>
-                ) : (
-                  <HoverCard.Root openDelay={100} closeDelay={60}>
-                    <HoverCard.Trigger
-                      type="button"
-                      aria-label="Open player history tab"
-                      className={s.playerNameButton}
-                      onClick={() => {
-                        openPlayerTab(participant);
-                      }}
-                    >
-                      {gameName}
-                    </HoverCard.Trigger>
-                    <Portal>
-                      <HoverCard.Positioner className={s.playerHoverPositioner}>
-                        <HoverCard.Content className={s.playerHoverContent}>
-                          {fullName}
-                        </HoverCard.Content>
-                      </HoverCard.Positioner>
-                    </Portal>
-                  </HoverCard.Root>
-                )}
+                <MatchCardPlayerNameButton
+                  participant={participant}
+                  sgpServerId={sgpServerId}
+                />
               </div>
             );
           })}

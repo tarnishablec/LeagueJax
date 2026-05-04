@@ -2,6 +2,7 @@ import { useState } from "react";
 
 export const SCOREBOARD_ICON_TYPES = [
   "record",
+  "kda",
   "gold",
   "cs",
   "damage",
@@ -13,6 +14,7 @@ const CDRAGON_POSTGAME_BASE =
 
 const CDRAGON_SCOREBOARD_ICON_BY_TYPE: Record<ScoreboardIconType, string> = {
   record: `${CDRAGON_POSTGAME_BASE}/scoreboard-kda-icon.svg`,
+  kda: `${CDRAGON_POSTGAME_BASE}/scoreboard-row-stat-star-icon.svg`,
   gold: `${CDRAGON_POSTGAME_BASE}/scoreboard-coins-icon.svg`,
   cs: `${CDRAGON_POSTGAME_BASE}/scoreboard-stat-switcher-minions-slain.svg`,
   damage: `${CDRAGON_POSTGAME_BASE}/scoreboard-sword-icon.svg`,

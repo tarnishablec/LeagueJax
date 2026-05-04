@@ -198,6 +198,9 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
   inline `style` for anything expressible statically.
 - Do not force a single color syntax. Prefer theme tokens for stable UI surfaces, and use the color format that best
   fits the API or interaction (`oklch()`, hex, `rgba()`, etc.).
+- Prefer `outline` over `border` for visual strokes, focus rings, hover outlines, and card/panel framing so sizing and
+  grid/flex layout are not affected. Use `border` only when the stroke should participate in the box model or when a
+  true layout separator is required.
 - **No Tailwind, no utility classes.** All styling must go through Vanilla Extract `.css.ts` files.
 
 ## Type Sharing (Rust → TypeScript)
