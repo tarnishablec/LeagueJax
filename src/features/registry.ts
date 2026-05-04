@@ -16,6 +16,7 @@ import { MiniShard } from "./mini/manifest";
 import { OngoingGameShard } from "./ongoing-game/manifest";
 import { SettingsShard } from "./settings/manifest";
 import { ShellShard } from "./shell/manifest";
+import { StaticCacheShard } from "./static-cache/manifest";
 import { ToolsShard } from "./tools/manifest";
 import { TrayShard } from "./tray/manifest";
 import { UpdaterFeature } from "./updater/manifest";
@@ -94,6 +95,7 @@ export const initializeWebShards = async (): Promise<void> => {
       .register(new I18nShard())
       .register(new UpdaterFeature())
       .register(new ShellShard())
+      .register(new StaticCacheShard())
       .register(new TrayShard())
       .register(new MiniShard())
       .register(new HistoryShard())

@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import { z } from "zod";
 import { HistoryTabBar } from "@/features/history/components/HistoryTabBar.tsx";
 import { SettingsShard } from "@/features/settings/manifest";
+import { StaticCacheShard } from "@/features/static-cache/manifest";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { useLcuStore } from "@/stores/lcu";
@@ -36,7 +37,7 @@ export class HistoryShard implements WebShard {
   }
 
   public dependsOn() {
-    return [SHARD_IDS.SETTINGS];
+    return [SHARD_IDS.SETTINGS, SHARD_IDS.STATIC_CACHE];
   }
 
   public setup(jax: Jax): void {
@@ -44,6 +45,7 @@ export class HistoryShard implements WebShard {
     void useLcuStore.getState();
 
     const settingsShard = jax.getShard(SettingsShard);
+    void jax.getShard(StaticCacheShard);
     settingsShard.registerPage({ id: "history", order: 20 });
     settingsShard.registerSection({ key: HISTORY_BEHAVIOR_SECTION, order: 10 });
     settingsShard.registerSection({ key: HISTORY_DISPLAY_SECTION, order: 20 });
