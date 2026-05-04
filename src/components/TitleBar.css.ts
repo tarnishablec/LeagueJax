@@ -40,3 +40,8 @@ export const windowControls = style({
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
 });
+
+export const restoreIcon = style({
+  transform: "scaleX(-1)",
+  transformOrigin: "center",
+});

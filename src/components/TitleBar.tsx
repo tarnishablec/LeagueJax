@@ -1,9 +1,69 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
+import { Copy, Minus, Square, X } from "lucide-react";
 import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as s from "./TitleBar.css";
 import { trafficButton } from "./WindowControlButton.css";
-import { CloseIcon, MaximizeIcon, MinimizeIcon } from "./WindowControlIcons";
+
+const WINDOW_CONTROL_BOX_ICON_SIZE = 13;
+const WINDOW_CONTROL_LINE_ICON_SIZE = 18;
+
+function useWindowMaximizedState() {
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  const syncIsMaximized = useCallback(async () => {
+    try {
+      const maximized = await getCurrentWindow().isMaximized();
+      setIsMaximized(maximized);
+    } catch {
+      setIsMaximized(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isSubscribed = true;
+    const currentWindow = getCurrentWindow();
+
+    const syncIfSubscribed = async () => {
+      try {
+        const maximized = await currentWindow.isMaximized();
+
+        if (isSubscribed) {
+          setIsMaximized(maximized);
+        }
+      } catch {
+        if (isSubscribed) {
+          setIsMaximized(false);
+        }
+      }
+    };
+
+    void syncIfSubscribed();
+
+    let unlistenResized: (() => void) | undefined;
+    void currentWindow
+      .onResized(() => {
+        void syncIfSubscribed();
+      })
+      .then((unlisten) => {
+        if (isSubscribed) {
+          unlistenResized = unlisten;
+          return;
+        }
+
+        unlisten();
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isSubscribed = false;
+      unlistenResized?.();
+    };
+  }, []);
+
+  return { isMaximized, syncIsMaximized };
+}
 
 export function Toolbar({ children }: { children?: React.ReactNode }) {
   return (
@@ -27,6 +87,16 @@ export function TitleBar({
   toolbarSlots = [],
   titlebarSlots = [],
 }: TitleBarProps) {
+  const { isMaximized, syncIsMaximized } = useWindowMaximizedState();
+
+  const handleToggleMaximize = async () => {
+    try {
+      await getCurrentWindow().toggleMaximize();
+    } finally {
+      await syncIsMaximized();
+    }
+  };
+
   return (
     <header data-tauri-drag-region className={s.header}>
       <div data-tauri-drag-region className={s.centerSlots}>
@@ -48,15 +118,25 @@ export function TitleBar({
           className={trafficButton({ variant: "default" })}
           onClick={() => void getCurrentWindow().minimize()}
         >
-          <MinimizeIcon />
+          <Minus size={WINDOW_CONTROL_LINE_ICON_SIZE} aria-hidden="true" />
         </button>
         <button
           type="button"
-          aria-label="Maximize / Restore"
+          aria-label={isMaximized ? "Restore" : "Maximize"}
           className={trafficButton({ variant: "default" })}
-          onClick={() => void getCurrentWindow().toggleMaximize()}
+          onClick={() => {
+            void handleToggleMaximize().catch(() => undefined);
+          }}
         >
-          <MaximizeIcon />
+          {isMaximized ? (
+            <Copy
+              size={WINDOW_CONTROL_BOX_ICON_SIZE}
+              aria-hidden="true"
+              className={s.restoreIcon}
+            />
+          ) : (
+            <Square size={WINDOW_CONTROL_BOX_ICON_SIZE} aria-hidden="true" />
+          )}
         </button>
         <button
           type="button"
@@ -64,7 +144,7 @@ export function TitleBar({
           className={trafficButton({ variant: "close" })}
           onClick={() => void exit()}
         >
-          <CloseIcon />
+          <X size={WINDOW_CONTROL_LINE_ICON_SIZE} aria-hidden="true" />
         </button>
       </div>
     </header>
