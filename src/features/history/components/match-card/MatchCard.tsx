@@ -13,7 +13,7 @@ import {
 import { useMatchDetails } from "../../hooks/use-match-details.ts";
 import { hasCompletedJungleRoleQuest } from "../../hooks/use-role-quest-slot.ts";
 import * as s from "./MatchCard.css";
-import { MatchCardExpandedTeams } from "./MatchCardExpandedTeams";
+import { MatchCardExpandedContent } from "./MatchCardExpandedContent";
 import { MatchCardHeader } from "./MatchCardHeader";
 import { MatchCardLoadout } from "./MatchCardLoadout";
 import { MatchCardMetrics } from "./MatchCardMetrics";
@@ -57,7 +57,6 @@ export function MatchCard({
   const outcomeLabel = t(OUTCOME_LABEL_KEYS[vm.gameResult], {
     defaultValue: vm.gameResult,
   });
-  const csShort = t("history.match.csShort", { defaultValue: "CS" });
 
   useEffect(() => {
     if (
@@ -139,12 +138,7 @@ export function MatchCard({
       </div>
 
       {expanded && (
-        <MatchCardExpandedTeams
-          participants={vm.participants}
-          csShort={csShort}
-          blueTeamLabel={t("history.blueTeam")}
-          redTeamLabel={t("history.redTeam")}
-        />
+        <MatchCardExpandedContent summary={match} detail={matchDetails} />
       )}
     </div>
   );
