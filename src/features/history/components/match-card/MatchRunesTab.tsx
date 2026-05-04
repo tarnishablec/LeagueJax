@@ -2,7 +2,7 @@ import { Portal } from "@ark-ui/react/portal";
 import { ToggleGroup } from "@ark-ui/react/toggle-group";
 import { Tooltip } from "@ark-ui/react/tooltip";
 import type { ReactElement } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   RawMatchDetailsGame,
@@ -13,6 +13,7 @@ import type {
   RawMatchSummaryStyle,
 } from "@/bindings/matches.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
+import { useSettings } from "@/features/settings/context";
 import {
   type CdragonGameDataCatalog,
   type CdragonGameDataCatalogPerk,
@@ -20,6 +21,7 @@ import {
   normalizeCdragonGameAssetPath,
   useCdragonGameDataCatalog,
 } from "../../hooks/use-cdragon-game-data-catalog.ts";
+import { HISTORY_SHOW_AUGMENT_DETAILS_SETTING } from "../../manifest.tsx";
 import {
   matchUsesSideTeams,
   type TeamTone,
@@ -828,7 +830,16 @@ export function MatchRunesTab({
 }) {
   void _detail;
   const { t } = useTranslation();
-  const catalog = useCdragonGameDataCatalog(summary.json.gameMode);
+  const settings = useSettings();
+  const showAugmentDetails = useSyncExternalStore(
+    (callback) =>
+      settings.subscribe(HISTORY_SHOW_AUGMENT_DETAILS_SETTING, callback),
+    () => settings.get<boolean>(HISTORY_SHOW_AUGMENT_DETAILS_SETTING) ?? false,
+  );
+  const catalog = useCdragonGameDataCatalog(
+    summary.json.gameMode,
+    showAugmentDetails,
+  );
   const participants = summary.json.participants;
   const participantEntries = useMemo(
     () =>

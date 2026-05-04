@@ -12,6 +12,7 @@ export const historyI18n: Resource = {
       sections: {
         history: {
           behavior: { title: "Behavior" },
+          display: { title: "Display" },
         },
       },
       history: {
@@ -20,6 +21,10 @@ export const historyI18n: Resource = {
         },
         autoOpenOwnTab: {
           label: "Auto-open own history on focus",
+        },
+        showAugmentDetails: {
+          label: "Show augment details",
+          hint: "Loads extra resources and parses augment descriptions when enabled. This may increase computation and resource usage.",
         },
       },
     },
@@ -188,6 +193,7 @@ export const historyI18n: Resource = {
       sections: {
         history: {
           behavior: { title: "行为" },
+          display: { title: "显示" },
         },
       },
       history: {
@@ -196,6 +202,10 @@ export const historyI18n: Resource = {
         },
         autoOpenOwnTab: {
           label: "聚焦时自动打开自己的战绩",
+        },
+        showAugmentDetails: {
+          label: "显示海克斯详情",
+          hint: "开启后会加载额外资源并解析强化描述，可能增加计算和资源占用。",
         },
       },
     },
@@ -364,6 +374,7 @@ export const historyI18n: Resource = {
       sections: {
         history: {
           behavior: { title: "動作" },
+          display: { title: "表示" },
         },
       },
       history: {
@@ -372,6 +383,10 @@ export const historyI18n: Resource = {
         },
         autoOpenOwnTab: {
           label: "フォーカス時に自分の履歴を自動表示",
+        },
+        showAugmentDetails: {
+          label: "オーグメント詳細を表示",
+          hint: "有効にすると追加リソースを読み込み、オーグメント説明を解析します。計算量とリソース使用量が増える場合があります。",
         },
       },
     },

@@ -21,7 +21,10 @@ export const HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING =
 
 export const HISTORY_AUTO_OPEN_OWN_TAB_SETTING =
   "history.behavior.autoOpenOwnTab";
+export const HISTORY_SHOW_AUGMENT_DETAILS_SETTING =
+  "history.display.showAugmentDetails";
 const HISTORY_BEHAVIOR_SECTION = "history.behavior" as const;
+const HISTORY_DISPLAY_SECTION = "history.display" as const;
 
 export class HistoryShard implements WebShard {
   public label() {
@@ -43,6 +46,7 @@ export class HistoryShard implements WebShard {
     const settingsShard = jax.getShard(SettingsShard);
     settingsShard.registerPage({ id: "history", order: 20 });
     settingsShard.registerSection({ key: HISTORY_BEHAVIOR_SECTION, order: 10 });
+    settingsShard.registerSection({ key: HISTORY_DISPLAY_SECTION, order: 20 });
 
     settingsShard.registerSetting({
       id: HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
@@ -63,6 +67,18 @@ export class HistoryShard implements WebShard {
       zod: z.boolean(),
       defaultValue: true,
       order: 11,
+      onSet: () => {},
+    });
+
+    settingsShard.registerSetting({
+      id: HISTORY_SHOW_AUGMENT_DETAILS_SETTING,
+      labelKey: "settings.history.showAugmentDetails.label",
+      hintKey: "settings.history.showAugmentDetails.hint",
+      scope: "frontend",
+      control: { kind: "toggle" },
+      zod: z.boolean(),
+      defaultValue: false,
+      order: 20,
       onSet: () => {},
     });
   }
