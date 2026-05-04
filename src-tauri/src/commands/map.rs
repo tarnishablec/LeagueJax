@@ -1,13 +1,14 @@
 use crate::error::AppError;
 use crate::shards::lcu::concepts::maps::LcuMap;
 use crate::shards::lcu::concepts::queues::LcuQueue;
+use crate::shards::lcu::static_data_cache::{
+    lcu_static_data_cache_namespace, LCU_MAPS_CACHE_FILE, LCU_QUEUES_CACHE_FILE,
+};
 use crate::shards::lcu::LcuShard;
 use crate::shards::static_cache::StaticCacheShard;
 use jax::Jax;
 use std::sync::Arc;
 use tauri::State;
-
-const LCU_CACHE: &str = "lcu-cache.json";
 
 #[tauri::command]
 pub async fn lcu_get_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppError> {
@@ -17,14 +18,11 @@ pub async fn lcu_get_maps(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuMap>, AppEr
         .ok_or(AppError::LcuNotConnected)?;
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let api = lcu.api();
-    let version = lcu
-        .cache()
-        .get_or_try_init("game_version", || api.get_game_version())
-        .await?;
-    let region = lcu.auth().region.clone().unwrap_or_default();
-    let cache_version = format!("{version}_{region}");
+    let cache_namespace = lcu_static_data_cache_namespace(&lcu).await?;
     jax.get_shard::<StaticCacheShard>()
-        .get_or_init(LCU_CACHE, "lcu_maps", &cache_version, || api.get_maps())
+        .get_json_file_or_init(&cache_namespace, LCU_MAPS_CACHE_FILE, || {
+            api.get_maps_json_bytes()
+        })
         .await
 }
 
@@ -36,13 +34,10 @@ pub async fn lcu_get_queues(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuQueue>, A
         .ok_or(AppError::LcuNotConnected)?;
     let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
     let api = lcu.api();
-    let version = lcu
-        .cache()
-        .get_or_try_init("game_version", || api.get_game_version())
-        .await?;
-    let region = lcu.auth().region.clone().unwrap_or_default();
-    let cache_version = format!("{version}_{region}");
+    let cache_namespace = lcu_static_data_cache_namespace(&lcu).await?;
     jax.get_shard::<StaticCacheShard>()
-        .get_or_init(LCU_CACHE, "lcu_queues", &cache_version, || api.get_queues())
+        .get_json_file_or_init(&cache_namespace, LCU_QUEUES_CACHE_FILE, || {
+            api.get_queues_json_bytes()
+        })
         .await
 }
