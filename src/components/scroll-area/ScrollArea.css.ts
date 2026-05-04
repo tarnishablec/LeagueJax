@@ -76,7 +76,7 @@ export const scrollbar = style({
   opacity: 0,
   transition: "opacity 120ms ease-out",
   selectors: {
-    [`${root.classNames.base}:hover &`]: {
+    [`${root.classNames.base}:hover > &`]: {
       opacity: 1,
     },
     "&[data-scrolling]": {

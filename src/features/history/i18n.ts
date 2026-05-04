@@ -102,6 +102,7 @@ export const historyI18n: Resource = {
       },
       matchDetails: {
         team: "Team {{number}}",
+        placement: "#{{placement}}",
         tabs: {
           details: "Details",
           runes: "Runes",
@@ -129,6 +130,16 @@ export const historyI18n: Resource = {
           atakhan: "Atakhan",
           tower: "Tower",
           inhibitor: "Inhibitor",
+        },
+        arenaTeams: {
+          krugs: "Krugs",
+          poros: "Poros",
+          raptors: "Raptors",
+          wolves: "Murk Wolves",
+          gromps: "Gromps",
+          scuttlers: "Scuttle Crabs",
+          minions: "Minions",
+          sentinels: "Sentinels",
         },
       },
       matchRunes: {
@@ -267,6 +278,7 @@ export const historyI18n: Resource = {
       },
       matchDetails: {
         team: "队伍 {{number}}",
+        placement: "第 {{placement}} 名",
         tabs: {
           details: "详情",
           runes: "符文",
@@ -294,6 +306,16 @@ export const historyI18n: Resource = {
           atakhan: "厄塔汗",
           tower: "防御塔",
           inhibitor: "水晶",
+        },
+        arenaTeams: {
+          krugs: "石甲虫",
+          poros: "魄罗",
+          raptors: "锋喙鸟",
+          wolves: "暗影狼",
+          gromps: "魔沼蛙",
+          scuttlers: "峡谷迅捷蟹",
+          minions: "小兵",
+          sentinels: "哨卫",
         },
       },
       matchRunes: {
@@ -432,6 +454,7 @@ export const historyI18n: Resource = {
       },
       matchDetails: {
         team: "チーム {{number}}",
+        placement: "{{placement}}位",
         tabs: {
           details: "詳細",
           runes: "ルーン",
@@ -459,6 +482,16 @@ export const historyI18n: Resource = {
           atakhan: "アタカン",
           tower: "タワー",
           inhibitor: "インヒビター",
+        },
+        arenaTeams: {
+          krugs: "クルーグ",
+          poros: "ポロ",
+          raptors: "ラプター",
+          wolves: "ウルフ",
+          gromps: "グロンプ",
+          scuttlers: "スカトル",
+          minions: "ミニオン",
+          sentinels: "センチネル",
         },
       },
       matchRunes: {

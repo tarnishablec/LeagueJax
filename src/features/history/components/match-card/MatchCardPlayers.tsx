@@ -1,7 +1,7 @@
-import { useMemo } from "react";
-import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
+import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { LazyImage } from "@/components/LazyImage";
 import { useChampionIcon } from "@/hooks/use-champion-icon";
+import type { MatchParticipantGroup } from "../../utils/match-participant-groups";
 import * as s from "./MatchCard.css";
 import { MatchCardPlayerNameButton } from "./MatchCardPlayerNameButton";
 
@@ -23,31 +23,33 @@ function PlayerIcon({ championId }: { championId: number }) {
 }
 
 export function MatchCardPlayers({
-  participants,
+  groups,
   sgpServerId,
 }: {
-  participants: RawMatchSummaryParticipant[];
+  groups: MatchParticipantGroup[];
   sgpServerId: string | null;
 }) {
-  const teams = useMemo(() => {
-    const map = new Map<number, RawMatchSummaryParticipant[]>();
-    for (const p of participants) {
-      const team = p.teamId ?? 0;
-      let list = map.get(team);
-      if (!list) {
-        list = [];
-        map.set(team, list);
-      }
-      list.push(p);
-    }
-    return [...map.entries()];
-  }, [participants]);
+  const layout = groups.some((group) => group.layout === "subteam")
+    ? "subteam"
+    : "side";
 
   return (
-    <div className={s.playersPanel}>
-      {teams.map(([teamId, members]) => (
-        <div key={teamId} className={s.playerTeamColumn}>
-          {members.map((participant, index) => {
+    // biome-ignore lint/a11y/noStaticElementInteractions: this wrapper only stops card toggle bubbling; child buttons keep their own semantics.
+    <div
+      className={s.playersPanel({ layout })}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      {groups.map((group) => (
+        <div
+          key={group.key}
+          className={s.playerTeamColumn({ layout })}
+          style={assignInlineVars({
+            [s.playerTeamAccentVar]: group.accentColor,
+          })}
+        >
+          {group.participants.map((participant, index) => {
             return (
               <div
                 key={`${participant.puuid}-${participant.championId}-${

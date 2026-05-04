@@ -6,6 +6,7 @@ export const metricRow = style({
   display: "grid",
   gridAutoFlow: "column",
   gap: 16,
+  alignSelf: "center",
   alignItems: "center",
   justifyContent: "start",
 });
@@ -21,7 +22,6 @@ export const metricGroup = style({
   display: "grid",
   alignItems: "center",
   gap: 2,
-  height: "100%",
 });
 
 export const metricPrimary = style({
@@ -39,7 +39,6 @@ export const metricPrimaryInline = style([
     display: "grid",
     gridAutoFlow: "column",
     placeItems: "center",
-    height: "100%",
     justifyContent: "center",
     gap: 3,
   },
@@ -48,7 +47,6 @@ export const metricPrimaryInline = style([
 export const metricPrimaryText = style({
   display: "grid",
   placeItems: "center",
-  height: "100%",
   fontSize: "1rem",
 });
 

@@ -20,14 +20,14 @@ import {
   normalizeCdragonGameAssetPath,
   useCdragonGameDataCatalog,
 } from "../../hooks/use-cdragon-game-data-catalog.ts";
-import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
-import * as s from "./MatchRunesTab.css";
-import { CDRAGON_PERK_STYLE_ICON_BY_ID } from "./match-card-display";
 import {
   matchUsesSideTeams,
   type TeamTone,
   teamToneFromId,
-} from "./match-card-team-groups";
+} from "../../utils/match-participant-groups";
+import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
+import * as s from "./MatchRunesTab.css";
+import { CDRAGON_PERK_STYLE_ICON_BY_ID } from "./match-card-display";
 
 type AugmentRarityVariant =
   | "default"
@@ -513,7 +513,7 @@ function statPerkValueFromDescription(
   }
 
   const rangedValue = description.match(
-    /([+＋]?\s*\d+(?:\.\d+)?\s*(?:-|－|–|—|~|～|至|到)\s*\d+(?:\.\d+)?)/,
+    /([+＋]?\s*\d+(?:\.\d+)?\s*[-－–—~～至到]\s*\d+(?:\.\d+)?)/,
   )?.[1];
   if (rangedValue) {
     return normalizeStatPerkValue(rangedValue);
