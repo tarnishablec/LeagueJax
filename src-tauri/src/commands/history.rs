@@ -2,17 +2,19 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::error::AppError;
+use crate::shards::cdragon_static_data::{
+    cdragon_game_data_locale_path, cdragon_static_data_context, get_cached_cdragon_json,
+    CDRAGON_RAW_ROOT,
+};
 use crate::shards::lcu::api::LcuApi;
 use crate::shards::lcu::concepts::cherry::CherryAugment;
 use crate::shards::lcu::concepts::rank::RankStats;
 use crate::shards::lcu::concepts::summoner::{SummonerInfo, SummonerSearchResult};
 use crate::shards::lcu::riot_client::{PlayerAccountAliasEntry, RiotClientHttpClient};
 use crate::shards::lcu::static_data_cache::{
-    lcu_static_data_cache_context, lcu_static_data_cache_namespace, LcuStaticDataCacheContext,
-    LCU_CHERRY_AUGMENTS_CACHE_FILE,
+    lcu_static_data_cache_namespace, LCU_CHERRY_AUGMENTS_CACHE_FILE,
 };
 use crate::shards::lcu::LcuShard;
-use crate::shards::network::{NetworkConfig, NetworkShard};
 use crate::shards::sgp::api::SgpApi;
 use crate::shards::sgp::config::{sgp_servers_config, SgpServersConfig};
 use crate::shards::sgp::matches::{
@@ -26,8 +28,8 @@ use serde_json::Value;
 use tauri::State;
 use uuid::Uuid;
 
-const CDRAGON_RAW_ROOT: &str = "https://raw.communitydragon.org";
 const CDRAGON_ARENA_CACHE_FILE: &str = "arena.json";
+const CDRAGON_CHERRY_AUGMENTS_CACHE_FILE: &str = "cherry-augments.json";
 const CDRAGON_KIWI_CACHE_FILE: &str = "kiwi.bin.json";
 const CDRAGON_LOL_STRINGTABLE_CACHE_FILE: &str = "lol.stringtable.json";
 
@@ -179,67 +181,6 @@ fn first_non_empty(values: &[&str]) -> String {
         .find(|value| !value.is_empty())
         .unwrap_or_default()
         .to_string()
-}
-
-fn normalize_cdragon_locale(locale: &str) -> String {
-    let normalized = locale.trim().replace('-', "_").to_ascii_lowercase();
-    if normalized.is_empty() {
-        "en_us".to_string()
-    } else {
-        normalized
-    }
-}
-
-async fn cdragon_static_data_context(
-    jax: &Arc<Jax>,
-) -> Result<LcuStaticDataCacheContext, AppError> {
-    let manager = jax
-        .get_shard::<LcuShard>()
-        .manager()
-        .ok_or(AppError::LcuNotConnected)?;
-    let lcu = manager.focused().await.ok_or(AppError::LcuNotConnected)?;
-    lcu_static_data_cache_context(&lcu).await
-}
-
-async fn fetch_cdragon_json_from_urls(
-    network_config: Arc<NetworkConfig>,
-    urls: Vec<String>,
-) -> Result<Value, AppError> {
-    let mut last_failure = String::new();
-
-    for url in urls {
-        let response = network_config
-            .external_http_client()
-            .get(&url)
-            .timeout(network_config.request_timeout())
-            .send()
-            .await?;
-
-        if response.status().is_success() {
-            return Ok(response.json::<Value>().await?);
-        }
-
-        last_failure = format!("{url} returned {}", response.status());
-    }
-
-    Err(AppError::other(format!(
-        "CDragon request failed: {last_failure}"
-    )))
-}
-
-async fn get_cached_cdragon_json(
-    jax: &Arc<Jax>,
-    cache_namespace: &str,
-    file_name: &str,
-    urls: Vec<String>,
-    force_refresh: bool,
-) -> Result<Value, AppError> {
-    let network_config = jax.get_shard::<NetworkShard>().config()?;
-    jax.get_shard::<StaticCacheShard>()
-        .get_json_file_or_init_with_options(cache_namespace, file_name, force_refresh, || {
-            fetch_cdragon_json_from_urls(network_config, urls)
-        })
-        .await
 }
 
 fn summoner_level(summoner: &SummonerInfo) -> i64 {
@@ -666,18 +607,48 @@ pub async fn get_cherry_augments(
 }
 
 #[tauri::command]
-pub async fn get_cdragon_arena_json(
+pub async fn get_cdragon_cherry_augments_json(
     force_refresh: Option<bool>,
+    locale: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Value, AppError> {
-    let context = cdragon_static_data_context(&jax).await?;
-    let locale = normalize_cdragon_locale(&context.locale);
+    let context = cdragon_static_data_context(&jax, &locale).await?;
+    let locale_path = cdragon_game_data_locale_path(&context.locale);
     let mut urls = vec![format!(
-        "{}/{}/cdragon/arena/{}.json",
-        CDRAGON_RAW_ROOT, context.version, locale
+        "{}/{}/plugins/rcp-be-lol-game-data/global/{}/v1/cherry-augments.json",
+        CDRAGON_RAW_ROOT, context.version, locale_path
     )];
 
-    if locale != "en_us" {
+    if locale_path != "en_gb" {
+        urls.push(format!(
+            "{}/{}/plugins/rcp-be-lol-game-data/global/en_gb/v1/cherry-augments.json",
+            CDRAGON_RAW_ROOT, context.version
+        ));
+    }
+
+    get_cached_cdragon_json(
+        &jax,
+        &context.namespace,
+        CDRAGON_CHERRY_AUGMENTS_CACHE_FILE,
+        urls,
+        force_refresh.unwrap_or(false),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn get_cdragon_arena_json(
+    force_refresh: Option<bool>,
+    locale: String,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Value, AppError> {
+    let context = cdragon_static_data_context(&jax, &locale).await?;
+    let mut urls = vec![format!(
+        "{}/{}/cdragon/arena/{}.json",
+        CDRAGON_RAW_ROOT, context.version, context.locale
+    )];
+
+    if context.locale != "en_us" {
         urls.push(format!(
             "{}/{}/cdragon/arena/en_us.json",
             CDRAGON_RAW_ROOT, context.version
@@ -697,12 +668,14 @@ pub async fn get_cdragon_arena_json(
 #[tauri::command]
 pub async fn get_cdragon_kiwi_json(
     force_refresh: Option<bool>,
+    locale: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Value, AppError> {
     get_cdragon_mode_specific_json(
         &jax,
         CDRAGON_KIWI_CACHE_FILE,
         CDRAGON_KIWI_CACHE_FILE,
+        &locale,
         force_refresh.unwrap_or(false),
     )
     .await
@@ -712,9 +685,10 @@ async fn get_cdragon_mode_specific_json(
     jax: &Arc<Jax>,
     file_name: &str,
     cache_file: &str,
+    locale: &str,
     force_refresh: bool,
 ) -> Result<Value, AppError> {
-    let context = cdragon_static_data_context(&jax).await?;
+    let context = cdragon_static_data_context(jax, locale).await?;
     let url = format!(
         "{}/{}/game/maps/modespecificdata/{}",
         CDRAGON_RAW_ROOT, context.version, file_name
@@ -733,16 +707,16 @@ async fn get_cdragon_mode_specific_json(
 #[tauri::command]
 pub async fn get_cdragon_lol_stringtable_json(
     force_refresh: Option<bool>,
+    locale: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Value, AppError> {
-    let context = cdragon_static_data_context(&jax).await?;
-    let locale = normalize_cdragon_locale(&context.locale);
+    let context = cdragon_static_data_context(&jax, &locale).await?;
     let mut urls = vec![format!(
         "{}/{}/game/{}/data/menu/en_us/lol.stringtable.json",
-        CDRAGON_RAW_ROOT, context.version, locale
+        CDRAGON_RAW_ROOT, context.version, context.locale
     )];
 
-    if locale != "en_us" {
+    if context.locale != "en_us" {
         urls.push(format!(
             "{}/{}/game/en_us/data/menu/en_us/lol.stringtable.json",
             CDRAGON_RAW_ROOT, context.version

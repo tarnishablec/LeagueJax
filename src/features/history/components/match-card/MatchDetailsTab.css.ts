@@ -11,12 +11,12 @@ export const trueSegmentWidthVar = createVar();
 export const teamAccentColorVar = createVar();
 
 const positionColumn = "34px";
-const summonerColumn = "minmax(100px, 150px)";
+const summonerColumn = "minmax(100px, 120px)";
 const spellsColumn = "minmax(52px, 52px)";
 const runesColumn = "minmax(152px, 152px)";
 const itemsColumn = "minmax(178px, 178px)";
 const questColumn = "minmax(32px, 32px)";
-const damageColumn = "minmax(144px, 144px)";
+const damageColumn = "80px";
 const scoreColumns = "repeat(4, minmax(58px, 58px))";
 const tableColumns = `${positionColumn} ${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
 const tableColumnsWithoutPosition = `${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
@@ -198,10 +198,10 @@ export const table = recipe({
   variants: {
     positionColumn: {
       shown: {
-        minWidth: 1336,
+        // minWidth: 1336,
       },
       hidden: {
-        minWidth: 1290,
+        // minWidth: 1290,
       },
     },
     questColumn: {
@@ -216,7 +216,7 @@ export const table = recipe({
         questColumn: "hidden",
       },
       style: {
-        minWidth: 1292,
+        // minWidth: 1292,
       },
     },
     {
@@ -225,7 +225,7 @@ export const table = recipe({
         questColumn: "hidden",
       },
       style: {
-        minWidth: 1246,
+        // minWidth: 1246,
       },
     },
   ],

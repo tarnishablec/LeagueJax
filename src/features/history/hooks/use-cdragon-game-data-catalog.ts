@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
+import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
 type CdragonPerk = {
   id?: number | string;
@@ -126,6 +127,7 @@ const CDRAGON_GAME_DATA_ROOT =
 const CDRAGON_GAME_DATA_ASSET_BASE = `${CDRAGON_GAME_DATA_ROOT}/default`;
 const CDRAGON_GAME_ASSET_BASE = "https://raw.communitydragon.org/latest/game";
 const CDRAGON_ARENA_AUGMENT_COMMAND = "get_cdragon_arena_json";
+const CDRAGON_CHERRY_AUGMENTS_COMMAND = "get_cdragon_cherry_augments_json";
 const CDRAGON_KIWI_AUGMENT_COMMAND = "get_cdragon_kiwi_json";
 
 const EMPTY_GAME_DATA_CATALOG: CdragonGameDataCatalog = {
@@ -142,47 +144,8 @@ function cdragonGameDataBase(locale: string): string {
   return `${CDRAGON_GAME_DATA_ROOT}/${locale}`;
 }
 
-function normalizeCdragonLocale(language: string | undefined): string {
-  const normalized = (language ?? "").trim().toLowerCase().replace("-", "_");
-
-  if (normalized.startsWith("zh")) {
-    return "zh_cn";
-  }
-  if (normalized.startsWith("ja")) {
-    return "ja_jp";
-  }
-  if (normalized.startsWith("ko")) {
-    return "ko_kr";
-  }
-  if (normalized.startsWith("pt")) {
-    return "pt_br";
-  }
-  if (normalized.startsWith("es_mx")) {
-    return "es_mx";
-  }
-  if (normalized.startsWith("es")) {
-    return "es_es";
-  }
-  if (normalized.startsWith("fr")) {
-    return "fr_fr";
-  }
-  if (normalized.startsWith("de")) {
-    return "de_de";
-  }
-  if (normalized.startsWith("it")) {
-    return "it_it";
-  }
-  if (normalized.startsWith("pl")) {
-    return "pl_pl";
-  }
-  if (normalized.startsWith("ru")) {
-    return "ru_ru";
-  }
-  if (normalized.startsWith("tr")) {
-    return "tr_tr";
-  }
-
-  return "en_us";
+function cdragonGameDataLocalePath(locale: string): string {
+  return locale === "default" || locale === "en_us" ? "en_gb" : locale;
 }
 
 function normalizeAugmentGameMode(
@@ -214,19 +177,21 @@ async function fetchLocalizedJson<T>(
   locale: string,
   fileName: string,
 ): Promise<T | null> {
+  const localePath = cdragonGameDataLocalePath(locale);
   const localized = await fetchJsonByUrl<T>(
-    `${cdragonGameDataBase(locale)}/v1/${fileName}`,
+    `${cdragonGameDataBase(localePath)}/v1/${fileName}`,
   );
-  if (localized !== null || locale === "en_us") {
+  if (localized !== null || localePath === "en_gb") {
     return localized;
   }
 
-  return fetchJsonByUrl<T>(`${cdragonGameDataBase("en_us")}/v1/${fileName}`);
+  return fetchJsonByUrl<T>(`${cdragonGameDataBase("en_gb")}/v1/${fileName}`);
 }
 
 async function fetchCachedCdragonJson<T>(
   command: string,
   enabled: boolean,
+  locale: string,
 ): Promise<T | null> {
   if (!enabled) {
     return null;
@@ -235,6 +200,7 @@ async function fetchCachedCdragonJson<T>(
   try {
     return await invoke<T>(command, {
       forceRefresh: false,
+      locale,
     });
   } catch {
     return null;
@@ -469,7 +435,7 @@ function replaceAugmentVariables(
 function cleanAugmentDescription(value: string): string {
   return cdragonTextToPlainText(value)
     .replace(/%i:[^%]+%/gi, "")
-    .replace(/\{\{\s*[^}]+\s*\}\}/g, "")
+    .replace(/\{\{\s*[^}]+\s*}}/g, "")
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !/@[^@]+@/.test(line))
@@ -897,7 +863,7 @@ async function fetchBaseAugmentsById(
 ): Promise<Record<number, CdragonGameDataCatalogAugment>> {
   const cachedAugments = await fetchCachedCdragonJson<
     CdragonAugment[] | Record<string, CdragonAugment>
-  >("get_cherry_augments", hasFocusedClient);
+  >(CDRAGON_CHERRY_AUGMENTS_COMMAND, hasFocusedClient, locale);
   const augments =
     cachedAugments ??
     (await fetchLocalizedJson<
@@ -909,15 +875,18 @@ async function fetchBaseAugmentsById(
 
 async function fetchModeSpecificAugmentsById(
   hasFocusedClient: boolean,
+  locale: string,
 ): Promise<Record<number, CdragonGameDataCatalogAugment>> {
   const [modeSpecificData, lolStringTable] = await Promise.all([
     fetchCachedCdragonJson<CdragonModeSpecificBinJson>(
       CDRAGON_KIWI_AUGMENT_COMMAND,
       hasFocusedClient,
+      locale,
     ),
     fetchCachedCdragonJson<CdragonLolStringTable>(
       "get_cdragon_lol_stringtable_json",
       hasFocusedClient,
+      locale,
     ),
   ]);
 
@@ -930,10 +899,12 @@ async function fetchModeSpecificAugmentsById(
 
 async function fetchArenaAugmentsById(
   hasFocusedClient: boolean,
+  locale: string,
 ): Promise<Record<number, CdragonGameDataCatalogAugment>> {
   const arenaData = await fetchCachedCdragonJson<CdragonArenaJson>(
     CDRAGON_ARENA_AUGMENT_COMMAND,
     hasFocusedClient,
+    locale,
   );
 
   return mapArenaAugmentsById(arenaData);
@@ -1030,10 +1001,11 @@ export function useCdragonGameDataCatalog(
         ? ([
             "history:cdragon-mode-augments",
             augmentGameMode,
+            locale,
             focusedPid,
           ] as const)
         : null,
-    [focusedPid, augmentGameMode, includeAugmentDetails],
+    [focusedPid, augmentGameMode, locale, includeAugmentDetails],
   );
 
   const { data: perksById = EMPTY_PERKS_BY_ID } = useSWR(
@@ -1066,10 +1038,10 @@ export function useCdragonGameDataCatalog(
   );
   const { data: modeSpecificAugmentsById = EMPTY_AUGMENTS_BY_ID } = useSWR(
     modeAugmentsKey,
-    ([, selectedGameMode]) =>
+    ([, selectedGameMode, cdragonLocale]) =>
       selectedGameMode === "CHERRY"
-        ? fetchArenaAugmentsById(true)
-        : fetchModeSpecificAugmentsById(true),
+        ? fetchArenaAugmentsById(true, cdragonLocale)
+        : fetchModeSpecificAugmentsById(true, cdragonLocale),
     {
       dedupingInterval: Number.POSITIVE_INFINITY,
       fallbackData: EMPTY_AUGMENTS_BY_ID,

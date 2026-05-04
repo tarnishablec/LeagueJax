@@ -1,7 +1,7 @@
 import { HoverCard } from "@ark-ui/react/hover-card";
 import { Portal } from "@ark-ui/react/portal";
 import { useMemo } from "react";
-import { useLcuCherryAugments } from "../../hooks/use-lcu-cherry-augments";
+import { useCdragonCherryAugments } from "../../hooks/use-cdragon-cherry-augments";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { CDRAGON_GAME_DATA_BASE } from "./match-card-display";
@@ -88,7 +88,7 @@ export function MatchCardAugments({
     number | null,
   ];
 }) {
-  const { byId } = useLcuCherryAugments();
+  const { byId } = useCdragonCherryAugments();
 
   const slots = useMemo(() => {
     return AUGMENT_SLOT_KEYS.map((slotKey, slotIndex) => ({
