@@ -10,12 +10,12 @@ export const trueSegmentWidthVar = createVar();
 
 const positionColumn = "34px";
 const summonerColumn = "minmax(190px, 220px)";
-const spellsColumn = "minmax(52px, max-content)";
-const runesColumn = "minmax(152px, max-content)";
-const itemsColumn = "minmax(178px, max-content)";
-const questColumn = "minmax(32px, max-content)";
-const damageColumn = "144px";
-const scoreColumns = "repeat(4, minmax(58px, max-content))";
+const spellsColumn = "minmax(52px, 52px)";
+const runesColumn = "minmax(152px, 152px)";
+const itemsColumn = "minmax(178px, 178px)";
+const questColumn = "minmax(32px, 32px)";
+const damageColumn = "minmax(144px, 144px)";
+const scoreColumns = "repeat(4, minmax(58px, 58px))";
 const tableColumns = `${positionColumn} ${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
 const tableColumnsWithoutPosition = `${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
 const tableColumnsWithoutQuest = `${positionColumn} ${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
@@ -168,14 +168,15 @@ export const tableScroller = style({
 export const table = recipe({
   base: {
     display: "grid",
+    width: "100%",
   },
   variants: {
     positionColumn: {
       shown: {
-        minWidth: 1302,
+        minWidth: 1336,
       },
       hidden: {
-        minWidth: 1256,
+        minWidth: 1290,
       },
     },
     questColumn: {
@@ -190,7 +191,7 @@ export const table = recipe({
         questColumn: "hidden",
       },
       style: {
-        minWidth: 1258,
+        minWidth: 1292,
       },
     },
     {
@@ -199,7 +200,7 @@ export const table = recipe({
         questColumn: "hidden",
       },
       style: {
-        minWidth: 1212,
+        minWidth: 1246,
       },
     },
   ],
@@ -226,7 +227,10 @@ export const table = recipe({
 export const participantRow = recipe({
   base: {
     display: "grid",
+    width: "100%",
+    boxSizing: "border-box",
     alignItems: "center",
+    justifyItems: "stretch",
     justifyContent: "space-between",
     gap: 12,
     minHeight: 42,
@@ -385,14 +389,17 @@ export const emptyQuestSlot = style({
 });
 
 export const damageCell = style({
+  width: "100%",
   minWidth: 0,
+  boxSizing: "border-box",
   display: "grid",
+  justifySelf: "stretch",
   gap: 4,
 });
 
 export const damageNumberRow = style({
   display: "grid",
-  gridTemplateColumns: "max-content minmax(0, 1fr)",
+  gridTemplateColumns: "minmax(0, 1fr) max-content",
   alignItems: "center",
   gap: 6,
   lineHeight: 1,
@@ -403,6 +410,9 @@ export const damageLabel = style({
   fontSize: "0.6875rem",
   fontWeight: 650,
   lineHeight: 1,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const damageNumber = style({
@@ -415,6 +425,7 @@ export const damageNumber = style({
 
 export const damageMeterTrack = style({
   width: "100%",
+  inlineSize: "100%",
   height: 7,
   borderRadius: 999,
   background: `color-mix(in srgb, ${theme.color.deep} 40%, transparent)`,
