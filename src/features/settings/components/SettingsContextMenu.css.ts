@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const scope = style({
@@ -7,11 +8,10 @@ export const scope = style({
   minHeight: "100%",
 });
 
-export const positioner = style({
-  zIndex: 80,
-});
+export const positioner = style({});
 
 export const content = style({
+  zIndex: layers.overlay.contextMenu,
   minWidth: 190,
   outline: "none",
   borderRadius: 8,

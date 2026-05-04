@@ -1,4 +1,5 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 const controlSize = 24;
@@ -7,7 +8,7 @@ export const group = style({
   position: "fixed",
   insetBlockEnd: "1rem",
   insetInlineEnd: "1rem",
-  zIndex: 120,
+  zIndex: layers.overlay.toast,
   width: "min(22rem, calc(100vw - 1.5rem))",
   display: "grid",
   gap: 12,

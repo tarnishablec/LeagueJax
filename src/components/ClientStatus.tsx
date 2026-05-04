@@ -12,13 +12,12 @@ import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { LoaderCircle, Unlink, Unplug } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { LazyImage } from "@/components/LazyImage.tsx";
 import { SummonerID } from "@/components/SummonerID.tsx";
+import { useOpenHistoryTab } from "@/features/history/hooks/use-open-history-tab";
 import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
-import { useTabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css";
 
 type ClientDisplayState = Exclude<LcuInstanceInfo["state"], "idle">;
@@ -265,8 +264,7 @@ interface ClientStatusProps {
 
 export function ClientStatus({ collapsed }: ClientStatusProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const openTab = useTabStore((st) => st.openTab);
+  const openHistoryTab = useOpenHistoryTab();
   const focusedReady = useLcuStore(selectIsFocused);
   const focusedInstance = useLcuStore((st) =>
     st.instances.find((i) => i.isFocused),
@@ -323,8 +321,7 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
     if (!summoner) {
       return;
     }
-    openTab(summoner.puuid);
-    void navigate("/main/history");
+    openHistoryTab(summoner.puuid);
   };
 
   const [open, setOpen] = useState(false);

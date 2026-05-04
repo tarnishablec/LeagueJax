@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const debugDock = style({
@@ -8,7 +9,7 @@ export const debugDock = style({
   display: "grid",
   gap: 8,
   justifyItems: "end",
-  zIndex: 30,
+  zIndex: layers.overlay.dock,
 });
 
 export const debugToggle = style({

@@ -13,6 +13,7 @@ interface ScrollAreaProps {
   contentStyle?: CSSProperties;
   gutter?: ScrollAreaGutter;
   orientation?: ScrollAreaOrientation;
+  showScrollbar?: boolean;
   size?: ScrollAreaSize;
   viewportClassName?: string;
   viewportStyle?: CSSProperties;
@@ -55,14 +56,15 @@ export function ScrollArea({
   contentStyle,
   gutter = "stable",
   orientation = "vertical",
+  showScrollbar = true,
   size = "fill",
   viewportClassName,
   viewportStyle,
 }: ScrollAreaProps) {
   const showVerticalScrollbar =
-    orientation === "vertical" || orientation === "both";
+    showScrollbar && (orientation === "vertical" || orientation === "both");
   const showHorizontalScrollbar =
-    orientation === "horizontal" || orientation === "both";
+    showScrollbar && (orientation === "horizontal" || orientation === "both");
   const reserveVerticalGutter = gutter === "stable" && showVerticalScrollbar;
   const reserveHorizontalGutter =
     gutter === "stable" && showHorizontalScrollbar;

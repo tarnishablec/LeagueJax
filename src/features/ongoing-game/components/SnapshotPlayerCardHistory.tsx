@@ -19,6 +19,18 @@ import {
 import * as s from "./OngoingGameCards.css.ts";
 import type { EnrichedMatch } from "./use-snapshot-player-card-state.ts";
 
+const HISTORY_SKELETON_ROW_IDS = [
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+] as const;
+
 function formatGameTime(epochMs: number): string {
   const d = new Date(epochMs);
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -124,6 +136,17 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
   );
 });
 
+function HistorySkeletonRow() {
+  return (
+    <Skeleton
+      width="100%"
+      height={40}
+      borderRadius={6}
+      containerClassName={s.historySkeletonRow}
+    />
+  );
+}
+
 function HistoryLoadingState() {
   return (
     <SkeletonTheme
@@ -134,16 +157,11 @@ function HistoryLoadingState() {
       <ScrollArea
         className={s.historyListScroller}
         contentClassName={s.historyList}
+        showScrollbar={false}
       >
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
-        <Skeleton width="100%" height={35} borderRadius={6} />
+        {HISTORY_SKELETON_ROW_IDS.map((id) => (
+          <HistorySkeletonRow key={id} />
+        ))}
       </ScrollArea>
     </SkeletonTheme>
   );
@@ -158,6 +176,7 @@ function SnapshotPlayerCardHistoryList(props: {
     <ScrollArea
       className={s.historyListScroller}
       contentClassName={s.historyList}
+      showScrollbar={false}
     >
       {recentGames.map((game) => (
         <HistoryRow key={game.json.gameId} game={game} />

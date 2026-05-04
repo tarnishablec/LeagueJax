@@ -1,5 +1,6 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { root as iconActionButton } from "@/components/IconActionButton.css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 const searchButtonWidth = "80px";
@@ -25,7 +26,7 @@ export const dialogBackdrop = style({
   position: "fixed",
   inset: 0,
   background: "oklch(0.06 0 0 / 0.62)",
-  zIndex: 40,
+  zIndex: layers.overlay.dialogBackdrop,
   selectors: {
     "&[hidden]": {
       display: "none",
@@ -39,7 +40,7 @@ export const dialogPositioner = style({
   display: "grid",
   placeItems: "center",
   padding: 20,
-  zIndex: 41,
+  zIndex: layers.overlay.dialog,
   selectors: {
     "&[hidden]": {
       display: "none",

@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 const scrollbarGutterSize = 12;
@@ -70,7 +71,7 @@ export const content = style({
 });
 
 export const scrollbar = style({
-  zIndex: 3,
+  zIndex: layers.local.scrollbar,
   boxSizing: "border-box",
   opacity: 0,
   transition: "opacity 120ms ease-out",

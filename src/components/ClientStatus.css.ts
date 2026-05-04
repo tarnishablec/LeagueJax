@@ -1,6 +1,7 @@
 import { createVar, globalStyle, keyframes, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { iconCol } from "@/layout/__root.css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 const tooltipSurface = `color-mix(in srgb, ${theme.color.primary}, transparent 0.75)`;
@@ -249,7 +250,7 @@ export const tooltip = style({
   gap: 8,
   // color: "oklch(0.96 0 0)",
   fontSize: "0.975rem",
-  zIndex: 1000,
+  zIndex: layers.overlay.tooltip,
   selectors: {
     ":root.dark &": {
       background: tooltipSurfaceDark,
@@ -274,7 +275,7 @@ export const emptyTooltip = style({
     0 10px 28px ${tooltipShadowColor},
     inset 0 1px 0 oklch(1 0 0 / 0.05)
   `,
-  zIndex: 1000,
+  zIndex: layers.overlay.tooltip,
   selectors: {
     ":root.dark &": {
       background: tooltipSurfaceDark,

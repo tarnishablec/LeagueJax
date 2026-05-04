@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const root = style({
@@ -56,11 +57,10 @@ export const indicator = style({
   placeItems: "center",
 });
 
-export const positioner = style({
-  zIndex: 120,
-});
+export const positioner = style({});
 
 export const content = style({
+  zIndex: layers.overlay.popover,
   marginTop: 4,
   borderRadius: 10,
   border: `1px solid ${theme.color.popoverBorder}`,

@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const srOnly = style({
@@ -71,11 +72,10 @@ export const valueSwatch = style({
   height: "100%",
 });
 
-export const positioner = style({
-  zIndex: 45,
-});
+export const positioner = style({});
 
 export const content = style({
+  zIndex: layers.overlay.popover,
   boxSizing: "border-box",
   width: "18rem",
   display: "grid",
@@ -154,7 +154,7 @@ export const slider = style({
 
 export const sliderTrack = style({
   position: "relative",
-  zIndex: 1,
+  zIndex: layers.local.raised,
   height: 14,
   borderRadius: 999,
   overflow: "hidden",
@@ -162,7 +162,7 @@ export const sliderTrack = style({
 });
 
 export const sliderThumb = style({
-  zIndex: 2,
+  zIndex: layers.local.floating,
   width: 14,
   height: 14,
   borderRadius: "50%",
