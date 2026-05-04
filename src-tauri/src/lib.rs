@@ -256,6 +256,8 @@ pub fn run() {
             get_match_summary,
             get_match_details,
             get_cherry_augments,
+            get_cdragon_kiwi_json,
+            get_cdragon_lol_stringtable_json,
             lcu_get_maps,
             lcu_get_queues,
             lcu_get_game_version,

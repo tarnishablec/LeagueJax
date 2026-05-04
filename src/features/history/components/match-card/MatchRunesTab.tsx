@@ -20,8 +20,8 @@ import {
   normalizeCdragonGameAssetPath,
   useCdragonGameDataCatalog,
 } from "../../hooks/use-cdragon-game-data-catalog.ts";
-import * as s from "./MatchRunesTab.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
+import * as s from "./MatchRunesTab.css";
 import { CDRAGON_PERK_STYLE_ICON_BY_ID } from "./match-card-display";
 
 type TeamSide = "blue" | "red";
@@ -73,17 +73,25 @@ function participantKey(
   return `participant-${participant.puuid ?? "unknown"}-${participant.championId}-${index}`;
 }
 
-function participantTeamSide(participant: RawMatchSummaryParticipant): TeamSide {
+function participantTeamSide(
+  participant: RawMatchSummaryParticipant,
+): TeamSide {
   return participant.teamId === 200 ? "red" : "blue";
 }
 
-function participantDisplayName(participant: RawMatchSummaryParticipant): string {
+function participantDisplayName(
+  participant: RawMatchSummaryParticipant,
+): string {
   const riotName = (participant.riotIdGameName ?? "").trim();
   if (riotName.length > 0) {
     return riotName;
   }
 
-  const fallbackName = (participant.summonerName ?? participant.puuid ?? "").trim();
+  const fallbackName = (
+    participant.summonerName ??
+    participant.puuid ??
+    ""
+  ).trim();
   return fallbackName.length > 0 ? fallbackName : "Unknown";
 }
 
@@ -177,9 +185,7 @@ function cdragonTextToPlainText(value: string | null | undefined): string {
     .trim();
 }
 
-function perkDescription(
-  perk: CdragonGameDataCatalogPerk | undefined,
-): string {
+function perkDescription(perk: CdragonGameDataCatalogPerk | undefined): string {
   return cdragonTextToPlainText(
     perk?.longDesc ??
       perk?.shortDesc ??
@@ -252,9 +258,10 @@ function perkIconSrc(
   return normalizeCdragonGameAssetPath(perk.iconPath, { lowercase: true });
 }
 
-function augmentIconSources(
-  iconPath: string | null | undefined,
-): { src: string | null; fallbacks: string[] } {
+function augmentIconSources(iconPath: string | null | undefined): {
+  src: string | null;
+  fallbacks: string[];
+} {
   if (!iconPath || iconPath.trim().length === 0) {
     return { src: null, fallbacks: [] };
   }
@@ -305,11 +312,13 @@ function GameDataTooltip({
   title,
   description,
   stats,
+  statsRarity = "default",
   children,
 }: {
   title: string;
   description?: string | null;
   stats?: readonly string[];
+  statsRarity?: AugmentRarityVariant;
   children: ReactElement;
 }) {
   const statLines = stats ?? [];
@@ -327,7 +336,12 @@ function GameDataTooltip({
             {statLines.length > 0 ? (
               <span className={s.tooltipStats}>
                 {statLines.map((statLine) => (
-                  <span key={statLine}>{statLine}</span>
+                  <span
+                    key={statLine}
+                    className={s.tooltipStatLine({ rarity: statsRarity })}
+                  >
+                    {statLine}
+                  </span>
                 ))}
               </span>
             ) : null}
@@ -364,7 +378,7 @@ function RuneEntry({
 
   return (
     <GameDataTooltip title={name} description={description} stats={stats}>
-      <span className={s.runeEntry} aria-label={`Show ${name} details`}>
+      <span className={s.runeEntry}>
         <MatchCardAssetIcon
           src={iconSrc}
           alt=""
@@ -373,7 +387,9 @@ function RuneEntry({
         />
         <span className={s.runeText}>
           <span className={s.runeName}>{name}</span>
-          {visibleMeta ? <span className={s.runeMeta}>{visibleMeta}</span> : null}
+          {visibleMeta ? (
+            <span className={s.runeMeta}>{visibleMeta}</span>
+          ) : null}
         </span>
       </span>
     </GameDataTooltip>
@@ -498,7 +514,9 @@ function statPerkValueFromDescription(
   return normalizeStatPerkValue(flatValue);
 }
 
-function normalizeStatPerkValue(value: string | null | undefined): string | null {
+function normalizeStatPerkValue(
+  value: string | null | undefined,
+): string | null {
   if (!value) {
     return null;
   }
@@ -661,18 +679,21 @@ function AugmentPanel({
             defaultValue: rarityDefaultLabel(rarity),
           });
           const iconSources = augmentIconSources(augment?.augmentSmallIconPath);
+          const description =
+            augment?.tooltip?.trim() || augment?.description?.trim() || null;
 
           return (
             <GameDataTooltip
               key={`${slotKey}-${augmentId}`}
               title={name}
-              description={rarityLabel}
+              description={description}
+              stats={[rarityLabel]}
+              statsRarity={rarityVariant(rarity)}
             >
               <span
                 className={s.augmentEntry({
                   rarity: rarityVariant(rarity),
                 })}
-                aria-label={`Show ${name} details`}
               >
                 <MatchCardAssetIcon
                   src={iconSources.src}

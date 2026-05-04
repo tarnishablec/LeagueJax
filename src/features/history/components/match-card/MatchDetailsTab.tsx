@@ -34,6 +34,16 @@ import * as s from "./MatchDetailsTab.css";
 import { formatDamage } from "./match-card-display";
 
 type TeamSide = "blue" | "red";
+type TeamTone = TeamSide | "neutral";
+
+type TeamGroup = {
+  key: string;
+  teamId: number | null;
+  labelNumber: number;
+  tone: TeamTone;
+  participants: RawMatchSummaryParticipant[];
+  showObjectives: boolean;
+};
 
 type TeamTotals = {
   kills: number;
@@ -64,7 +74,8 @@ type ObjectiveConfig = {
   defaultLabel: string;
 };
 
-const TEAM_IDS = [100, 200] as const;
+const BLUE_TEAM_ID = 100;
+const RED_TEAM_ID = 200;
 const AUGMENT_GAME_MODES = new Set(["CHERRY", "KIWI", "STRAWBERRY"]);
 const CDRAGON_LATEST_BASE = "https://raw.communitydragon.org/latest";
 const CDRAGON_GAME_CHARACTERS_BASE = `${CDRAGON_LATEST_BASE}/game/assets/characters`;
@@ -122,18 +133,25 @@ function safeNumber(value: number | null | undefined): number {
 
 function participantRowKey(
   participant: RawMatchSummaryParticipant,
-  teamId: number,
+  groupKey: string,
   index: number,
 ): string {
   if (participant.participantId !== null) {
-    return `team-${teamId}-pid-${participant.participantId}`;
+    return `${groupKey}-pid-${participant.participantId}`;
   }
 
-  return `team-${teamId}-puuid-${participant.puuid ?? "unknown"}-champ-${participant.championId}-idx-${index}`;
+  return `${groupKey}-puuid-${participant.puuid ?? "unknown"}-champ-${participant.championId}-idx-${index}`;
 }
 
-function teamSideFromId(teamId: number): TeamSide {
-  return teamId === 100 ? "blue" : "red";
+function teamToneFromId(teamId: number | null): TeamTone {
+  if (teamId === BLUE_TEAM_ID) {
+    return "blue";
+  }
+  if (teamId === RED_TEAM_ID) {
+    return "red";
+  }
+
+  return "neutral";
 }
 
 function participantPosition(
@@ -219,6 +237,106 @@ function isAramMatch(summary: RawMatchSummaryGame): boolean {
   return summary.json.mapId === 12 || summary.json.queueId === 450;
 }
 
+function matchUsesSideTeams(summary: RawMatchSummaryGame): boolean {
+  return isSummonersRiftMatch(summary) || isAramMatch(summary);
+}
+
+function compareTeamIds(a: number, b: number): number {
+  const sideOrder = new Map<number, number>([
+    [BLUE_TEAM_ID, 0],
+    [RED_TEAM_ID, 1],
+  ]);
+  return (sideOrder.get(a) ?? a + 1000) - (sideOrder.get(b) ?? b + 1000);
+}
+
+function validGroupId(value: number | null | undefined): number | null {
+  return value !== null && value !== undefined && value > 0 ? value : null;
+}
+
+function participantFallbackGroupId(
+  participant: RawMatchSummaryParticipant,
+  index: number,
+): number {
+  return (
+    validGroupId(participant.teamId) ??
+    validGroupId(participant.playerSubteamId) ??
+    participant.participantId ??
+    index + 1
+  );
+}
+
+function matchHasSubteams(summary: RawMatchSummaryGame): boolean {
+  const subteamIds = new Set(
+    summary.json.participants
+      .map((participant) => validGroupId(participant.playerSubteamId))
+      .filter((subteamId): subteamId is number => subteamId !== null),
+  );
+  return subteamIds.size > 1;
+}
+
+function groupedParticipants(
+  participants: RawMatchSummaryParticipant[],
+  groupIdForParticipant: (
+    participant: RawMatchSummaryParticipant,
+    index: number,
+  ) => number,
+): Array<[number, RawMatchSummaryParticipant[]]> {
+  const groups = new Map<number, RawMatchSummaryParticipant[]>();
+
+  participants.forEach((participant, index) => {
+    const groupId = groupIdForParticipant(participant, index);
+    const group = groups.get(groupId);
+    if (group) {
+      group.push(participant);
+    } else {
+      groups.set(groupId, [participant]);
+    }
+  });
+
+  return Array.from(groups.entries()).filter(
+    ([, groupParticipants]) => groupParticipants.length > 0,
+  );
+}
+
+function resolveTeamGroups(summary: RawMatchSummaryGame): TeamGroup[] {
+  if (matchUsesSideTeams(summary)) {
+    return groupedParticipants(summary.json.participants, (participant, index) =>
+      participantFallbackGroupId(participant, index),
+    )
+      .sort(([a], [b]) => compareTeamIds(a, b))
+      .map(([teamId, participants], index) => ({
+        key: `team-${teamId}`,
+        teamId,
+        labelNumber: index + 1,
+        tone: teamToneFromId(teamId),
+        participants,
+        showObjectives: true,
+      }));
+  }
+
+  const useSubteams = matchHasSubteams(summary);
+
+  return groupedParticipants(summary.json.participants, (participant, index) => {
+    if (useSubteams) {
+      return (
+        validGroupId(participant.playerSubteamId) ??
+        participantFallbackGroupId(participant, index)
+      );
+    }
+
+    return participantFallbackGroupId(participant, index);
+  })
+    .sort(([a], [b]) => a - b)
+    .map(([groupId, participants], index) => ({
+      key: `group-${groupId}`,
+      teamId: null,
+      labelNumber: index + 1,
+      tone: "neutral",
+      participants,
+      showObjectives: false,
+    }));
+}
+
 function matchObjectiveKills(
   summary: RawMatchSummaryGame,
   key: keyof RawMatchSummaryObjectives,
@@ -243,10 +361,7 @@ function resolveVisibleObjectives(
   }
 
   return OBJECTIVES.filter((objective) => {
-    return (
-      ARAM_OBJECTIVE_KEYS.has(objective.key) ||
-      matchObjectiveKills(summary, objective.key) > 0
-    );
+    return matchObjectiveKills(summary, objective.key) > 0;
   });
 }
 
@@ -759,6 +874,10 @@ function TeamBlock({
   const participants = summary.json.participants.filter(
     (participant) => participant.teamId === teamId,
   );
+  if (participants.length === 0) {
+    return null;
+  }
+
   const team = summary.json.teams.find(
     (candidate) => candidate.teamId === teamId,
   );

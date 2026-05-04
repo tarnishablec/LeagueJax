@@ -36,10 +36,28 @@ impl StaticCacheShard {
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<T, AppError>>,
     {
+        self.get_json_file_or_init_with_options(namespace, file_name, false, init)
+            .await
+    }
+
+    pub async fn get_json_file_or_init_with_options<T, F, Fut>(
+        &self,
+        namespace: &str,
+        file_name: &str,
+        force_refresh: bool,
+        init: F,
+    ) -> Result<T, AppError>
+    where
+        T: DeserializeOwned + Serialize,
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<T, AppError>>,
+    {
         let cache_file = self.cache_file_path(namespace, file_name);
-        if let Ok(path) = &cache_file {
-            if let Some(cached) = read_json_cache_file::<T>(path) {
-                return Ok(cached);
+        if !force_refresh {
+            if let Ok(path) = &cache_file {
+                if let Some(cached) = read_json_cache_file::<T>(path) {
+                    return Ok(cached);
+                }
             }
         }
 

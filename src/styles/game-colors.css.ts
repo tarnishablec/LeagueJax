@@ -25,6 +25,16 @@ export const gameColorVars = createGlobalThemeContract({
     magic: "game-damage-magic",
     trueDamage: "game-damage-true",
   },
+  augmentRarity: {
+    bronze: "game-augment-rarity-bronze",
+    bronzeAccent: "game-augment-rarity-bronze-accent",
+    silver: "game-augment-rarity-silver",
+    silverAccent: "game-augment-rarity-silver-accent",
+    gold: "game-augment-rarity-gold",
+    goldAccent: "game-augment-rarity-gold-accent",
+    prismatic: "game-augment-rarity-prismatic",
+    prismaticAccent: "game-augment-rarity-prismatic-accent",
+  },
 });
 
 createGlobalTheme(":root", gameColorVars, {
@@ -49,6 +59,16 @@ createGlobalTheme(":root", gameColorVars, {
     magic: "oklch(0.66 0.14 244)",
     trueDamage: "oklch(0.58 0 0)",
   },
+  augmentRarity: {
+    bronze: "oklch(0.68 0.11 58)",
+    bronzeAccent: "oklch(0.62 0.08 66 / 0.72)",
+    silver: "oklch(0.78 0.02 250)",
+    silverAccent: "oklch(0.74 0.02 250 / 0.72)",
+    gold: "oklch(0.82 0.15 86)",
+    goldAccent: "oklch(0.78 0.13 84 / 0.78)",
+    prismatic: "oklch(0.78 0.18 300)",
+    prismaticAccent: "oklch(0.72 0.18 294 / 0.82)",
+  },
 });
 
 createGlobalTheme(":root.dark", gameColorVars, {
@@ -72,5 +92,15 @@ createGlobalTheme(":root.dark", gameColorVars, {
     physical: "oklch(0.62 0.18 24)",
     magic: "oklch(0.66 0.14 244)",
     trueDamage: "oklch(0.72 0 0)",
+  },
+  augmentRarity: {
+    bronze: "oklch(0.74 0.11 58)",
+    bronzeAccent: "oklch(0.68 0.09 66 / 0.72)",
+    silver: "oklch(0.84 0.02 250)",
+    silverAccent: "oklch(0.78 0.02 250 / 0.72)",
+    gold: "oklch(0.88 0.14 86)",
+    goldAccent: "oklch(0.82 0.13 84 / 0.78)",
+    prismatic: "oklch(0.84 0.16 300)",
+    prismaticAccent: "oklch(0.78 0.17 294 / 0.82)",
   },
 });
