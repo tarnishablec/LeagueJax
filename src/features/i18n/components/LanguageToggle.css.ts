@@ -18,10 +18,14 @@ export const trigger = style({
   fontSize: "0.75rem",
   fontWeight: 600,
   letterSpacing: "0.02em",
-  transition: "color 100ms",
+  transition: "color 100ms, background-color 100ms",
   selectors: {
     "&:hover": {
+      background: `color-mix(in oklch, ${theme.color.primary} 10%, transparent)`,
       color: theme.color.foreground,
+    },
+    ":root.dark &:hover": {
+      background: theme.color.accent,
     },
   },
 });
@@ -67,18 +71,30 @@ export const dropdownItem = recipe({
     paddingInline: 8,
     paddingBlock: 6,
     fontSize: "0.75rem",
-    transition: "color 100ms, background-color 100ms",
+    transition: "color 100ms, background-color 100ms, outline-color 100ms",
   },
   variants: {
     active: {
       true: {
-        background: theme.color.accent,
-        color: theme.color.accentForeground,
+        background: `color-mix(in oklch, ${theme.color.primary} 18%, ${theme.color.background})`,
+        color: theme.color.foreground,
+        outline: `1px solid color-mix(in oklch, ${theme.color.primary} 55%, transparent)`,
+        selectors: {
+          ":root.dark &": {
+            background: theme.color.accent,
+            color: theme.color.accentForeground,
+            outlineColor: "transparent",
+          },
+        },
       },
       false: {
         color: theme.color.mutedForeground,
         selectors: {
           "&:hover": {
+            background: `color-mix(in oklch, ${theme.color.primary} 12%, ${theme.color.background})`,
+            color: theme.color.foreground,
+          },
+          ":root.dark &:hover": {
             background: theme.color.accent,
             color: theme.color.accentForeground,
           },

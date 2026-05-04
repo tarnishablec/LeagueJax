@@ -19,7 +19,7 @@ export const outlet = style({
 
 export const outletContent = style({
   display: "grid",
-  alignContent: "start",
+  alignContent: "stretch",
   minHeight: "100%",
 });
 
