@@ -1,5 +1,6 @@
 import { style, styleVariants } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const row = style({
@@ -52,13 +53,13 @@ export const hintTriggerTone = styleVariants({
 });
 
 export const hintPositioner = style({
-  zIndex: 40,
   pointerEvents: "none",
   minWidth: "0 !important",
   maxWidth: "min(32rem, calc(100vw - 32px))",
 });
 
 export const hintContent = style({
+  zIndex: layers.overlay.tooltip,
   boxSizing: "border-box",
   borderRadius: 8,
   padding: "4px 8px",

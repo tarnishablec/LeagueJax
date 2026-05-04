@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const root = style({
@@ -44,11 +45,10 @@ export const text = style({
   lineHeight: 1.1,
 });
 
-export const tooltipPositioner = style({
-  zIndex: 60,
-});
+export const tooltipPositioner = style({});
 
 export const tooltipContent = style({
+  zIndex: layers.overlay.tooltip,
   padding: "5px 7px",
   borderRadius: 4,
   border: `1px solid ${theme.color.popoverBorder}`,

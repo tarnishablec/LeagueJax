@@ -1,5 +1,6 @@
 import { createVar, type StyleRule, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "../styles/layers.css";
 import { theme } from "../styles/theme.css";
 
 export const sidebarWidth = createVar();
@@ -184,11 +185,10 @@ export const navLabel = recipe({
   },
 });
 
-export const navTooltipPositioner = style({
-  zIndex: 1000,
-});
+export const navTooltipPositioner = style({});
 
 export const navTooltipContent = style({
+  zIndex: layers.overlay.tooltip,
   borderRadius: 6,
   // border: `1px solid color-mix(in oklch, ${vars.color.primary} 34%, ${vars.color.popoverBorder})`,
   background: tooltipSurface,

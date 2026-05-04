@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
 export const metricRow = style({
@@ -78,11 +79,10 @@ export const scoreboardIconFallback = style({
   flexShrink: 0,
 });
 
-export const tooltipPositioner = style({
-  zIndex: 40,
-});
+export const tooltipPositioner = style({});
 
 export const tooltipContent = style({
+  zIndex: layers.overlay.tooltip,
   borderRadius: 8,
   border: `1px solid ${theme.color.popoverBorder}`,
   background: theme.color.popupBackground,

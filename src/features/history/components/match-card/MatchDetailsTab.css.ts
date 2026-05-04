@@ -1,6 +1,7 @@
 import { createVar, style, styleVariants } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { gameColorVars } from "@/styles/game-colors.css.ts";
+import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
 export const meterFillWidthVar = createVar();
@@ -9,7 +10,7 @@ export const magicSegmentWidthVar = createVar();
 export const trueSegmentWidthVar = createVar();
 
 const positionColumn = "34px";
-const summonerColumn = "minmax(190px, 220px)";
+const summonerColumn = "minmax(100px, 150px)";
 const spellsColumn = "minmax(52px, 52px)";
 const runesColumn = "minmax(152px, 152px)";
 const itemsColumn = "minmax(178px, 178px)";
@@ -516,11 +517,10 @@ export const scoreCellIconFallback = style({
   background: theme.color.accent,
 });
 
-export const tooltipPositioner = style({
-  zIndex: 40,
-});
+export const tooltipPositioner = style({});
 
 export const tooltipContent = style({
+  zIndex: layers.overlay.tooltip,
   maxWidth: 260,
   padding: "4px 6px",
   borderRadius: 8,

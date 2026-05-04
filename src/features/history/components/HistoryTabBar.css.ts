@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
 export const container = style({
@@ -130,11 +131,10 @@ export const closeButton = style({
   },
 });
 
-export const contextMenuPositioner = style({
-  zIndex: 80,
-});
+export const contextMenuPositioner = style({});
 
 export const contextMenuContent = style({
+  zIndex: layers.overlay.contextMenu,
   minWidth: 180,
   borderRadius: 10,
   border: `1px solid ${theme.color.popoverBorder}`,

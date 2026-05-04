@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
 export const root = style({
@@ -137,11 +138,10 @@ export const soloKillNumber = style({
   transform: "translateY(-0.02em)",
 });
 
-export const tooltipPositioner = style({
-  zIndex: 40,
-});
+export const tooltipPositioner = style({});
 
 export const tooltipContent = style({
+  zIndex: layers.overlay.tooltip,
   borderRadius: 8,
   border: `1px solid ${theme.color.popoverBorder}`,
   background: theme.color.popupBackground,

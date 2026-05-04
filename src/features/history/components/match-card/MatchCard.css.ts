@@ -1,6 +1,7 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { gameColorVars } from "@/styles/game-colors.css.ts";
+import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
 const translucentSlotAccent = `color-mix(in srgb, ${theme.color.accent} 42%, transparent)`;
@@ -512,11 +513,10 @@ export const playerNameButton = style({
   },
 });
 
-export const playerHoverPositioner = style({
-  zIndex: 40,
-});
+export const playerHoverPositioner = style({});
 
 export const playerHoverContent = style({
+  zIndex: layers.overlay.tooltip,
   borderRadius: 8,
   border: `1px solid ${theme.color.popoverBorder}`,
   background: theme.color.popupBackground,
@@ -537,11 +537,10 @@ export const augmentGrid = style({
   alignItems: "center",
 });
 
-export const augmentHoverPositioner = style({
-  zIndex: 40,
-});
+export const augmentHoverPositioner = style({});
 
 export const augmentHoverContent = style({
+  zIndex: layers.overlay.tooltip,
   borderRadius: 8,
   border: `1px solid ${theme.color.popoverBorder}`,
   background: theme.color.popupBackground,

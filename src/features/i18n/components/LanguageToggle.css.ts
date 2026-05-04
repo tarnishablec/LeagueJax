@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
+import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
 export const wrapper = style({
@@ -39,7 +40,7 @@ export const dropdownOuter = style({
   pointerEvents: "none",
   opacity: 0,
   transition: "opacity 150ms",
-  zIndex: 50,
+  zIndex: layers.overlay.dropdown,
   selectors: {
     [`${wrapper}:hover &`]: {
       pointerEvents: "auto",

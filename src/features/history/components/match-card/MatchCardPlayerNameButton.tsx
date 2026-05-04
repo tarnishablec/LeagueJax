@@ -1,7 +1,7 @@
 import { HoverCard } from "@ark-ui/react/hover-card";
 import { Portal } from "@ark-ui/react/portal";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
-import { useTabStore } from "@/stores/tabs";
+import { useOpenHistoryTab } from "../../hooks/use-open-history-tab";
 import * as s from "./MatchCard.css";
 
 const BOT_PUUID = "00000000-0000-0000-0000-000000000000";
@@ -44,7 +44,7 @@ export function MatchCardPlayerNameButton({
   botClassName?: string;
   children?: string;
 }) {
-  const openTab = useTabStore((state) => state.openTab);
+  const openHistoryTab = useOpenHistoryTab();
   const { gameName, tagLine } = resolvePlayerName(participant);
   const displayName = children ?? gameName;
   const fullName = tagLine ? `${gameName}#${tagLine}` : gameName;
@@ -66,7 +66,7 @@ export function MatchCardPlayerNameButton({
         aria-label="Open player history tab"
         className={classNames(s.playerNameButton, className)}
         onClick={() => {
-          openTab(participant.puuid ?? "", sgpServerId, {
+          openHistoryTab(participant.puuid ?? "", sgpServerId, {
             gameName,
             tagLine,
           });

@@ -9,6 +9,7 @@ import { ConnectionGuard } from "../components/ConnectionGuard";
 import { MatchList } from "../components/MatchList";
 import { SummaryBar } from "../components/SummaryBar";
 import { useFocusSync } from "../hooks/use-focus-sync.ts";
+import { useOpenHistoryTab } from "../hooks/use-open-history-tab";
 import { useSummonerInfo } from "../hooks/use-summoner";
 import {
   HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
@@ -46,7 +47,7 @@ function useDeferredListMount(key: string | null): boolean {
 function OwnSummonerButton({ serverId }: { serverId: string | null }) {
   const { t } = useTranslation();
   const connected = useLcuStore(selectIsFocused);
-  const openTab = useTabStore((state) => state.openTab);
+  const openHistoryTab = useOpenHistoryTab();
   const summoner = connected?.summoner ?? null;
 
   const { src: avatarUrl } = useCdragonStaticData(
@@ -66,7 +67,7 @@ function OwnSummonerButton({ serverId }: { serverId: string | null }) {
         type="button"
         className={s.focusPickerCard}
         onClick={() =>
-          openTab(summoner.puuid, serverId, {
+          openHistoryTab(summoner.puuid, serverId, {
             gameName,
             tagLine,
             profileIconId: summoner.profileIconId,

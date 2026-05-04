@@ -1,4 +1,5 @@
 import { keyframes, style } from "@vanilla-extract/css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 const fadeIn = keyframes({
@@ -146,11 +147,10 @@ export const privacyBadge = style({
   // },
 });
 
-export const tooltipPositioner = style({
-  zIndex: 40,
-});
+export const tooltipPositioner = style({});
 
 export const tooltipContent = style({
+  zIndex: layers.overlay.tooltip,
   borderRadius: 8,
   border: `1px solid ${theme.color.popoverBorder}`,
   background: theme.color.popupBackground,

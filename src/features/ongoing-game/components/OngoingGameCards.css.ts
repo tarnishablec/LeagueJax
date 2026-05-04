@@ -5,6 +5,7 @@ import {
   summonerIdTagLineColorVar,
 } from "@/components/SummonerID";
 import { gameColorVars } from "@/styles/game-colors.css";
+import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
@@ -294,11 +295,10 @@ export const rankMiniIcon = recipe({
   },
 });
 
-export const rankTooltipPositioner = style({
-  zIndex: 60,
-});
+export const rankTooltipPositioner = style({});
 
 export const rankTooltipContent = style({
+  zIndex: layers.overlay.tooltip,
   padding: "5px 7px",
   borderRadius: 4,
   border: `1px solid ${theme.color.popoverBorder}`,
@@ -361,6 +361,12 @@ export const historyRow = style({
   },
 });
 
+export const historySkeletonRow = style({
+  display: "block",
+  height: 40,
+  lineHeight: 0,
+});
+
 export const historyRowButtonReset = style({
   width: "100%",
   border: "none",
@@ -374,7 +380,7 @@ export const historyDialogBackdrop = style({
   position: "fixed",
   inset: 0,
   background: "oklch(0.06 0 0 / 0.62)",
-  zIndex: 40,
+  zIndex: layers.overlay.dialogBackdrop,
   selectors: {
     "&[hidden]": { display: "none" },
   },
@@ -386,7 +392,7 @@ export const historyDialogPositioner = style({
   display: "grid",
   placeItems: "center",
   padding: 20,
-  zIndex: 41,
+  zIndex: layers.overlay.dialog,
   selectors: {
     "&[hidden]": { display: "none" },
   },
