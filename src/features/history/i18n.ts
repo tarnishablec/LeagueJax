@@ -150,7 +150,7 @@ export const historyI18n: Resource = {
         noData: "No rune data",
         noAugmentData: "No augment data",
         unknownRune: "Rune #{{id}}",
-        unknownAugment: "Augment #{{id}}",
+        unknownAugment: "Unknown augment",
         statSlots: {
           offense: "Offense",
           flex: "Flex",
@@ -326,7 +326,7 @@ export const historyI18n: Resource = {
         noData: "暂无符文数据",
         noAugmentData: "暂无强化数据",
         unknownRune: "符文 #{{id}}",
-        unknownAugment: "强化 #{{id}}",
+        unknownAugment: "未知强化",
         statSlots: {
           offense: "进攻",
           flex: "灵活",
@@ -502,7 +502,7 @@ export const historyI18n: Resource = {
         noData: "ルーンデータがありません",
         noAugmentData: "オーグメントデータがありません",
         unknownRune: "ルーン #{{id}}",
-        unknownAugment: "オーグメント #{{id}}",
+        unknownAugment: "不明なオーグメント",
         statSlots: {
           offense: "攻撃",
           flex: "フレックス",

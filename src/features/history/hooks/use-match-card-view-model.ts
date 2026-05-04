@@ -275,8 +275,7 @@ export function useMatchCardViewModel({
     ? "terminated"
     : outcome;
 
-  const hasAugments =
-    gameMode === "CHERRY" || gameMode === "KIWI" || gameMode === "STRAWBERRY";
+  const hasAugments = gameMode === "CHERRY" || gameMode === "KIWI";
   const supportsPosition = mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
   const participantGroups = resolveMatchParticipantGroups(match);
   const meGroup =

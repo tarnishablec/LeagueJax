@@ -27,6 +27,7 @@ use tauri::State;
 use uuid::Uuid;
 
 const CDRAGON_RAW_ROOT: &str = "https://raw.communitydragon.org";
+const CDRAGON_ARENA_CACHE_FILE: &str = "arena.json";
 const CDRAGON_KIWI_CACHE_FILE: &str = "kiwi.bin.json";
 const CDRAGON_LOL_STRINGTABLE_CACHE_FILE: &str = "lol.stringtable.json";
 
@@ -665,22 +666,66 @@ pub async fn get_cherry_augments(
 }
 
 #[tauri::command]
-pub async fn get_cdragon_kiwi_json(
+pub async fn get_cdragon_arena_json(
     force_refresh: Option<bool>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<Value, AppError> {
     let context = cdragon_static_data_context(&jax).await?;
-    let url = format!(
-        "{}/{}/game/maps/modespecificdata/kiwi.bin.json",
-        CDRAGON_RAW_ROOT, context.version
-    );
+    let locale = normalize_cdragon_locale(&context.locale);
+    let mut urls = vec![format!(
+        "{}/{}/cdragon/arena/{}.json",
+        CDRAGON_RAW_ROOT, context.version, locale
+    )];
+
+    if locale != "en_us" {
+        urls.push(format!(
+            "{}/{}/cdragon/arena/en_us.json",
+            CDRAGON_RAW_ROOT, context.version
+        ));
+    }
 
     get_cached_cdragon_json(
         &jax,
         &context.namespace,
-        CDRAGON_KIWI_CACHE_FILE,
-        vec![url],
+        CDRAGON_ARENA_CACHE_FILE,
+        urls,
         force_refresh.unwrap_or(false),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn get_cdragon_kiwi_json(
+    force_refresh: Option<bool>,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Value, AppError> {
+    get_cdragon_mode_specific_json(
+        &jax,
+        CDRAGON_KIWI_CACHE_FILE,
+        CDRAGON_KIWI_CACHE_FILE,
+        force_refresh.unwrap_or(false),
+    )
+    .await
+}
+
+async fn get_cdragon_mode_specific_json(
+    jax: &Arc<Jax>,
+    file_name: &str,
+    cache_file: &str,
+    force_refresh: bool,
+) -> Result<Value, AppError> {
+    let context = cdragon_static_data_context(&jax).await?;
+    let url = format!(
+        "{}/{}/game/maps/modespecificdata/{}",
+        CDRAGON_RAW_ROOT, context.version, file_name
+    );
+
+    get_cached_cdragon_json(
+        jax,
+        &context.namespace,
+        cache_file,
+        vec![url],
+        force_refresh,
     )
     .await
 }
