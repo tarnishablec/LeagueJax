@@ -64,6 +64,7 @@ export const participantTrigger = recipe({
           },
         },
       },
+      neutral: {},
     },
   },
 });

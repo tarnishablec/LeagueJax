@@ -32,18 +32,11 @@ import { MatchCardRunes } from "./MatchCardRunes";
 import { MatchCardSpells } from "./MatchCardSpells";
 import * as s from "./MatchDetailsTab.css";
 import { formatDamage } from "./match-card-display";
-
-type TeamSide = "blue" | "red";
-type TeamTone = TeamSide | "neutral";
-
-type TeamGroup = {
-  key: string;
-  teamId: number | null;
-  labelNumber: number;
-  tone: TeamTone;
-  participants: RawMatchSummaryParticipant[];
-  showObjectives: boolean;
-};
+import {
+  type MatchParticipantGroup,
+  resolveMatchParticipantGroups,
+  type TeamSide,
+} from "./match-card-team-groups";
 
 type TeamTotals = {
   kills: number;
@@ -74,8 +67,6 @@ type ObjectiveConfig = {
   defaultLabel: string;
 };
 
-const BLUE_TEAM_ID = 100;
-const RED_TEAM_ID = 200;
 const AUGMENT_GAME_MODES = new Set(["CHERRY", "KIWI", "STRAWBERRY"]);
 const CDRAGON_LATEST_BASE = "https://raw.communitydragon.org/latest";
 const CDRAGON_GAME_CHARACTERS_BASE = `${CDRAGON_LATEST_BASE}/game/assets/characters`;
@@ -141,17 +132,6 @@ function participantRowKey(
   }
 
   return `${groupKey}-puuid-${participant.puuid ?? "unknown"}-champ-${participant.championId}-idx-${index}`;
-}
-
-function teamToneFromId(teamId: number | null): TeamTone {
-  if (teamId === BLUE_TEAM_ID) {
-    return "blue";
-  }
-  if (teamId === RED_TEAM_ID) {
-    return "red";
-  }
-
-  return "neutral";
 }
 
 function participantPosition(
@@ -235,106 +215,6 @@ function isSummonersRiftMatch(summary: RawMatchSummaryGame): boolean {
 
 function isAramMatch(summary: RawMatchSummaryGame): boolean {
   return summary.json.mapId === 12 || summary.json.queueId === 450;
-}
-
-function matchUsesSideTeams(summary: RawMatchSummaryGame): boolean {
-  return isSummonersRiftMatch(summary) || isAramMatch(summary);
-}
-
-function compareTeamIds(a: number, b: number): number {
-  const sideOrder = new Map<number, number>([
-    [BLUE_TEAM_ID, 0],
-    [RED_TEAM_ID, 1],
-  ]);
-  return (sideOrder.get(a) ?? a + 1000) - (sideOrder.get(b) ?? b + 1000);
-}
-
-function validGroupId(value: number | null | undefined): number | null {
-  return value !== null && value !== undefined && value > 0 ? value : null;
-}
-
-function participantFallbackGroupId(
-  participant: RawMatchSummaryParticipant,
-  index: number,
-): number {
-  return (
-    validGroupId(participant.teamId) ??
-    validGroupId(participant.playerSubteamId) ??
-    participant.participantId ??
-    index + 1
-  );
-}
-
-function matchHasSubteams(summary: RawMatchSummaryGame): boolean {
-  const subteamIds = new Set(
-    summary.json.participants
-      .map((participant) => validGroupId(participant.playerSubteamId))
-      .filter((subteamId): subteamId is number => subteamId !== null),
-  );
-  return subteamIds.size > 1;
-}
-
-function groupedParticipants(
-  participants: RawMatchSummaryParticipant[],
-  groupIdForParticipant: (
-    participant: RawMatchSummaryParticipant,
-    index: number,
-  ) => number,
-): Array<[number, RawMatchSummaryParticipant[]]> {
-  const groups = new Map<number, RawMatchSummaryParticipant[]>();
-
-  participants.forEach((participant, index) => {
-    const groupId = groupIdForParticipant(participant, index);
-    const group = groups.get(groupId);
-    if (group) {
-      group.push(participant);
-    } else {
-      groups.set(groupId, [participant]);
-    }
-  });
-
-  return Array.from(groups.entries()).filter(
-    ([, groupParticipants]) => groupParticipants.length > 0,
-  );
-}
-
-function resolveTeamGroups(summary: RawMatchSummaryGame): TeamGroup[] {
-  if (matchUsesSideTeams(summary)) {
-    return groupedParticipants(summary.json.participants, (participant, index) =>
-      participantFallbackGroupId(participant, index),
-    )
-      .sort(([a], [b]) => compareTeamIds(a, b))
-      .map(([teamId, participants], index) => ({
-        key: `team-${teamId}`,
-        teamId,
-        labelNumber: index + 1,
-        tone: teamToneFromId(teamId),
-        participants,
-        showObjectives: true,
-      }));
-  }
-
-  const useSubteams = matchHasSubteams(summary);
-
-  return groupedParticipants(summary.json.participants, (participant, index) => {
-    if (useSubteams) {
-      return (
-        validGroupId(participant.playerSubteamId) ??
-        participantFallbackGroupId(participant, index)
-      );
-    }
-
-    return participantFallbackGroupId(participant, index);
-  })
-    .sort(([a], [b]) => a - b)
-    .map(([groupId, participants], index) => ({
-      key: `group-${groupId}`,
-      teamId: null,
-      labelNumber: index + 1,
-      tone: "neutral",
-      participants,
-      showObjectives: false,
-    }));
 }
 
 function matchObjectiveKills(
@@ -859,30 +739,36 @@ function ParticipantRow({
 function TeamBlock({
   summary,
   detail,
-  teamId,
+  group,
   sgpServerId,
 }: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
-  teamId: number;
+  group: MatchParticipantGroup;
   sgpServerId: string | null;
 }) {
   const { t } = useTranslation();
   const { showPositionColumn, showQuestColumn, visibleObjectives } =
     useMatchDetailsTabModelContext();
-  const side = teamSideFromId(teamId);
-  const participants = summary.json.participants.filter(
-    (participant) => participant.teamId === teamId,
-  );
+  const { participants } = group;
   if (participants.length === 0) {
     return null;
   }
 
+  const objectiveSide: TeamSide = group.tone === "red" ? "red" : "blue";
   const team = summary.json.teams.find(
-    (candidate) => candidate.teamId === teamId,
+    (candidate) => candidate.teamId === group.teamId,
   );
   const totals = computeTeamTotals(participants);
-  const teamLabel = t(side === "blue" ? "history.blueTeam" : "history.redTeam");
+  const teamLabel =
+    group.tone === "blue"
+      ? t("history.blueTeam")
+      : group.tone === "red"
+        ? t("history.redTeam")
+        : t("history.matchDetails.team", {
+            number: group.labelNumber,
+            defaultValue: `Team ${group.labelNumber}`,
+          });
   // const headerLabels = {
   //   position: t("history.matchDetails.columns.position", {
   //     defaultValue: "Position",
@@ -923,10 +809,10 @@ function TeamBlock({
   // };
 
   return (
-    <section className={s.teamBlock({ team: side })}>
+    <section className={s.teamBlock({ team: group.tone })}>
       <header className={s.teamHeader}>
         <div className={s.teamTitleGroup}>
-          <span className={s.teamTitle({ team: side })}>{teamLabel}</span>
+          <span className={s.teamTitle({ team: group.tone })}>{teamLabel}</span>
           <span className={s.teamHeaderMetric}>
             <ScoreboardIcon
               type="record"
@@ -944,21 +830,23 @@ function TeamBlock({
             {formatDamage(totals.gold)}
           </span>
         </div>
-        <ScrollArea
-          orientation="horizontal"
-          size="content"
-          className={s.objectiveScroller}
-          contentClassName={s.objectiveList}
-        >
-          {visibleObjectives.map((objective) => (
-            <ObjectiveStat
-              key={`${teamId}-${objective.key}`}
-              objective={objective}
-              team={team}
-              side={side}
-            />
-          ))}
-        </ScrollArea>
+        {group.showObjectives && visibleObjectives.length > 0 ? (
+          <ScrollArea
+            orientation="horizontal"
+            size="content"
+            className={s.objectiveScroller}
+            contentClassName={s.objectiveList}
+          >
+            {visibleObjectives.map((objective) => (
+              <ObjectiveStat
+                key={`${group.key}-${objective.key}`}
+                objective={objective}
+                team={team}
+                side={objectiveSide}
+              />
+            ))}
+          </ScrollArea>
+        ) : null}
       </header>
 
       <ScrollArea
@@ -988,7 +876,7 @@ function TeamBlock({
           {/*</div>*/}
           {participants.map((participant, index) => (
             <ParticipantRow
-              key={participantRowKey(participant, teamId, index)}
+              key={participantRowKey(participant, group.key, index)}
               summary={summary}
               detail={detail}
               participant={participant}
@@ -1011,16 +899,20 @@ export function MatchDetailsTab({
   sgpServerId?: string | null;
 }) {
   const model = useMatchDetailsTabModel(summary);
+  const teamGroups = useMemo(
+    () => resolveMatchParticipantGroups(summary),
+    [summary],
+  );
 
   return (
     <MatchDetailsTabModelContext.Provider value={model}>
       <div className={s.root}>
-        {TEAM_IDS.map((teamId) => (
+        {teamGroups.map((group) => (
           <TeamBlock
-            key={teamId}
+            key={group.key}
             summary={summary}
             detail={detail}
-            teamId={teamId}
+            group={group}
             sgpServerId={sgpServerId ?? null}
           />
         ))}
