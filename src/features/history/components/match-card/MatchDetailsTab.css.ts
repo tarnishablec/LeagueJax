@@ -7,8 +7,7 @@ export const physicalSegmentWidthVar = createVar();
 export const magicSegmentWidthVar = createVar();
 export const trueSegmentWidthVar = createVar();
 
-const tableColumns =
-  "34px 1fr repeat(4, auto) 144px 144px 76px 64px 58px 58px";
+const tableColumns = "34px minmax(auto, 200px) repeat(4, auto) 144px 144px 76px 64px 58px 58px";
 
 export const root = style({
   display: "grid",
@@ -22,16 +21,18 @@ export const teamBlock = recipe({
     gap: 8,
     padding: 10,
     borderRadius: 8,
-    border: `1px solid ${vars.color.border}`,
+    outline: `1px solid ${vars.color.border}`,
     background: `color-mix(in srgb, ${vars.color.background} 16%, transparent)`,
   },
   variants: {
     team: {
       blue: {
-        boxShadow: "inset 2px 0 0 oklch(0.68 0.13 242 / 0.7)",
+        outline: `1px solid oklch(0.68 0.13 242 / 0.7)`,
+        // boxShadow: "inset 2px 0 0 oklch(0.68 0.13 242 / 0.7)",
       },
       red: {
-        boxShadow: "inset 2px 0 0 oklch(0.66 0.16 24 / 0.72)",
+        outline: `1px solid oklch(0.66 0.16 24 / 0.72)`,
+        // boxShadow: "inset 2px 0 0 oklch(0.66 0.16 24 / 0.72)",
       },
     },
   },
@@ -174,6 +175,7 @@ export const participantRow = style({
   display: "grid",
   gridTemplateColumns: tableColumns,
   alignItems: "center",
+  justifyContent: "space-between",
   gap: 12,
   minHeight: 42,
   padding: "5px 8px",
@@ -322,4 +324,20 @@ export const mutedNumberCell = style({
   fontWeight: 650,
   lineHeight: 1,
   textAlign: "right",
+});
+
+export const tooltipPositioner = style({
+  zIndex: 40,
+});
+
+export const tooltipContent = style({
+  maxWidth: 260,
+  padding: "4px 6px",
+  borderRadius: 8,
+  border: `1px solid ${vars.color.popoverBorder}`,
+  background: vars.color.popupBackground,
+  color: vars.color.foreground,
+  fontSize: "0.6875rem",
+  lineHeight: 1.25,
+  boxShadow: `0 8px 24px ${vars.color.blurry}`,
 });
