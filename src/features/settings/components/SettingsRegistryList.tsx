@@ -115,5 +115,9 @@ export function SettingsRegistryList({
     return cols;
   }, [t, currentLocale, showCurrentLanguageColumn]);
 
-  return <DataTable data={rows} columns={columns} />;
+  return (
+    <div className={s.registryPage}>
+      <DataTable data={rows} columns={columns} />
+    </div>
+  );
 }

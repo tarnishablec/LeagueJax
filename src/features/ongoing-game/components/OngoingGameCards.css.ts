@@ -413,7 +413,7 @@ export const historyDialogContent = style({
   overflow: "hidden",
   borderRadius: 12,
   border: `1px solid ${theme.color.border}`,
-  background: theme.color.deep,
+  background: theme.color.background,
   color: theme.color.foreground,
   padding: 0,
   display: "grid",

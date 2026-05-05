@@ -212,6 +212,12 @@ export const navTooltipContent = style({
   },
 });
 
+export const toolbarSlot = style({
+  display: "grid",
+  alignItems: "center",
+  height: "100%",
+});
+
 export const main = style({
   overflow: "hidden",
   // padding: 16,

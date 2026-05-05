@@ -1,6 +1,12 @@
 import { style } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css";
 
+export const registryPage = style({
+  alignSelf: "start",
+  width: "100%",
+  minWidth: 0,
+});
+
 export const keyCell = style({
   display: "grid",
   alignItems: "center",
