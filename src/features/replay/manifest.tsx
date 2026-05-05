@@ -28,7 +28,7 @@ export class ReplayShard implements WebShard {
             <ReplayRoute />
           </Suspense>
         ),
-        order: 20,
+        order: 30,
       },
     ];
   }
@@ -40,7 +40,7 @@ export class ReplayShard implements WebShard {
         labelKey: "nav.replay",
         icon: Film,
         section: "main" as const,
-        order: 20,
+        order: 30,
       },
     ];
   }
