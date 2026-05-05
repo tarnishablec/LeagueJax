@@ -1,7 +1,7 @@
 {
   "name": "league-jax",
   "private": true,
-  "version": "0.1.40",
+  "version": "0.1.41",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -54,7 +54,7 @@
     "swr": "^2.4.1",
     "uuid": "^14.0.0",
     "zod": "^4.4.3",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
