@@ -11,13 +11,13 @@ export const trueSegmentWidthVar = createVar();
 export const teamAccentColorVar = createVar();
 
 const positionColumn = "34px";
-const summonerColumn = "minmax(100px, 120px)";
-const spellsColumn = "minmax(52px, 52px)";
-const runesColumn = "minmax(152px, 152px)";
-const itemsColumn = "minmax(178px, 178px)";
-const questColumn = "minmax(32px, 32px)";
+const summonerColumn = "minmax(100px, max-content)";
+const spellsColumn = "max-content";
+const runesColumn = "max-content";
+const itemsColumn = "max-content";
+const questColumn = "32px";
 const damageColumn = "80px";
-const scoreColumns = "repeat(4, minmax(58px, 58px))";
+const scoreColumns = "repeat(4, minmax(58px, max-content))";
 const tableColumns = `${positionColumn} ${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
 const tableColumnsWithoutPosition = `${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${questColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
 const tableColumnsWithoutQuest = `${positionColumn} ${summonerColumn} ${spellsColumn} ${runesColumn} ${itemsColumn} ${damageColumn} ${damageColumn} ${scoreColumns}`;
@@ -30,7 +30,6 @@ export const root = style({
 
 export const teamBlock = recipe({
   base: {
-    minWidth: 0,
     display: "grid",
     gap: 8,
     padding: 10,
@@ -69,7 +68,6 @@ export const teamHeader = style({
 });
 
 export const teamTitleGroup = style({
-  minWidth: 0,
   display: "grid",
   gridTemplateColumns: "max-content max-content max-content",
   alignItems: "center",
@@ -138,7 +136,6 @@ export const scoreboardIconFallback = style({
 });
 
 export const objectiveScroller = style({
-  minWidth: 0,
   maxWidth: "100%",
   justifySelf: "end",
   "@media": {
@@ -186,91 +183,14 @@ export const objectiveIconFallback = style({
   background: theme.color.accent,
 });
 
-export const tableScroller = style({
-  minWidth: 0,
-});
+export const tableScroller = style({});
 
 export const table = recipe({
   base: {
     display: "grid",
     width: "100%",
-  },
-  variants: {
-    positionColumn: {
-      shown: {
-        // minWidth: 1336,
-      },
-      hidden: {
-        // minWidth: 1290,
-      },
-    },
-    questColumn: {
-      shown: {},
-      hidden: {},
-    },
-  },
-  compoundVariants: [
-    {
-      variants: {
-        positionColumn: "shown",
-        questColumn: "hidden",
-      },
-      style: {
-        // minWidth: 1292,
-      },
-    },
-    {
-      variants: {
-        positionColumn: "hidden",
-        questColumn: "hidden",
-      },
-      style: {
-        // minWidth: 1246,
-      },
-    },
-  ],
-  defaultVariants: {
-    positionColumn: "shown",
-    questColumn: "shown",
-  },
-});
-
-// export const tableHeader = style({
-//   display: "grid",
-//   gridTemplateColumns: tableColumns,
-//   alignItems: "center",
-//   gap: 8,
-//   minHeight: 26,
-//   padding: "0 8px",
-//   color: vars.color.mutedForeground,
-//   fontSize: "0.6875rem",
-//   fontWeight: 700,
-//   lineHeight: 1,
-//   borderBottom: `1px solid ${vars.color.border}`,
-// });
-
-export const participantRow = recipe({
-  base: {
-    display: "grid",
-    width: "100%",
-    boxSizing: "border-box",
-    alignItems: "center",
-    justifyItems: "stretch",
+    minWidth: "max-content",
     justifyContent: "space-between",
-    gap: 12,
-    minHeight: 42,
-    padding: "5px 8px",
-    color: theme.color.foreground,
-    fontSize: "0.75rem",
-    lineHeight: 1,
-    selectors: {
-      "&:not(:last-child)": {
-        borderBottom: `1px solid ${theme.color.border}`,
-      },
-      "&:hover": {
-        background: `color-mix(in srgb, ${theme.color.accent} 54%, transparent)`,
-      },
-    },
   },
   variants: {
     positionColumn: {
@@ -312,13 +232,82 @@ export const participantRow = recipe({
   },
 });
 
+// export const tableHeader = style({
+//   display: "grid",
+//   gridTemplateColumns: tableColumns,
+//   alignItems: "center",
+//   gap: 8,
+//   minHeight: 26,
+//   padding: "0 8px",
+//   color: vars.color.mutedForeground,
+//   fontSize: "0.6875rem",
+//   fontWeight: 700,
+//   lineHeight: 1,
+//   borderBottom: `1px solid ${vars.color.border}`,
+// });
+
+export const participantRow = recipe({
+  base: {
+    display: "grid",
+    gridColumn: "1 / -1",
+    gridTemplateColumns: "subgrid",
+    width: "100%",
+    boxSizing: "border-box",
+    alignItems: "center",
+    justifyItems: "stretch",
+    gap: 12,
+    minHeight: 42,
+    padding: "5px 8px",
+    color: theme.color.foreground,
+    fontSize: "0.75rem",
+    lineHeight: 1,
+    selectors: {
+      "&:not(:last-child)": {
+        borderBottom: `1px solid ${theme.color.border}`,
+      },
+      "&:hover": {
+        background: `color-mix(in srgb, ${theme.color.accent} 54%, transparent)`,
+      },
+    },
+  },
+  variants: {
+    positionColumn: {
+      shown: {},
+      hidden: {},
+    },
+    questColumn: {
+      shown: {},
+      hidden: {},
+    },
+  },
+  compoundVariants: [
+    {
+      variants: {
+        positionColumn: "shown",
+        questColumn: "hidden",
+      },
+      style: {},
+    },
+    {
+      variants: {
+        positionColumn: "hidden",
+        questColumn: "hidden",
+      },
+      style: {},
+    },
+  ],
+  defaultVariants: {
+    positionColumn: "shown",
+    questColumn: "shown",
+  },
+});
+
 export const positionCell = style({
   display: "grid",
   placeItems: "center",
 });
 
 export const summonerCell = style({
-  minWidth: 0,
   display: "grid",
   gridTemplateColumns: "28px minmax(0, 1fr)",
   alignItems: "center",
@@ -342,14 +331,12 @@ export const championIconFallback = style({
 });
 
 export const summonerText = style({
-  minWidth: 0,
   display: "grid",
   gap: 3,
 });
 
 export const summonerName = style({
   width: "100%",
-  minWidth: 0,
   border: "none",
   background: "transparent",
   color: theme.color.foreground,
@@ -375,7 +362,6 @@ export const summonerName = style({
 });
 
 export const summonerBotName = style({
-  minWidth: 0,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -386,7 +372,6 @@ export const summonerBotName = style({
 });
 
 export const championName = style({
-  minWidth: 0,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
@@ -400,7 +385,6 @@ export const centeredCell = style({
 });
 
 export const loadoutCell = style({
-  minWidth: 0,
   display: "grid",
   alignItems: "center",
 });
@@ -415,7 +399,6 @@ export const emptyQuestSlot = style({
 
 export const damageCell = style({
   width: "100%",
-  minWidth: 0,
   boxSizing: "border-box",
   display: "grid",
   justifySelf: "stretch",
@@ -459,7 +442,6 @@ export const damageMeterTrack = style({
 
 export const damageMeterFill = style({
   width: meterFillWidthVar,
-  minWidth: 0,
   maxWidth: "100%",
   height: "100%",
   display: "flex",

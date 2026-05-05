@@ -58,9 +58,17 @@ export type MatchTag =
   | "mostTurretDamage"
   | "mostDamageTaken"
   | "mostHealing"
+  | "mostShielding"
   | "bestVision"
+  | "mostWardsKilled"
+  | "mostWardsPlaced"
+  | "epicSteal"
+  | "junglePressure"
+  | "survivor"
+  | "mostMitigated"
   | "mostCC"
   | "mostCS"
+  | "mostAssists"
   | "highestKP"
   | "mostGold"
   | "bestDamageEfficiency"
@@ -77,17 +85,25 @@ const TAG_PRIORITY: Record<MatchTag, number> = {
   penta: 3,
   quadra: 4,
   triple: 5,
-  highestDamage: 6,
-  mostTurretDamage: 7,
-  mostDamageTaken: 8,
-  mostHealing: 9,
-  bestVision: 10,
-  mostCC: 11,
-  mostCS: 12,
-  highestKP: 13,
-  mostGold: 14,
-  bestDamageEfficiency: 15,
-  firstBlood: 16,
+  epicSteal: 6,
+  highestDamage: 7,
+  mostTurretDamage: 8,
+  mostDamageTaken: 9,
+  mostMitigated: 10,
+  mostHealing: 11,
+  mostShielding: 12,
+  bestVision: 13,
+  mostWardsKilled: 14,
+  mostWardsPlaced: 15,
+  junglePressure: 16,
+  survivor: 17,
+  mostCC: 18,
+  mostCS: 19,
+  mostAssists: 20,
+  highestKP: 21,
+  mostGold: 22,
+  bestDamageEfficiency: 23,
+  firstBlood: 24,
 };
 
 function getPillPriority(pill: MatchPill): number {
@@ -102,6 +118,38 @@ type StatTagRule = {
   min?: number;
 };
 
+function getWardsKilled(p: RawMatchSummaryParticipant): number {
+  return p.wardsKilled ?? p.challenges?.wardTakedowns ?? 0;
+}
+
+function getWardsPlaced(p: RawMatchSummaryParticipant): number {
+  const wardsPlaced = p.wardsPlaced ?? 0;
+  const challengeWards =
+    (p.challenges?.stealthWardsPlaced ?? 0) +
+    (p.challenges?.controlWardsPlaced ?? 0);
+  return Math.max(wardsPlaced, challengeWards);
+}
+
+function getJunglePressureScore(p: RawMatchSummaryParticipant): number {
+  const enemyJungleKills = Math.max(
+    p.totalEnemyJungleMinionsKilled ?? 0,
+    p.challenges?.enemyJungleMonsterKills ?? 0,
+  );
+  const stolenBuffs = p.challenges?.buffsStolen ?? 0;
+  return enemyJungleKills + stolenBuffs * 4;
+}
+
+function getSurvivalScore(p: RawMatchSummaryParticipant): number {
+  const longestLife = p.longestTimeSpentLiving ?? 0;
+  const clutchEscapes = p.challenges?.survivedSingleDigitHpCount ?? 0;
+  const largeDamageSurvived = p.challenges?.tookLargeDamageSurvived ?? 0;
+  const deaths = p.deaths ?? 0;
+  return Math.max(
+    0,
+    longestLife + clutchEscapes * 180 + largeDamageSurvived * 120 - deaths * 120,
+  );
+}
+
 const STAT_TAG_RULES: StatTagRule[] = [
   {
     tag: "mostTurretDamage",
@@ -110,18 +158,41 @@ const STAT_TAG_RULES: StatTagRule[] = [
   },
   { tag: "mostDamageTaken", stat: (p) => p.totalDamageTaken, scope: "team" },
   {
-    tag: "mostHealing",
-    stat: (p) => p.totalHealsOnTeammates + p.totalDamageShieldedOnTeammates,
+    tag: "mostMitigated",
+    stat: (p) => p.damageSelfMitigated ?? 0,
     scope: "all",
     min: 5000,
   },
+  {
+    tag: "mostHealing",
+    stat: (p) => p.totalHealsOnTeammates,
+    scope: "all",
+    min: 3000,
+  },
+  {
+    tag: "mostShielding",
+    stat: (p) => p.totalDamageShieldedOnTeammates,
+    scope: "all",
+    min: 1000,
+  },
   { tag: "bestVision", stat: (p) => p.visionScore ?? 0, scope: "all" },
+  { tag: "mostWardsKilled", stat: getWardsKilled, scope: "all" },
+  { tag: "mostWardsPlaced", stat: getWardsPlaced, scope: "all" },
+  { tag: "epicSteal", stat: (p) => p.objectivesStolen ?? 0, scope: "all" },
+  {
+    tag: "junglePressure",
+    stat: getJunglePressureScore,
+    scope: "all",
+    min: 4,
+  },
+  { tag: "survivor", stat: getSurvivalScore, scope: "all", min: 600 },
   { tag: "mostCC", stat: (p) => p.totalTimeCcDealt ?? 0, scope: "all" },
   {
     tag: "mostCS",
     stat: (p) => p.totalMinionsKilled + p.neutralMinionsKilled,
     scope: "all",
   },
+  { tag: "mostAssists", stat: (p) => p.assists ?? 0, scope: "all", min: 10 },
   {
     tag: "highestKP",
     stat: (p) => p.challenges?.killParticipation ?? 0,
