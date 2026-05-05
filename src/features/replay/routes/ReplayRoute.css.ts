@@ -602,6 +602,31 @@ export const replayMeta = style({
   fontSize: "0.6875rem",
 });
 
+export const replayChampions = style({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: 4,
+  marginTop: 3,
+});
+
+export const replayChampionIcon = style({
+  width: 20,
+  height: 20,
+  borderRadius: 4,
+  outline: `1px solid color-mix(in srgb, ${theme.color.border} 70%, transparent)`,
+  background: `color-mix(in srgb, ${theme.color.deep} 54%, transparent)`,
+  overflow: "hidden",
+});
+
+export const replayChampionFallback = style([
+  replayChampionIcon,
+  {
+    display: "inline-block",
+    background: `color-mix(in srgb, ${theme.color.surface} 78%, transparent)`,
+  },
+]);
+
 export const metaItem = style({
   minWidth: 0,
   color: theme.color.mutedForeground,

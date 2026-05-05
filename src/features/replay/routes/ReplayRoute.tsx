@@ -19,6 +19,12 @@ import type {
   ReplayLibrarySnapshot,
 } from "@/bindings/replay";
 import { AppTooltip } from "@/components/AppTooltip";
+import { LazyImage } from "@/components/LazyImage";
+import {
+  type CdragonChampionCatalog,
+  championAliasKey,
+  useCdragonChampionCatalog,
+} from "@/hooks/use-cdragon-champion-summary";
 import * as s from "./ReplayRoute.css";
 
 type FamilyTone = "tencent" | "riot" | "unknown";
@@ -35,6 +41,8 @@ const REPLAY_LOADING_ROW_KEYS = [
 ] as const;
 
 const LCU_REFRESH_DEBOUNCE_MS = 180;
+const CDRAGON_CHAMPION_ICON_BASE =
+  "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons";
 
 function LoadingResourceRow({ label }: { label: string }) {
   return (
@@ -85,7 +93,30 @@ function formatDate(ms: number | null): string {
   return new Date(ms).toLocaleString();
 }
 
-function entryMatches(entry: ReplayEntry, query: string): boolean {
+function entryChampionSearchText(
+  entry: ReplayEntry,
+  championCatalog: CdragonChampionCatalog,
+): string {
+  const aliasText = entry.championAliases
+    .map((alias) => {
+      const champion = championCatalog.byAlias[championAliasKey(alias)];
+      return [
+        alias,
+        champion?.alias ?? "",
+        champion?.name ?? "",
+        champion?.id.toString() ?? "",
+      ].join(" ");
+    })
+    .join(" ");
+
+  return [entry.championIds.join(" "), aliasText].join(" ");
+}
+
+function entryMatches(
+  entry: ReplayEntry,
+  query: string,
+  championCatalog: CdragonChampionCatalog,
+): boolean {
   const normalized = query.trim().toLocaleLowerCase();
   if (!normalized) return true;
   return [
@@ -93,6 +124,7 @@ function entryMatches(entry: ReplayEntry, query: string): boolean {
     entry.path,
     entry.platformId ?? "",
     entry.gameId?.toString() ?? "",
+    entryChampionSearchText(entry, championCatalog),
     entry.patchVersion ?? "",
     entry.metadataError ?? "",
   ]
@@ -191,13 +223,22 @@ function launchUnavailableReason(
     return t("replay.playTooltip.reason.missingVersion");
   }
 
-  const missingServer = reason.match(
-    /^No running (RIOT|TENCENT) client matches server (.+)$/,
+  const noFamilyClient = reason.match(
+    /^No running (RIOT|TENCENT) client was detected$/,
   );
-  if (missingServer) {
-    return t("replay.playTooltip.reason.missingServerClient", {
-      family: missingServer[1],
-      server: missingServer[2],
+  if (noFamilyClient) {
+    return t("replay.playTooltip.reason.missingFamilyClient", {
+      family: noFamilyClient[1],
+    });
+  }
+
+  const compatibleVersionMismatch = reason.match(
+    /^No running (RIOT|TENCENT) client has a compatible version for replay version (.+)$/,
+  );
+  if (compatibleVersionMismatch) {
+    return t("replay.playTooltip.reason.compatibleVersionMismatch", {
+      family: compatibleVersionMismatch[1],
+      version: compatibleVersionMismatch[2],
     });
   }
 
@@ -233,6 +274,47 @@ function playTooltip(
   });
 }
 
+function championIconUrl(championId: number): string {
+  return `${CDRAGON_CHAMPION_ICON_BASE}/${championId}.png`;
+}
+
+function replayChampionIconItems(
+  entry: ReplayEntry,
+  championCatalog: CdragonChampionCatalog,
+) {
+  const counts = new Map<string, number>();
+  const fromAliases = entry.championAliases.flatMap((alias) => {
+    const aliasKey = championAliasKey(alias);
+    const champion = championCatalog.byAlias[aliasKey];
+    if (!champion) {
+      return [];
+    }
+
+    const count = (counts.get(aliasKey) ?? 0) + 1;
+    counts.set(aliasKey, count);
+    return {
+      key: `${entry.id}-champion-${aliasKey}-${count}`,
+      src: champion.src,
+      alt: champion.name ?? champion.alias,
+    };
+  });
+
+  if (fromAliases.length > 0) {
+    return fromAliases;
+  }
+
+  return entry.championIds.map((championId) => {
+    const key = championId.toString();
+    const count = (counts.get(key) ?? 0) + 1;
+    counts.set(key, count);
+    return {
+      key: `${entry.id}-champion-${championId}-${count}`,
+      src: championIconUrl(championId),
+      alt: `Champion ${championId}`,
+    };
+  });
+}
+
 function isPositionInsideElement(
   position: { x: number; y: number },
   element: HTMLElement,
@@ -246,6 +328,7 @@ function isPositionInsideElement(
 
 export function ReplayRoute() {
   const { t } = useTranslation();
+  const championCatalog = useCdragonChampionCatalog();
   const [snapshot, setSnapshot] = useState<ReplayLibrarySnapshot | null>(null);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(true);
@@ -323,8 +406,10 @@ export function ReplayRoute() {
 
   const entries = useMemo(
     () =>
-      (snapshot?.entries ?? []).filter((entry) => entryMatches(entry, query)),
-    [query, snapshot?.entries],
+      (snapshot?.entries ?? []).filter((entry) =>
+        entryMatches(entry, query, championCatalog),
+      ),
+    [championCatalog, query, snapshot?.entries],
   );
   const folders = snapshot?.folders ?? [];
   const clients = snapshot?.clients ?? [];
@@ -648,35 +733,52 @@ export function ReplayRoute() {
               <div className={s.empty}>{t("replay.empty")}</div>
             ) : null}
             {!initialLoading &&
-              entries.map((entry) => (
-                <article key={entry.id} className={s.replayRowShell}>
-                  <button
-                    type="button"
-                    className={s.replayRow}
-                    aria-label="Reveal replay file"
-                    onClick={() => {
-                      void revealReplay(entry);
-                    }}
-                  >
-                    <span className={s.replayOpenContent}>
-                      <span className={s.replayTitleLine}>
-                        <span className={s.primaryText}>{entry.fileName}</span>
-                        <span
-                          className={`${s.familyBadge} ${s.familyBadgeTone[familyTone(entry.family)]}`}
-                        >
-                          {familyLabel(entry.family)}
+              entries.map((entry) => {
+                const championIcons = replayChampionIconItems(
+                  entry,
+                  championCatalog,
+                );
+                return (
+                  <article key={entry.id} className={s.replayRowShell}>
+                    <button
+                      type="button"
+                      className={s.replayRow}
+                      aria-label="Reveal replay file"
+                      onClick={() => {
+                        void revealReplay(entry);
+                      }}
+                    >
+                      <span className={s.replayOpenContent}>
+                        <span className={s.replayTitleLine}>
+                          <span className={s.primaryText}>
+                            {entry.fileName}
+                          </span>
+                          <span
+                            className={`${s.familyBadge} ${s.familyBadgeTone[familyTone(entry.family)]}`}
+                          >
+                            {familyLabel(entry.family)}
+                          </span>
                         </span>
-                      </span>
-                      <span className={s.replayMeta}>
-                        <span className={s.metaItem}>
-                          {t("replay.gameId")}: {entry.gameId ?? "-"}
-                        </span>
-                        <span className={s.metaItem}>
-                          {t("replay.platform")}: {entry.platformId ?? "-"}
-                        </span>
-                        {entry.metadataError ? (
-                          <AppTooltip content={entry.metadataError}>
-                            <span className={s.metaWarning}>
+                        <span className={s.replayMeta}>
+                          <span className={s.metaItem}>
+                            {t("replay.gameId")}: {entry.gameId ?? "-"}
+                          </span>
+                          <span className={s.metaItem}>
+                            {t("replay.platform")}: {entry.platformId ?? "-"}
+                          </span>
+                          {entry.metadataError ? (
+                            <AppTooltip content={entry.metadataError}>
+                              <span className={s.metaWarning}>
+                                {t("replay.patch")}:{" "}
+                                {patchLabel(
+                                  entry,
+                                  t("replay.unknownVersion"),
+                                  t("replay.metadataFailed"),
+                                )}
+                              </span>
+                            </AppTooltip>
+                          ) : (
+                            <span className={s.metaItem}>
                               {t("replay.patch")}:{" "}
                               {patchLabel(
                                 entry,
@@ -684,45 +786,53 @@ export function ReplayRoute() {
                                 t("replay.metadataFailed"),
                               )}
                             </span>
-                          </AppTooltip>
-                        ) : (
+                          )}
                           <span className={s.metaItem}>
-                            {t("replay.patch")}:{" "}
-                            {patchLabel(
-                              entry,
-                              t("replay.unknownVersion"),
-                              t("replay.metadataFailed"),
-                            )}
+                            {t("replay.size")}:{" "}
+                            {formatBytes(entry.fileSizeBytes)}
                           </span>
-                        )}
-                        <span className={s.metaItem}>
-                          {t("replay.size")}: {formatBytes(entry.fileSizeBytes)}
+                          <span className={s.metaItem}>
+                            {t("replay.modified")}:{" "}
+                            {formatDate(entry.modifiedAtMs)}
+                          </span>
                         </span>
-                        <span className={s.metaItem}>
-                          {t("replay.modified")}:{" "}
-                          {formatDate(entry.modifiedAtMs)}
-                        </span>
+                        {championIcons.length > 0 ? (
+                          <span className={s.replayChampions}>
+                            {championIcons.map((champion) => (
+                              <LazyImage
+                                key={champion.key}
+                                src={champion.src}
+                                alt={champion.alt}
+                                className={s.replayChampionIcon}
+                                fallbackClassName={s.replayChampionFallback}
+                              />
+                            ))}
+                          </span>
+                        ) : null}
                       </span>
-                    </span>
-                    <span className={s.replayActionSpace} aria-hidden="true" />
-                  </button>
-                  <AppTooltip content={playTooltip(entry, t)}>
-                    <span className={s.replayPlayButton}>
-                      <button
-                        type="button"
-                        className={`${s.smallButton} ${s.playButtonTone[familyTone(entry.launchAvailability.clientFamily)]}`}
-                        aria-label="Play replay"
-                        disabled={!entry.launchAvailability.canLaunch}
-                        onClick={() => {
-                          void playReplay(entry);
-                        }}
-                      >
-                        <Play size={14} aria-hidden="true" />
-                      </button>
-                    </span>
-                  </AppTooltip>
-                </article>
-              ))}
+                      <span
+                        className={s.replayActionSpace}
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <AppTooltip content={playTooltip(entry, t)}>
+                      <span className={s.replayPlayButton}>
+                        <button
+                          type="button"
+                          className={`${s.smallButton} ${s.playButtonTone[familyTone(entry.launchAvailability.clientFamily)]}`}
+                          aria-label="Play replay"
+                          disabled={!entry.launchAvailability.canLaunch}
+                          onClick={() => {
+                            void playReplay(entry);
+                          }}
+                        >
+                          <Play size={14} aria-hidden="true" />
+                        </button>
+                      </span>
+                    </AppTooltip>
+                  </article>
+                );
+              })}
           </div>
         </section>
       </div>

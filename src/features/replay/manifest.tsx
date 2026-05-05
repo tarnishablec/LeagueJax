@@ -1,7 +1,9 @@
 import { Film } from "lucide-react";
 import { lazy, Suspense } from "react";
+import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SHARD_IDS } from "../shard-ids";
+import { StaticCacheShard } from "../static-cache/manifest";
 import { replayI18n } from "./i18n";
 
 const ReplayRoute = lazy(() =>
@@ -17,6 +19,14 @@ export class ReplayShard implements WebShard {
 
   public id() {
     return SHARD_IDS.REPLAY;
+  }
+
+  public dependsOn() {
+    return [SHARD_IDS.STATIC_CACHE];
+  }
+
+  public setup(jax: Jax): void {
+    void jax.getShard(StaticCacheShard);
   }
 
   public routes() {
