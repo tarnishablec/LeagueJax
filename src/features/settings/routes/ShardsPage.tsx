@@ -26,11 +26,11 @@ function buildFrontendShards(): ShardInfoDto[] {
 
     let status: ShardInfoDto["status"];
     if (failedIds.has(id)) {
-      status = {kind: "failed", error: "Setup failed"};
+      status = { kind: "failed", error: "Setup failed" };
     } else if (skippedIds.has(id)) {
-      status = {kind: "skipped"};
+      status = { kind: "skipped" };
     } else {
-      status = {kind: "running"};
+      status = { kind: "running" };
     }
 
     return {
@@ -44,7 +44,7 @@ function buildFrontendShards(): ShardInfoDto[] {
 }
 
 export function ShardsPage() {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const [side, setSide] = useState<Side>("frontend");
   const [backendSnapshot, setBackendSnapshot] =
     useState<ShardsSnapshotDto | null>(null);
@@ -52,8 +52,7 @@ export function ShardsPage() {
   useEffect(() => {
     invoke<ShardsSnapshotDto>("get_shards_status")
       .then(setBackendSnapshot)
-      .catch(() => {
-      });
+      .catch(() => {});
 
     let cancelled = false;
     const unlistenPromise = listen<ShardsSnapshotDto>(
@@ -102,7 +101,7 @@ export function ShardsPage() {
             </button>
           </div>
 
-          <div/>
+          <div />
 
           <Carousel.Context>
             {(api) => (
@@ -129,11 +128,11 @@ export function ShardsPage() {
         <Carousel.ItemGroup className={s.carouselItemGroup}>
           <Carousel.Item index={0} className={s.carouselItem}>
             <div className={s.tablePane}>
-              <ShardsTable shards={activeShards} labelMap={labelMap}/>
+              <ShardsTable shards={activeShards} labelMap={labelMap} />
             </div>
           </Carousel.Item>
           <Carousel.Item index={1} className={s.carouselItem}>
-            <ShardsDag shards={activeShards}/>
+            <ShardsDag shards={activeShards} />
           </Carousel.Item>
         </Carousel.ItemGroup>
       </Carousel.Root>

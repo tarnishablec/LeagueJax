@@ -147,7 +147,10 @@ function getSurvivalScore(p: RawMatchSummaryParticipant): number {
   const deaths = p.deaths ?? 0;
   return Math.max(
     0,
-    longestLife + clutchEscapes * 180 + largeDamageSurvived * 120 - deaths * 120,
+    longestLife +
+      clutchEscapes * 180 +
+      largeDamageSurvived * 120 -
+      deaths * 120,
   );
 }
 

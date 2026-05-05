@@ -23,6 +23,7 @@ use crate::commands::map::*;
 use crate::commands::mini_window::*;
 use crate::commands::ongoing_game::*;
 use crate::commands::platform::*;
+use crate::commands::replay::*;
 use crate::commands::settings::*;
 use crate::commands::shards::*;
 use crate::commands::updater::*;
@@ -256,6 +257,17 @@ pub fn run() {
             get_match_summaries,
             get_match_summary,
             get_match_details,
+            replay_get_snapshot,
+            replay_scan_folders,
+            replay_add_folder,
+            replay_remove_folder,
+            replay_open_folder,
+            replay_reveal_entry,
+            replay_prepare_match,
+            replay_get_match_metadata,
+            replay_download_match,
+            replay_watch_match,
+            replay_play_entry,
             get_cherry_augments,
             get_cdragon_cherry_augments_json,
             get_cdragon_arena_json,
@@ -328,6 +340,7 @@ pub fn run() {
                 .register(Arc::new(shards::league_bridge::LeagueBridgeShard::new()))
                 .register(Arc::new(shards::static_cache::StaticCacheShard::new()))
                 .register(Arc::new(shards::sgp::SgpShard::new()))
+                .register(Arc::new(shards::replay::ReplayShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
                 .register(Arc::new(shards::auto_accept::AutoAcceptShard::new()))
                 .register(Arc::new(shards::auto_reply::AutoReplyShard::new()))

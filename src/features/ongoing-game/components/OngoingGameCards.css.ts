@@ -121,9 +121,9 @@ export const playerSquadBadge = style({
   maxWidth: "100%",
   padding: "0 5px",
   borderRadius: 4,
-  border: `1px solid color-mix(in oklch, ${playerCardSquadColorVar} 42%, transparent)`,
+  border: `1px solid color-mix(in oklch, ${playerCardSquadColorVar} 42%, ${theme.color.border})`,
   color: `color-mix(in oklch, ${playerCardSquadColorVar} 78%, ${theme.color.foreground})`,
-  background: `color-mix(in oklch, ${playerCardSquadColorVar} 18%, transparent)`,
+  background: `color-mix(in oklch, ${playerCardSquadColorVar} 18%, ${theme.color.surface})`,
   fontSize: "0.68rem",
   fontWeight: 750,
   lineHeight: 1,
@@ -150,7 +150,7 @@ export const championAvatarFallback = style({
   width: 40,
   height: 40,
   borderRadius: 6,
-  background: theme.color.border,
+  background: theme.color.surface,
 });
 
 export const playerMetaSingle = style({
@@ -176,8 +176,8 @@ export const levelBadge = style({
   fontWeight: 700,
   lineHeight: 1,
   color: "oklch(0.98 0 0 / 0.96)",
-  background: "color-mix(in oklch, oklch(0.14 0.01 260) 72%, transparent)",
-  border: `1px solid color-mix(in oklch, ${theme.color.background} 65%, transparent)`,
+  background: theme.color.deep,
+  border: `1px solid ${theme.color.blurry}`,
 });
 
 export const playerOverview = style({
@@ -233,9 +233,9 @@ export const playerTag = style({
   maxWidth: "100%",
   padding: "0 5px",
   borderRadius: 4,
-  border: `1px solid color-mix(in oklch, ${playerTagColorVar} 36%, transparent)`,
+  border: `1px solid color-mix(in oklch, ${playerTagColorVar} 36%, ${theme.color.border})`,
   color: `color-mix(in oklch, ${playerTagColorVar} 72%, ${theme.color.foreground})`,
-  background: `color-mix(in oklch, ${playerTagColorVar} 20%, transparent)`,
+  background: `color-mix(in oklch, ${playerTagColorVar} 20%, ${theme.color.surface})`,
   fontSize: "0.68rem",
   fontWeight: 700,
   lineHeight: 1,
@@ -307,13 +307,13 @@ export const rankTooltipContent = style({
   zIndex: layers.overlay.tooltip,
   padding: "5px 7px",
   borderRadius: 4,
-  border: `1px solid ${theme.color.popoverBorder}`,
-  background: theme.color.popupBackground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.deep,
   color: theme.color.foreground,
   fontSize: "0.72rem",
   fontWeight: 650,
   lineHeight: 1,
-  boxShadow: "0 8px 18px oklch(0% 0 0 / 0.28)",
+  boxShadow: `0 8px 18px ${theme.color.blurry}`,
   whiteSpace: "nowrap",
 });
 
@@ -388,7 +388,7 @@ export const historyRowButtonReset = style({
 export const historyDialogBackdrop = style({
   position: "fixed",
   inset: 0,
-  background: "oklch(0.06 0 0 / 0.62)",
+  background: theme.color.blurry,
   zIndex: layers.overlay.dialogBackdrop,
   selectors: {
     "&[hidden]": { display: "none" },
@@ -412,8 +412,8 @@ export const historyDialogContent = style({
   maxHeight: "calc(100vh - 40px)",
   overflow: "hidden",
   borderRadius: 12,
-  border: `1px solid ${theme.color.popoverBorder}`,
-  background: theme.color.popupBackground,
+  border: `1px solid ${theme.color.border}`,
+  background: theme.color.deep,
   color: theme.color.foreground,
   padding: 0,
   display: "grid",
@@ -431,19 +431,19 @@ export const historyDialogScrollerContent = style({
 });
 
 export const winRow = style({
-  background: `color-mix(in srgb, ${gameColorVars.outcome.winSurface} 60%, transparent)`,
+  background: `color-mix(in srgb, ${gameColorVars.outcome.winSurface} 42%, ${theme.color.surface})`,
 });
 
 export const loseRow = style({
-  background: `color-mix(in srgb, ${gameColorVars.outcome.loseSurface} 60%, transparent)`,
+  background: `color-mix(in srgb, ${gameColorVars.outcome.loseSurface} 42%, ${theme.color.surface})`,
 });
 
 export const remakeRow = style({
-  background: `color-mix(in oklch, ${theme.color.mutedForeground} 8%, transparent)`,
+  background: theme.color.surface,
 });
 
 export const terminatedRow = style({
-  background: `color-mix(in oklch, ${theme.color.mutedForeground} 8%, transparent)`,
+  background: theme.color.surface,
 });
 
 export const historyEmpty = style({
@@ -606,5 +606,5 @@ export const historyChampionFallback = style({
   width: 35,
   height: 35,
   borderRadius: 4,
-  background: theme.color.border,
+  background: theme.color.surface,
 });

@@ -5,6 +5,7 @@ pub mod map;
 pub mod mini_window;
 pub mod ongoing_game;
 pub mod platform;
+pub mod replay;
 pub mod settings;
 pub mod shards;
 pub mod updater;
