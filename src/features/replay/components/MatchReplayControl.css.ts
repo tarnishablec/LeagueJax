@@ -5,10 +5,8 @@ import { theme } from "@/styles/theme.css.ts";
 
 export const root = style({
   display: "grid",
-  gridTemplateColumns: "max-content minmax(0, max-content)",
+  gridTemplateColumns: "max-content",
   alignItems: "center",
-  gap: 6,
-  minWidth: 0,
 });
 
 export const button = recipe({
@@ -63,8 +61,8 @@ export const statusText = style({
 });
 
 const matchReplaySpin = keyframes({
-  from: { transform: "rotate(0deg)" },
-  to: { transform: "rotate(360deg)" },
+  from: {transform: "rotate(0deg)"},
+  to: {transform: "rotate(360deg)"},
 });
 
 export const spin = style({
