@@ -3,6 +3,33 @@ use ts_rs::TS;
 
 use crate::shards::lcu::concepts::replays::{LcuReplayConfiguration, LcuReplayMetadata};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "replay.ts")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ReplayClientFamily {
+    Tencent,
+    Riot,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "replay.ts")]
+#[serde(rename_all = "camelCase")]
+pub enum ReplayFolderSourceKind {
+    User,
+    Client,
+    Default,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "replay.ts")]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayFolderSource {
+    pub kind: ReplayFolderSourceKind,
+    pub client_pid: Option<u32>,
+    pub client_family: Option<ReplayClientFamily>,
+    pub client_server_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "replay.ts")]
 #[serde(rename_all = "camelCase")]
@@ -10,14 +37,7 @@ pub struct ReplayFolder {
     pub path: String,
     pub enabled: bool,
     pub exists: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "replay.ts")]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ReplayClientFamily {
-    Tencent,
-    Riot,
+    pub sources: Vec<ReplayFolderSource>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

@@ -29,6 +29,20 @@ export type LcuReplayMetadata = {
   state: LcuReplayDownloadState;
 };
 
+export type ReplayClient = {
+  pid: number;
+  label: string;
+  family: ReplayClientFamily;
+  serverId: string | null;
+  gameVersion: string | null;
+  installDir: string | null;
+  isFocused: boolean;
+  available: boolean;
+  reason: string | null;
+};
+
+export type ReplayClientFamily = "TENCENT" | "RIOT";
+
 export type ReplayEntry = {
   id: string;
   path: string;
@@ -47,21 +61,21 @@ export type ReplayEntry = {
   launchAvailability: ReplayLaunchAvailability;
 };
 
-export type ReplayClient = {
-  pid: number;
-  label: string;
-  family: ReplayClientFamily;
-  serverId: string | null;
-  gameVersion: string | null;
-  installDir: string | null;
-  isFocused: boolean;
-  available: boolean;
-  reason: string | null;
+export type ReplayFolder = {
+  path: string;
+  enabled: boolean;
+  exists: boolean;
+  sources: Array<ReplayFolderSource>;
 };
 
-export type ReplayClientFamily = "TENCENT" | "RIOT";
+export type ReplayFolderSource = {
+  kind: ReplayFolderSourceKind;
+  clientPid: number | null;
+  clientFamily: ReplayClientFamily | null;
+  clientServerId: string | null;
+};
 
-export type ReplayFolder = { path: string; enabled: boolean; exists: boolean };
+export type ReplayFolderSourceKind = "user" | "client" | "default";
 
 export type ReplayLaunchAvailability = {
   canLaunch: boolean;

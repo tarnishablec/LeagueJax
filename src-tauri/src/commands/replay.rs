@@ -1,12 +1,23 @@
 use std::sync::Arc;
 
 use jax::Jax;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
 use crate::shards::replay::types::{ReplayLibrarySnapshot, ReplayMatchContext, ReplayMatchState};
 use crate::shards::replay::ReplayShard;
+
+fn dialog_folder_path_to_string(folder: FilePath) -> Result<String, AppError> {
+    match folder {
+        FilePath::Path(path) => Ok(path.to_string_lossy().to_string()),
+        FilePath::Url(url) => url
+            .to_file_path()
+            .map(|path| path.to_string_lossy().to_string())
+            .map_err(|_| AppError::other("Selected replay folder path is not a local path")),
+    }
+}
 
 #[tauri::command]
 pub async fn replay_get_snapshot(
@@ -37,6 +48,20 @@ pub async fn replay_add_folder(
 }
 
 #[tauri::command]
+pub async fn replay_pick_folder(
+    app: AppHandle,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<Option<ReplayLibrarySnapshot>, AppError> {
+    let Some(folder) = app.dialog().file().blocking_pick_folder() else {
+        return Ok(None);
+    };
+    let path = dialog_folder_path_to_string(folder)?;
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.add_folder(&lcu, path).await.map(Some)
+}
+
+#[tauri::command]
 pub async fn replay_remove_folder(
     path: String,
     jax: State<'_, Arc<Jax>>,
@@ -48,12 +73,16 @@ pub async fn replay_remove_folder(
 
 #[tauri::command]
 pub async fn replay_open_folder(path: String, jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
-    jax.get_shard::<ReplayShard>().open_folder(path)
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.open_folder(&lcu, path).await
 }
 
 #[tauri::command]
 pub async fn replay_reveal_entry(path: String, jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
-    jax.get_shard::<ReplayShard>().reveal_entry(path)
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.reveal_entry(&lcu, path).await
 }
 
 #[tauri::command]
