@@ -246,13 +246,13 @@ function computeMatchPills(
   me: RawMatchSummaryParticipant,
   participants: RawMatchSummaryParticipant[],
   teammates: RawMatchSummaryParticipant[],
-  isVictory: boolean,
+  // isVictory: boolean,
   damageRank: number,
 ): MatchPill[] {
   const pills: MatchPill[] = [];
 
-  const teamTag = resolveMatchPerformanceBadge({ me, teammates, isVictory });
-  if (teamTag) pills.push({ type: "tag", tag: teamTag });
+  // const teamTag = resolveMatchPerformanceBadge({ me, teammates, isVictory });
+  // if (teamTag) pills.push({ type: "tag", tag: teamTag });
   if ((me.totalDamageDealtToChampions ?? 0) > 0 && damageRank === 1) {
     pills.push({ type: "tag", tag: "highestDamage" });
   }
@@ -359,7 +359,7 @@ export function useMatchCardViewModel({
     me,
     participants,
     teammates,
-    gameResult === "victory",
+    // gameResult === "victory",
     damageRank,
   );
   const performanceBadge = resolveMatchPerformanceBadge({
