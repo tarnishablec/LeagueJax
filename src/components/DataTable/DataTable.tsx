@@ -8,17 +8,25 @@ import {
 import * as s from "./DataTable.css";
 
 interface DataTableProps<T> {
+  className?: string;
   data: T[];
   columns: ColumnDef<T>[];
   emptyText?: string;
   getRowClassName?: (row: Row<T>) => string | undefined;
+  stickyHeader?: boolean;
+}
+
+function joinClassNames(...classNames: Array<string | undefined>): string {
+  return classNames.filter(Boolean).join(" ");
 }
 
 export function DataTable<T>({
+  className,
   data,
   columns,
   emptyText,
   getRowClassName,
+  stickyHeader = false,
 }: DataTableProps<T>) {
   const table = useReactTable({
     data,
@@ -27,7 +35,14 @@ export function DataTable<T>({
   });
 
   return (
-    <div className={s.tableWrap}>
+    <div
+      className={joinClassNames(
+        s.tableWrap({
+          stickyHeader: stickyHeader ? "enabled" : "disabled",
+        }),
+        className,
+      )}
+    >
       <table className={s.table}>
         <colgroup>
           {table.getAllColumns().map((col) => {
@@ -52,9 +67,12 @@ export function DataTable<T>({
                 const meta = header.column.columnDef.meta as
                   | { className?: string }
                   | undefined;
-                const cls = meta?.className
-                  ? `${s.headCell} ${meta.className}`
-                  : s.headCell;
+                const cls = joinClassNames(
+                  s.headCell({
+                    stickyHeader: stickyHeader ? "enabled" : "disabled",
+                  }),
+                  meta?.className,
+                );
                 return (
                   <th key={header.id} className={cls}>
                     {header.isPlaceholder

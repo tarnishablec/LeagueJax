@@ -13,13 +13,20 @@ export const page = style({
 });
 
 export const outlet = style({
+  display: "grid",
+  minHeight: 0,
+  height: "100%",
+  overflow: "hidden",
+});
+
+export const pageScroller = style({
   minHeight: 0,
   height: "100%",
 });
 
-export const outletContent = style({
+export const pageScrollerContent = style({
   display: "grid",
-  alignContent: "stretch",
+  alignContent: "start",
   minHeight: "100%",
 });
 

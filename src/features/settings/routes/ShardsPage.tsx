@@ -4,7 +4,6 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShardInfoDto, ShardsSnapshotDto } from "@/bindings/shards";
-import { ScrollArea } from "@/components/scroll-area";
 import { getJaxRuntime } from "@/features/registry";
 import { ShardsDag } from "../components/ShardsDag";
 import { ShardsTable } from "../components/ShardsTable";
@@ -27,11 +26,11 @@ function buildFrontendShards(): ShardInfoDto[] {
 
     let status: ShardInfoDto["status"];
     if (failedIds.has(id)) {
-      status = { kind: "failed", error: "Setup failed" };
+      status = {kind: "failed", error: "Setup failed"};
     } else if (skippedIds.has(id)) {
-      status = { kind: "skipped" };
+      status = {kind: "skipped"};
     } else {
-      status = { kind: "running" };
+      status = {kind: "running"};
     }
 
     return {
@@ -45,7 +44,7 @@ function buildFrontendShards(): ShardInfoDto[] {
 }
 
 export function ShardsPage() {
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   const [side, setSide] = useState<Side>("frontend");
   const [backendSnapshot, setBackendSnapshot] =
     useState<ShardsSnapshotDto | null>(null);
@@ -53,7 +52,8 @@ export function ShardsPage() {
   useEffect(() => {
     invoke<ShardsSnapshotDto>("get_shards_status")
       .then(setBackendSnapshot)
-      .catch(() => {});
+      .catch(() => {
+      });
 
     let cancelled = false;
     const unlistenPromise = listen<ShardsSnapshotDto>(
@@ -102,7 +102,7 @@ export function ShardsPage() {
             </button>
           </div>
 
-          <div />
+          <div/>
 
           <Carousel.Context>
             {(api) => (
@@ -128,20 +128,12 @@ export function ShardsPage() {
 
         <Carousel.ItemGroup className={s.carouselItemGroup}>
           <Carousel.Item index={0} className={s.carouselItem}>
-            <ScrollArea
-              className={s.carouselItemScroller}
-              contentClassName={s.carouselItemContent}
-            >
-              <ShardsTable shards={activeShards} labelMap={labelMap} />
-            </ScrollArea>
+            <div className={s.tablePane}>
+              <ShardsTable shards={activeShards} labelMap={labelMap}/>
+            </div>
           </Carousel.Item>
           <Carousel.Item index={1} className={s.carouselItem}>
-            <ScrollArea
-              className={s.carouselItemScroller}
-              contentClassName={s.carouselItemContent}
-            >
-              <ShardsDag shards={activeShards} />
-            </ScrollArea>
+            <ShardsDag shards={activeShards}/>
           </Carousel.Item>
         </Carousel.ItemGroup>
       </Carousel.Root>

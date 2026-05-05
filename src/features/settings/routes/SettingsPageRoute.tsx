@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useOutletContext, useParams } from "react-router";
+import { ScrollArea } from "@/components/scroll-area";
 import { useSettings } from "@/features/settings/context";
 import { SettingsClientArgsView } from "../components/SettingsClientArgsView";
 import type { SettingsOutletContext } from "../components/SettingsHub";
@@ -10,6 +12,17 @@ import { SettingsSections } from "../components/SettingsSections";
 import { AboutPage } from "./AboutPage";
 import { ShardsPage } from "./ShardsPage";
 
+function SettingsPageScroller({ children }: { children: ReactNode }) {
+  return (
+    <ScrollArea
+      className={s.pageScroller}
+      contentClassName={s.pageScrollerContent}
+    >
+      {children}
+    </ScrollArea>
+  );
+}
+
 export function SettingsPageRoute() {
   const settings = useSettings();
   const { t } = useTranslation();
@@ -17,11 +30,19 @@ export function SettingsPageRoute() {
   const { pageId } = useParams();
 
   if (pageId === "client-args") {
-    return <SettingsClientArgsView />;
+    return (
+      <SettingsPageScroller>
+        <SettingsClientArgsView />
+      </SettingsPageScroller>
+    );
   }
 
   if (pageId === "registry") {
-    return <SettingsRegistryList definitions={settings.listDefinitions()} />;
+    return (
+      <SettingsPageScroller>
+        <SettingsRegistryList definitions={settings.listDefinitions()} />
+      </SettingsPageScroller>
+    );
   }
 
   if (pageId === "shards") {
@@ -29,7 +50,11 @@ export function SettingsPageRoute() {
   }
 
   if (pageId === "about") {
-    return <AboutPage />;
+    return (
+      <SettingsPageScroller>
+        <AboutPage />
+      </SettingsPageScroller>
+    );
   }
 
   const activePage = resolveActivePage(pages, pageId);
@@ -41,5 +66,9 @@ export function SettingsPageRoute() {
     return <Navigate to={`/main/settings/${pages[0].id}`} replace />;
   }
 
-  return <SettingsSections page={activePage} />;
+  return (
+    <SettingsPageScroller>
+      <SettingsSections page={activePage} />
+    </SettingsPageScroller>
+  );
 }

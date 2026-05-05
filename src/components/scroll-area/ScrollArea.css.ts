@@ -65,9 +65,22 @@ export const horizontalGutter = style({
   paddingBlockEnd: scrollbarGutterSize,
 });
 
-export const content = style({
-  width: "100%",
-  minWidth: 0,
+export const content = recipe({
+  base: {
+    width: "100%",
+    minWidth: 0,
+  },
+  variants: {
+    size: {
+      fill: {
+        height: "100%",
+      },
+      content: {},
+    },
+  },
+  defaultVariants: {
+    size: "fill",
+  },
 });
 
 export const scrollbar = style({
