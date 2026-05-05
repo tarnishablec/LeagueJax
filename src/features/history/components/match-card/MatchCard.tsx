@@ -118,6 +118,7 @@ export function MatchCard({
               gameResult={vm.gameResult}
               outcomeLabel={outcomeLabel}
               placementLabel={placementLabel}
+              performanceBadge={vm.performanceBadge}
               queueName={vm.queueName}
               mapName={vm.mapName}
               gameDuration={vm.gameDuration}

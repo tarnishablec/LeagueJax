@@ -200,9 +200,9 @@ export const winRateText = recipe({
   },
   variants: {
     tone: {
-      win: { color: gameColorVars.outcome.winForeground },
-      lose: { color: gameColorVars.outcome.loseForeground },
-      neutral: { color: theme.color.mutedForeground },
+      win: {color: gameColorVars.outcome.winForeground},
+      lose: {color: gameColorVars.outcome.loseForeground},
+      neutral: {color: theme.color.mutedForeground},
     },
   },
   defaultVariants: {
@@ -382,7 +382,7 @@ export const historyDialogBackdrop = style({
   background: "oklch(0.06 0 0 / 0.62)",
   zIndex: layers.overlay.dialogBackdrop,
   selectors: {
-    "&[hidden]": { display: "none" },
+    "&[hidden]": {display: "none"},
   },
 });
 
@@ -394,7 +394,7 @@ export const historyDialogPositioner = style({
   padding: 20,
   zIndex: layers.overlay.dialog,
   selectors: {
-    "&[hidden]": { display: "none" },
+    "&[hidden]": {display: "none"},
   },
 });
 
@@ -519,6 +519,7 @@ export const matchBrief = style({
   justifyItems: "start",
   alignItems: "center",
   gap: 2,
+  minWidth: 0,
   overflow: "hidden",
   textBoxTrim: "trim-both",
 });
@@ -532,12 +533,42 @@ export const matchBriefDown = style({
 });
 
 export const queueNameText = style({
+  display: "block",
+  minWidth: 0,
   color: theme.color.foreground,
   fontWeight: 600,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
   fontSize: "0.65rem",
+});
+
+export const queueNameRow = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  maxWidth: "100%",
+  minWidth: 0,
+});
+
+export const historyPerformanceBadge = recipe({
+  base: {
+    fontSize: "0.6rem",
+    fontWeight: 800,
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+    fontStyle: "italic",
+  },
+  variants: {
+    badge: {
+      mvp: {
+        color: "oklch(0.84 0.18 85)",
+      },
+      ace: {
+        color: "oklch(0.62 0.18 280)",
+      },
+    },
+  },
 });
 
 export const gameTimeText = style({
