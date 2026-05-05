@@ -12,15 +12,27 @@ pub struct ReplayFolder {
     pub exists: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "replay.ts")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ReplayClientFamily {
+    Tencent,
+    Riot,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "replay.ts")]
 #[serde(rename_all = "camelCase")]
-pub struct ReplayExecutable {
-    pub path: String,
+pub struct ReplayClient {
+    pub pid: u32,
     pub label: String,
-    pub game_base_dir: Option<String>,
+    pub family: ReplayClientFamily,
+    pub server_id: Option<String>,
     pub game_version: Option<String>,
-    pub exists: bool,
+    pub install_dir: Option<String>,
+    pub is_focused: bool,
+    pub available: bool,
+    pub reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -29,7 +41,10 @@ pub struct ReplayExecutable {
 pub struct ReplayLaunchAvailability {
     pub can_launch: bool,
     pub reason: Option<String>,
-    pub executable_path: Option<String>,
+    pub client_pid: Option<u32>,
+    pub client_family: Option<ReplayClientFamily>,
+    pub client_server_id: Option<String>,
+    pub client_game_version: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -40,6 +55,7 @@ pub struct ReplayEntry {
     pub path: String,
     pub file_name: String,
     pub platform_id: Option<String>,
+    pub family: Option<ReplayClientFamily>,
     pub game_id: Option<u64>,
     pub patch_version: Option<String>,
     pub metadata_error: Option<String>,
@@ -57,7 +73,7 @@ pub struct ReplayEntry {
 #[serde(rename_all = "camelCase")]
 pub struct ReplayLibrarySnapshot {
     pub folders: Vec<ReplayFolder>,
-    pub executables: Vec<ReplayExecutable>,
+    pub clients: Vec<ReplayClient>,
     pub entries: Vec<ReplayEntry>,
 }
 

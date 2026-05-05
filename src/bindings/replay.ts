@@ -34,6 +34,7 @@ export type ReplayEntry = {
   path: string;
   fileName: string;
   platformId: string | null;
+  family: ReplayClientFamily | null;
   gameId: number | null;
   patchVersion: string | null;
   metadataError: string | null;
@@ -46,25 +47,34 @@ export type ReplayEntry = {
   launchAvailability: ReplayLaunchAvailability;
 };
 
-export type ReplayExecutable = {
-  path: string;
+export type ReplayClient = {
+  pid: number;
   label: string;
-  gameBaseDir: string | null;
+  family: ReplayClientFamily;
+  serverId: string | null;
   gameVersion: string | null;
-  exists: boolean;
+  installDir: string | null;
+  isFocused: boolean;
+  available: boolean;
+  reason: string | null;
 };
+
+export type ReplayClientFamily = "TENCENT" | "RIOT";
 
 export type ReplayFolder = { path: string; enabled: boolean; exists: boolean };
 
 export type ReplayLaunchAvailability = {
   canLaunch: boolean;
   reason: string | null;
-  executablePath: string | null;
+  clientPid: number | null;
+  clientFamily: ReplayClientFamily | null;
+  clientServerId: string | null;
+  clientGameVersion: string | null;
 };
 
 export type ReplayLibrarySnapshot = {
   folders: Array<ReplayFolder>;
-  executables: Array<ReplayExecutable>;
+  clients: Array<ReplayClient>;
   entries: Array<ReplayEntry>;
 };
 
