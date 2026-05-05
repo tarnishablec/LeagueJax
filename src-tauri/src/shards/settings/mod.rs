@@ -179,7 +179,7 @@ impl SettingsShard {
         F: Fn() -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<Value, AppError>> + Send + 'static,
     {
-        if !matches!(definition.control, SettingControlDto::Action) {
+        if !matches!(definition.control, Some(SettingControlDto::Action)) {
             return Err(AppError::other(format!(
                 "register_action requires Action control, got {:?} for {}",
                 definition.control, definition.id
@@ -537,7 +537,7 @@ fn validate_setting_id(id: &str) -> Result<(), AppError> {
 }
 
 fn validate_definition(definition: &SettingDefinitionDto) -> Result<(), AppError> {
-    if !matches!(definition.control, SettingControlDto::Action)
+    if !matches!(definition.control, Some(SettingControlDto::Action))
         && !is_value_compatible(definition, &definition.default_value)
     {
         return Err(AppError::other(format!(
@@ -546,7 +546,7 @@ fn validate_definition(definition: &SettingDefinitionDto) -> Result<(), AppError
         )));
     }
 
-    if matches!(definition.control, SettingControlDto::Select)
+    if matches!(definition.control, Some(SettingControlDto::Select))
         && definition
             .options
             .as_ref()
@@ -563,16 +563,17 @@ fn validate_definition(definition: &SettingDefinitionDto) -> Result<(), AppError
 
 fn is_value_compatible(definition: &SettingDefinitionDto, value: &Value) -> bool {
     match &definition.control {
-        SettingControlDto::Toggle => value.is_boolean(),
-        SettingControlDto::Text { .. } => value.is_string(),
-        SettingControlDto::Number { .. } => value.is_number(),
-        SettingControlDto::Select => value.as_str().is_some_and(|current| {
+        None => true,
+        Some(SettingControlDto::Toggle) => value.is_boolean(),
+        Some(SettingControlDto::Text { .. }) => value.is_string(),
+        Some(SettingControlDto::Number { .. }) => value.is_number(),
+        Some(SettingControlDto::Select) => value.as_str().is_some_and(|current| {
             definition
                 .options
                 .as_ref()
                 .is_none_or(|options| options.iter().any(|item| item.value == current))
         }),
-        SettingControlDto::Action => value.is_null(),
+        Some(SettingControlDto::Action) => value.is_null(),
     }
 }
 

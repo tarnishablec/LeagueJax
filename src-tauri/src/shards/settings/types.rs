@@ -55,7 +55,7 @@ pub struct SettingDefinitionDto {
     pub label_key: String,
     pub hint_key: Option<String>,
     pub scope: SettingScopeDto,
-    pub control: SettingControlDto,
+    pub control: Option<SettingControlDto>,
     #[ts(type = "unknown")]
     pub default_value: Value,
     pub order: Option<i32>,

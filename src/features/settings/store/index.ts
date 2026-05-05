@@ -210,7 +210,7 @@ function definitionSignature(definition: SettingDefinition): string {
 }
 
 function buildRemoteZod(
-  control: SettingDefinitionDto["control"],
+  control: NonNullable<SettingDefinitionDto["control"]>,
   remoteOptions: { value: string; labelKey: string }[],
 ): ZodType {
   switch (control.kind) {
@@ -608,6 +608,11 @@ class SettingsStore {
       return;
     }
 
+    const control = definition.control;
+    if (!control) {
+      return;
+    }
+
     const remoteOptions = (definition.options ?? []).map((option) => ({
       value: option.value,
       labelKey: option.labelKey,
@@ -619,7 +624,7 @@ class SettingsStore {
       labelKey: definition.labelKey,
       hintKey: definition.hintKey ?? undefined,
       scope: definition.scope,
-      zod: buildRemoteZod(definition.control, remoteOptions),
+      zod: buildRemoteZod(control, remoteOptions),
       defaultValue: definition.defaultValue,
       order: definition.order ?? undefined,
       visible: definition.visible ?? undefined,
@@ -627,7 +632,7 @@ class SettingsStore {
     } as const;
 
     let mapped: SettingDefinition;
-    switch (definition.control.kind) {
+    switch (control.kind) {
       case "select":
         mapped = {
           ...shared,
@@ -646,7 +651,7 @@ class SettingsStore {
           ...shared,
           control: {
             kind: "text",
-            placeholderKey: definition.control.placeholderKey ?? undefined,
+            placeholderKey: control.placeholderKey ?? undefined,
           },
         };
         break;
@@ -655,10 +660,10 @@ class SettingsStore {
           ...shared,
           control: {
             kind: "number",
-            placeholderKey: definition.control.placeholderKey ?? undefined,
-            min: definition.control.min ?? undefined,
-            max: definition.control.max ?? undefined,
-            step: definition.control.step ?? undefined,
+            placeholderKey: control.placeholderKey ?? undefined,
+            min: control.min ?? undefined,
+            max: control.max ?? undefined,
+            step: control.step ?? undefined,
           },
         };
         break;
