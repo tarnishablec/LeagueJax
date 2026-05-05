@@ -83,7 +83,7 @@ impl AutoAcceptShard {
             label_key: "settings.ongoing.matchmaking.autoAccept.label".to_string(),
             hint_key: Some("settings.ongoing.matchmaking.autoAccept.hint".to_string()),
             scope: SettingScopeDto::Backend,
-            control: SettingControlDto::Toggle,
+            control: Some(SettingControlDto::Toggle),
             default_value: Value::Bool(AUTO_ACCEPT_DEFAULT),
             order: Some(10),
             visible: Some(true),
@@ -95,12 +95,12 @@ impl AutoAcceptShard {
             label_key: "settings.ongoing.matchmaking.acceptDelaySeconds.label".to_string(),
             hint_key: Some("settings.ongoing.matchmaking.acceptDelaySeconds.hint".to_string()),
             scope: SettingScopeDto::Backend,
-            control: SettingControlDto::Number {
+            control: Some(SettingControlDto::Number {
                 placeholder_key: None,
                 min: Some(ACCEPT_DELAY_MIN_SECONDS),
                 max: Some(ACCEPT_DELAY_MAX_SECONDS),
                 step: Some(1.0),
-            },
+            }),
             default_value: Value::from(ACCEPT_DELAY_DEFAULT_SECONDS),
             order: Some(20),
             visible: Some(true),

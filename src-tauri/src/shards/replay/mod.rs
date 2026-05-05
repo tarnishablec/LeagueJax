@@ -11,8 +11,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
-use serde::{Deserialize, Serialize};
-use sled::Db;
 
 use self::types::{
     ReplayEntry, ReplayExecutable, ReplayFolder, ReplayLaunchAvailability, ReplayLibrarySnapshot,
@@ -21,27 +19,20 @@ use self::types::{
 use crate::error::AppError;
 use crate::shards::lcu::installs::discover_lol_client_installs;
 use crate::shards::lcu::LcuShard;
-use crate::shards::persistence_sled::PersistenceSled;
+use crate::shards::settings::types::{SettingDefinitionDto, SettingScopeDto};
+use crate::shards::settings::{SettingHandle, SettingsShard};
 
-const REPLAY_TREE: &str = "replay";
-const REPLAY_FOLDERS_KEY: &[u8] = b"folders";
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ReplayFolderConfig {
-    path: String,
-    enabled: bool,
-}
+const REPLAY_FOLDERS_SETTING_ID: &str = "replay.library.folders";
 
 pub struct ReplayShard {
-    db: OnceLock<Db>,
+    folders: OnceLock<SettingHandle>,
     executables: RwLock<Vec<ReplayExecutable>>,
 }
 
 impl ReplayShard {
     pub fn new() -> Self {
         Self {
-            db: OnceLock::new(),
+            folders: OnceLock::new(),
             executables: RwLock::new(Vec::new()),
         }
     }
@@ -54,10 +45,10 @@ impl ReplayShard {
         Ok(ReplayLibrarySnapshot {
             folders: folders
                 .into_iter()
-                .map(|folder| ReplayFolder {
-                    exists: Path::new(&folder.path).is_dir(),
-                    path: folder.path,
-                    enabled: folder.enabled,
+                .map(|path| ReplayFolder {
+                    exists: Path::new(&path).is_dir(),
+                    path,
+                    enabled: true,
                 })
                 .collect(),
             executables,
@@ -73,11 +64,8 @@ impl ReplayShard {
     pub fn add_folder(&self, path: String) -> Result<ReplayLibrarySnapshot, AppError> {
         let path = normalize_path_string(&path)?;
         let mut folders = self.load_folders()?;
-        if !folders.iter().any(|folder| folder.path == path) {
-            folders.push(ReplayFolderConfig {
-                path,
-                enabled: true,
-            });
+        if !folders.iter().any(|folder| folder == &path) {
+            folders.push(path);
             self.store_folders(&folders)?;
         }
         self.snapshot()
@@ -86,7 +74,7 @@ impl ReplayShard {
     pub fn remove_folder(&self, path: String) -> Result<ReplayLibrarySnapshot, AppError> {
         let path = normalize_path_string(&path)?;
         let mut folders = self.load_folders()?;
-        folders.retain(|folder| folder.path != path);
+        folders.retain(|folder| folder != &path);
         self.store_folders(&folders)?;
         self.snapshot()
     }
@@ -250,31 +238,23 @@ impl ReplayShard {
         Ok(next)
     }
 
-    fn db(&self) -> Result<Db, AppError> {
-        Ok(self
-            .db
+    fn folders_setting(&self) -> Result<&SettingHandle, AppError> {
+        self.folders
             .get()
-            .ok_or_else(|| AppError::other("Replay shard database is not initialized"))?
-            .clone())
+            .ok_or_else(|| AppError::other("Replay folders setting is not initialized"))
     }
 
-    fn tree(&self) -> Result<sled::Tree, AppError> {
-        Ok(self.db()?.open_tree(REPLAY_TREE)?)
+    fn load_folders(&self) -> Result<Vec<String>, AppError> {
+        let value = self.folders_setting()?.get_value()?;
+        serde_json::from_value::<Vec<String>>(value)?
+            .into_iter()
+            .map(|path| normalize_path_string(&path))
+            .collect::<Result<Vec<_>, _>>()
     }
 
-    fn load_folders(&self) -> Result<Vec<ReplayFolderConfig>, AppError> {
-        let tree = self.tree()?;
-        let Some(raw) = tree.get(REPLAY_FOLDERS_KEY)? else {
-            return Ok(default_replay_folders());
-        };
-        Ok(serde_json::from_slice::<Vec<ReplayFolderConfig>>(&raw)?)
-    }
-
-    fn store_folders(&self, folders: &[ReplayFolderConfig]) -> Result<(), AppError> {
-        let tree = self.tree()?;
-        let raw = serde_json::to_vec(folders)?;
-        tree.insert(REPLAY_FOLDERS_KEY, raw)?;
-        tree.flush()?;
+    fn store_folders(&self, folders: &[String]) -> Result<(), AppError> {
+        self.folders_setting()?
+            .set_value(serde_json::to_value(folders)?)?;
         Ok(())
     }
 }
@@ -282,13 +262,26 @@ impl ReplayShard {
 #[async_trait]
 impl Shard for ReplayShard {
     shard_id!("4b7a2a92-951e-4ca6-b5f5-df6c7cbb4f02");
-    depends![PersistenceSled, LcuShard];
+    depends![SettingsShard, LcuShard];
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        let db = jax.get_shard::<PersistenceSled>().get_db()?;
-        if self.db.set(db).is_err() {
-            return Err(AppError::other("Replay shard database is already initialized").into());
+        let settings = jax.get_shard::<SettingsShard>();
+        let folders = settings.register_definition(SettingDefinitionDto {
+            id: REPLAY_FOLDERS_SETTING_ID.to_string(),
+            label_key: "settings.replay.library.folders.label".to_string(),
+            hint_key: None,
+            scope: SettingScopeDto::Backend,
+            control: None,
+            default_value: serde_json::to_value(default_replay_folders())?,
+            order: None,
+            visible: Some(false),
+            options: None,
+        })?;
+
+        if self.folders.set(folders).is_err() {
+            return Err(AppError::other("Replay folders setting is already initialized").into());
         }
+
         self.refresh_executables()?;
         Ok(())
     }
@@ -316,7 +309,7 @@ fn normalize_path_string(path: &str) -> Result<String, AppError> {
     Ok(PathBuf::from(trimmed).to_string_lossy().to_string())
 }
 
-fn default_replay_folders() -> Vec<ReplayFolderConfig> {
+fn default_replay_folders() -> Vec<String> {
     let Some(user_profile) = std::env::var_os("USERPROFILE") else {
         return Vec::new();
     };
@@ -325,21 +318,18 @@ fn default_replay_folders() -> Vec<ReplayFolderConfig> {
         .join("League of Legends")
         .join("Replays");
 
-    vec![ReplayFolderConfig {
-        path: path.to_string_lossy().to_string(),
-        enabled: true,
-    }]
+    vec![path.to_string_lossy().to_string()]
 }
 
 fn scan_replay_entries(
-    folders: &[ReplayFolderConfig],
+    folders: &[String],
     executables: &[ReplayExecutable],
 ) -> Result<Vec<ReplayEntry>, AppError> {
     let mut entries = Vec::new();
     let mut seen = BTreeSet::new();
 
-    for folder in folders.iter().filter(|folder| folder.enabled) {
-        let root = PathBuf::from(&folder.path);
+    for folder in folders {
+        let root = PathBuf::from(folder);
         if !root.is_dir() {
             continue;
         }
@@ -566,13 +556,10 @@ fn version_major_minor(version: &str) -> Option<String> {
     Some(format!("{major}.{minor}"))
 }
 
-fn ensure_replay_path_allowed(
-    replay_path: &Path,
-    folders: &[ReplayFolderConfig],
-) -> Result<(), AppError> {
+fn ensure_replay_path_allowed(replay_path: &Path, folders: &[String]) -> Result<(), AppError> {
     let replay_path = replay_path.canonicalize()?;
-    for folder in folders.iter().filter(|folder| folder.enabled) {
-        let folder_path = PathBuf::from(&folder.path);
+    for folder in folders {
+        let folder_path = PathBuf::from(folder);
         if !folder_path.is_dir() {
             continue;
         }
@@ -587,13 +574,10 @@ fn ensure_replay_path_allowed(
     ))
 }
 
-fn ensure_replay_folder_allowed(
-    folder_path: &Path,
-    folders: &[ReplayFolderConfig],
-) -> Result<(), AppError> {
+fn ensure_replay_folder_allowed(folder_path: &Path, folders: &[String]) -> Result<(), AppError> {
     let folder_path = folder_path.canonicalize()?;
-    for folder in folders.iter().filter(|folder| folder.enabled) {
-        let configured_path = PathBuf::from(&folder.path);
+    for folder in folders {
+        let configured_path = PathBuf::from(folder);
         if !configured_path.is_dir() {
             continue;
         }

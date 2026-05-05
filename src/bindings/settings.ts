@@ -18,7 +18,7 @@ export type SettingDefinitionDto = {
   labelKey: string;
   hintKey: string | null;
   scope: SettingScopeDto;
-  control: SettingControlDto;
+  control: SettingControlDto | null;
   defaultValue: unknown;
   order: number | null;
   visible: boolean | null;

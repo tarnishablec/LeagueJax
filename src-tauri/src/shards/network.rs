@@ -138,12 +138,12 @@ impl Shard for NetworkShard {
             label_key: "settings.network.requestTimeoutSeconds.label".to_string(),
             hint_key: None,
             scope: SettingScopeDto::Shared,
-            control: SettingControlDto::Number {
+            control: Some(SettingControlDto::Number {
                 placeholder_key: None,
                 min: Some(1.0),
                 max: Some(300.0),
                 step: Some(1.0),
-            },
+            }),
             default_value: Value::Number(serde_json::Number::from(REQUEST_TIMEOUT_DEFAULT_SECONDS)),
             order: Some(10),
             visible: Some(true),
@@ -155,7 +155,7 @@ impl Shard for NetworkShard {
             label_key: "settings.network.useSystemProxy.label".to_string(),
             hint_key: Some("settings.network.useSystemProxy.hint".to_string()),
             scope: SettingScopeDto::Backend,
-            control: SettingControlDto::Toggle,
+            control: Some(SettingControlDto::Toggle),
             default_value: Value::Bool(USE_SYSTEM_PROXY_DEFAULT),
             order: Some(20),
             visible: Some(true),

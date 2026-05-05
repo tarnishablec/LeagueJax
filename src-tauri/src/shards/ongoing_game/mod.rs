@@ -52,12 +52,12 @@ impl Shard for OngoingGameShard {
             label_key: "settings.ongoing.matchHistoryCount.label".to_string(),
             hint_key: None,
             scope: SettingScopeDto::Shared,
-            control: SettingControlDto::Number {
+            control: Some(SettingControlDto::Number {
                 placeholder_key: None,
                 min: Some(1.0),
                 max: Some(200.0),
                 step: Some(1.0),
-            },
+            }),
             default_value: Value::Number(serde_json::Number::from(MATCH_HISTORY_COUNT_DEFAULT)),
             order: Some(10),
             visible: Some(true),
