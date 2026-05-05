@@ -3,6 +3,8 @@ import { theme } from "@/styles/theme.css";
 
 export const shardsPage = style({
   height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
 });
 
 export const toolbar = style({
@@ -51,23 +53,35 @@ export const carouselRoot = style({
   gridTemplateRows: "auto 1fr",
   gap: 10,
   height: "100%",
+  minHeight: 0,
   overflow: "hidden",
 });
 
 export const carouselItemGroup = style({
   height: "100%",
+  minHeight: 0,
   scrollBehavior: "smooth",
 });
 
 export const carouselItem = style({
   height: "100%",
+  minHeight: 0,
   overflow: "hidden",
 });
 
 export const carouselItemScroller = style({
   height: "100%",
+  minHeight: 0,
 });
 
 export const carouselItemContent = style({
+  height: "100%",
   minHeight: "100%",
+});
+
+export const tablePane = style({
+  height: "100%",
+  minHeight: 0,
+  overflow: "scroll",
+  scrollbarGutter: "stable",
 });

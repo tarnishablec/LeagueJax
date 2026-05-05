@@ -84,7 +84,7 @@ export function ScrollArea({
         }}
       >
         <ArkScrollArea.Content
-          className={joinClassNames(s.content, contentClassName)}
+          className={joinClassNames(s.content({ size }), contentClassName)}
           style={{
             ...getContentBaseStyle(orientation),
             ...contentStyle,

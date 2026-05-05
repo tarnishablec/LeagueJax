@@ -14,8 +14,8 @@ interface ShardsTableProps {
 
 const col = createColumnHelper<ShardInfoDto>();
 
-export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
-  const { t } = useTranslation();
+export function ShardsTable({shards, labelMap}: ShardsTableProps) {
+  const {t} = useTranslation();
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column
@@ -38,7 +38,7 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
     }),
     col.accessor("id", {
       header: () => t("settings.shards.columns.id"),
-      meta: { className: dt.monospace },
+      meta: {className: dt.monospace},
       cell: (info) => {
         const id = info.getValue() as string;
         return (
@@ -59,7 +59,7 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
       cell: (info) => {
         const status = info.getValue() as ShardInfoDto["status"];
         return (
-          <span className={s.status({ kind: status.kind })}>
+          <span className={s.status({kind: status.kind})}>
             {t(`settings.shards.status.${status.kind}`)}
           </span>
         );
@@ -116,6 +116,7 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
       getRowClassName={(row) =>
         row.original.id === highlightedId ? s.rowHighlight : undefined
       }
+      stickyHeader={false}
     />
   );
 }
