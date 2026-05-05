@@ -9,6 +9,7 @@ import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionI
 import { ScrollArea } from "@/components/scroll-area";
 import { MatchCard } from "@/features/history/components/match-card/MatchCard";
 import { normalizeHistoryPosition } from "@/features/history/hooks/use-match-card-view-model";
+import { resolveMatchPerformanceBadgeForMatch } from "@/features/history/utils/match-performance-badge.ts";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { theme } from "@/styles/theme.css.ts";
 import {
@@ -45,6 +46,11 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
   const { t } = useTranslation();
   const result = resolveRecentGameResult(game);
   const queueName = useLcuQueueName(game.json.queueId);
+  const performanceBadge = resolveMatchPerformanceBadgeForMatch(
+    game,
+    game.me,
+    result === "Win",
+  );
   const championId = game.me.championId > 0 ? game.me.championId : null;
   const { mapId, gameMode } = game.json;
   const supportsPosition = mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
@@ -75,7 +81,18 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
             fallbackClassName={s.historyChampionFallback}
           />
           <div className={s.matchBrief}>
-            <span className={s.queueNameText}>{queueName}</span>
+            <div className={s.queueNameRow}>
+              <span className={s.queueNameText}>{queueName}</span>
+              {performanceBadge ? (
+                <span
+                  className={s.historyPerformanceBadge({
+                    badge: performanceBadge,
+                  })}
+                >
+                  {performanceBadge.toUpperCase()}
+                </span>
+              ) : null}
+            </div>
             <div className={s.matchBriefDown}>
               <span
                 className={`${historyResultClassName(result, {

@@ -9,6 +9,7 @@ import {
   matchUsesSubteams,
   resolveMatchParticipantGroups,
 } from "../utils/match-participant-groups.ts";
+import { resolveMatchPerformanceBadge } from "../utils/match-performance-badge.ts";
 import { useParticipantBrief } from "./use-participant-brief.ts";
 import { useRoleQuestSlot } from "./use-role-quest-slot.ts";
 
@@ -223,22 +224,6 @@ function getMultiKillTag(me: RawMatchSummaryParticipant): MatchTag | null {
   return null;
 }
 
-function computeKda(p: RawMatchSummaryParticipant): number {
-  return ((p.kills ?? 0) + (p.assists ?? 0)) / Math.max(1, p.deaths ?? 1);
-}
-
-function getTeamTag(
-  me: RawMatchSummaryParticipant,
-  teammates: RawMatchSummaryParticipant[],
-  isVictory: boolean,
-): MatchTag | null {
-  const myKda = computeKda(me);
-  if (myKda > 0 && teammates.every((p) => computeKda(p) <= myKda)) {
-    return isVictory ? "mvp" : "ace";
-  }
-  return null;
-}
-
 function collectStatTags(
   me: RawMatchSummaryParticipant,
   participants: RawMatchSummaryParticipant[],
@@ -266,7 +251,7 @@ function computeMatchPills(
 ): MatchPill[] {
   const pills: MatchPill[] = [];
 
-  const teamTag = getTeamTag(me, teammates, isVictory);
+  const teamTag = resolveMatchPerformanceBadge({ me, teammates, isVictory });
   if (teamTag) pills.push({ type: "tag", tag: teamTag });
   if ((me.totalDamageDealtToChampions ?? 0) > 0 && damageRank === 1) {
     pills.push({ type: "tag", tag: "highestDamage" });
@@ -377,6 +362,11 @@ export function useMatchCardViewModel({
     gameResult === "victory",
     damageRank,
   );
+  const performanceBadge = resolveMatchPerformanceBadge({
+    me,
+    teammates,
+    isVictory: gameResult === "victory",
+  });
   const myGold = me.goldEarned ?? 0;
   const goldRank =
     participants.filter((p) => (p.goldEarned ?? 0) > myGold).length + 1;
@@ -403,6 +393,7 @@ export function useMatchCardViewModel({
     damageRank,
     goldRank,
     position,
+    performanceBadge,
     pills,
     roleQuestSlot: roleQuest.slot,
   };
