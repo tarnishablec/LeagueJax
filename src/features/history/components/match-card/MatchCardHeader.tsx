@@ -35,12 +35,12 @@ export function MatchCardHeader({
           {outcomeLabel}
         </span>
       )}
-      <span className={s.metaPill}>{queueName}</span>
       {performanceBadge ? (
         <span className={s.performanceBadge({ badge: performanceBadge })}>
           {performanceBadge.toUpperCase()}
         </span>
       ) : null}
+      <span className={s.metaPill}>{queueName}</span>
       <span className={s.metaPill}>{mapName}</span>
       <span className={s.metaPill}>
         {durationLabel} {formatDuration(gameDuration)}
