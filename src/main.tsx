@@ -12,6 +12,30 @@ import { createLogger } from "./infra/logger";
 
 const logger = createLogger("bootstrap");
 
+function resolveUiPlatform(): string {
+  const userAgent = navigator.userAgent;
+
+  if (/\bWindows\b/i.test(userAgent)) {
+    return "windows";
+  }
+
+  if (/\b(iPhone|iPad|iPod)\b/i.test(userAgent)) {
+    return "ios";
+  }
+
+  if (/\bMacintosh\b/i.test(userAgent)) {
+    return "macos";
+  }
+
+  if (/\bLinux\b/i.test(userAgent)) {
+    return "linux";
+  }
+
+  return "unknown";
+}
+
+document.documentElement.dataset.platform = resolveUiPlatform();
+
 async function bootstrap(): Promise<void> {
   const rootElement = document.getElementById("root") as HTMLElement;
   const root = ReactDOM.createRoot(rootElement);

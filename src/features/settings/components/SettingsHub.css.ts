@@ -16,18 +16,9 @@ export const outlet = style({
   display: "grid",
   minHeight: 0,
   height: "100%",
-  overflow: "hidden",
-});
-
-export const pageScroller = style({
-  minHeight: 0,
-  height: "100%",
-});
-
-export const pageScrollerContent = style({
-  display: "grid",
-  alignContent: "start",
-  minHeight: "100%",
+  overflowX: "hidden",
+  overflowY: "auto",
+  scrollbarGutter: "stable",
 });
 
 export const title = style({
@@ -77,12 +68,6 @@ export const primaryTabsList = style({
   overflowX: "auto",
   overflowY: "hidden",
   borderBottom: `1px solid ${theme.color.border}`,
-  scrollbarWidth: "none",
-  selectors: {
-    "&::-webkit-scrollbar": {
-      display: "none",
-    },
-  },
 });
 
 export const primaryTab = style({

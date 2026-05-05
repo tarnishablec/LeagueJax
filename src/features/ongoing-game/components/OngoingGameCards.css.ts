@@ -15,10 +15,16 @@ export const playerTagColorVar = createVar();
 export const teamSection = style({
   height: "calc(100% + 6px)",
   marginBottom: -6,
+  minWidth: 0,
+  overflowX: "auto",
+  overflowY: "hidden",
+  scrollbarGutter: "stable",
 });
 
 export const teamSectionContent = style({
   height: "100%",
+  minWidth: "100%",
+  width: "max-content",
 });
 
 export const teamRow = style({
@@ -200,9 +206,9 @@ export const winRateText = recipe({
   },
   variants: {
     tone: {
-      win: {color: gameColorVars.outcome.winForeground},
-      lose: {color: gameColorVars.outcome.loseForeground},
-      neutral: {color: theme.color.mutedForeground},
+      win: { color: gameColorVars.outcome.winForeground },
+      lose: { color: gameColorVars.outcome.loseForeground },
+      neutral: { color: theme.color.mutedForeground },
     },
   },
   defaultVariants: {
@@ -342,6 +348,9 @@ export const historyList = style({
 export const historyListScroller = style({
   minHeight: 0,
   height: "100%",
+  overflowX: "hidden",
+  overflowY: "auto",
+  scrollbarGutter: "stable",
 });
 
 export const historyRow = style({
@@ -382,7 +391,7 @@ export const historyDialogBackdrop = style({
   background: "oklch(0.06 0 0 / 0.62)",
   zIndex: layers.overlay.dialogBackdrop,
   selectors: {
-    "&[hidden]": {display: "none"},
+    "&[hidden]": { display: "none" },
   },
 });
 
@@ -394,7 +403,7 @@ export const historyDialogPositioner = style({
   padding: 20,
   zIndex: layers.overlay.dialog,
   selectors: {
-    "&[hidden]": {display: "none"},
+    "&[hidden]": { display: "none" },
   },
 });
 
@@ -412,6 +421,9 @@ export const historyDialogContent = style({
 
 export const historyDialogScroller = style({
   maxHeight: "calc(100vh - 40px)",
+  overflowX: "hidden",
+  overflowY: "auto",
+  scrollbarGutter: "stable",
 });
 
 export const historyDialogScrollerContent = style({

@@ -86,7 +86,11 @@ export const list = style({
 });
 
 export const listScroller = style({
+  minWidth: 0,
   minHeight: 0,
+  overflowX: "hidden",
+  overflowY: "auto",
+  scrollbarGutter: "stable",
 });
 
 export const emptyState = style({

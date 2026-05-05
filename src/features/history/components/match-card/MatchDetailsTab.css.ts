@@ -137,6 +137,10 @@ export const scoreboardIconFallback = style({
 
 export const objectiveScroller = style({
   maxWidth: "100%",
+  minWidth: 0,
+  overflowX: "auto",
+  overflowY: "hidden",
+  scrollbarGutter: "stable",
   justifySelf: "end",
   "@media": {
     "screen and (max-width: 760px)": {
@@ -151,6 +155,7 @@ export const objectiveList = style({
   gridAutoColumns: "max-content",
   alignItems: "center",
   gap: 6,
+  minWidth: "fit-content",
 });
 
 export const objectiveStat = style({
@@ -183,7 +188,13 @@ export const objectiveIconFallback = style({
   background: theme.color.accent,
 });
 
-export const tableScroller = style({});
+export const tableScroller = style({
+  maxWidth: "100%",
+  minWidth: 0,
+  overflowX: "auto",
+  overflowY: "hidden",
+  scrollbarGutter: "stable",
+});
 
 export const table = recipe({
   base: {

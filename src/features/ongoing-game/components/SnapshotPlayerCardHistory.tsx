@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
-import { ScrollArea } from "@/components/scroll-area";
 import { MatchCard } from "@/features/history/components/match-card/MatchCard";
 import { normalizeHistoryPosition } from "@/features/history/hooks/use-match-card-view-model";
 import { resolveMatchPerformanceBadgeForMatch } from "@/features/history/utils/match-performance-badge.ts";
@@ -134,18 +133,16 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
         <Dialog.Backdrop className={s.historyDialogBackdrop} />
         <Dialog.Positioner className={s.historyDialogPositioner}>
           <Dialog.Content className={s.historyDialogContent}>
-            <ScrollArea
-              size="content"
-              className={s.historyDialogScroller}
-              contentClassName={s.historyDialogScrollerContent}
-            >
-              <MatchCard
-                match={game}
-                me={game.me}
-                sgpServerId={null}
-                defaultExpanded
-              />
-            </ScrollArea>
+            <div className={s.historyDialogScroller}>
+              <div className={s.historyDialogScrollerContent}>
+                <MatchCard
+                  match={game}
+                  me={game.me}
+                  sgpServerId={null}
+                  defaultExpanded
+                />
+              </div>
+            </div>
           </Dialog.Content>
         </Dialog.Positioner>
       </Portal>
@@ -171,15 +168,13 @@ function HistoryLoadingState() {
       highlightColor={`color-mix(in oklch, ${theme.color.foreground} 16%, transparent)`}
       duration={1.2}
     >
-      <ScrollArea
-        className={s.historyListScroller}
-        contentClassName={s.historyList}
-        showScrollbar={false}
-      >
-        {HISTORY_SKELETON_ROW_IDS.map((id) => (
-          <HistorySkeletonRow key={id} />
-        ))}
-      </ScrollArea>
+      <div className={s.historyListScroller}>
+        <div className={s.historyList}>
+          {HISTORY_SKELETON_ROW_IDS.map((id) => (
+            <HistorySkeletonRow key={id} />
+          ))}
+        </div>
+      </div>
     </SkeletonTheme>
   );
 }
@@ -190,15 +185,13 @@ function SnapshotPlayerCardHistoryList(props: {
   const { recentGames } = props;
 
   return (
-    <ScrollArea
-      className={s.historyListScroller}
-      contentClassName={s.historyList}
-      showScrollbar={false}
-    >
-      {recentGames.map((game) => (
-        <HistoryRow key={game.json.gameId} game={game} />
-      ))}
-    </ScrollArea>
+    <div className={s.historyListScroller}>
+      <div className={s.historyList}>
+        {recentGames.map((game) => (
+          <HistoryRow key={game.json.gameId} game={game} />
+        ))}
+      </div>
+    </div>
   );
 }
 
