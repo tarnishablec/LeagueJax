@@ -94,7 +94,9 @@ export function MainWindowLayout() {
   const toolbarSlots = useMemo(
     () =>
       getToolbarSlots(pathname).map((slot) => (
-        <div key={slot.id}>{slot.node}</div>
+        <div key={slot.id} className={s.toolbarSlot}>
+          {slot.node}
+        </div>
       )),
     [pathname],
   );
