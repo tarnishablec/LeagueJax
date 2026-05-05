@@ -3,7 +3,7 @@ pub mod types;
 
 use core::error::Error;
 use std::cmp::Reverse;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -12,8 +12,9 @@ use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 
 use self::types::{
-    ReplayClient, ReplayClientFamily, ReplayEntry, ReplayFolder, ReplayLaunchAvailability,
-    ReplayLibrarySnapshot, ReplayMatchContext, ReplayMatchState,
+    ReplayClient, ReplayClientFamily, ReplayEntry, ReplayFolder, ReplayFolderSource,
+    ReplayFolderSourceKind, ReplayLaunchAvailability, ReplayLibrarySnapshot, ReplayMatchContext,
+    ReplayMatchState,
 };
 use crate::error::AppError;
 use crate::shards::lcu::session::LcuSession;
@@ -38,19 +39,19 @@ impl ReplayShard {
     }
 
     pub async fn snapshot(&self, lcu_shard: &LcuShard) -> Result<ReplayLibrarySnapshot, AppError> {
-        let folders = self.load_folders()?;
+        let user_folders = self.load_folders()?;
         let clients = self.refresh_clients(lcu_shard).await?;
-        let entries = scan_replay_entries(&folders, &clients)?;
+        let folders = self
+            .build_replay_folders(lcu_shard, &user_folders, &clients)
+            .await?;
+        let scan_roots = folders
+            .iter()
+            .map(|folder| folder.path.clone())
+            .collect::<Vec<_>>();
+        let entries = scan_replay_entries(&scan_roots, &clients)?;
 
         Ok(ReplayLibrarySnapshot {
-            folders: folders
-                .into_iter()
-                .map(|path| ReplayFolder {
-                    exists: Path::new(&path).is_dir(),
-                    path,
-                    enabled: true,
-                })
-                .collect(),
+            folders,
             clients,
             entries,
         })
@@ -66,6 +67,10 @@ impl ReplayShard {
         path: String,
     ) -> Result<ReplayLibrarySnapshot, AppError> {
         let path = normalize_path_string(&path)?;
+        if !Path::new(&path).is_dir() {
+            return Err(AppError::other("Replay folder does not exist"));
+        }
+
         let mut folders = self.load_folders()?;
         if !folders.iter().any(|folder| folder == &path) {
             folders.push(path);
@@ -86,13 +91,13 @@ impl ReplayShard {
         self.snapshot(lcu_shard).await
     }
 
-    pub fn open_folder(&self, path: String) -> Result<(), AppError> {
+    pub async fn open_folder(&self, lcu_shard: &LcuShard, path: String) -> Result<(), AppError> {
         let folder_path = PathBuf::from(normalize_path_string(&path)?);
         if !folder_path.is_dir() {
             return Err(AppError::other("Replay folder does not exist"));
         }
 
-        let folders = self.load_folders()?;
+        let folders = self.allowed_folder_paths(lcu_shard).await?;
         ensure_replay_folder_allowed(&folder_path, &folders)?;
 
         tauri_plugin_opener::open_path(folder_path.to_string_lossy().to_string(), None::<String>)
@@ -100,13 +105,13 @@ impl ReplayShard {
         Ok(())
     }
 
-    pub fn reveal_entry(&self, path: String) -> Result<(), AppError> {
+    pub async fn reveal_entry(&self, lcu_shard: &LcuShard, path: String) -> Result<(), AppError> {
         let replay_path = PathBuf::from(normalize_path_string(&path)?);
         if !replay_path.is_file() || !is_rofl_file(&replay_path) {
             return Err(AppError::other("Replay entry is not a valid .rofl file"));
         }
 
-        let folders = self.load_folders()?;
+        let folders = self.allowed_folder_paths(lcu_shard).await?;
         ensure_replay_path_allowed(&replay_path, &folders)?;
 
         tauri_plugin_opener::reveal_item_in_dir(&replay_path)
@@ -189,7 +194,7 @@ impl ReplayShard {
             return Err(AppError::other("Replay entry is not a valid .rofl file"));
         }
 
-        let folders = self.load_folders()?;
+        let folders = self.allowed_folder_paths(lcu_shard).await?;
         ensure_replay_path_allowed(&replay_path, &folders)?;
 
         let parsed = parse_replay_file_name(&replay_path);
@@ -240,6 +245,27 @@ impl ReplayShard {
         Ok(next)
     }
 
+    async fn allowed_folder_paths(&self, lcu_shard: &LcuShard) -> Result<Vec<String>, AppError> {
+        let user_folders = self.load_folders()?;
+        let clients = self.refresh_clients(lcu_shard).await?;
+        Ok(self
+            .build_replay_folders(lcu_shard, &user_folders, &clients)
+            .await?
+            .into_iter()
+            .map(|folder| folder.path)
+            .collect())
+    }
+
+    async fn build_replay_folders(
+        &self,
+        lcu_shard: &LcuShard,
+        user_folders: &[String],
+        clients: &[ReplayClient],
+    ) -> Result<Vec<ReplayFolder>, AppError> {
+        let discovered = detect_replay_folder_candidates(lcu_shard, clients).await;
+        merge_replay_folder_candidates(user_folders, discovered, default_replay_folders())
+    }
+
     fn folders_setting(&self) -> Result<&SettingHandle, AppError> {
         self.folders
             .get()
@@ -274,7 +300,7 @@ impl Shard for ReplayShard {
             hint_key: None,
             scope: SettingScopeDto::Backend,
             control: None,
-            default_value: serde_json::to_value(default_replay_folders())?,
+            default_value: serde_json::to_value(Vec::<String>::new())?,
             order: None,
             visible: Some(false),
             options: None,
@@ -318,6 +344,156 @@ fn default_replay_folders() -> Vec<String> {
         .join("Replays");
 
     vec![path.to_string_lossy().to_string()]
+}
+
+#[derive(Debug, Clone)]
+struct ReplayFolderCandidate {
+    path: String,
+    source: ReplayFolderSource,
+}
+
+fn replay_folder_source(
+    kind: ReplayFolderSourceKind,
+    client: Option<&ReplayClient>,
+) -> ReplayFolderSource {
+    ReplayFolderSource {
+        kind,
+        client_pid: client.map(|client| client.pid),
+        client_family: client.map(|client| client.family),
+        client_server_id: client.and_then(|client| client.server_id.clone()),
+    }
+}
+
+async fn detect_replay_folder_candidates(
+    lcu_shard: &LcuShard,
+    clients: &[ReplayClient],
+) -> Vec<ReplayFolderCandidate> {
+    let Some(manager) = lcu_shard.manager() else {
+        return Vec::new();
+    };
+
+    let mut candidates = Vec::new();
+    for client in clients {
+        let Some(session) = manager
+            .session_for_pid(client.pid)
+            .filter(|session| session.is_ready())
+        else {
+            continue;
+        };
+
+        match session.api().get_replay_path().await {
+            Ok(Some(path)) => candidates.push(ReplayFolderCandidate {
+                path,
+                source: replay_folder_source(ReplayFolderSourceKind::Client, Some(client)),
+            }),
+            Ok(None) => {}
+            Err(error) => {
+                tracing::debug!(
+                    pid = client.pid,
+                    error = %error,
+                    "Failed to read configured LCU replay folder"
+                );
+            }
+        }
+
+        match session.api().get_default_replay_path().await {
+            Ok(Some(path)) => candidates.push(ReplayFolderCandidate {
+                path,
+                source: replay_folder_source(ReplayFolderSourceKind::Default, Some(client)),
+            }),
+            Ok(None) => {}
+            Err(error) => {
+                tracing::debug!(
+                    pid = client.pid,
+                    error = %error,
+                    "Failed to read default LCU replay folder"
+                );
+            }
+        }
+    }
+
+    candidates
+}
+
+fn merge_replay_folder_candidates(
+    user_folders: &[String],
+    discovered: Vec<ReplayFolderCandidate>,
+    fallback_folders: Vec<String>,
+) -> Result<Vec<ReplayFolder>, AppError> {
+    let mut folders = Vec::new();
+    let mut seen = BTreeMap::new();
+
+    for path in user_folders {
+        push_replay_folder_candidate(
+            &mut folders,
+            &mut seen,
+            ReplayFolderCandidate {
+                path: path.clone(),
+                source: replay_folder_source(ReplayFolderSourceKind::User, None),
+            },
+        )?;
+    }
+
+    for candidate in discovered {
+        push_replay_folder_candidate(&mut folders, &mut seen, candidate)?;
+    }
+
+    if folders.is_empty() {
+        for path in fallback_folders {
+            push_replay_folder_candidate(
+                &mut folders,
+                &mut seen,
+                ReplayFolderCandidate {
+                    path,
+                    source: replay_folder_source(ReplayFolderSourceKind::Default, None),
+                },
+            )?;
+        }
+    }
+
+    Ok(folders)
+}
+
+fn push_replay_folder_candidate(
+    folders: &mut Vec<ReplayFolder>,
+    seen: &mut BTreeMap<String, usize>,
+    candidate: ReplayFolderCandidate,
+) -> Result<(), AppError> {
+    let path = normalize_path_string(&candidate.path)?;
+    let key = replay_folder_merge_key(&path)?;
+
+    if let Some(index) = seen.get(&key).copied() {
+        if !folders[index].sources.contains(&candidate.source) {
+            folders[index].sources.push(candidate.source);
+        }
+        return Ok(());
+    }
+
+    seen.insert(key, folders.len());
+    folders.push(ReplayFolder {
+        exists: Path::new(&path).is_dir(),
+        path,
+        enabled: true,
+        sources: vec![candidate.source],
+    });
+    Ok(())
+}
+
+fn replay_folder_merge_key(path: &str) -> Result<String, AppError> {
+    let path = normalize_path_string(path)?;
+    let path_buf = PathBuf::from(&path);
+    let comparable = path_buf.canonicalize().unwrap_or(path_buf);
+    let mut key = comparable.to_string_lossy().replace('/', "\\");
+
+    while key.len() > 3 && key.ends_with('\\') {
+        key.pop();
+    }
+
+    if cfg!(windows) {
+        Ok(key.to_ascii_lowercase())
+    } else {
+        Ok(key)
+    }
 }
 
 fn scan_replay_entries(
@@ -845,5 +1021,56 @@ mod tests {
 
         assert!(!availability.can_launch);
         assert!(availability.reason.is_some());
+    }
+
+    #[test]
+    fn merges_replay_folders_by_normalized_path() -> Result<(), AppError> {
+        let user_path = PathBuf::from("target")
+            .join("replay-merge-test")
+            .to_string_lossy()
+            .to_string();
+        let duplicate_path = format!("{}/", user_path.replace('\\', "/"));
+        let client = replay_client(7, ReplayClientFamily::Riot, "JP1", "16.9.772.8292");
+
+        let folders = merge_replay_folder_candidates(
+            &[user_path.clone()],
+            vec![
+                ReplayFolderCandidate {
+                    path: duplicate_path.clone(),
+                    source: replay_folder_source(ReplayFolderSourceKind::Client, Some(&client)),
+                },
+                ReplayFolderCandidate {
+                    path: duplicate_path,
+                    source: replay_folder_source(ReplayFolderSourceKind::Default, Some(&client)),
+                },
+            ],
+            Vec::new(),
+        )?;
+
+        assert_eq!(folders.len(), 1);
+        assert_eq!(folders[0].path, user_path);
+        assert_eq!(folders[0].sources.len(), 3);
+        assert_eq!(folders[0].sources[0].kind, ReplayFolderSourceKind::User);
+        assert_eq!(folders[0].sources[1].kind, ReplayFolderSourceKind::Client);
+        assert_eq!(folders[0].sources[1].client_pid, Some(7));
+        assert_eq!(folders[0].sources[2].kind, ReplayFolderSourceKind::Default);
+        Ok(())
+    }
+
+    #[test]
+    fn uses_fallback_replay_folder_when_no_sources_exist() -> Result<(), AppError> {
+        let fallback = PathBuf::from("target")
+            .join("replay-fallback-test")
+            .to_string_lossy()
+            .to_string();
+
+        let folders = merge_replay_folder_candidates(&[], Vec::new(), vec![fallback.clone()])?;
+
+        assert_eq!(folders.len(), 1);
+        assert_eq!(folders[0].path, fallback);
+        assert_eq!(folders[0].sources.len(), 1);
+        assert_eq!(folders[0].sources[0].kind, ReplayFolderSourceKind::Default);
+        assert_eq!(folders[0].sources[0].client_pid, None);
+        Ok(())
     }
 }

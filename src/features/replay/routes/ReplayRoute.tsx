@@ -1,6 +1,6 @@
-import { FileUpload } from "@ark-ui/react/file-upload";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   FolderOpen,
   Monitor,
@@ -15,14 +15,11 @@ import type { LcuInstanceInfo } from "@/bindings/lcu";
 import type {
   ReplayClientFamily,
   ReplayEntry,
+  ReplayFolder,
   ReplayLibrarySnapshot,
 } from "@/bindings/replay";
 import { AppTooltip } from "@/components/AppTooltip";
 import * as s from "./ReplayRoute.css";
-
-type DirectoryUploadFile = File & {
-  path?: string;
-};
 
 type FamilyTone = "tencent" | "riot" | "unknown";
 
@@ -133,6 +130,42 @@ function clientServerLabel(client: ReplayLibrarySnapshot["clients"][number]) {
   return client.serverId ?? `Client #${client.pid}`;
 }
 
+function folderCanRemove(folder: ReplayFolder): boolean {
+  return (
+    folder.sources.length > 0 &&
+    folder.sources.every((source) => source.kind === "user")
+  );
+}
+
+function folderSourceLabel(
+  folder: ReplayFolder,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  const kinds = new Set(folder.sources.map((source) => source.kind));
+  const labels: string[] = [];
+  if (kinds.has("user")) labels.push(t("replay.folderSource.user"));
+  if (kinds.has("client")) labels.push(t("replay.folderSource.client"));
+  if (kinds.has("default")) labels.push(t("replay.folderSource.default"));
+  return labels.join(" / ");
+}
+
+function folderStatusLabel(
+  folder: ReplayFolder,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  const status = folder.exists ? t("replay.enabled") : t("replay.missing");
+  const source = folderSourceLabel(folder, t);
+  return source ? `${status} / ${source}` : status;
+}
+
+function folderTooltip(
+  folder: ReplayFolder,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  const source = folderSourceLabel(folder, t);
+  return source ? `${folder.path}\n${source}` : folder.path;
+}
+
 function launchUnavailableReason(
   reason: string | null,
   t: ReturnType<typeof useTranslation>["t"],
@@ -200,30 +233,15 @@ function playTooltip(
   });
 }
 
-function parentPath(path: string): string | null {
-  const index = Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/"));
-  if (index <= 0) return null;
-  return path.slice(0, index);
-}
-
-function inferUploadedDirectoryPath(files: File[]): string | null {
-  for (const file of files) {
-    const absolutePath = (file as DirectoryUploadFile).path;
-    const relativePath = file.webkitRelativePath;
-    if (!absolutePath || !relativePath) continue;
-
-    const relativeSegments = relativePath.split(/[\\/]/).filter(Boolean);
-    if (relativeSegments.length < 2) continue;
-
-    let directoryPath: string | null = absolutePath;
-    for (let index = 1; index < relativeSegments.length; index += 1) {
-      directoryPath = parentPath(directoryPath);
-      if (!directoryPath) return null;
-    }
-    return directoryPath;
-  }
-
-  return null;
+function isPositionInsideElement(
+  position: { x: number; y: number },
+  element: HTMLElement,
+): boolean {
+  const scale = window.devicePixelRatio || 1;
+  const x = position.x / scale;
+  const y = position.y / scale;
+  const rect = element.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
 export function ReplayRoute() {
@@ -233,6 +251,8 @@ export function ReplayRoute() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const lcuRefreshTimerRef = useRef<number | null>(null);
+  const dropzoneRef = useRef<HTMLButtonElement | null>(null);
+  const [draggingFolder, setDraggingFolder] = useState(false);
   const initialLoading = busy && snapshot === null;
 
   const refreshSnapshot = useCallback(async () => {
@@ -309,26 +329,89 @@ export function ReplayRoute() {
   const folders = snapshot?.folders ?? [];
   const clients = snapshot?.clients ?? [];
 
-  const addFolderFromFiles = async (files: File[]) => {
-    const folderPath = inferUploadedDirectoryPath(files);
-    if (!folderPath) {
-      setError(t("replay.directoryPathUnavailable"));
-      return;
-    }
+  const addFolderPath = useCallback(
+    async (folderPath: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const next = await invoke<ReplayLibrarySnapshot>("replay_add_folder", {
+          path: folderPath,
+        });
+        setSnapshot(next);
+      } catch (caught) {
+        setError(t("replay.operationFailed", { reason: String(caught) }));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [t],
+  );
 
+  const pickFolder = async () => {
     setBusy(true);
     setError(null);
     try {
-      const next = await invoke<ReplayLibrarySnapshot>("replay_add_folder", {
-        path: folderPath,
-      });
-      setSnapshot(next);
+      const next = await invoke<ReplayLibrarySnapshot | null>(
+        "replay_pick_folder",
+      );
+      if (next) {
+        setSnapshot(next);
+      }
     } catch (caught) {
       setError(t("replay.operationFailed", { reason: String(caught) }));
     } finally {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    let disposed = false;
+    let disposeDragDrop: (() => void) | null = null;
+
+    getCurrentWebview()
+      .onDragDropEvent((event) => {
+        const payload = event.payload;
+        const dropzone = dropzoneRef.current;
+
+        if (!dropzone) {
+          setDraggingFolder(false);
+          return;
+        }
+
+        if (payload.type === "enter" || payload.type === "over") {
+          setDraggingFolder(
+            isPositionInsideElement(payload.position, dropzone),
+          );
+          return;
+        }
+
+        if (payload.type === "drop") {
+          const inside = isPositionInsideElement(payload.position, dropzone);
+          setDraggingFolder(false);
+          if (inside && payload.paths[0]) {
+            void addFolderPath(payload.paths[0]);
+          }
+          return;
+        }
+
+        setDraggingFolder(false);
+      })
+      .then((unlisten) => {
+        if (disposed) {
+          unlisten();
+          return;
+        }
+        disposeDragDrop = unlisten;
+      })
+      .catch((caught) => {
+        setError(t("replay.operationFailed", { reason: String(caught) }));
+      });
+
+    return () => {
+      disposed = true;
+      disposeDragDrop?.();
+    };
+  }, [addFolderPath, t]);
 
   const openFolder = async (path: string) => {
     setError(null);
@@ -401,73 +484,78 @@ export function ReplayRoute() {
         <aside className={s.side}>
           <section className={s.panel}>
             <span className={s.panelTitle}>{t("replay.folders")}</span>
-            <FileUpload.Root
-              accept={[".rofl"]}
-              directory
-              maxFiles={5000}
+            <button
+              ref={dropzoneRef}
+              type="button"
+              className={`${s.directoryDropzone} ${s.directoryTrigger}`}
               disabled={busy}
-              onFileAccept={(details) => {
-                void addFolderFromFiles(details.files);
+              data-dragging={draggingFolder ? "" : undefined}
+              aria-label="Choose replay folder"
+              onClick={() => {
+                void pickFolder();
               }}
             >
-              <FileUpload.Dropzone className={s.directoryDropzone}>
-                <FileUpload.Trigger className={s.directoryTrigger}>
-                  <span className={s.resourceIconSlot}>
-                    <Upload size={14} aria-hidden="true" />
-                  </span>
-                  <span className={s.directoryText}>
-                    <span className={s.primaryText}>
-                      {t("replay.folderDropzone")}
-                    </span>
-                    <span className={s.dropzoneText}>ROFL</span>
-                  </span>
-                </FileUpload.Trigger>
-              </FileUpload.Dropzone>
-              <FileUpload.HiddenInput />
-            </FileUpload.Root>
+              <span className={s.resourceIconSlot}>
+                <Upload size={14} aria-hidden="true" />
+              </span>
+              <span className={s.directoryText}>
+                <span className={s.primaryText}>
+                  {t("replay.folderDropzone")}
+                </span>
+                <span className={s.dropzoneText}>ROFL</span>
+              </span>
+            </button>
             <div className={s.stack}>
               {initialLoading ? (
                 <LoadingResourceRow label={t("replay.loadingFolders")} />
               ) : null}
               {!initialLoading &&
-                folders.map((folder) => (
-                  <div key={folder.path} className={s.resourceRow}>
-                    <button
-                      type="button"
-                      className={s.folderOpenButton}
-                      aria-label="Open replay folder"
-                      disabled={!folder.exists}
-                      onClick={() => {
-                        void openFolder(folder.path);
-                      }}
-                    >
-                      <span className={s.resourceIconSlot}>
-                        <FolderOpen size={14} aria-hidden="true" />
-                      </span>
-                      <span className={s.resourceText}>
-                        <AppTooltip content={folder.path}>
-                          <span className={s.primaryText}>{folder.path}</span>
-                        </AppTooltip>
-                        <span className={s.mutedText}>
-                          {folder.exists
-                            ? t("replay.enabled")
-                            : t("replay.missing")}
+                folders.map((folder) => {
+                  const removable = folderCanRemove(folder);
+                  return (
+                    <div key={folder.path} className={s.resourceRow}>
+                      <button
+                        type="button"
+                        className={s.folderOpenButton}
+                        aria-label="Open replay folder"
+                        disabled={!folder.exists}
+                        onClick={() => {
+                          void openFolder(folder.path);
+                        }}
+                      >
+                        <span className={s.resourceIconSlot}>
+                          <FolderOpen size={14} aria-hidden="true" />
                         </span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className={s.smallButton}
-                      aria-label="Remove replay folder"
-                      disabled={busy}
-                      onClick={() => {
-                        void removeFolder(folder.path);
-                      }}
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                    </button>
-                  </div>
-                ))}
+                        <span className={s.resourceText}>
+                          <AppTooltip content={folderTooltip(folder, t)}>
+                            <span className={s.primaryText}>{folder.path}</span>
+                          </AppTooltip>
+                          <span className={s.mutedText}>
+                            {folderStatusLabel(folder, t)}
+                          </span>
+                        </span>
+                      </button>
+                      {removable ? (
+                        <button
+                          type="button"
+                          className={s.smallButton}
+                          aria-label="Remove replay folder"
+                          disabled={busy}
+                          onClick={() => {
+                            void removeFolder(folder.path);
+                          }}
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      ) : (
+                        <span
+                          className={s.resourceActionSlot}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           </section>
 

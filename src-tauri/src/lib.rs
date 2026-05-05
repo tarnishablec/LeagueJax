@@ -230,6 +230,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             present_main_window(app);
         }))
@@ -260,6 +261,7 @@ pub fn run() {
             replay_get_snapshot,
             replay_scan_folders,
             replay_add_folder,
+            replay_pick_folder,
             replay_remove_folder,
             replay_open_folder,
             replay_reveal_entry,

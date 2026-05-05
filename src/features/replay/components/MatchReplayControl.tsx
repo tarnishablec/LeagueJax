@@ -37,7 +37,7 @@ function replayLabel(
     case "watch":
       return t("replay.matchReplay.watch");
     case "downloading":
-      return t("replay.matchReplay.downloading", {progress});
+      return t("replay.matchReplay.downloading", { progress });
     case "incompatible":
       return t("replay.matchReplay.incompatible");
     default:
@@ -76,15 +76,15 @@ function replayIcon(kind: ReplayIconKind): ReactNode {
   switch (kind) {
     case "error":
     case "incompatible":
-      return <AlertTriangle size={15} aria-hidden="true"/>;
+      return <AlertTriangle size={15} aria-hidden="true" />;
     case "busy":
-      return <Loader size={15} aria-hidden="true" className={s.spin}/>;
+      return <Loader size={15} aria-hidden="true" className={s.spin} />;
     case "watch":
-      return <Play size={15} aria-hidden="true"/>;
+      return <Play size={15} aria-hidden="true" />;
     case "checking":
-      return <RefreshCw size={15} aria-hidden="true"/>;
+      return <RefreshCw size={15} aria-hidden="true" />;
     case "download":
-      return <Download size={15} aria-hidden="true"/>;
+      return <Download size={15} aria-hidden="true" />;
   }
 }
 
@@ -99,11 +99,11 @@ function replayTooltip(
 }
 
 export function MatchReplayControl({
-                                     context,
-                                   }: {
+  context,
+}: {
   context: ReplayMatchContext;
 }) {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const replay = useMatchReplay(context);
   const state = replay.downloadState;
   const busy = replay.isLoading || replay.isActing || state === "downloading";
@@ -128,9 +128,7 @@ export function MatchReplayControl({
             })}
             aria-label="Replay action"
             disabled={disabled}
-            onClick={() =>
-              void onClick()
-            }
+            onClick={() => void onClick()}
           >
             {icon}
           </button>
