@@ -35,6 +35,21 @@ export const replayI18n: Resource = {
       size: "Size",
       modified: "Modified",
       operationFailed: "Operation failed: {{reason}}",
+      playTooltip: {
+        unavailable: "Replay unavailable",
+        matched: "{{family}} {{server}} {{version}}",
+        reason: {
+          missingGameId: "Replay file name does not include a game ID",
+          noRunningClient: "No running League client detected",
+          missingPlatformId: "Replay file name does not include a server",
+          unknownFamily: "Replay server type could not be identified",
+          missingVersion: "Replay version could not be parsed",
+          missingServerClient:
+            "No running {{family}} client matches {{server}}",
+          versionMismatch:
+            "No running {{family}} client for {{server}} matches replay version {{version}}",
+        },
+      },
       matchReplay: {
         checking: "Checking",
         download: "Download replay",
@@ -78,6 +93,20 @@ export const replayI18n: Resource = {
       size: "大小",
       modified: "修改时间",
       operationFailed: "操作失败：{{reason}}",
+      playTooltip: {
+        unavailable: "回放不可用",
+        matched: "{{family}} {{server}} {{version}}",
+        reason: {
+          missingGameId: "回放文件名缺少对局 ID",
+          noRunningClient: "没有检测到正在运行的 League 客户端",
+          missingPlatformId: "回放文件名缺少大区",
+          unknownFamily: "无法识别回放所属客户端类型",
+          missingVersion: "无法解析回放版本",
+          missingServerClient: "没有正在运行的 {{family}} {{server}} 客户端",
+          versionMismatch:
+            "正在运行的 {{family}} {{server}} 客户端版本与回放版本 {{version}} 不匹配",
+        },
+      },
       matchReplay: {
         checking: "检查中",
         download: "下载回放",
@@ -123,6 +152,21 @@ export const replayI18n: Resource = {
       size: "サイズ",
       modified: "更新日時",
       operationFailed: "操作に失敗しました: {{reason}}",
+      playTooltip: {
+        unavailable: "リプレイは利用できません",
+        matched: "{{family}} {{server}} {{version}}",
+        reason: {
+          missingGameId: "リプレイファイル名にゲーム ID がありません",
+          noRunningClient: "実行中の League クライアントが検出されません",
+          missingPlatformId: "リプレイファイル名にサーバーがありません",
+          unknownFamily: "リプレイのクライアント種別を識別できません",
+          missingVersion: "リプレイのバージョンを解析できません",
+          missingServerClient:
+            "実行中の {{family}} {{server}} クライアントがありません",
+          versionMismatch:
+            "実行中の {{family}} {{server}} クライアントはリプレイバージョン {{version}} と一致しません",
+        },
+      },
       matchReplay: {
         checking: "確認中",
         download: "リプレイをダウンロード",

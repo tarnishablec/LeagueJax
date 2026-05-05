@@ -133,15 +133,71 @@ function clientServerLabel(client: ReplayLibrarySnapshot["clients"][number]) {
   return client.serverId ?? `Client #${client.pid}`;
 }
 
-function playTooltip(entry: ReplayEntry): string {
+function launchUnavailableReason(
+  reason: string | null,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  if (!reason) return t("replay.playTooltip.unavailable");
+
+  if (reason === "Replay file name does not expose a game id") {
+    return t("replay.playTooltip.reason.missingGameId");
+  }
+  if (
+    reason === "No running League client was detected" ||
+    reason === "No running League client detected"
+  ) {
+    return t("replay.playTooltip.reason.noRunningClient");
+  }
+  if (reason === "Replay file name does not expose a platform id") {
+    return t("replay.playTooltip.reason.missingPlatformId");
+  }
+  if (reason === "Replay platform family could not be resolved") {
+    return t("replay.playTooltip.reason.unknownFamily");
+  }
+  if (reason === "Replay metadata does not expose game version") {
+    return t("replay.playTooltip.reason.missingVersion");
+  }
+
+  const missingServer = reason.match(
+    /^No running (RIOT|TENCENT) client matches server (.+)$/,
+  );
+  if (missingServer) {
+    return t("replay.playTooltip.reason.missingServerClient", {
+      family: missingServer[1],
+      server: missingServer[2],
+    });
+  }
+
+  const versionMismatch = reason.match(
+    /^No running (RIOT|TENCENT) client for (.+) matches replay version (.+)$/,
+  );
+  if (versionMismatch) {
+    return t("replay.playTooltip.reason.versionMismatch", {
+      family: versionMismatch[1],
+      server: versionMismatch[2],
+      version: versionMismatch[3],
+    });
+  }
+
+  return reason;
+}
+
+function playTooltip(
+  entry: ReplayEntry,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
   if (!entry.launchAvailability.canLaunch) {
-    return entry.launchAvailability.reason ?? "Replay unavailable";
+    return launchUnavailableReason(entry.launchAvailability.reason, t);
   }
 
   const family = familyLabel(entry.launchAvailability.clientFamily);
   const server = entry.launchAvailability.clientServerId ?? "-";
   const version = entry.launchAvailability.clientGameVersion ?? "-";
-  return `${family} ${server} ${version}`;
+  return t("replay.playTooltip.matched", {
+    family,
+    server,
+    version,
+  });
 }
 
 function parentPath(path: string): string | null {
@@ -562,7 +618,7 @@ export function ReplayRoute() {
                     </span>
                     <span className={s.replayActionSpace} aria-hidden="true" />
                   </button>
-                  <AppTooltip content={playTooltip(entry)}>
+                  <AppTooltip content={playTooltip(entry, t)}>
                     <span className={s.replayPlayButton}>
                       <button
                         type="button"
