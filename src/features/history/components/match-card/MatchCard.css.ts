@@ -323,7 +323,6 @@ export const performanceBadge = recipe({
     lineHeight: 1,
     whiteSpace: "nowrap",
     fontStyle: "italic",
-
   },
   variants: {
     badge: {

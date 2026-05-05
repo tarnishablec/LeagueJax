@@ -50,7 +50,7 @@ export const checkboxControl = style({
   height: 18,
   borderRadius: 4,
   border: `1px solid ${theme.color.border}`,
-  background: theme.color.background,
+  background: theme.color.surface,
   color: "oklch(0.18 0.02 250)",
   display: "grid",
   placeItems: "center",

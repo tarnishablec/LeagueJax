@@ -53,7 +53,7 @@ export const queueIconFallback = style({
   height: 18,
   borderRadius: 4,
   outline: `1px solid color-mix(in oklch, ${theme.color.border} 80%, transparent)`,
-  background: `color-mix(in oklch, ${theme.color.foreground} 12%, transparent)`,
+  background: theme.color.surface,
 });
 
 export const idleText = style({

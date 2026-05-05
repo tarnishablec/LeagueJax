@@ -57,7 +57,9 @@ export function resolveMatchPerformanceBadgeForMatch(
   const groups = resolveMatchParticipantGroups(match);
   const meGroup =
     groups.find((group) =>
-      group.participants.some((participant) => isSameParticipant(participant, me)),
+      group.participants.some((participant) =>
+        isSameParticipant(participant, me),
+      ),
     ) ?? null;
 
   return resolveMatchPerformanceBadge({

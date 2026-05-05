@@ -14,6 +14,7 @@ import { HistoryShard } from "./history/manifest";
 import { I18nShard } from "./i18n/manifest";
 import { MiniShard } from "./mini/manifest";
 import { OngoingGameShard } from "./ongoing-game/manifest";
+import { ReplayShard } from "./replay/manifest";
 import { SettingsShard } from "./settings/manifest";
 import { ShellShard } from "./shell/manifest";
 import { StaticCacheShard } from "./static-cache/manifest";
@@ -99,6 +100,7 @@ export const initializeWebShards = async (): Promise<void> => {
       .register(new TrayShard())
       .register(new MiniShard())
       .register(new HistoryShard())
+      .register(new ReplayShard())
       .register(new OngoingGameShard())
       .register(new AutomationShard())
       .register(new ToolsShard())

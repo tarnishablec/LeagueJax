@@ -10,6 +10,18 @@ export const expandedRoot = style({
   background: `color-mix(in srgb, ${theme.color.surface} 72%, transparent)`,
 });
 
+export const header = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) max-content",
+  alignItems: "center",
+  gap: 8,
+  "@media": {
+    "screen and (max-width: 760px)": {
+      gridTemplateColumns: "1fr",
+    },
+  },
+});
+
 export const tabList = style({
   width: "100%",
   minWidth: 0,
