@@ -12,14 +12,18 @@ use crate::shards::replay::ReplayShard;
 pub async fn replay_get_snapshot(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<ReplayLibrarySnapshot, AppError> {
-    jax.get_shard::<ReplayShard>().snapshot()
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.snapshot(&lcu).await
 }
 
 #[tauri::command]
 pub async fn replay_scan_folders(
     jax: State<'_, Arc<Jax>>,
 ) -> Result<ReplayLibrarySnapshot, AppError> {
-    jax.get_shard::<ReplayShard>().scan()
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.scan(&lcu).await
 }
 
 #[tauri::command]
@@ -27,7 +31,9 @@ pub async fn replay_add_folder(
     path: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<ReplayLibrarySnapshot, AppError> {
-    jax.get_shard::<ReplayShard>().add_folder(path)
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.add_folder(&lcu, path).await
 }
 
 #[tauri::command]
@@ -35,7 +41,9 @@ pub async fn replay_remove_folder(
     path: String,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<ReplayLibrarySnapshot, AppError> {
-    jax.get_shard::<ReplayShard>().remove_folder(path)
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.remove_folder(&lcu, path).await
 }
 
 #[tauri::command]
@@ -87,5 +95,7 @@ pub async fn replay_watch_match(game_id: u64, jax: State<'_, Arc<Jax>>) -> Resul
 
 #[tauri::command]
 pub async fn replay_play_entry(path: String, jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
-    jax.get_shard::<ReplayShard>().play_entry(path)
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    replay.play_entry(&lcu, path).await
 }

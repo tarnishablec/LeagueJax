@@ -1,4 +1,4 @@
-import { keyframes, style } from "@vanilla-extract/css";
+import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css.ts";
 
 const spinKeyframes = keyframes({
@@ -148,15 +148,15 @@ export const directoryTrigger = style({
   minHeight: 74,
   boxSizing: "border-box",
   display: "grid",
-  gridTemplateColumns: "24px minmax(0, 1fr) 40px",
-  alignItems: "center",
-  gap: 10,
+  justifyItems: "center",
+  alignContent: "center",
+  gap: 6,
   border: "none",
   borderRadius: 8,
   padding: 12,
   background: "transparent",
   color: theme.color.foreground,
-  textAlign: "left",
+  textAlign: "center",
   cursor: "pointer",
   selectors: {
     "&:disabled": {
@@ -236,7 +236,7 @@ export const resourceRow = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) 40px",
   alignItems: "center",
-  gap: 8,
+  gap: 12,
   padding: "7px 8px",
   borderRadius: 6,
   outline: "1px solid transparent",
@@ -255,7 +255,7 @@ export const loadingResourceRow = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) 40px",
   alignItems: "center",
-  gap: 8,
+  gap: 12,
   padding: "7px 8px",
   borderRadius: 6,
   outline: "1px solid transparent",
@@ -267,7 +267,7 @@ export const loadingResourceMain = style({
   display: "grid",
   gridTemplateColumns: "24px minmax(0, 1fr)",
   alignItems: "center",
-  gap: 10,
+  gap: 12,
 });
 
 export const loadingReplayRow = style({
@@ -340,6 +340,29 @@ export const resourceText = style({
   gap: 3,
 });
 
+export const directoryText = style([
+  resourceText,
+  {
+    justifyItems: "center",
+  },
+]);
+
+export const resourceClientMain = style({
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "24px minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 10,
+});
+
+export const resourceTitleLine = style({
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 6,
+});
+
 export const folderOpenButton = style({
   minWidth: 0,
   display: "grid",
@@ -401,6 +424,62 @@ export const mutedText = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+});
+
+const tencentColor = "oklch(0.74 0.17 62)";
+const riotColor = "oklch(0.72 0.12 230)";
+
+export const familyBadge = style({
+  minWidth: 0,
+  height: 18,
+  boxSizing: "border-box",
+  display: "inline-grid",
+  placeItems: "center",
+  borderRadius: 4,
+  padding: "0 6px",
+  outline: "1px solid transparent",
+  fontSize: "0.625rem",
+  fontWeight: 800,
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+});
+
+export const familyBadgeTone = styleVariants({
+  tencent: {
+    color: tencentColor,
+    outlineColor: `color-mix(in srgb, ${tencentColor} 58%, ${theme.color.border})`,
+    background: `color-mix(in srgb, ${tencentColor} 12%, transparent)`,
+  },
+  riot: {
+    color: riotColor,
+    outlineColor: `color-mix(in srgb, ${riotColor} 58%, ${theme.color.border})`,
+    background: `color-mix(in srgb, ${riotColor} 12%, transparent)`,
+  },
+  unknown: {
+    color: theme.color.mutedForeground,
+    outlineColor: theme.color.border,
+    background: `color-mix(in srgb, ${theme.color.deep} 34%, transparent)`,
+  },
+});
+
+export const clientTone = styleVariants({
+  tencent: {
+    outlineColor: `color-mix(in srgb, ${tencentColor} 44%, ${theme.color.border})`,
+    selectors: {
+      "&:hover": {
+        outlineColor: `color-mix(in srgb, ${tencentColor} 68%, ${theme.color.border})`,
+      },
+    },
+  },
+  riot: {
+    outlineColor: `color-mix(in srgb, ${riotColor} 44%, ${theme.color.border})`,
+    selectors: {
+      "&:hover": {
+        outlineColor: `color-mix(in srgb, ${riotColor} 68%, ${theme.color.border})`,
+      },
+    },
+  },
+  unknown: {},
 });
 
 export const content = style({
@@ -468,6 +547,15 @@ export const replayOpenContent = style({
   gap: 3,
 });
 
+export const replayTitleLine = style({
+  minWidth: 0,
+  display: "grid",
+  gridTemplateColumns: "minmax(0, max-content) max-content",
+  alignItems: "center",
+  justifyContent: "start",
+  gap: 10,
+});
+
 export const replayActionSpace = style({
   width: 40,
   height: 40,
@@ -479,6 +567,31 @@ export const replayPlayButton = style({
   right: 10,
   zIndex: 1,
   transform: "translateY(-50%)",
+  display: "block",
+});
+
+export const playButtonTone = styleVariants({
+  tencent: {
+    outline: `1px solid color-mix(in srgb, ${tencentColor} 62%, ${theme.color.border})`,
+    background: `color-mix(in srgb, ${tencentColor} 22%, ${theme.color.accent})`,
+    selectors: {
+      "&:hover:not(:disabled)": {
+        outline: `2px solid ${tencentColor}`,
+        background: `color-mix(in srgb, ${tencentColor} 34%, ${theme.color.accent})`,
+      },
+    },
+  },
+  riot: {
+    outline: `1px solid color-mix(in srgb, ${riotColor} 62%, ${theme.color.border})`,
+    background: `color-mix(in srgb, ${riotColor} 22%, ${theme.color.accent})`,
+    selectors: {
+      "&:hover:not(:disabled)": {
+        outline: `2px solid ${riotColor}`,
+        background: `color-mix(in srgb, ${riotColor} 34%, ${theme.color.accent})`,
+      },
+    },
+  },
+  unknown: {},
 });
 
 export const replayMeta = style({

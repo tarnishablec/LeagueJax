@@ -5,7 +5,6 @@ use core::error::Error;
 use std::cmp::Reverse;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -13,34 +12,35 @@ use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 
 use self::types::{
-    ReplayEntry, ReplayExecutable, ReplayFolder, ReplayLaunchAvailability, ReplayLibrarySnapshot,
-    ReplayMatchContext, ReplayMatchState,
+    ReplayClient, ReplayClientFamily, ReplayEntry, ReplayFolder, ReplayLaunchAvailability,
+    ReplayLibrarySnapshot, ReplayMatchContext, ReplayMatchState,
 };
 use crate::error::AppError;
-use crate::shards::lcu::installs::discover_lol_client_installs;
+use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::LcuShard;
 use crate::shards::settings::types::{SettingDefinitionDto, SettingScopeDto};
 use crate::shards::settings::{SettingHandle, SettingsShard};
+use crate::utils::league_cmd_arg::LeagueClientCmdArgs;
 
 const REPLAY_FOLDERS_SETTING_ID: &str = "replay.library.folders";
 
 pub struct ReplayShard {
     folders: OnceLock<SettingHandle>,
-    executables: RwLock<Vec<ReplayExecutable>>,
+    clients: RwLock<Vec<ReplayClient>>,
 }
 
 impl ReplayShard {
     pub fn new() -> Self {
         Self {
             folders: OnceLock::new(),
-            executables: RwLock::new(Vec::new()),
+            clients: RwLock::new(Vec::new()),
         }
     }
 
-    pub fn snapshot(&self) -> Result<ReplayLibrarySnapshot, AppError> {
+    pub async fn snapshot(&self, lcu_shard: &LcuShard) -> Result<ReplayLibrarySnapshot, AppError> {
         let folders = self.load_folders()?;
-        let executables = self.cached_executables()?;
-        let entries = scan_replay_entries(&folders, &executables)?;
+        let clients = self.refresh_clients(lcu_shard).await?;
+        let entries = scan_replay_entries(&folders, &clients)?;
 
         Ok(ReplayLibrarySnapshot {
             folders: folders
@@ -51,32 +51,39 @@ impl ReplayShard {
                     enabled: true,
                 })
                 .collect(),
-            executables,
+            clients,
             entries,
         })
     }
 
-    pub fn scan(&self) -> Result<ReplayLibrarySnapshot, AppError> {
-        self.refresh_executables()?;
-        self.snapshot()
+    pub async fn scan(&self, lcu_shard: &LcuShard) -> Result<ReplayLibrarySnapshot, AppError> {
+        self.snapshot(lcu_shard).await
     }
 
-    pub fn add_folder(&self, path: String) -> Result<ReplayLibrarySnapshot, AppError> {
+    pub async fn add_folder(
+        &self,
+        lcu_shard: &LcuShard,
+        path: String,
+    ) -> Result<ReplayLibrarySnapshot, AppError> {
         let path = normalize_path_string(&path)?;
         let mut folders = self.load_folders()?;
         if !folders.iter().any(|folder| folder == &path) {
             folders.push(path);
             self.store_folders(&folders)?;
         }
-        self.snapshot()
+        self.snapshot(lcu_shard).await
     }
 
-    pub fn remove_folder(&self, path: String) -> Result<ReplayLibrarySnapshot, AppError> {
+    pub async fn remove_folder(
+        &self,
+        lcu_shard: &LcuShard,
+        path: String,
+    ) -> Result<ReplayLibrarySnapshot, AppError> {
         let path = normalize_path_string(&path)?;
         let mut folders = self.load_folders()?;
         folders.retain(|folder| folder != &path);
         self.store_folders(&folders)?;
-        self.snapshot()
+        self.snapshot(lcu_shard).await
     }
 
     pub fn open_folder(&self, path: String) -> Result<(), AppError> {
@@ -115,17 +122,14 @@ impl ReplayShard {
         validate_game_id(context.game_id)?;
         let lcu = focused_lcu(lcu_shard).await?;
         let configuration = lcu.api().get_replay_configuration().await?;
-        let game_version = context
-            .game_version
-            .as_deref()
-            .filter(|value| !value.trim().is_empty())
-            .or_else(|| {
-                if configuration.game_version.trim().is_empty() {
-                    None
-                } else {
-                    Some(configuration.game_version.as_str())
-                }
-            });
+        let game_version = if configuration.game_version.trim().is_empty() {
+            context
+                .game_version
+                .as_deref()
+                .filter(|value| !value.trim().is_empty())
+        } else {
+            Some(configuration.game_version.as_str())
+        };
 
         lcu.api()
             .create_replay_metadata(
@@ -179,7 +183,7 @@ impl ReplayShard {
         lcu.api().watch_replay(game_id).await
     }
 
-    pub fn play_entry(&self, path: String) -> Result<(), AppError> {
+    pub async fn play_entry(&self, lcu_shard: &LcuShard, path: String) -> Result<(), AppError> {
         let replay_path = PathBuf::from(normalize_path_string(&path)?);
         if !replay_path.is_file() || !is_rofl_file(&replay_path) {
             return Err(AppError::other("Replay entry is not a valid .rofl file"));
@@ -188,53 +192,51 @@ impl ReplayShard {
         let folders = self.load_folders()?;
         ensure_replay_path_allowed(&replay_path, &folders)?;
 
+        let parsed = parse_replay_file_name(&replay_path);
+        let game_id = parsed
+            .game_id
+            .ok_or_else(|| AppError::other("Replay file name does not expose a game id"))?;
+        validate_game_id(game_id)?;
+
         let replay_metadata = parser::read_rofl_metadata(&replay_path).map_err(AppError::other)?;
         let replay_version = replay_metadata
             .game_version
             .as_deref()
             .ok_or_else(|| AppError::other("Replay metadata does not expose game version"))?;
-        let executables = self.cached_executables()?;
-        let executable =
-            match_replay_executable(replay_version, &executables).ok_or_else(|| {
-                AppError::other(format!(
-                    "No League executable matches replay version {replay_version}"
-                ))
-            })?;
-        let executable_path = PathBuf::from(&executable.path);
-        let mut command = Command::new(&executable_path);
-        command.arg(&replay_path);
-        if let Some(game_base_dir) = executable.game_base_dir.as_deref() {
-            command.arg(format!("-GameBaseDir={game_base_dir}"));
-        }
-        command
-            .arg("-SkipRads")
-            .arg("-SkipBuild")
-            .arg("-EnableLNP")
-            .arg("-UseNewX3D=1")
-            .arg("-UseNewX3DFramebuffers=1");
-        if let Some(parent) = executable_path.parent() {
-            command.current_dir(parent);
+
+        let family = replay_family(parsed.platform_id.as_deref());
+        let clients = self.refresh_clients(lcu_shard).await?;
+        let availability = resolve_launch_availability(
+            parsed.game_id,
+            Some(replay_version),
+            parsed.platform_id.as_deref(),
+            family,
+            &clients,
+        );
+
+        if !availability.can_launch {
+            return Err(AppError::other(availability.reason.unwrap_or_else(|| {
+                "Replay cannot be launched by any running client".to_string()
+            })));
         }
 
-        command.spawn()?;
+        let client_pid = availability
+            .client_pid
+            .ok_or_else(|| AppError::other("Replay matched no running client session"))?;
+        let manager = lcu_shard.manager().ok_or(AppError::LcuNotConnected)?;
+        let lcu = manager
+            .session_for_pid(client_pid)
+            .filter(|session| session.is_ready())
+            .ok_or_else(|| AppError::other("Matched League client is no longer connected"))?;
+
+        lcu.api().watch_replay(game_id).await?;
         Ok(())
     }
 
-    fn cached_executables(&self) -> Result<Vec<ReplayExecutable>, AppError> {
-        let executables = self
-            .executables
-            .read()
-            .map_err(|_| AppError::MutexPoisoned)?;
-        Ok(executables.clone())
-    }
-
-    fn refresh_executables(&self) -> Result<Vec<ReplayExecutable>, AppError> {
-        let next = detect_replay_executables();
-        let mut executables = self
-            .executables
-            .write()
-            .map_err(|_| AppError::MutexPoisoned)?;
-        *executables = next.clone();
+    async fn refresh_clients(&self, lcu_shard: &LcuShard) -> Result<Vec<ReplayClient>, AppError> {
+        let next = detect_replay_clients(lcu_shard).await?;
+        let mut clients = self.clients.write().map_err(|_| AppError::MutexPoisoned)?;
+        *clients = next.clone();
         Ok(next)
     }
 
@@ -282,14 +284,11 @@ impl Shard for ReplayShard {
             return Err(AppError::other("Replay folders setting is already initialized").into());
         }
 
-        self.refresh_executables()?;
         Ok(())
     }
 }
 
-async fn focused_lcu(
-    lcu_shard: &LcuShard,
-) -> Result<Arc<crate::shards::lcu::session::LcuSession>, AppError> {
+async fn focused_lcu(lcu_shard: &LcuShard) -> Result<Arc<LcuSession>, AppError> {
     let manager = lcu_shard.manager().ok_or(AppError::LcuNotConnected)?;
     manager.focused().await.ok_or(AppError::LcuNotConnected)
 }
@@ -323,7 +322,7 @@ fn default_replay_folders() -> Vec<String> {
 
 fn scan_replay_entries(
     folders: &[String],
-    executables: &[ReplayExecutable],
+    clients: &[ReplayClient],
 ) -> Result<Vec<ReplayEntry>, AppError> {
     let mut entries = Vec::new();
     let mut seen = BTreeSet::new();
@@ -333,7 +332,7 @@ fn scan_replay_entries(
         if !root.is_dir() {
             continue;
         }
-        scan_replay_dir(&root, executables, &mut seen, &mut entries)?;
+        scan_replay_dir(&root, clients, &mut seen, &mut entries)?;
     }
 
     entries.sort_by_key(|entry| Reverse(entry.modified_at_ms));
@@ -342,7 +341,7 @@ fn scan_replay_entries(
 
 fn scan_replay_dir(
     root: &Path,
-    executables: &[ReplayExecutable],
+    clients: &[ReplayClient],
     seen: &mut BTreeSet<String>,
     entries: &mut Vec<ReplayEntry>,
 ) -> Result<(), AppError> {
@@ -393,8 +392,14 @@ fn scan_replay_dir(
                 }
                 Err(error) => (None, Some(error), None, None, None),
             };
-            let launch_availability =
-                resolve_launch_availability(patch_version.as_deref(), executables);
+            let family = replay_family(parsed.platform_id.as_deref());
+            let launch_availability = resolve_launch_availability(
+                parsed.game_id,
+                patch_version.as_deref(),
+                parsed.platform_id.as_deref(),
+                family,
+                clients,
+            );
             entries.push(ReplayEntry {
                 id: path_string.clone(),
                 path: path_string,
@@ -404,6 +409,7 @@ fn scan_replay_dir(
                     .unwrap_or_default()
                     .to_string(),
                 platform_id: parsed.platform_id,
+                family,
                 game_id: parsed.game_id,
                 patch_version,
                 metadata_error,
@@ -454,87 +460,257 @@ fn parse_replay_file_name(path: &Path) -> ParsedReplayFileName {
 }
 
 fn resolve_launch_availability(
+    game_id: Option<u64>,
     patch_version: Option<&str>,
-    executables: &[ReplayExecutable],
+    platform_id: Option<&str>,
+    family: Option<ReplayClientFamily>,
+    clients: &[ReplayClient],
 ) -> ReplayLaunchAvailability {
-    if executables.is_empty() {
+    if game_id.is_none() {
+        return launch_unavailable("Replay file name does not expose a game id");
+    }
+
+    if clients.is_empty() {
+        return launch_unavailable("No running League client was detected");
+    }
+
+    let Some(platform_id) = platform_id.and_then(normalize_platform_id) else {
+        return launch_unavailable("Replay file name does not expose a platform id");
+    };
+
+    let Some(family) = family else {
+        return launch_unavailable("Replay platform family could not be resolved");
+    };
+
+    let same_server_clients = clients
+        .iter()
+        .filter(|client| {
+            client.family == family
+                && client
+                    .server_id
+                    .as_deref()
+                    .is_some_and(|server_id| server_id == platform_id)
+        })
+        .collect::<Vec<_>>();
+
+    if same_server_clients.is_empty() {
         return ReplayLaunchAvailability {
             can_launch: false,
-            reason: Some("No League executable was detected from Riot installs".to_string()),
-            executable_path: None,
+            reason: Some(format!(
+                "No running {} client matches server {platform_id}",
+                family_label(family)
+            )),
+            client_pid: None,
+            client_family: None,
+            client_server_id: None,
+            client_game_version: None,
         };
     }
 
     let Some(patch_version) = patch_version else {
-        return ReplayLaunchAvailability {
-            can_launch: false,
-            reason: Some("Replay metadata does not expose game version".to_string()),
-            executable_path: None,
-        };
+        return launch_unavailable("Replay metadata does not expose game version");
     };
 
-    let Some(executable) = match_replay_executable(patch_version, executables) else {
+    let Some(client) = match_replay_client(patch_version, &same_server_clients) else {
         return ReplayLaunchAvailability {
             can_launch: false,
             reason: Some(format!(
-                "No League executable matches replay version {patch_version}"
+                "No running {} client for {platform_id} matches replay version {patch_version}",
+                family_label(family)
             )),
-            executable_path: None,
+            client_pid: None,
+            client_family: None,
+            client_server_id: None,
+            client_game_version: None,
         };
     };
 
     ReplayLaunchAvailability {
         can_launch: true,
         reason: None,
-        executable_path: Some(executable.path.clone()),
+        client_pid: Some(client.pid),
+        client_family: Some(client.family),
+        client_server_id: client.server_id.clone(),
+        client_game_version: client.game_version.clone(),
     }
 }
 
-fn detect_replay_executables() -> Vec<ReplayExecutable> {
-    discover_lol_client_installs()
-        .into_iter()
-        .map(|install| {
-            let game_version = install.game_version;
-            let label = game_version
-                .as_deref()
-                .and_then(version_major_minor)
-                .map(|version| format!("Patch {version}"))
-                .unwrap_or_else(|| "League of Legends".to_string());
-
-            ReplayExecutable {
-                path: install.game_executable_path.to_string_lossy().to_string(),
-                label,
-                game_base_dir: Some(install.game_base_dir.to_string_lossy().to_string()),
-                game_version,
-                exists: install.game_executable_path.is_file(),
-            }
-        })
-        .collect()
+fn launch_unavailable(reason: impl Into<String>) -> ReplayLaunchAvailability {
+    ReplayLaunchAvailability {
+        can_launch: false,
+        reason: Some(reason.into()),
+        client_pid: None,
+        client_family: None,
+        client_server_id: None,
+        client_game_version: None,
+    }
 }
 
-fn match_replay_executable<'a>(
+async fn detect_replay_clients(lcu_shard: &LcuShard) -> Result<Vec<ReplayClient>, AppError> {
+    let Some(manager) = lcu_shard.manager() else {
+        return Ok(Vec::new());
+    };
+
+    let focused_pid = manager.focused_pid().await;
+    let mut clients = Vec::new();
+    for session in manager.ready_sessions() {
+        let auth = session.auth();
+        let family = client_family(&auth.cmd_args);
+        let server_id = client_server_id(&auth.cmd_args);
+        let install_dir = session.install_dir().map(ToString::to_string);
+        let (game_version, available, reason) = replay_client_configuration(&session).await;
+
+        clients.push(ReplayClient {
+            pid: auth.pid,
+            label: replay_client_label(family, server_id.as_deref(), auth.pid),
+            family,
+            server_id,
+            game_version,
+            install_dir,
+            is_focused: focused_pid == Some(auth.pid),
+            available,
+            reason,
+        });
+    }
+
+    clients.sort_by(|left, right| {
+        family_label(left.family)
+            .cmp(family_label(right.family))
+            .then_with(|| left.server_id.cmp(&right.server_id))
+            .then_with(|| left.pid.cmp(&right.pid))
+    });
+    Ok(clients)
+}
+
+async fn replay_client_configuration(
+    session: &Arc<LcuSession>,
+) -> (Option<String>, bool, Option<String>) {
+    match session.api().get_replay_configuration().await {
+        Ok(configuration) => {
+            let game_version = normalize_version_string(&configuration.game_version);
+            if !configuration.is_replays_enabled {
+                return (
+                    game_version,
+                    false,
+                    Some("LCU reports replays are disabled".to_string()),
+                );
+            }
+            (game_version, true, None)
+        }
+        Err(error) => (
+            None,
+            false,
+            Some(format!("Failed to read LCU replay configuration: {error}")),
+        ),
+    }
+}
+
+fn match_replay_client<'a>(
     replay_version: &str,
-    executables: &'a [ReplayExecutable],
-) -> Option<&'a ReplayExecutable> {
+    clients: &'a [&'a ReplayClient],
+) -> Option<&'a ReplayClient> {
     let replay_version = normalize_version_string(replay_version)?;
-    if let Some(executable) = executables.iter().find(|executable| {
-        executable
-            .game_version
-            .as_deref()
-            .and_then(normalize_version_string)
-            .is_some_and(|version| version == replay_version)
+    if let Some(client) = clients.iter().copied().find(|client| {
+        client.available
+            && client
+                .game_version
+                .as_deref()
+                .and_then(normalize_version_string)
+                .is_some_and(|version| version == replay_version)
     }) {
-        return Some(executable);
+        return Some(client);
     }
 
     let replay_patch = version_major_minor(&replay_version)?;
-    executables.iter().find(|executable| {
-        executable
-            .game_version
-            .as_deref()
-            .and_then(version_major_minor)
-            .is_some_and(|version| version == replay_patch)
+    clients.iter().copied().find(|client| {
+        client.available
+            && client
+                .game_version
+                .as_deref()
+                .and_then(version_major_minor)
+                .is_some_and(|version| version == replay_patch)
     })
+}
+
+fn replay_family(platform_id: Option<&str>) -> Option<ReplayClientFamily> {
+    let platform_id = normalize_platform_id(platform_id?)?;
+    if is_riot_platform_id(&platform_id) {
+        Some(ReplayClientFamily::Riot)
+    } else {
+        Some(ReplayClientFamily::Tencent)
+    }
+}
+
+fn client_family(args: &LeagueClientCmdArgs) -> ReplayClientFamily {
+    match args {
+        LeagueClientCmdArgs::Tencent(_) => ReplayClientFamily::Tencent,
+        LeagueClientCmdArgs::Riot(_) => ReplayClientFamily::Riot,
+    }
+}
+
+fn client_server_id(args: &LeagueClientCmdArgs) -> Option<String> {
+    match args {
+        LeagueClientCmdArgs::Tencent(args) => normalize_platform_id(&args.rso_platform_id),
+        LeagueClientCmdArgs::Riot(args) => riot_region_to_platform_id(&args.region),
+    }
+}
+
+fn replay_client_label(family: ReplayClientFamily, server_id: Option<&str>, pid: u32) -> String {
+    match server_id {
+        Some(server_id) => format!("{} {server_id}", family_label(family)),
+        None => format!("{} Client #{pid}", family_label(family)),
+    }
+}
+
+fn family_label(family: ReplayClientFamily) -> &'static str {
+    match family {
+        ReplayClientFamily::Tencent => "TENCENT",
+        ReplayClientFamily::Riot => "RIOT",
+    }
+}
+
+fn normalize_platform_id(value: &str) -> Option<String> {
+    let normalized = value.trim().to_ascii_uppercase();
+    if normalized.is_empty() {
+        return None;
+    }
+    Some(normalized)
+}
+
+const RIOT_PLATFORM_IDS: &[&str] = &[
+    "BR1", "EUN1", "EUW1", "JP1", "KR", "LA1", "LA2", "ME1", "NA1", "OC1", "PBE1", "PH2", "RU",
+    "SG2", "TH2", "TR1", "TW2", "VN2",
+];
+
+fn is_riot_platform_id(value: &str) -> bool {
+    RIOT_PLATFORM_IDS.iter().any(|id| id == &value)
+}
+
+fn riot_region_to_platform_id(region: &str) -> Option<String> {
+    let region = normalize_platform_id(region)?;
+    let platform = match region.as_str() {
+        "BR" => "BR1",
+        "EUN" | "EUNE" => "EUN1",
+        "EUW" => "EUW1",
+        "JP" => "JP1",
+        "KR" => "KR",
+        "LAN" => "LA1",
+        "LAS" => "LA2",
+        "ME" => "ME1",
+        "NA" => "NA1",
+        "OCE" => "OC1",
+        "PBE" => "PBE1",
+        "PH" => "PH2",
+        "RU" => "RU",
+        "SG" => "SG2",
+        "TH" => "TH2",
+        "TR" => "TR1",
+        "TW" => "TW2",
+        "VN" => "VN2",
+        value if is_riot_platform_id(value) => value,
+        value => value,
+    };
+    Some(platform.to_string())
 }
 
 fn normalize_version_string(version: &str) -> Option<String> {
@@ -595,4 +771,79 @@ fn ensure_replay_folder_allowed(folder_path: &Path, folders: &[String]) -> Resul
 fn system_time_to_epoch_ms(time: Option<SystemTime>) -> Option<i64> {
     let duration = time?.duration_since(UNIX_EPOCH).ok()?;
     i64::try_from(duration.as_millis()).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn replay_client(
+        pid: u32,
+        family: ReplayClientFamily,
+        server_id: &str,
+        game_version: &str,
+    ) -> ReplayClient {
+        ReplayClient {
+            pid,
+            label: replay_client_label(family, Some(server_id), pid),
+            family,
+            server_id: Some(server_id.to_string()),
+            game_version: Some(game_version.to_string()),
+            install_dir: None,
+            is_focused: false,
+            available: true,
+            reason: None,
+        }
+    }
+
+    #[test]
+    fn classifies_riot_and_tencent_platform_ids() {
+        assert_eq!(replay_family(Some("JP1")), Some(ReplayClientFamily::Riot));
+        assert_eq!(
+            replay_family(Some("hn1")),
+            Some(ReplayClientFamily::Tencent)
+        );
+        assert_eq!(riot_region_to_platform_id("JP").as_deref(), Some("JP1"));
+    }
+
+    #[test]
+    fn matches_running_client_by_family_server_and_patch() {
+        let clients = vec![
+            replay_client(1, ReplayClientFamily::Riot, "JP1", "16.9.772.8292"),
+            replay_client(2, ReplayClientFamily::Tencent, "HN1", "16.9.769.5709"),
+        ];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.1032"),
+            Some("JP1"),
+            Some(ReplayClientFamily::Riot),
+            &clients,
+        );
+
+        assert!(availability.can_launch);
+        assert_eq!(availability.client_pid, Some(1));
+        assert_eq!(availability.client_family, Some(ReplayClientFamily::Riot));
+    }
+
+    #[test]
+    fn disables_replay_when_family_or_server_does_not_match() {
+        let clients = vec![replay_client(
+            1,
+            ReplayClientFamily::Tencent,
+            "HN1",
+            "16.9.772.8292",
+        )];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.1032"),
+            Some("JP1"),
+            Some(ReplayClientFamily::Riot),
+            &clients,
+        );
+
+        assert!(!availability.can_launch);
+        assert!(availability.reason.is_some());
+    }
 }
