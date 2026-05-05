@@ -209,13 +209,11 @@ impl ReplayShard {
             .as_deref()
             .ok_or_else(|| AppError::other("Replay metadata does not expose game version"))?;
 
-        let family = replay_family(parsed.platform_id.as_deref());
         let clients = self.refresh_clients(lcu_shard).await?;
         let availability = resolve_launch_availability(
             parsed.game_id,
             Some(replay_version),
-            parsed.platform_id.as_deref(),
-            family,
+            replay_family(parsed.platform_id.as_deref()),
             &clients,
         );
 
@@ -551,6 +549,8 @@ fn scan_replay_dir(
                 game_length_ms,
                 last_game_chunk_id,
                 last_key_frame_id,
+                champion_ids,
+                champion_aliases,
             ) = match rofl_metadata {
                 Ok(metadata) => {
                     let metadata_error = if metadata.game_version.is_some() {
@@ -564,15 +564,16 @@ fn scan_replay_dir(
                         metadata.game_length_ms,
                         metadata.last_game_chunk_id,
                         metadata.last_key_frame_id,
+                        metadata.champion_ids,
+                        metadata.champion_aliases,
                     )
                 }
-                Err(error) => (None, Some(error), None, None, None),
+                Err(error) => (None, Some(error), None, None, None, Vec::new(), Vec::new()),
             };
             let family = replay_family(parsed.platform_id.as_deref());
             let launch_availability = resolve_launch_availability(
                 parsed.game_id,
                 patch_version.as_deref(),
-                parsed.platform_id.as_deref(),
                 family,
                 clients,
             );
@@ -587,6 +588,8 @@ fn scan_replay_dir(
                 platform_id: parsed.platform_id,
                 family,
                 game_id: parsed.game_id,
+                champion_ids,
+                champion_aliases,
                 patch_version,
                 metadata_error,
                 game_length_ms,
@@ -638,7 +641,6 @@ fn parse_replay_file_name(path: &Path) -> ParsedReplayFileName {
 fn resolve_launch_availability(
     game_id: Option<u64>,
     patch_version: Option<&str>,
-    platform_id: Option<&str>,
     family: Option<ReplayClientFamily>,
     clients: &[ReplayClient],
 ) -> ReplayLaunchAvailability {
@@ -650,30 +652,24 @@ fn resolve_launch_availability(
         return launch_unavailable("No running League client was detected");
     }
 
-    let Some(platform_id) = platform_id.and_then(normalize_platform_id) else {
-        return launch_unavailable("Replay file name does not expose a platform id");
-    };
-
     let Some(family) = family else {
         return launch_unavailable("Replay platform family could not be resolved");
     };
 
-    let same_server_clients = clients
+    let Some(patch_version) = patch_version else {
+        return launch_unavailable("Replay metadata does not expose game version");
+    };
+
+    let same_family_clients = clients
         .iter()
-        .filter(|client| {
-            client.family == family
-                && client
-                    .server_id
-                    .as_deref()
-                    .is_some_and(|server_id| server_id == platform_id)
-        })
+        .filter(|client| client.family == family)
         .collect::<Vec<_>>();
 
-    if same_server_clients.is_empty() {
+    if same_family_clients.is_empty() {
         return ReplayLaunchAvailability {
             can_launch: false,
             reason: Some(format!(
-                "No running {} client matches server {platform_id}",
+                "No running {} client was detected",
                 family_label(family)
             )),
             client_pid: None,
@@ -683,15 +679,11 @@ fn resolve_launch_availability(
         };
     }
 
-    let Some(patch_version) = patch_version else {
-        return launch_unavailable("Replay metadata does not expose game version");
-    };
-
-    let Some(client) = match_replay_client(patch_version, &same_server_clients) else {
+    let Some(client) = match_replay_client(patch_version, &same_family_clients) else {
         return ReplayLaunchAvailability {
             can_launch: false,
             reason: Some(format!(
-                "No running {} client for {platform_id} matches replay version {patch_version}",
+                "No running {} client has a compatible version for replay version {patch_version}",
                 family_label(family)
             )),
             client_pid: None,
@@ -785,19 +777,8 @@ fn match_replay_client<'a>(
     replay_version: &str,
     clients: &'a [&'a ReplayClient],
 ) -> Option<&'a ReplayClient> {
-    let replay_version = normalize_version_string(replay_version)?;
-    if let Some(client) = clients.iter().copied().find(|client| {
-        client.available
-            && client
-                .game_version
-                .as_deref()
-                .and_then(normalize_version_string)
-                .is_some_and(|version| version == replay_version)
-    }) {
-        return Some(client);
-    }
-
-    let replay_patch = version_major_minor(&replay_version)?;
+    let replay_patch = version_major_minor(replay_version)?;
+    let replay_parts = parse_version_parts(replay_version)?;
     clients.iter().copied().find(|client| {
         client.available
             && client
@@ -805,6 +786,13 @@ fn match_replay_client<'a>(
                 .as_deref()
                 .and_then(version_major_minor)
                 .is_some_and(|version| version == replay_patch)
+            && client
+                .game_version
+                .as_deref()
+                .and_then(parse_version_parts)
+                .is_some_and(|client_parts| {
+                    compare_version_parts(&replay_parts, &client_parts).is_le()
+                })
     })
 }
 
@@ -908,6 +896,33 @@ fn version_major_minor(version: &str) -> Option<String> {
     Some(format!("{major}.{minor}"))
 }
 
+fn parse_version_parts(version: &str) -> Option<Vec<u64>> {
+    let version = normalize_version_string(version)?;
+    version
+        .split('.')
+        .map(|part| {
+            let part = part.trim();
+            if part.is_empty() {
+                return None;
+            }
+            part.parse::<u64>().ok()
+        })
+        .collect()
+}
+
+fn compare_version_parts(left: &[u64], right: &[u64]) -> std::cmp::Ordering {
+    let len = left.len().max(right.len());
+    for index in 0..len {
+        let left = left.get(index).copied().unwrap_or_default();
+        let right = right.get(index).copied().unwrap_or_default();
+        match left.cmp(&right) {
+            std::cmp::Ordering::Equal => {}
+            order => return order,
+        }
+    }
+    std::cmp::Ordering::Equal
+}
+
 fn ensure_replay_path_allowed(replay_path: &Path, folders: &[String]) -> Result<(), AppError> {
     let replay_path = replay_path.canonicalize()?;
     for folder in folders {
@@ -983,16 +998,40 @@ mod tests {
     }
 
     #[test]
-    fn matches_running_client_by_family_server_and_patch() {
+    fn matches_same_family_client_when_replay_version_is_lower() {
         let clients = vec![
-            replay_client(1, ReplayClientFamily::Riot, "JP1", "16.9.772.8292"),
-            replay_client(2, ReplayClientFamily::Tencent, "HN1", "16.9.769.5709"),
+            replay_client(1, ReplayClientFamily::Tencent, "HN1", "16.9.772.8292"),
+            replay_client(2, ReplayClientFamily::Riot, "NA1", "16.9.769.5709"),
         ];
 
         let availability = resolve_launch_availability(
             Some(10),
             Some("16.9.772.1032"),
-            Some("JP1"),
+            Some(ReplayClientFamily::Tencent),
+            &clients,
+        );
+
+        assert!(availability.can_launch);
+        assert_eq!(availability.client_pid, Some(1));
+        assert_eq!(
+            availability.client_family,
+            Some(ReplayClientFamily::Tencent)
+        );
+        assert_eq!(availability.client_server_id.as_deref(), Some("HN1"));
+    }
+
+    #[test]
+    fn matches_same_family_client_when_version_is_exact() {
+        let clients = vec![replay_client(
+            1,
+            ReplayClientFamily::Riot,
+            "NA1",
+            "16.9.772.1032",
+        )];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.1032"),
             Some(ReplayClientFamily::Riot),
             &clients,
         );
@@ -1003,7 +1042,7 @@ mod tests {
     }
 
     #[test]
-    fn disables_replay_when_family_or_server_does_not_match() {
+    fn disables_replay_when_only_other_family_matches_version() {
         let clients = vec![replay_client(
             1,
             ReplayClientFamily::Tencent,
@@ -1014,8 +1053,47 @@ mod tests {
         let availability = resolve_launch_availability(
             Some(10),
             Some("16.9.772.1032"),
-            Some("JP1"),
             Some(ReplayClientFamily::Riot),
+            &clients,
+        );
+
+        assert!(!availability.can_launch);
+        assert!(availability.reason.is_some());
+    }
+
+    #[test]
+    fn disables_replay_when_replay_version_is_newer_than_client_version() {
+        let clients = vec![replay_client(
+            1,
+            ReplayClientFamily::Tencent,
+            "HN1",
+            "16.9.772.1032",
+        )];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.8292"),
+            Some(ReplayClientFamily::Tencent),
+            &clients,
+        );
+
+        assert!(!availability.can_launch);
+        assert!(availability.reason.is_some());
+    }
+
+    #[test]
+    fn disables_replay_when_no_client_version_matches() {
+        let clients = vec![replay_client(
+            1,
+            ReplayClientFamily::Tencent,
+            "HN1",
+            "16.8.764.0835",
+        )];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.1032"),
+            Some(ReplayClientFamily::Tencent),
             &clients,
         );
 

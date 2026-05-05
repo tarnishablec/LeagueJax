@@ -49,6 +49,9 @@ export const replayI18n: Resource = {
           missingPlatformId: "Replay file name does not include a server",
           unknownFamily: "Replay server type could not be identified",
           missingVersion: "Replay version could not be parsed",
+          missingFamilyClient: "No running {{family}} client detected",
+          compatibleVersionMismatch:
+            "No running {{family}} client has a compatible version for replay version {{version}}",
           missingServerClient:
             "No running {{family}} client matches {{server}}",
           versionMismatch:
@@ -112,6 +115,9 @@ export const replayI18n: Resource = {
           missingPlatformId: "回放文件名缺少大区",
           unknownFamily: "无法识别回放所属客户端类型",
           missingVersion: "无法解析回放版本",
+          missingFamilyClient: "没有检测到正在运行的 {{family}} 客户端",
+          compatibleVersionMismatch:
+            "没有正在运行的 {{family}} 客户端兼容回放版本 {{version}}",
           missingServerClient: "没有正在运行的 {{family}} {{server}} 客户端",
           versionMismatch:
             "正在运行的 {{family}} {{server}} 客户端版本与回放版本 {{version}} 不匹配",
@@ -175,6 +181,10 @@ export const replayI18n: Resource = {
           missingPlatformId: "リプレイファイル名にサーバーがありません",
           unknownFamily: "リプレイのクライアント種別を識別できません",
           missingVersion: "リプレイのバージョンを解析できません",
+          missingFamilyClient:
+            "実行中の {{family}} クライアントが検出されません",
+          compatibleVersionMismatch:
+            "実行中の {{family}} クライアントにリプレイバージョン {{version}} と互換性のあるものがありません",
           missingServerClient:
             "実行中の {{family}} {{server}} クライアントがありません",
           versionMismatch:

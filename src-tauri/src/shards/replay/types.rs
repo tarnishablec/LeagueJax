@@ -77,6 +77,8 @@ pub struct ReplayEntry {
     pub platform_id: Option<String>,
     pub family: Option<ReplayClientFamily>,
     pub game_id: Option<u64>,
+    pub champion_ids: Vec<u32>,
+    pub champion_aliases: Vec<String>,
     pub patch_version: Option<String>,
     pub metadata_error: Option<String>,
     pub game_length_ms: Option<u64>,

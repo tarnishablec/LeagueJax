@@ -50,6 +50,8 @@ export type ReplayEntry = {
   platformId: string | null;
   family: ReplayClientFamily | null;
   gameId: number | null;
+  championIds: Array<number>;
+  championAliases: Array<string>;
   patchVersion: string | null;
   metadataError: string | null;
   gameLengthMs: number | null;

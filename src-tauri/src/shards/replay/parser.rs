@@ -12,9 +12,17 @@ const METADATA_MARKERS: [&[u8]; 2] = [br#"{"gameLength""#, br#"{"gameVersion""#]
 #[derive(Debug, Clone)]
 pub struct RoflFileMetadata {
     pub game_version: Option<String>,
+    pub champion_ids: Vec<u32>,
+    pub champion_aliases: Vec<String>,
     pub game_length_ms: Option<u64>,
     pub last_game_chunk_id: Option<u64>,
     pub last_key_frame_id: Option<u64>,
+}
+
+#[derive(Debug, Default)]
+struct RoflChampionMetadata {
+    ids: Vec<u32>,
+    aliases: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -24,6 +32,7 @@ struct RawRoflMetadata {
     game_length: Option<serde_json::Value>,
     last_game_chunk_id: Option<serde_json::Value>,
     last_key_frame_id: Option<serde_json::Value>,
+    stats_json: Option<serde_json::Value>,
 }
 
 pub fn read_rofl_metadata(path: &Path) -> Result<RoflFileMetadata, String> {
@@ -70,6 +79,8 @@ fn validate_rofl(content: &[u8]) -> Result<(), String> {
 fn empty_metadata() -> RoflFileMetadata {
     RoflFileMetadata {
         game_version: None,
+        champion_ids: Vec::new(),
+        champion_aliases: Vec::new(),
         game_length_ms: None,
         last_game_chunk_id: None,
         last_key_frame_id: None,
@@ -77,8 +88,11 @@ fn empty_metadata() -> RoflFileMetadata {
 }
 
 fn metadata_from_raw(raw: RawRoflMetadata) -> RoflFileMetadata {
+    let champions = champions_from_stats_json(raw.stats_json.as_ref());
     RoflFileMetadata {
         game_version: raw.game_version.and_then(normalize_version),
+        champion_ids: champions.ids,
+        champion_aliases: champions.aliases,
         game_length_ms: raw.game_length.as_ref().and_then(json_u64),
         last_game_chunk_id: raw.last_game_chunk_id.as_ref().and_then(json_u64),
         last_key_frame_id: raw.last_key_frame_id.as_ref().and_then(json_u64),
@@ -271,11 +285,110 @@ fn json_u64(value: &serde_json::Value) -> Option<u64> {
         return Some(value);
     }
 
+    if let Some(value) = value.as_str() {
+        return value.trim().parse::<u64>().ok();
+    }
+
     let value = value.as_f64()?;
     if !value.is_finite() || value < 0.0 {
         return None;
     }
     Some(value.round() as u64)
+}
+
+fn champions_from_stats_json(value: Option<&serde_json::Value>) -> RoflChampionMetadata {
+    let Some(value) = value else {
+        return RoflChampionMetadata::default();
+    };
+    let Some(stats) = normalize_stats_json(value) else {
+        return RoflChampionMetadata::default();
+    };
+
+    let participants = participant_stats_from_value(&stats);
+    RoflChampionMetadata {
+        ids: participants
+            .iter()
+            .filter_map(|value| champion_id_from_participant_stats(value))
+            .collect(),
+        aliases: participants
+            .iter()
+            .filter_map(|value| champion_alias_from_participant_stats(value))
+            .collect(),
+    }
+}
+
+fn participant_stats_from_value(value: &serde_json::Value) -> Vec<&serde_json::Value> {
+    match value {
+        serde_json::Value::Array(values) => values.iter().collect(),
+        serde_json::Value::Object(object) => {
+            if let Some(values) = object
+                .get("participants")
+                .or_else(|| object.get("Participants"))
+                .or_else(|| object.get("PARTICIPANTS"))
+                .and_then(|value| value.as_array())
+            {
+                values.iter().collect()
+            } else {
+                vec![value]
+            }
+        }
+        _ => Vec::new(),
+    }
+}
+
+fn normalize_stats_json(value: &serde_json::Value) -> Option<serde_json::Value> {
+    match value {
+        serde_json::Value::String(text) => serde_json::from_str(text).ok(),
+        other => Some(other.clone()),
+    }
+}
+
+fn champion_id_from_participant_stats(value: &serde_json::Value) -> Option<u32> {
+    let object = value.as_object()?;
+    object.iter().find_map(|(key, value)| {
+        let normalized = key
+            .chars()
+            .filter(|char| *char != '_' && *char != '-')
+            .collect::<String>()
+            .to_ascii_lowercase();
+
+        match normalized.as_str() {
+            "championid" | "champion" | "skin" => json_u32(value),
+            _ => None,
+        }
+    })
+}
+
+fn champion_alias_from_participant_stats(value: &serde_json::Value) -> Option<String> {
+    let object = value.as_object()?;
+    object.iter().find_map(|(key, value)| {
+        let normalized = key
+            .chars()
+            .filter(|char| *char != '_' && *char != '-')
+            .collect::<String>()
+            .to_ascii_lowercase();
+
+        match normalized.as_str() {
+            "skin" | "championalias" | "championname" => json_champion_alias(value),
+            _ => None,
+        }
+    })
+}
+
+fn json_champion_alias(value: &serde_json::Value) -> Option<String> {
+    let trimmed = value.as_str()?.trim();
+    if trimmed.is_empty() || trimmed.parse::<u32>().is_ok() {
+        return None;
+    }
+    Some(trimmed.to_string())
+}
+
+fn json_u32(value: &serde_json::Value) -> Option<u32> {
+    let value = json_u64(value)?;
+    if value == 0 {
+        return None;
+    }
+    u32::try_from(value).ok()
 }
 
 #[cfg(test)]
@@ -296,6 +409,8 @@ mod tests {
         assert_eq!(metadata.game_length_ms, Some(1_612_502));
         assert_eq!(metadata.last_game_chunk_id, Some(540));
         assert_eq!(metadata.last_key_frame_id, Some(27));
+        assert!(metadata.champion_ids.is_empty());
+        assert!(metadata.champion_aliases.is_empty());
         Ok(())
     }
 
@@ -311,6 +426,77 @@ mod tests {
 
         assert_eq!(metadata.game_version.as_deref(), Some("16.8.1.2"));
         assert_eq!(metadata.game_length_ms, Some(10));
+        Ok(())
+    }
+
+    #[test]
+    fn extracts_champion_ids_from_stats_json() -> Result<(), String> {
+        let content = [
+            br#"RIOT\x02\x00aaaa16.9.772.1032zzzz"#.as_slice(),
+            br#"noise{"gameLength":10,"lastGameChunkId":2,"lastKeyFrameId":1,"statsJson":"[{\"SKIN\":\"22\"},{\"championId\":64},{\"CHAMPION_ID\":\"99\"}]"}"#.as_slice(),
+        ]
+        .concat();
+
+        let metadata = parse_rofl_metadata(&content)?;
+
+        assert_eq!(metadata.champion_ids, vec![22, 64, 99]);
+        assert!(metadata.champion_aliases.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn extracts_champion_aliases_from_stats_json() -> Result<(), String> {
+        let content = [
+            br#"RIOT\x02\x00aaaa16.9.772.1032zzzz"#.as_slice(),
+            br#"noise{"gameLength":10,"lastGameChunkId":2,"lastKeyFrameId":1,"statsJson":"[{\"SKIN\":\"Jayce\"},{\"SKIN\":\"MissFortune\"},{\"championId\":64}]"}"#.as_slice(),
+        ]
+        .concat();
+
+        let metadata = parse_rofl_metadata(&content)?;
+
+        assert_eq!(metadata.champion_ids, vec![64]);
+        assert_eq!(metadata.champion_aliases, vec!["Jayce", "MissFortune"]);
+        Ok(())
+    }
+
+    #[test]
+    fn extracts_all_arena_champion_aliases_from_stats_json() -> Result<(), String> {
+        let aliases = [
+            "Aatrox",
+            "Ahri",
+            "Akali",
+            "Alistar",
+            "Ambessa",
+            "Anivia",
+            "Annie",
+            "Ashe",
+            "AurelionSol",
+            "Azir",
+            "Bard",
+            "Belveth",
+            "Blitzcrank",
+            "Brand",
+            "Braum",
+            "Caitlyn",
+        ];
+        let stats_json = aliases
+            .iter()
+            .map(|alias| format!(r#"{{\"SKIN\":\"{alias}\"}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        let content = format!(
+            r#"RIOT\x02\x00aaaa16.9.772.1032zzzznoise{{"gameLength":10,"lastGameChunkId":2,"lastKeyFrameId":1,"statsJson":"[{stats_json}]"}}"#
+        );
+
+        let metadata = parse_rofl_metadata(content.as_bytes())?;
+
+        assert_eq!(
+            metadata.champion_aliases,
+            aliases
+                .iter()
+                .map(|alias| alias.to_string())
+                .collect::<Vec<_>>()
+        );
         Ok(())
     }
 
