@@ -17,12 +17,6 @@ export const viewport = style({
   minWidth: 0,
   overflowX: "auto",
   overflowY: "hidden",
-  scrollbarWidth: "none",
-  selectors: {
-    "&::-webkit-scrollbar": {
-      display: "none",
-    },
-  },
 });
 
 export const track = style({

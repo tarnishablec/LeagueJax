@@ -16,7 +16,6 @@ import {
   ScoreboardIcon,
   type ScoreboardIconType,
 } from "@/components/ScoreboardIcon.tsx";
-import { ScrollArea } from "@/components/scroll-area";
 import { resolveJungleEggItemIdFromDetails } from "../../hooks/match-details-timeline.ts";
 import { normalizeHistoryPosition } from "../../hooks/use-match-card-view-model.ts";
 import {
@@ -859,29 +858,22 @@ function TeamBlock({
           </span>
         </div>
         {group.showObjectives && visibleObjectives.length > 0 ? (
-          <ScrollArea
-            orientation="horizontal"
-            size="content"
-            className={s.objectiveScroller}
-            contentClassName={s.objectiveList}
-          >
-            {visibleObjectives.map((objective) => (
-              <ObjectiveStat
-                key={`${group.key}-${objective.key}`}
-                objective={objective}
-                team={team}
-                side={objectiveSide}
-              />
-            ))}
-          </ScrollArea>
+          <div className={s.objectiveScroller}>
+            <div className={s.objectiveList}>
+              {visibleObjectives.map((objective) => (
+                <ObjectiveStat
+                  key={`${group.key}-${objective.key}`}
+                  objective={objective}
+                  team={team}
+                  side={objectiveSide}
+                />
+              ))}
+            </div>
+          </div>
         ) : null}
       </header>
 
-      <ScrollArea
-        orientation="horizontal"
-        size="content"
-        className={s.tableScroller}
-      >
+      <div className={s.tableScroller}>
         <div
           className={s.table({
             positionColumn: showPositionColumn ? "shown" : "hidden",
@@ -912,7 +904,7 @@ function TeamBlock({
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </section>
   );
 }

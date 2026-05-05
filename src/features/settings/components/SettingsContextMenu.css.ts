@@ -5,7 +5,7 @@ import { theme } from "@/styles/theme.css";
 export const scope = style({
   display: "grid",
   alignContent: "start",
-  minHeight: "100%",
+  height: "100%",
 });
 
 export const positioner = style({});

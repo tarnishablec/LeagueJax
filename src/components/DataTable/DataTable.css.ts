@@ -14,7 +14,6 @@ export const tableWrap = recipe({
         height: "100%",
         minHeight: 0,
         overflow: "auto",
-        scrollbarWidth: "thin",
       },
       disabled: {
         overflow: "hidden",

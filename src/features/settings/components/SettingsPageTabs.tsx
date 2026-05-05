@@ -50,7 +50,11 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
         value={activePrimaryPageId}
         activationMode="manual"
       >
-        <Tabs.List className={s.primaryTabsList} aria-label="Settings pages">
+        <Tabs.List
+          className={s.primaryTabsList}
+          data-scrollbar="hidden"
+          aria-label="Settings pages"
+        >
           {pages.map((page) => (
             <Tabs.Trigger
               key={page.id}
@@ -75,6 +79,7 @@ export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
       >
         <Tabs.List
           className={s.utilityTabsList}
+          data-scrollbar="hidden"
           aria-label="Settings utility pages"
         >
           {utilityPages.map((page) => (

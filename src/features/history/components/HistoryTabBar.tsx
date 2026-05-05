@@ -243,7 +243,12 @@ export function HistoryTabBar() {
   return (
     <Menu.Root positioning={{ placement: "bottom-start", strategy: "fixed" }}>
       <div className={s.container}>
-        <div data-tauri-drag-region className={s.viewport} ref={viewportRef}>
+        <div
+          data-scrollbar="hidden"
+          data-tauri-drag-region
+          className={s.viewport}
+          ref={viewportRef}
+        >
           <Menu.ContextTrigger asChild>
             <ul className={s.track} onContextMenu={handleTrackContextMenu}>
               {tabs.map((tab) => (

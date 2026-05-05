@@ -1,6 +1,5 @@
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { useTranslation } from "react-i18next";
-import { ScrollArea } from "@/components/scroll-area";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import * as s from "./OngoingGameCards.css.ts";
@@ -52,34 +51,31 @@ export function TeamRow(props: {
   });
 
   return (
-    <ScrollArea
-      orientation="horizontal"
-      className={s.teamSection}
-      contentClassName={s.teamSectionContent}
-      contentStyle={{ minWidth: "100%" }}
-    >
-      <div
-        className={s.teamRow}
-        style={assignInlineVars({
-          [s.teamColsVar]: String(teamCols),
-        })}
-      >
-        {visibleSlots.length === 0 ? (
-          <div className={s.emptyState}>{noDataText}</div>
-        ) : (
-          visibleSlots.map((slot, index) => (
-            <SnapshotPlayerCard
-              key={getSlotKey(slot, index)}
-              enabledPlayerCardTagIds={enabledPlayerCardTagIds}
-              excellentKdaThreshold={excellentKdaThreshold}
-              matchHistoryCount={matchHistoryCount}
-              playerCardTagColors={playerCardTagColors}
-              squadAssignment={squadAssignments.byPuuid[slot.puuid.trim()]}
-              slot={slot}
-            />
-          ))
-        )}
+    <div className={s.teamSection}>
+      <div className={s.teamSectionContent}>
+        <div
+          className={s.teamRow}
+          style={assignInlineVars({
+            [s.teamColsVar]: String(teamCols),
+          })}
+        >
+          {visibleSlots.length === 0 ? (
+            <div className={s.emptyState}>{noDataText}</div>
+          ) : (
+            visibleSlots.map((slot, index) => (
+              <SnapshotPlayerCard
+                key={getSlotKey(slot, index)}
+                enabledPlayerCardTagIds={enabledPlayerCardTagIds}
+                excellentKdaThreshold={excellentKdaThreshold}
+                matchHistoryCount={matchHistoryCount}
+                playerCardTagColors={playerCardTagColors}
+                squadAssignment={squadAssignments.byPuuid[slot.puuid.trim()]}
+                slot={slot}
+              />
+            ))
+          )}
+        </div>
       </div>
-    </ScrollArea>
+    </div>
   );
 }

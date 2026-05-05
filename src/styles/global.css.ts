@@ -30,9 +30,56 @@ globalStyle("*, *::before, *::after", {
   boxSizing: "border-box",
 });
 
-globalStyle("html, body, *", {
-  scrollbarWidth: "thin",
-  scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
+globalStyle('[data-platform="windows"] *::-webkit-scrollbar-button', {
+  display: "none",
+  width: 0,
+  height: 0,
+  WebkitAppearance: "none",
+  background: "transparent",
+});
+
+globalStyle(
+  '[data-platform="windows"] *::-webkit-scrollbar-button:single-button, [data-platform="windows"] *::-webkit-scrollbar-button:vertical:start:decrement, [data-platform="windows"] *::-webkit-scrollbar-button:vertical:end:increment, [data-platform="windows"] *::-webkit-scrollbar-button:horizontal:start:decrement, [data-platform="windows"] *::-webkit-scrollbar-button:horizontal:end:increment',
+  {
+    display: "none",
+    width: 0,
+    height: 0,
+    WebkitAppearance: "none",
+    background: "transparent",
+  },
+);
+
+globalStyle('[data-platform="windows"] *::-webkit-scrollbar', {
+  width: 8,
+  height: 8,
+});
+
+globalStyle('[data-platform="windows"] *::-webkit-scrollbar-thumb', {
+  border: "2px solid transparent",
+  borderRadius: 999,
+  background: "rgba(128, 128, 128, 0.55)",
+  backgroundClip: "content-box",
+});
+
+globalStyle('[data-platform="windows"] *::-webkit-scrollbar-thumb:hover', {
+  background: "rgba(128, 128, 128, 0.72)",
+  backgroundClip: "content-box",
+});
+
+globalStyle('[data-platform="windows"] *::-webkit-scrollbar-track', {
+  background: "transparent",
+});
+
+globalStyle('[data-platform="windows"] *::-webkit-scrollbar-corner', {
+  background: "transparent",
+});
+
+globalStyle('[data-scrollbar="hidden"]', {
+  scrollbarWidth: "none",
+});
+
+globalStyle('[data-scrollbar="hidden"]::-webkit-scrollbar', {
+  display: "none",
 });
 
 globalStyle("button", {
@@ -47,8 +94,4 @@ globalStyle("button", {
 globalStyle("*", {
   userSelect: "none",
   // scrollbarGutter: "stable",
-});
-
-globalStyle("html", {
-  scrollbarColor: `#888 transparent`,
 });
