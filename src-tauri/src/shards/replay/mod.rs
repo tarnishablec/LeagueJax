@@ -5,6 +5,7 @@ use core::error::Error;
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -13,10 +14,13 @@ use jax::{depends, shard_id, Jax, Shard};
 
 use self::types::{
     ReplayClient, ReplayClientFamily, ReplayEntry, ReplayFolder, ReplayFolderSource,
-    ReplayFolderSourceKind, ReplayLaunchAvailability, ReplayLibrarySnapshot, ReplayMatchContext,
-    ReplayMatchState,
+    ReplayFolderSourceKind, ReplayLaunchAvailability, ReplayLaunchMethod, ReplayLibrarySnapshot,
+    ReplayMatchContext, ReplayMatchState,
 };
 use crate::error::AppError;
+use crate::shards::lcu::installs::{
+    discover_lol_client_installs, LolClientInstall, LolClientInstallFamily,
+};
 use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::LcuShard;
 use crate::shards::settings::types::{SettingDefinitionDto, SettingScopeDto};
@@ -41,6 +45,7 @@ impl ReplayShard {
     pub async fn snapshot(&self, lcu_shard: &LcuShard) -> Result<ReplayLibrarySnapshot, AppError> {
         let user_folders = self.load_folders()?;
         let clients = self.refresh_clients(lcu_shard).await?;
+        let installs = discover_lol_client_installs();
         let folders = self
             .build_replay_folders(lcu_shard, &user_folders, &clients)
             .await?;
@@ -48,7 +53,7 @@ impl ReplayShard {
             .iter()
             .map(|folder| folder.path.clone())
             .collect::<Vec<_>>();
-        let entries = scan_replay_entries(&scan_roots, &clients)?;
+        let entries = scan_replay_entries(&scan_roots, &clients, &installs)?;
 
         Ok(ReplayLibrarySnapshot {
             folders,
@@ -210,11 +215,13 @@ impl ReplayShard {
             .ok_or_else(|| AppError::other("Replay metadata does not expose game version"))?;
 
         let clients = self.refresh_clients(lcu_shard).await?;
+        let installs = discover_lol_client_installs();
         let availability = resolve_launch_availability(
             parsed.game_id,
             Some(replay_version),
             replay_family(parsed.platform_id.as_deref()),
             &clients,
+            &installs,
         );
 
         if !availability.can_launch {
@@ -223,16 +230,35 @@ impl ReplayShard {
             })));
         }
 
-        let client_pid = availability
-            .client_pid
-            .ok_or_else(|| AppError::other("Replay matched no running client session"))?;
-        let manager = lcu_shard.manager().ok_or(AppError::LcuNotConnected)?;
-        let lcu = manager
-            .session_for_pid(client_pid)
-            .filter(|session| session.is_ready())
-            .ok_or_else(|| AppError::other("Matched League client is no longer connected"))?;
+        match availability.launch_method {
+            Some(ReplayLaunchMethod::Lcu) => {
+                let client_pid = availability
+                    .client_pid
+                    .ok_or_else(|| AppError::other("Replay matched no running client session"))?;
+                let manager = lcu_shard.manager().ok_or(AppError::LcuNotConnected)?;
+                let lcu = manager
+                    .session_for_pid(client_pid)
+                    .filter(|session| session.is_ready())
+                    .ok_or_else(|| {
+                        AppError::other("Matched League client is no longer connected")
+                    })?;
 
-        lcu.api().watch_replay(game_id).await?;
+                lcu.api().watch_replay(game_id).await?;
+            }
+            Some(ReplayLaunchMethod::LocalExecutable) => {
+                let install =
+                    match_local_install(replay_version, ReplayClientFamily::Tencent, &installs)
+                        .ok_or_else(|| {
+                            AppError::other("Replay matched no compatible local Tencent install")
+                        })?;
+                launch_local_replay(&replay_path, install)?;
+            }
+            None => {
+                return Err(AppError::other(
+                    "Replay launch method could not be resolved",
+                ));
+            }
+        }
         Ok(())
     }
 
@@ -497,6 +523,7 @@ fn replay_folder_merge_key(path: &str) -> Result<String, AppError> {
 fn scan_replay_entries(
     folders: &[String],
     clients: &[ReplayClient],
+    installs: &[LolClientInstall],
 ) -> Result<Vec<ReplayEntry>, AppError> {
     let mut entries = Vec::new();
     let mut seen = BTreeSet::new();
@@ -506,7 +533,7 @@ fn scan_replay_entries(
         if !root.is_dir() {
             continue;
         }
-        scan_replay_dir(&root, clients, &mut seen, &mut entries)?;
+        scan_replay_dir(&root, clients, installs, &mut seen, &mut entries)?;
     }
 
     entries.sort_by_key(|entry| Reverse(entry.modified_at_ms));
@@ -516,6 +543,7 @@ fn scan_replay_entries(
 fn scan_replay_dir(
     root: &Path,
     clients: &[ReplayClient],
+    installs: &[LolClientInstall],
     seen: &mut BTreeSet<String>,
     entries: &mut Vec<ReplayEntry>,
 ) -> Result<(), AppError> {
@@ -576,6 +604,7 @@ fn scan_replay_dir(
                 patch_version.as_deref(),
                 family,
                 clients,
+                installs,
             );
             entries.push(ReplayEntry {
                 id: path_string.clone(),
@@ -643,13 +672,10 @@ fn resolve_launch_availability(
     patch_version: Option<&str>,
     family: Option<ReplayClientFamily>,
     clients: &[ReplayClient],
+    installs: &[LolClientInstall],
 ) -> ReplayLaunchAvailability {
     if game_id.is_none() {
         return launch_unavailable("Replay file name does not expose a game id");
-    }
-
-    if clients.is_empty() {
-        return launch_unavailable("No running League client was detected");
     }
 
     let Some(family) = family else {
@@ -665,48 +691,136 @@ fn resolve_launch_availability(
         .filter(|client| client.family == family)
         .collect::<Vec<_>>();
 
-    if same_family_clients.is_empty() {
+    if let Some(client) = match_replay_client(patch_version, &same_family_clients) {
         return ReplayLaunchAvailability {
-            can_launch: false,
-            reason: Some(format!(
-                "No running {} client was detected",
-                family_label(family)
-            )),
-            client_pid: None,
-            client_family: None,
-            client_server_id: None,
-            client_game_version: None,
+            can_launch: true,
+            reason: None,
+            launch_method: Some(ReplayLaunchMethod::Lcu),
+            client_pid: Some(client.pid),
+            client_family: Some(client.family),
+            client_server_id: client.server_id.clone(),
+            client_game_version: client.game_version.clone(),
         };
     }
 
-    let Some(client) = match_replay_client(patch_version, &same_family_clients) else {
-        return ReplayLaunchAvailability {
-            can_launch: false,
-            reason: Some(format!(
-                "No running {} client has a compatible version for replay version {patch_version}",
-                family_label(family)
-            )),
-            client_pid: None,
-            client_family: None,
-            client_server_id: None,
-            client_game_version: None,
-        };
+    if family == ReplayClientFamily::Tencent {
+        if let Some(install) = match_local_install(patch_version, family, installs) {
+            return ReplayLaunchAvailability {
+                can_launch: true,
+                reason: None,
+                launch_method: Some(ReplayLaunchMethod::LocalExecutable),
+                client_pid: None,
+                client_family: Some(ReplayClientFamily::Tencent),
+                client_server_id: None,
+                client_game_version: install.game_version.clone(),
+            };
+        }
+    }
+
+    if clients.is_empty() && family == ReplayClientFamily::Tencent {
+        return launch_unavailable(
+            "No running League client or compatible local TENCENT install was detected",
+        );
+    }
+
+    if clients.is_empty() && family == ReplayClientFamily::Riot {
+        return launch_unavailable(
+            "No running RIOT client was detected; RIOT replays cannot use local executable fallback",
+        );
+    }
+
+    if clients.is_empty() {
+        return launch_unavailable("No running League client was detected");
+    }
+
+    if same_family_clients.is_empty() && family == ReplayClientFamily::Riot {
+        return launch_unavailable(
+            "No running RIOT client was detected; RIOT replays cannot use local executable fallback",
+        );
+    }
+
+    if same_family_clients.is_empty() {
+        return launch_unavailable(format!(
+            "No running {} client was detected",
+            family_label(family)
+        ));
+    }
+
+    if family == ReplayClientFamily::Riot {
+        return launch_unavailable(format!(
+            "No running RIOT client has a compatible version for replay version {patch_version}; RIOT replays cannot use local executable fallback"
+        ));
+    }
+
+    launch_unavailable(format!(
+        "No running TENCENT client or local install has a compatible version for replay version {patch_version}"
+    ))
+}
+
+fn match_local_install<'a>(
+    replay_version: &str,
+    family: ReplayClientFamily,
+    installs: &'a [LolClientInstall],
+) -> Option<&'a LolClientInstall> {
+    let install_family = match family {
+        ReplayClientFamily::Tencent => LolClientInstallFamily::Tencent,
+        ReplayClientFamily::Riot => LolClientInstallFamily::Riot,
     };
 
-    ReplayLaunchAvailability {
-        can_launch: true,
-        reason: None,
-        client_pid: Some(client.pid),
-        client_family: Some(client.family),
-        client_server_id: client.server_id.clone(),
-        client_game_version: client.game_version.clone(),
-    }
+    installs.iter().find(|install| {
+        install.family == install_family
+            && install
+                .game_version
+                .as_deref()
+                .is_some_and(|install_version| {
+                    is_compatible_game_version(replay_version, install_version)
+                })
+    })
+}
+
+fn launch_local_replay(replay_path: &Path, install: &LolClientInstall) -> Result<(), AppError> {
+    let game_dir = install
+        .game_executable_path
+        .parent()
+        .ok_or_else(|| AppError::other("Local League executable does not have a game directory"))?;
+
+    Command::new(&install.game_executable_path)
+        .current_dir(game_dir)
+        .arg(replay_path)
+        .arg(format!(
+            "-GameBaseDir={}",
+            install.game_base_dir.to_string_lossy()
+        ))
+        .arg("-SkipRads")
+        .arg("-SkipBuild")
+        .arg("-EnableLNP")
+        .arg("-UseNewX3D=1")
+        .arg("-UseNewX3DFramebuffers=1")
+        .arg("-Locale=zh_CN")
+        .spawn()
+        .map_err(|error| AppError::other(format!("Failed to launch local replay: {error}")))?;
+
+    Ok(())
+}
+
+fn is_compatible_game_version(replay_version: &str, candidate_version: &str) -> bool {
+    let Some(replay_patch) = version_major_minor(replay_version) else {
+        return false;
+    };
+    let Some(replay_parts) = parse_version_parts(replay_version) else {
+        return false;
+    };
+    version_major_minor(candidate_version).is_some_and(|version| version == replay_patch)
+        && parse_version_parts(candidate_version).is_some_and(|candidate_parts| {
+            compare_version_parts(&replay_parts, &candidate_parts).is_le()
+        })
 }
 
 fn launch_unavailable(reason: impl Into<String>) -> ReplayLaunchAvailability {
     ReplayLaunchAvailability {
         can_launch: false,
         reason: Some(reason.into()),
+        launch_method: None,
         client_pid: None,
         client_family: None,
         client_server_id: None,
@@ -777,21 +891,13 @@ fn match_replay_client<'a>(
     replay_version: &str,
     clients: &'a [&'a ReplayClient],
 ) -> Option<&'a ReplayClient> {
-    let replay_patch = version_major_minor(replay_version)?;
-    let replay_parts = parse_version_parts(replay_version)?;
     clients.iter().copied().find(|client| {
         client.available
             && client
                 .game_version
                 .as_deref()
-                .and_then(version_major_minor)
-                .is_some_and(|version| version == replay_patch)
-            && client
-                .game_version
-                .as_deref()
-                .and_then(parse_version_parts)
-                .is_some_and(|client_parts| {
-                    compare_version_parts(&replay_parts, &client_parts).is_le()
+                .is_some_and(|client_version| {
+                    is_compatible_game_version(replay_version, client_version)
                 })
     })
 }
@@ -987,6 +1093,17 @@ mod tests {
         }
     }
 
+    fn local_install(family: LolClientInstallFamily, game_version: &str) -> LolClientInstall {
+        LolClientInstall {
+            family,
+            game_executable_path: PathBuf::from(
+                "D:/WeGameApps/LeagueCN/Game/League of Legends.exe",
+            ),
+            game_base_dir: PathBuf::from("D:/WeGameApps/LeagueCN"),
+            game_version: Some(game_version.to_string()),
+        }
+    }
+
     #[test]
     fn classifies_riot_and_tencent_platform_ids() {
         assert_eq!(replay_family(Some("JP1")), Some(ReplayClientFamily::Riot));
@@ -1009,9 +1126,11 @@ mod tests {
             Some("16.9.772.1032"),
             Some(ReplayClientFamily::Tencent),
             &clients,
+            &[],
         );
 
         assert!(availability.can_launch);
+        assert_eq!(availability.launch_method, Some(ReplayLaunchMethod::Lcu));
         assert_eq!(availability.client_pid, Some(1));
         assert_eq!(
             availability.client_family,
@@ -1034,9 +1153,11 @@ mod tests {
             Some("16.9.772.1032"),
             Some(ReplayClientFamily::Riot),
             &clients,
+            &[],
         );
 
         assert!(availability.can_launch);
+        assert_eq!(availability.launch_method, Some(ReplayLaunchMethod::Lcu));
         assert_eq!(availability.client_pid, Some(1));
         assert_eq!(availability.client_family, Some(ReplayClientFamily::Riot));
     }
@@ -1055,6 +1176,7 @@ mod tests {
             Some("16.9.772.1032"),
             Some(ReplayClientFamily::Riot),
             &clients,
+            &[],
         );
 
         assert!(!availability.can_launch);
@@ -1075,6 +1197,7 @@ mod tests {
             Some("16.9.772.8292"),
             Some(ReplayClientFamily::Tencent),
             &clients,
+            &[],
         );
 
         assert!(!availability.can_launch);
@@ -1095,9 +1218,82 @@ mod tests {
             Some("16.9.772.1032"),
             Some(ReplayClientFamily::Tencent),
             &clients,
+            &[],
         );
 
         assert!(!availability.can_launch);
+        assert!(availability.reason.is_some());
+    }
+
+    #[test]
+    fn tencent_replay_uses_local_install_when_no_lcu_matches() {
+        let clients = Vec::new();
+        let installs = vec![local_install(
+            LolClientInstallFamily::Tencent,
+            "16.9.772.8292",
+        )];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.1032"),
+            Some(ReplayClientFamily::Tencent),
+            &clients,
+            &installs,
+        );
+
+        assert!(availability.can_launch);
+        assert_eq!(
+            availability.launch_method,
+            Some(ReplayLaunchMethod::LocalExecutable)
+        );
+        assert_eq!(
+            availability.client_family,
+            Some(ReplayClientFamily::Tencent)
+        );
+        assert_eq!(availability.client_pid, None);
+    }
+
+    #[test]
+    fn tencent_replay_prefers_lcu_over_local_install() {
+        let clients = vec![replay_client(
+            1,
+            ReplayClientFamily::Tencent,
+            "HN1",
+            "16.9.772.8292",
+        )];
+        let installs = vec![local_install(
+            LolClientInstallFamily::Tencent,
+            "16.9.772.8292",
+        )];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.1032"),
+            Some(ReplayClientFamily::Tencent),
+            &clients,
+            &installs,
+        );
+
+        assert!(availability.can_launch);
+        assert_eq!(availability.launch_method, Some(ReplayLaunchMethod::Lcu));
+        assert_eq!(availability.client_pid, Some(1));
+    }
+
+    #[test]
+    fn riot_replay_does_not_use_local_install_fallback() {
+        let clients = Vec::new();
+        let installs = vec![local_install(LolClientInstallFamily::Riot, "16.9.772.8292")];
+
+        let availability = resolve_launch_availability(
+            Some(10),
+            Some("16.9.772.1032"),
+            Some(ReplayClientFamily::Riot),
+            &clients,
+            &installs,
+        );
+
+        assert!(!availability.can_launch);
+        assert_eq!(availability.launch_method, None);
         assert!(availability.reason.is_some());
     }
 

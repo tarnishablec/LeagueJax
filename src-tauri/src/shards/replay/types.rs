@@ -14,6 +14,14 @@ pub enum ReplayClientFamily {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "replay.ts")]
 #[serde(rename_all = "camelCase")]
+pub enum ReplayLaunchMethod {
+    Lcu,
+    LocalExecutable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "replay.ts")]
+#[serde(rename_all = "camelCase")]
 pub enum ReplayFolderSourceKind {
     User,
     Client,
@@ -61,6 +69,7 @@ pub struct ReplayClient {
 pub struct ReplayLaunchAvailability {
     pub can_launch: bool,
     pub reason: Option<String>,
+    pub launch_method: Option<ReplayLaunchMethod>,
     pub client_pid: Option<u32>,
     pub client_family: Option<ReplayClientFamily>,
     pub client_server_id: Option<String>,

@@ -43,15 +43,24 @@ export const replayI18n: Resource = {
       playTooltip: {
         unavailable: "Replay unavailable",
         matched: "{{family}} {{server}} {{version}}",
+        localExecutable: "Local Tencent install {{version}}",
         reason: {
           missingGameId: "Replay file name does not include a game ID",
           noRunningClient: "No running League client detected",
+          noRunningClientOrTencentInstall:
+            "No running League client or compatible local Tencent install detected",
+          riotLocalFallbackMissingClient:
+            "No running Riot client detected; Riot replays cannot use local executable fallback",
           missingPlatformId: "Replay file name does not include a server",
           unknownFamily: "Replay server type could not be identified",
           missingVersion: "Replay version could not be parsed",
           missingFamilyClient: "No running {{family}} client detected",
           compatibleVersionMismatch:
             "No running {{family}} client has a compatible version for replay version {{version}}",
+          riotLocalFallbackUnsupported:
+            "No running Riot client matches replay version {{version}}; Riot replays cannot use local executable fallback",
+          tencentClientOrInstallVersionMismatch:
+            "No running Tencent client or local install matches replay version {{version}}",
           missingServerClient:
             "No running {{family}} client matches {{server}}",
           versionMismatch:
@@ -109,15 +118,24 @@ export const replayI18n: Resource = {
       playTooltip: {
         unavailable: "回放不可用",
         matched: "{{family}} {{server}} {{version}}",
+        localExecutable: "本地腾讯客户端 {{version}}",
         reason: {
           missingGameId: "回放文件名缺少对局 ID",
           noRunningClient: "没有检测到正在运行的 League 客户端",
+          noRunningClientOrTencentInstall:
+            "没有检测到正在运行的 League 客户端或兼容的本地腾讯客户端",
+          riotLocalFallbackMissingClient:
+            "没有检测到正在运行的 Riot 客户端；Riot 回放不能使用本地客户端兜底启动",
           missingPlatformId: "回放文件名缺少大区",
           unknownFamily: "无法识别回放所属客户端类型",
           missingVersion: "无法解析回放版本",
           missingFamilyClient: "没有检测到正在运行的 {{family}} 客户端",
           compatibleVersionMismatch:
             "没有正在运行的 {{family}} 客户端兼容回放版本 {{version}}",
+          riotLocalFallbackUnsupported:
+            "没有正在运行的 Riot 客户端匹配回放版本 {{version}}；Riot 回放不能使用本地客户端兜底启动",
+          tencentClientOrInstallVersionMismatch:
+            "没有正在运行的腾讯客户端或本地安装匹配回放版本 {{version}}",
           missingServerClient: "没有正在运行的 {{family}} {{server}} 客户端",
           versionMismatch:
             "正在运行的 {{family}} {{server}} 客户端版本与回放版本 {{version}} 不匹配",
@@ -175,9 +193,14 @@ export const replayI18n: Resource = {
       playTooltip: {
         unavailable: "リプレイは利用できません",
         matched: "{{family}} {{server}} {{version}}",
+        localExecutable: "ローカル Tencent クライアント {{version}}",
         reason: {
           missingGameId: "リプレイファイル名にゲーム ID がありません",
           noRunningClient: "実行中の League クライアントが検出されません",
+          noRunningClientOrTencentInstall:
+            "実行中の League クライアントまたは互換性のあるローカル Tencent クライアントが検出されません",
+          riotLocalFallbackMissingClient:
+            "実行中の Riot クライアントが検出されません。Riot リプレイはローカルクライアントでの代替起動に対応していません",
           missingPlatformId: "リプレイファイル名にサーバーがありません",
           unknownFamily: "リプレイのクライアント種別を識別できません",
           missingVersion: "リプレイのバージョンを解析できません",
@@ -185,6 +208,10 @@ export const replayI18n: Resource = {
             "実行中の {{family}} クライアントが検出されません",
           compatibleVersionMismatch:
             "実行中の {{family}} クライアントにリプレイバージョン {{version}} と互換性のあるものがありません",
+          riotLocalFallbackUnsupported:
+            "リプレイバージョン {{version}} に一致する実行中の Riot クライアントがありません。Riot リプレイはローカルクライアントでの代替起動に対応していません",
+          tencentClientOrInstallVersionMismatch:
+            "実行中の Tencent クライアントまたはローカルインストールがリプレイバージョン {{version}} と一致しません",
           missingServerClient:
             "実行中の {{family}} {{server}} クライアントがありません",
           versionMismatch:

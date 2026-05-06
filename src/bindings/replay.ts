@@ -43,6 +43,8 @@ export type ReplayClient = {
 
 export type ReplayClientFamily = "TENCENT" | "RIOT";
 
+export type ReplayLaunchMethod = "lcu" | "localExecutable";
+
 export type ReplayEntry = {
   id: string;
   path: string;
@@ -82,6 +84,7 @@ export type ReplayFolderSourceKind = "user" | "client" | "default";
 export type ReplayLaunchAvailability = {
   canLaunch: boolean;
   reason: string | null;
+  launchMethod: ReplayLaunchMethod | null;
   clientPid: number | null;
   clientFamily: ReplayClientFamily | null;
   clientServerId: string | null;
