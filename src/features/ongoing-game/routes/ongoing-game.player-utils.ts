@@ -12,12 +12,22 @@ const MULTI_TEAM_QUEUE_IDS = new Set<number>([
   3140, // Hextech ARAM variants
 ]);
 
+function isMultiTeamQueueId(queueId: number | null): boolean {
+  return typeof queueId === "number" && MULTI_TEAM_QUEUE_IDS.has(queueId);
+}
+
+export type OngoingTeamSide = "blue" | "red";
+
 export function isBotSlot(slot: PlayerSlot): boolean {
-  // A slot is only a bot when it has no identity AND no champion selection.
-  // Hidden-identity allies during ranked pre-reveal champ-select have empty
-  // puuid / zero summonerId but a real championId — they must not be classified
-  // as bots.
-  return slot.summonerId === 0 && slot.puuid.trim().length === 0;
+  return slot.slotKind === "bot";
+}
+
+export function shouldRenderSlot(slot: PlayerSlot, showBots: boolean): boolean {
+  if (slot.slotKind === "placeholder") {
+    return false;
+  }
+
+  return showBots || !isBotSlot(slot);
 }
 
 export function groupTeamMembers(teamMembers: PlayerSlot[]): Array<{
@@ -84,7 +94,7 @@ function shouldUseTopBottomLayout(
   }
 
   if (typeof queueId === "number" && queueId > 0) {
-    return !MULTI_TEAM_QUEUE_IDS.has(queueId);
+    return !isMultiTeamQueueId(queueId);
   }
 
   const hasBlue = teamMembers.some((member) => isBlueTeamSlot(member, phase));
@@ -135,6 +145,80 @@ export function resolveOngoingTeamGroups(params: {
     { teamId: blueTeamId, members: blueMembers },
     { teamId: redTeamId, members: redMembers },
   ];
+}
+
+function sideFromTeamId(teamId: number): OngoingTeamSide | null {
+  const normalizedTeamId = normalizeTeamId(teamId);
+  if (normalizedTeamId === 1) {
+    return "blue";
+  }
+
+  if (normalizedTeamId === 2) {
+    return "red";
+  }
+
+  return null;
+}
+
+function isVisibleSideSlot(slot: PlayerSlot): boolean {
+  return slot.slotKind !== "placeholder";
+}
+
+export function resolveOwnOngoingTeamSide(params: {
+  phase: OngoingGamePhase;
+  teamMembers: PlayerSlot[];
+  gameflowSession: GameflowSessionData | null;
+  champSelectSession: ChampSelectSessionData | null;
+  effectiveQueueId?: number | null;
+  ownPuuid?: string | null;
+}): OngoingTeamSide | null {
+  const {
+    phase,
+    teamMembers,
+    gameflowSession,
+    champSelectSession,
+    effectiveQueueId,
+    ownPuuid,
+  } = params;
+  if (phase !== "ChampSelect" && phase !== "InGame") {
+    return null;
+  }
+
+  const queueId =
+    typeof effectiveQueueId === "number" && effectiveQueueId > 0
+      ? effectiveQueueId
+      : resolveQueueIdFromSessions(gameflowSession, champSelectSession);
+  if (!shouldUseTopBottomLayout(phase, queueId, teamMembers)) {
+    return null;
+  }
+
+  const normalizedOwnPuuid = ownPuuid?.trim();
+  const ownSlot =
+    normalizedOwnPuuid && normalizedOwnPuuid.length > 0
+      ? teamMembers.find(
+          (member) =>
+            member.puuid.trim() === normalizedOwnPuuid &&
+            isVisibleSideSlot(member),
+        )
+      : undefined;
+  if (ownSlot) {
+    return sideFromTeamId(ownSlot.team);
+  }
+
+  if (phase !== "ChampSelect") {
+    return null;
+  }
+
+  const localPlayerCellId = champSelectSession?.localPlayerCellId;
+  if (typeof localPlayerCellId !== "number" || localPlayerCellId < 0) {
+    return null;
+  }
+
+  const cellSlot = teamMembers.find(
+    (member) =>
+      member.cellId === localPlayerCellId && isVisibleSideSlot(member),
+  );
+  return cellSlot ? sideFromTeamId(cellSlot.team) : null;
 }
 
 /** Maps both champ-select (1/2) and in-game (100/200) team IDs to a stable value. */

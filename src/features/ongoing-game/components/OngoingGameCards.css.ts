@@ -23,7 +23,7 @@ export const teamSection = recipe({
         height: "calc(100% + 6px)",
         marginBottom: -6,
         overflowX: "auto",
-        scrollbarGutter: "stable",
+        // scrollbarGutter: "stable",
       },
       compact: {
         height: "100%",

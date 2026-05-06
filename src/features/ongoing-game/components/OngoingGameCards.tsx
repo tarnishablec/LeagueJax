@@ -1,6 +1,6 @@
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { useTranslation } from "react-i18next";
-import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
+import { shouldRenderSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import * as s from "./OngoingGameCards.css.ts";
 import type { PlayerSquadAssignments } from "./player-card-squads.ts";
@@ -48,9 +48,7 @@ export function TeamRow(props: {
   } = props;
   const { t } = useTranslation();
 
-  const visibleSlots = showBots
-    ? slots
-    : slots.filter((slot) => !isBotSlot(slot));
+  const visibleSlots = slots.filter((slot) => shouldRenderSlot(slot, showBots));
   const teamCols = Math.max(minimumColumns, visibleSlots.length, 1);
   const noDataText = t("ongoingGame.noData", {
     defaultValue: "No player data yet",

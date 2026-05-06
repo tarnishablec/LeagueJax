@@ -3,7 +3,7 @@ import { style } from "@vanilla-extract/css";
 export const page = style({
   display: "grid",
   gridTemplateRows: "repeat(2, 1fr)",
-  gap: 8,
+  gap: 12,
   alignContent: "start",
   minHeight: 0,
   height: "100%",

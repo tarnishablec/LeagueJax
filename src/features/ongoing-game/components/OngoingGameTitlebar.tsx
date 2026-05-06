@@ -8,7 +8,9 @@ import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/types/match-mode";
 import { useLcuMapQuery } from "@/hooks/use-lcu-maps";
+import { useLcuStore } from "@/stores/lcu";
 import { preferredLcuMapAsset } from "@/utils/lcu-map-assets";
+import { resolveOwnOngoingTeamSide } from "../routes/ongoing-game.player-utils.ts";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
@@ -49,17 +51,27 @@ export function OngoingGameTitlebar() {
   const isOngoingVisible = isVisibleOngoingPhase(phase);
 
   const modeTag = useOngoingGameStore((state) => state.modeTag);
+  const teamMembers = useOngoingGameStore((state) => state.teamMembers);
+  const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
+  const champSelectSession = useOngoingGameStore(
+    (state) => state.champSelectSession,
+  );
+  const effectiveQueueId = useOngoingGameStore(
+    (state) => state.effectiveQueueId,
+  );
+  const ownPuuid = useLcuStore(
+    (state) =>
+      state.instances
+        .find((instance) => instance.isFocused && instance.state === "ready")
+        ?.summoner?.puuid.trim() || null,
+  );
   const matchHistoriesPending = useOngoingGameStore((state) =>
     Object.values(state.historyStatesByPuuid).some(
       (s) => s.status === "loading",
     ),
   );
-  const gameflowMap = useOngoingGameStore(
-    (state) => state.gameflowSession?.map ?? null,
-  );
-  const queueAssetMutator = useOngoingGameStore(
-    (state) => state.gameflowSession?.gameData.queue.assetMutator ?? "",
-  );
+  const gameflowMap = gameflowSession?.map ?? null;
+  const queueAssetMutator = gameflowSession?.gameData.queue.assetMutator ?? "";
   const gameflowMapMutators = useMemo(
     () => [gameflowMap?.gameMutator ?? "", queueAssetMutator],
     [gameflowMap?.gameMutator, queueAssetMutator],
@@ -69,8 +81,8 @@ export function OngoingGameTitlebar() {
     gameflowMapMutators,
     gameflowMap?.gameMode ?? "",
   );
-  const rawQueueDetailedDescription = useOngoingGameStore((state) => {
-    const session = state.gameflowSession;
+  const rawQueueDetailedDescription = useMemo(() => {
+    const session = gameflowSession;
     if (!session) return null;
     // Some queues (e.g., Hextech ARAM, queue 2400) leave `detailedDescription`
     // as an empty string. Walk the queue → map chain until we find something
@@ -86,9 +98,28 @@ export function OngoingGameTitlebar() {
       if (trimmed.length > 0) return trimmed;
     }
     return null;
-  });
+  }, [gameflowSession]);
 
   const setModeTag = useOngoingGameStore((state) => state.setModeTag);
+  const ownTeamSide = useMemo(
+    () =>
+      resolveOwnOngoingTeamSide({
+        phase,
+        teamMembers,
+        gameflowSession,
+        champSelectSession,
+        effectiveQueueId,
+        ownPuuid,
+      }),
+    [
+      champSelectSession,
+      effectiveQueueId,
+      gameflowSession,
+      ownPuuid,
+      phase,
+      teamMembers,
+    ],
+  );
 
   const queueIconPath = useMemo(() => {
     if (!isOngoingVisible || !gameflowMap) {
@@ -100,6 +131,12 @@ export function OngoingGameTitlebar() {
   const queueDetailedDescription = isOngoingVisible
     ? rawQueueDetailedDescription
     : null;
+  const ownTeamSideLabel =
+    ownTeamSide === "blue"
+      ? t("ongoingGame.titlebar.sideBlue", { defaultValue: "Blue Side" })
+      : ownTeamSide === "red"
+        ? t("ongoingGame.titlebar.sideRed", { defaultValue: "Red Side" })
+        : null;
 
   const currentModeLabel = t("ongoingGame.titlebar.filterCurrentMode", {
     defaultValue: "Current Mode",
@@ -166,6 +203,12 @@ export function OngoingGameTitlebar() {
             />
           ) : null}
           <span className={s.queueDesc}>{queueDetailedDescription}</span>
+          {ownTeamSide && ownTeamSideLabel ? (
+            <span className={s.sideBadge}>
+              <span className={s.sideDiamond[ownTeamSide]} />
+              <span>{ownTeamSideLabel}</span>
+            </span>
+          ) : null}
         </span>
       </div>
 
