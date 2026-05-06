@@ -11,6 +11,8 @@ export const themeBackdropOverride = createGlobalVar("theme-backdrop-override");
 export const theme = createGlobalThemeContract({
   color: {
     primary: "primary",
+    tint: "tint",
+    tintHover: "tint-hover",
     success: "success",
     error: "error",
     background: "background",
@@ -31,6 +33,8 @@ export const theme = createGlobalThemeContract({
 createGlobalTheme(":root", theme, {
   color: {
     primary: "rgb(245 130 0)",
+    tint: `color-mix(in oklch, ${theme.color.primary} 10%, ${theme.color.background})`,
+    tintHover: `color-mix(in oklch, ${theme.color.primary} 6%, ${theme.color.background})`,
     success: "rgb(91 195 82)",
     error: "rgb(255 37 43)",
     background: `rgb(255 255 255 / 1)`,
@@ -51,6 +55,8 @@ createGlobalTheme(":root", theme, {
 createGlobalTheme(":root.dark", theme, {
   color: {
     primary: "rgb(245 130 0)",
+    tint: `color-mix(in oklch, ${theme.color.primary} 10%, ${theme.color.background})`,
+    tintHover: `color-mix(in oklch, ${theme.color.primary} 6%, ${theme.color.background})`,
     success: "rgb(91 195 82)",
     error: "rgb(255 37 43)",
     background: `rgb(25 26 28)`,

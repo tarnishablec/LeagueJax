@@ -40,7 +40,7 @@ export const tabTrigger = style({
   minWidth: 0,
   height: 30,
   border: "none",
-  borderRadius: 6,
+  borderRadius: 8,
   padding: "0 12px",
   color: theme.color.mutedForeground,
   background: "transparent",
@@ -56,11 +56,13 @@ export const tabTrigger = style({
   selectors: {
     "&:hover": {
       color: theme.color.foreground,
-      background: `color-mix(in srgb, ${theme.color.accent} 56%, transparent)`,
+      background: theme.color.tintHover,
     },
     "&[data-state='on']": {
       color: theme.color.foreground,
-      background: `color-mix(in srgb, ${theme.color.accent} 78%, transparent)`,
+      background: theme.color.tint,
+      outline: `1px solid ${theme.color.primary}`,
+      outlineOffset: -1,
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,

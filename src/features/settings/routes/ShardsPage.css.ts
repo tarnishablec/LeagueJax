@@ -21,7 +21,7 @@ export const segmentGroup = style({
   gap: 2,
   padding: 2,
   borderRadius: 6,
-  background: theme.color.accent,
+  background: theme.color.surface,
 });
 
 export const segment = style({
@@ -43,7 +43,7 @@ export const segmentActive = style([
   segment,
   {
     color: theme.color.foreground,
-    background: theme.color.blurry,
+    background: theme.color.surface,
     // boxShadow: `0 1px 2px oklch(0 0 0 / 0.06)`,
   },
 ]);
