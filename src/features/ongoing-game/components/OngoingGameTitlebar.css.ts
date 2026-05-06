@@ -17,6 +17,7 @@ export const labels = style({
   gridAutoFlow: "column",
   gridAutoColumns: "max-content",
   alignItems: "center",
+  justifySelf: "start",
   gap: 6,
   minWidth: 0,
   overflow: "hidden",
