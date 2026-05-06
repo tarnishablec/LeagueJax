@@ -218,7 +218,8 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
   `src/bindings/`.
 - **Shard-specific types** should be defined inside each shard and exported to `src/bindings/<shard_name>.ts` (for
   example `src/bindings/client_shard.ts`).
-- Run `bun run sync_rs_types` to regenerate bindings (Rust export tests + Biome format + typecheck).
+- Run `bun run sync_rs_types` from the project root to regenerate bindings (Rust export tests + Biome format +
+  typecheck).
 - TS should always import these types from `src/bindings/`.
 
 ## Rust Code Style

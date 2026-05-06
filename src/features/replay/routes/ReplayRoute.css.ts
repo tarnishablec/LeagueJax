@@ -263,6 +263,10 @@ export const resourceRow = style({
   },
 });
 
+export const executableRow = style({
+  gridTemplateColumns: "minmax(0, 1fr) max-content",
+});
+
 export const loadingStatusRow = style({
   minWidth: 0,
   minHeight: 40,
@@ -417,6 +421,34 @@ export const familyBadgeTone = styleVariants({
     background: `color-mix(in srgb, ${riotColor} 12%, transparent)`,
   },
   unknown: {
+    color: theme.color.mutedForeground,
+    outlineColor: theme.color.border,
+    background: `color-mix(in srgb, ${theme.color.deep} 34%, transparent)`,
+  },
+});
+
+export const statusBadge = style({
+  minWidth: 58,
+  height: 22,
+  boxSizing: "border-box",
+  display: "inline-grid",
+  placeItems: "center",
+  borderRadius: 4,
+  padding: "0 8px",
+  outline: "1px solid transparent",
+  fontSize: "0.6875rem",
+  fontWeight: 800,
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+});
+
+export const statusBadgeTone = styleVariants({
+  running: {
+    color: theme.color.success,
+    outlineColor: `color-mix(in srgb, ${theme.color.success} 58%, ${theme.color.border})`,
+    background: `color-mix(in srgb, ${theme.color.success} 18%, transparent)`,
+  },
+  local: {
     color: theme.color.mutedForeground,
     outlineColor: theme.color.border,
     background: `color-mix(in srgb, ${theme.color.deep} 34%, transparent)`,
