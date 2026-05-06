@@ -3,7 +3,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { useSettings } from "@/features/settings/context";
-import { TeamRow } from "../components/OngoingGameCards.tsx";
+import { FiveVsFiveOngoingLayout } from "../components/layouts/FiveVsFiveOngoingLayout.tsx";
+import { MultiTeamOngoingLayout } from "../components/layouts/MultiTeamOngoingLayout.tsx";
 import {
   DEFAULT_MIN_SHARED_SQUAD_GAMES,
   type PlayerSquadAssignments,
@@ -17,11 +18,7 @@ import {
   normalizePlayerCardTagColor,
 } from "../components/player-card-tags.ts";
 import { useOngoingGameStore } from "../store";
-import * as s from "./OngoingGameRoute.css";
-import {
-  normalizeTeamId,
-  resolveOngoingTeamGroups,
-} from "./ongoing-game.player-utils.ts";
+import { resolveOngoingTeamGroups } from "./ongoing-game.player-utils.ts";
 
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots" as const;
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
@@ -234,25 +231,19 @@ export function OngoingGameRoute() {
     );
   }
 
-  const shouldOffsetSingleRedTeam =
-    teamGroups.length === 1 &&
-    normalizeTeamId(teamGroups[0]?.teamId ?? 0) === 2;
+  const layoutProps = {
+    enabledPlayerCardTagIds,
+    excellentKdaThreshold,
+    matchHistoryCount,
+    playerCardTagColors,
+    showBots,
+    squadAssignments,
+    teamGroups,
+  };
 
-  return (
-    <div className={s.page}>
-      {shouldOffsetSingleRedTeam ? <div className={s.rowSpacer} /> : null}
-      {teamGroups.map((group) => (
-        <TeamRow
-          key={`team:${normalizeTeamId(group.teamId)}`}
-          enabledPlayerCardTagIds={enabledPlayerCardTagIds}
-          excellentKdaThreshold={excellentKdaThreshold}
-          matchHistoryCount={matchHistoryCount}
-          playerCardTagColors={playerCardTagColors}
-          showBots={showBots}
-          squadAssignments={squadAssignments}
-          slots={group.members}
-        />
-      ))}
-    </div>
-  );
+  if (teamGroups.length > 2) {
+    return <MultiTeamOngoingLayout {...layoutProps} />;
+  }
+
+  return <FiveVsFiveOngoingLayout {...layoutProps} />;
 }

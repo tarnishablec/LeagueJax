@@ -6,6 +6,8 @@ import * as s from "./OngoingGameCards.css.ts";
 import type { PlayerSquadAssignments } from "./player-card-squads.ts";
 import { SnapshotPlayerCard } from "./SnapshotPlayerCard.tsx";
 
+type TeamRowLayout = "standard" | "compact";
+
 function getSlotKey(slot: PlayerSlot, index: number): string {
   if (slot.cellId > 0) {
     return `slot:${slot.team}:${slot.cellId}`;
@@ -25,7 +27,9 @@ function getSlotKey(slot: PlayerSlot, index: number): string {
 export function TeamRow(props: {
   enabledPlayerCardTagIds: readonly string[];
   excellentKdaThreshold: number;
+  layout?: TeamRowLayout;
   matchHistoryCount: number;
+  minimumColumns?: number;
   playerCardTagColors: Readonly<Record<string, string>>;
   showBots: boolean;
   squadAssignments: PlayerSquadAssignments;
@@ -34,7 +38,9 @@ export function TeamRow(props: {
   const {
     enabledPlayerCardTagIds,
     excellentKdaThreshold,
+    layout = "standard",
     matchHistoryCount,
+    minimumColumns = 5,
     playerCardTagColors,
     showBots,
     squadAssignments,
@@ -45,16 +51,16 @@ export function TeamRow(props: {
   const visibleSlots = showBots
     ? slots
     : slots.filter((slot) => !isBotSlot(slot));
-  const teamCols = Math.max(5, visibleSlots.length);
+  const teamCols = Math.max(minimumColumns, visibleSlots.length, 1);
   const noDataText = t("ongoingGame.noData", {
     defaultValue: "No player data yet",
   });
 
   return (
-    <div className={s.teamSection}>
-      <div className={s.teamSectionContent}>
+    <div className={s.teamSection({ layout })}>
+      <div className={s.teamSectionContent({ layout })}>
         <div
-          className={s.teamRow}
+          className={s.teamRow({ layout })}
           style={assignInlineVars({
             [s.teamColsVar]: String(teamCols),
           })}

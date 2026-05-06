@@ -7,7 +7,7 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/types/match-mode";
-import { useLcuMaps } from "@/hooks/use-lcu-maps";
+import { useLcuMapQuery } from "@/hooks/use-lcu-maps";
 import { preferredLcuMapAsset } from "@/utils/lcu-map-assets";
 import { useOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
@@ -45,7 +45,6 @@ function resolveSelectedValue(
 
 export function OngoingGameTitlebar() {
   const { t } = useTranslation();
-  const { data: maps } = useLcuMaps();
   const phase = useOngoingGameStore((state) => state.phase);
   const isOngoingVisible = isVisibleOngoingPhase(phase);
 
@@ -57,6 +56,18 @@ export function OngoingGameTitlebar() {
   );
   const gameflowMap = useOngoingGameStore(
     (state) => state.gameflowSession?.map ?? null,
+  );
+  const queueAssetMutator = useOngoingGameStore(
+    (state) => state.gameflowSession?.gameData.queue.assetMutator ?? "",
+  );
+  const gameflowMapMutators = useMemo(
+    () => [gameflowMap?.gameMutator ?? "", queueAssetMutator],
+    [gameflowMap?.gameMutator, queueAssetMutator],
+  );
+  const { data: knownMap } = useLcuMapQuery(
+    gameflowMap?.id ?? 0,
+    gameflowMapMutators,
+    gameflowMap?.gameMode ?? "",
   );
   const rawQueueDetailedDescription = useOngoingGameStore((state) => {
     const session = state.gameflowSession;
@@ -84,9 +95,8 @@ export function OngoingGameTitlebar() {
       return null;
     }
 
-    const knownMap = maps?.find((map) => map.id === gameflowMap.id);
-    return preferredLcuMapAsset(knownMap ?? gameflowMap);
-  }, [gameflowMap, isOngoingVisible, maps]);
+    return preferredLcuMapAsset(knownMap) ?? preferredLcuMapAsset(gameflowMap);
+  }, [gameflowMap, isOngoingVisible, knownMap]);
   const queueDetailedDescription = isOngoingVisible
     ? rawQueueDetailedDescription
     : null;

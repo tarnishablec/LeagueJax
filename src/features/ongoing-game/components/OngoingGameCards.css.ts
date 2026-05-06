@@ -12,28 +12,72 @@ export const teamColsVar = createVar();
 export const playerCardSquadColorVar = createVar();
 export const playerTagColorVar = createVar();
 
-export const teamSection = style({
-  height: "calc(100% + 6px)",
-  marginBottom: -6,
-  minWidth: 0,
-  overflowX: "auto",
-  overflowY: "hidden",
-  scrollbarGutter: "stable",
+export const teamSection = recipe({
+  base: {
+    minWidth: 0,
+    overflowY: "hidden",
+  },
+  variants: {
+    layout: {
+      standard: {
+        height: "calc(100% + 6px)",
+        marginBottom: -6,
+        overflowX: "auto",
+        scrollbarGutter: "stable",
+      },
+      compact: {
+        height: "100%",
+        overflowX: "hidden",
+      },
+    },
+  },
+  defaultVariants: {
+    layout: "standard",
+  },
 });
 
-export const teamSectionContent = style({
-  height: "100%",
-  minWidth: "100%",
-  width: "max-content",
+export const teamSectionContent = recipe({
+  base: {
+    height: "100%",
+  },
+  variants: {
+    layout: {
+      standard: {
+        minWidth: "100%",
+        width: "max-content",
+      },
+      compact: {
+        minWidth: 0,
+        width: "100%",
+      },
+    },
+  },
+  defaultVariants: {
+    layout: "standard",
+  },
 });
 
-export const teamRow = style({
-  display: "grid",
-  gridTemplateColumns: `repeat(${teamColsVar}, minmax(188px, 1fr))`,
-  gap: 8,
-  height: "100%",
-  placeItems: "center",
-  justifyContent: "space-between",
+export const teamRow = recipe({
+  base: {
+    display: "grid",
+    gridTemplateColumns: `repeat(${teamColsVar}, minmax(188px, 1fr))`,
+    gap: 8,
+    height: "100%",
+    placeItems: "center",
+  },
+  variants: {
+    layout: {
+      standard: {
+        justifyContent: "space-between",
+      },
+      compact: {
+        justifyContent: "stretch",
+      },
+    },
+  },
+  defaultVariants: {
+    layout: "standard",
+  },
 });
 
 export const emptyState = style({
