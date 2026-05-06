@@ -57,12 +57,71 @@ export const teamBlock = recipe({
 
 export const teamHeader = style({
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) max-content",
+  gridTemplateColumns: "repeat(3, auto)",
   alignItems: "center",
+  justifyContent: "space-between",
   gap: 12,
   "@media": {
     "screen and (max-width: 760px)": {
       gridTemplateColumns: "1fr",
+    },
+  },
+});
+
+export const teamBans = style({
+  display: "grid",
+  gridTemplateColumns: "max-content max-content",
+  alignItems: "center",
+  gap: 6,
+  justifySelf: "center",
+  minWidth: 0,
+  color: theme.color.mutedForeground,
+  fontSize: "0.6875rem",
+  fontWeight: 700,
+  lineHeight: 1,
+  "@media": {
+    "screen and (max-width: 760px)": {
+      justifySelf: "start",
+    },
+  },
+});
+
+export const teamBansLabel = style({
+  whiteSpace: "nowrap",
+});
+
+export const teamBanList = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  gridAutoColumns: "20px",
+  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
+});
+
+export const teamBanIcon = style({
+  width: 23,
+  height: 23,
+  borderRadius: 4,
+  objectFit: "cover",
+  outline: `1px solid ${theme.color.border}`,
+});
+
+export const teamBanIconFallback = style({
+  position: "relative",
+  width: 23,
+  height: 23,
+  borderRadius: 4,
+  outline: `1px solid ${theme.color.border}`,
+  background: `color-mix(in srgb, ${theme.color.accent} 42%, transparent)`,
+  selectors: {
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      inset: 5,
+      borderRadius: 3,
+      outline: `1px solid color-mix(in srgb, ${theme.color.mutedForeground} 54%, transparent)`,
+      background: `color-mix(in srgb, ${theme.color.surface} 62%, transparent)`,
     },
   },
 });

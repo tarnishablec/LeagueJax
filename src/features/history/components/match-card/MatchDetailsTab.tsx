@@ -27,6 +27,11 @@ import {
   resolveMatchParticipantGroups,
   type TeamSide,
 } from "../../utils/match-participant-groups";
+import {
+  EMPTY_BAN_CHAMPION_ID,
+  resolveMatchTeamBanSlots,
+  resolveMatchTeamForGroup,
+} from "../../utils/match-team-bans";
 import * as matchCardStyles from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { MatchCardAugments } from "./MatchCardAugments";
@@ -562,6 +567,38 @@ function ObjectiveStat({
   );
 }
 
+function TeamBans({ team }: { team: RawMatchSummaryTeam | undefined }) {
+  const { t } = useTranslation();
+  const bans = resolveMatchTeamBanSlots(team);
+  if (bans.length === 0) {
+    return null;
+  }
+
+  const label = t("history.matchDetails.bans.label", {
+    defaultValue: "Bans:",
+  });
+  const emptyBanLabel = t("history.matchDetails.bans.empty", {
+    defaultValue: "Empty ban",
+  });
+
+  return (
+    <div className={s.teamBans}>
+      <span className={s.teamBansLabel}>{label}</span>
+      <div className={s.teamBanList}>
+        {bans.map((ban) => (
+          <ChampionAvatar
+            key={ban.key}
+            championId={ban.championId}
+            imageClassName={s.teamBanIcon}
+            fallbackClassName={s.teamBanIconFallback}
+            alt={ban.championId === EMPTY_BAN_CHAMPION_ID ? emptyBanLabel : ""}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function QuestSlot({ slot }: { slot: RoleQuestSlot | null }) {
   if (slot === null) {
     return <span className={s.emptyQuestSlot} aria-hidden="true" />;
@@ -755,9 +792,7 @@ function TeamBlock({
   }
 
   const objectiveSide: TeamSide = group.tone === "red" ? "red" : "blue";
-  const team = summary.json.teams.find(
-    (candidate) => candidate.teamId === group.teamId,
-  );
+  const team = resolveMatchTeamForGroup(summary.json.teams, group);
   const totals = computeTeamTotals(participants);
   const teamLabel =
     group.tone === "blue"
@@ -857,6 +892,7 @@ function TeamBlock({
             {formatDamage(totals.gold)}
           </span>
         </div>
+        <TeamBans team={team} />
         {group.showObjectives && visibleObjectives.length > 0 ? (
           <div className={s.objectiveScroller}>
             <div className={s.objectiveList}>

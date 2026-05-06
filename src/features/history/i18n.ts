@@ -113,6 +113,10 @@ export const historyI18n: Resource = {
           runes: "Runes",
         },
         perfectKda: "Perfect",
+        bans: {
+          label: "Bans:",
+          empty: "Empty ban",
+        },
         columns: {
           position: "Position",
           summoner: "Summoner",
@@ -294,6 +298,10 @@ export const historyI18n: Resource = {
           runes: "符文",
         },
         perfectKda: "完美",
+        bans: {
+          label: "禁用:",
+          empty: "空禁用",
+        },
         columns: {
           position: "位置",
           summoner: "召唤师",
@@ -475,6 +483,10 @@ export const historyI18n: Resource = {
           runes: "ルーン",
         },
         perfectKda: "Perfect",
+        bans: {
+          label: "バン:",
+          empty: "空きバン",
+        },
         columns: {
           position: "位置",
           summoner: "サモナー",
