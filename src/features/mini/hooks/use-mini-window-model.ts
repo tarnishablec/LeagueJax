@@ -9,9 +9,12 @@ import type {
 import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
 import type { LcuQueue } from "@/bindings/queues";
 import { useOngoingGameStore } from "@/features/ongoing-game/store";
-import { useLcuMaps } from "@/hooks/use-lcu-maps";
+import { useLcuMapQuery } from "@/hooks/use-lcu-maps";
 import { useLcuQueues } from "@/hooks/use-lcu-queues";
-import { preferredLcuMapAsset } from "@/utils/lcu-map-assets";
+import {
+  type LcuMapAssetSource,
+  preferredLcuMapAsset,
+} from "@/utils/lcu-map-assets";
 
 export type MiniChampSelectMode = "bench" | "default";
 
@@ -27,7 +30,7 @@ export type MiniChampSelectModel = {
 export type MiniWindowModel = {
   phase: OngoingGameUpdated["phase"];
   queueName: string | null;
-  mapIconSrc: string | null;
+  queueIconSrc: string | null;
   isSpectating: boolean;
   readyCheck: OngoingGameUpdated["ready_check"];
   champSelect: MiniChampSelectModel | null;
@@ -58,6 +61,13 @@ function queueIdFromState(
     gameflowSession?.gameData.queue.id ??
     null
   );
+}
+
+export function resolveMiniQueueIconSrc(
+  knownMap: LcuMapAssetSource | null | undefined,
+  gameflowMap: LcuMapAssetSource | null | undefined,
+): string | null {
+  return preferredLcuMapAsset(knownMap) ?? preferredLcuMapAsset(gameflowMap);
 }
 
 function normalizePositiveId(value: number | null | undefined): number | null {
@@ -135,7 +145,6 @@ function isSpectatingFromState(
 
 export function useMiniWindowModel(): MiniWindowModel {
   const { data: queues } = useLcuQueues();
-  const { data: maps } = useLcuMaps();
 
   const phase = useOngoingGameStore((state) => state.phase);
   const effectiveQueueId = useOngoingGameStore(
@@ -158,6 +167,18 @@ export function useMiniWindowModel(): MiniWindowModel {
       .catch(() => {});
   }, []);
 
+  const gameflowMap = gameflowSession?.map ?? null;
+  const queueAssetMutator = gameflowSession?.gameData.queue.assetMutator ?? "";
+  const gameflowMapMutators = useMemo(
+    () => [gameflowMap?.gameMutator ?? "", queueAssetMutator],
+    [gameflowMap?.gameMutator, queueAssetMutator],
+  );
+  const { data: knownMap } = useLcuMapQuery(
+    gameflowMap?.id ?? 0,
+    gameflowMapMutators,
+    gameflowMap?.gameMode ?? "",
+  );
+
   return useMemo(() => {
     const queueId = queueIdFromState(
       effectiveQueueId,
@@ -165,15 +186,11 @@ export function useMiniWindowModel(): MiniWindowModel {
       matchmakingSearch,
       gameflowSession,
     );
-    const sessionMap = gameflowSession?.map ?? null;
-    const knownMap = sessionMap
-      ? (maps?.find((map) => map.id === sessionMap.id) ?? sessionMap)
-      : null;
 
     return {
       phase,
       queueName: queueNameForId(queues, queueId),
-      mapIconSrc: preferredLcuMapAsset(knownMap),
+      queueIconSrc: resolveMiniQueueIconSrc(knownMap, gameflowMap),
       isSpectating: isSpectatingFromState(champSelectSession, gameflowSession),
       readyCheck,
       champSelect: champSelectModelFromSession(champSelectSession),
@@ -182,7 +199,8 @@ export function useMiniWindowModel(): MiniWindowModel {
     champSelectSession,
     effectiveQueueId,
     gameflowSession,
-    maps,
+    gameflowMap,
+    knownMap,
     matchmakingSearch,
     phase,
     queues,

@@ -162,11 +162,11 @@ export function MiniRoute() {
     <section className={s.root}>
       <div className={s.hero}>
         <div className={s.mapIconFrame}>
-          {model.mapIconSrc ? (
+          {model.queueIconSrc ? (
             <LcuImage
               className={s.mapImage}
-              src={model.mapIconSrc}
-              alt="Map icon"
+              src={model.queueIconSrc}
+              alt="Queue icon"
             />
           ) : (
             <MapPinned className={s.mapFallback} size={52} aria-hidden="true" />
