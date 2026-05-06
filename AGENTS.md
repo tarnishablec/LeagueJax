@@ -160,6 +160,9 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 - All page-level layouts should use **CSS Grid** (`grid`, `grid-cols-*`, `grid-rows-*`).
 - Do not use Flexbox (`flex`) for page-level layout. Flex is only allowed for small one-dimensional alignment (for
   example, icon alignment inside a button).
+- Avoid visual jumps in interaction design. Loading, empty, error, and loaded states should keep stable dimensions and
+  layout structure whenever possible; avoid large DOM replacements after loading completes. Prefer skeletons, reserved
+  space, stable grid tracks, progressive content fill, or state changes inside existing containers.
 
 ## Accessibility
 
@@ -194,6 +197,10 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
   enumerated variants.
 - **Theme tokens:** Defined in `src/styles/theme.css.ts` via `createGlobalThemeContract` / `createGlobalTheme`. Access
   with `vars.color.*`.
+- **Color sources:** All UI colors must come from `src/styles/theme.css.ts` or `src/styles/game-colors.css.ts`. Do not
+  scatter hard-coded business colors inside component styles when a theme or game color token can represent the value.
+- **Global styles:** App-wide resets, root styles, document-level selectors, and other global CSS must live in
+  `src/styles/global.css.ts`. Component-specific styles should remain in co-located `.css.ts` files.
 - **Dynamic values:** Use `assignInlineVars()` from `@vanilla-extract/dynamic` for runtime-dependent CSS values; avoid
   inline `style` for anything expressible statically.
 - Do not force a single color syntax. Prefer theme tokens for stable UI surfaces, and use the color format that best

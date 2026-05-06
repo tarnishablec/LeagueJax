@@ -1,4 +1,5 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
+import { gameColorVars } from "@/styles/game-colors.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
 const spinKeyframes = keyframes({
@@ -7,16 +8,16 @@ const spinKeyframes = keyframes({
   },
 });
 
-const shimmerKeyframes = keyframes({
+const appearInKeyframes = keyframes({
   from: {
-    backgroundPosition: "100% 0",
+    opacity: 0,
+    transform: "translateY(4px)",
   },
   to: {
-    backgroundPosition: "-100% 0",
+    opacity: 1,
+    transform: "translateY(0)",
   },
 });
-
-const shimmerBackground = `linear-gradient(90deg, color-mix(in srgb, ${theme.color.deep} 58%, transparent) 0%, color-mix(in srgb, ${theme.color.blurry} 72%, transparent) 42%, color-mix(in srgb, ${theme.color.deep} 58%, transparent) 84%)`;
 
 export const root = style({
   height: "100%",
@@ -86,6 +87,17 @@ export const scanButton = style({
 
 export const spin = style({
   animation: `${spinKeyframes} 900ms linear infinite`,
+});
+
+export const appearIn = style({
+  animation: `${appearInKeyframes} 180ms ease-out both`,
+  transition: "opacity 180ms ease-out, transform 180ms ease-out",
+  "@media": {
+    "(prefers-reduced-motion: reduce)": {
+      animation: "none",
+      transition: "none",
+    },
+  },
 });
 
 export const layout = style({
@@ -241,7 +253,8 @@ export const resourceRow = style({
   borderRadius: 6,
   outline: "1px solid transparent",
   background: `color-mix(in srgb, ${theme.color.surface} 52%, transparent)`,
-  transition: "background 140ms, outline-color 140ms",
+  transition:
+    "background 140ms, outline-color 140ms, opacity 180ms ease-out, transform 180ms ease-out",
   selectors: {
     "&:hover": {
       background: `color-mix(in srgb, ${theme.color.surface} 72%, transparent)`,
@@ -250,42 +263,25 @@ export const resourceRow = style({
   },
 });
 
-export const loadingResourceRow = style({
+export const loadingStatusRow = style({
   minWidth: 0,
+  minHeight: 40,
+  boxSizing: "border-box",
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) 40px",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
   alignItems: "center",
-  gap: 12,
-  padding: "7px 8px",
+  gap: 8,
+  padding: "8px 10px",
   borderRadius: 6,
   outline: "1px solid transparent",
   background: `color-mix(in srgb, ${theme.color.surface} 52%, transparent)`,
 });
 
-export const loadingResourceMain = style({
-  minWidth: 0,
+export const loadingStatusIcon = style({
+  width: 16,
+  height: 16,
   display: "grid",
-  gridTemplateColumns: "24px minmax(0, 1fr)",
-  alignItems: "center",
-  gap: 12,
-});
-
-export const loadingReplayRow = style({
-  minWidth: 0,
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) 40px",
-  alignItems: "center",
-  gap: 12,
-  padding: 10,
-  borderRadius: 8,
-  outline: `1px solid ${theme.color.border}`,
-  background: `color-mix(in srgb, ${theme.color.surface} 54%, transparent)`,
-});
-
-export const loadingTextStack = style({
-  minWidth: 0,
-  display: "grid",
-  gap: 7,
+  color: theme.color.primary,
 });
 
 export const loadingLabel = style({
@@ -298,41 +294,6 @@ export const loadingLabel = style({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 });
-
-export const loadingIcon = style({
-  width: 24,
-  height: 24,
-  borderRadius: 6,
-  background: shimmerBackground,
-  backgroundSize: "200% 100%",
-  animation: `${shimmerKeyframes} 1.15s ease-in-out infinite`,
-});
-
-export const loadingAction = style({
-  width: 40,
-  height: 40,
-  borderRadius: 6,
-  background: shimmerBackground,
-  backgroundSize: "200% 100%",
-  animation: `${shimmerKeyframes} 1.15s ease-in-out infinite`,
-});
-
-export const loadingLine = style({
-  width: "62%",
-  height: 10,
-  borderRadius: 999,
-  background: shimmerBackground,
-  backgroundSize: "200% 100%",
-  animation: `${shimmerKeyframes} 1.15s ease-in-out infinite`,
-});
-
-export const loadingLineShort = style([
-  loadingLine,
-  {
-    width: "38%",
-    height: 8,
-  },
-]);
 
 export const resourceText = style({
   minWidth: 0,
@@ -426,8 +387,8 @@ export const mutedText = style({
   whiteSpace: "nowrap",
 });
 
-const tencentColor = "oklch(0.74 0.17 62)";
-const riotColor = "oklch(0.72 0.12 230)";
+const tencentColor = gameColorVars.augmentRarity.gold;
+const riotColor = gameColorVars.team.blue;
 
 export const familyBadge = style({
   minWidth: 0,
@@ -652,6 +613,6 @@ export const empty = style({
 });
 
 export const error = style({
-  color: "oklch(0.74 0.17 28)",
+  color: theme.color.error,
   fontSize: "0.75rem",
 });
