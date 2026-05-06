@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "league-jax",
+  "productName": "LeagueJax",
   "version": "0.1.45",
   "identifier": "com.tarnishablec.league-jax",
   "build": {
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "league-jax",
+        "title": "MAIN",
         "width": 1450,
         "height": 1000,
         "minHeight": 600,
