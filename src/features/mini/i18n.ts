@@ -13,9 +13,25 @@ export const miniI18n: Resource = {
       },
       queue: {
         empty: "No active queue",
+        unknown: "Current queue",
       },
       autoAccept: {
         countdown: "Auto accept: {{count}}s",
+      },
+      champSelect: {
+        selected: "Selected",
+        notSelected: "Not selected",
+        status: {
+          completed: "Champion Select (Completed)",
+          pending: "Champion Select",
+        },
+        swapFailed: "Failed to switch champion",
+        dodge: {
+          title: "Dodge Champion Select",
+          pending: "Dodging",
+          action: "Dodge Now",
+          failed: "Failed to dodge champion select",
+        },
       },
     },
     settings: {
@@ -55,9 +71,25 @@ export const miniI18n: Resource = {
       },
       queue: {
         empty: "暂无活动",
+        unknown: "当前队列",
       },
       autoAccept: {
         countdown: "自动接受：{{count}}秒",
+      },
+      champSelect: {
+        selected: "已选择",
+        notSelected: "未选择",
+        status: {
+          completed: "英雄选择（已完成）",
+          pending: "英雄选择",
+        },
+        swapFailed: "切换英雄失败",
+        dodge: {
+          title: "退出英雄选择",
+          pending: "秒退中",
+          action: "立即秒退",
+          failed: "退出英雄选择失败",
+        },
       },
     },
     settings: {
@@ -97,9 +129,25 @@ export const miniI18n: Resource = {
       },
       queue: {
         empty: "アクティブなキューなし",
+        unknown: "現在のキュー",
       },
       autoAccept: {
         countdown: "自動承認: {{count}}秒",
+      },
+      champSelect: {
+        selected: "選択済み",
+        notSelected: "未選択",
+        status: {
+          completed: "チャンピオン選択（完了）",
+          pending: "チャンピオン選択",
+        },
+        swapFailed: "チャンピオンの切り替えに失敗しました",
+        dodge: {
+          title: "チャンピオン選択をドッジ",
+          pending: "ドッジ中",
+          action: "今すぐドッジ",
+          failed: "チャンピオン選択のドッジに失敗しました",
+        },
       },
     },
     settings: {
