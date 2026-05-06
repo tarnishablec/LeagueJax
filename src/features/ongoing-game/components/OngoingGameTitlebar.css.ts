@@ -1,9 +1,10 @@
-import { style } from "@vanilla-extract/css";
+import { style, styleVariants } from "@vanilla-extract/css";
+import { gameColorVars } from "@/styles/game-colors.css";
 import { theme } from "@/styles/theme.css";
 
 export const root = style({
   display: "grid",
-  gridTemplateColumns: "auto auto",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
   alignItems: "center",
   justifyContent: "space-between",
   gap: 8,
@@ -66,6 +67,40 @@ export const idleText = style({
 export const separator = style({
   fontSize: "0.72rem",
   color: theme.color.mutedForeground,
+});
+
+export const sideBadge = style({
+  display: "grid",
+  gridAutoFlow: "column",
+  gridAutoColumns: "max-content",
+  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
+  color: theme.color.mutedForeground,
+  fontSize: "0.72rem",
+  fontWeight: 600,
+});
+
+const sideDiamondBase = style({
+  width: 8,
+  height: 8,
+  transform: "rotate(45deg)",
+  outline: `1px solid color-mix(in oklch, ${theme.color.foreground} 18%, transparent)`,
+});
+
+export const sideDiamond = styleVariants({
+  blue: [
+    sideDiamondBase,
+    {
+      background: gameColorVars.team.blue,
+    },
+  ],
+  red: [
+    sideDiamondBase,
+    {
+      background: gameColorVars.team.red,
+    },
+  ],
 });
 
 export const controls = style({

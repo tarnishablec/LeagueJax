@@ -84,7 +84,7 @@ createGlobalTheme(":root.dark", gameColorVars, {
   },
   team: {
     blue: "oklch(0.78 0.12 242)",
-    red: "oklch(0.78 0.15 24)",
+    red: "red",
     blueAccent: "oklch(0.68 0.13 242 / 0.7)",
     redAccent: "oklch(0.66 0.16 24 / 0.72)",
   },

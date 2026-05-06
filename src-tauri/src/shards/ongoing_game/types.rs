@@ -2,12 +2,15 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::shards::lcu::api::OngoingSessionSeed;
-use crate::shards::lcu::concepts::champ_select_session::{ChampSelectSessionData, TeamMember};
+use crate::shards::lcu::concepts::champ_select_session::{
+    ChampSelectSessionData, NameVisibilityType, TeamMember,
+};
 use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
 use crate::shards::lcu::concepts::matchmaking_ready_check::MatchmakingReadyCheckData;
 use crate::shards::lcu::concepts::matchmaking_search::MatchmakingSearchData;
 use crate::shards::lcu::concepts::summoner::SummonerInfo;
 use crate::shards::lcu::concepts::teambuilder_tbd_game::TeambuilderTbdGamePayload;
+use crate::shards::lcu::concepts::LanePosition;
 use crate::shards::lcu::manager::FocusChange;
 use crate::shards::sgp::matches::RawMatchSummaryGame;
 
@@ -59,6 +62,77 @@ pub struct OngoingGameMatchHistoryState {
     pub games: Option<Vec<RawMatchSummaryGame>>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, TS)]
+#[ts(export, export_to = "ongoing_game.ts")]
+#[serde(rename_all = "snake_case")]
+pub enum OngoingGameSlotKind {
+    #[default]
+    Player,
+    Bot,
+    Placeholder,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "ongoing_game.ts")]
+#[serde(rename_all = "camelCase")]
+pub struct OngoingGameTeamMember {
+    pub assigned_position: LanePosition,
+    pub cell_id: u64,
+    pub champion_id: u64,
+    pub champion_pick_intent: u64,
+    pub game_name: String,
+    pub internal_name: String,
+    pub is_auto_filled: bool,
+    pub is_humanoid: bool,
+    pub name_visibility_type: NameVisibilityType,
+    pub obfuscate_puuid: String,
+    pub obfuscate_summoner_id: u64,
+    pub pick_mode: u64,
+    pub pick_turn: u64,
+    pub player_alias: String,
+    pub player_type: String,
+    pub puuid: String,
+    pub selected_skin_id: u64,
+    pub spell1_id: u64,
+    pub spell2_id: u64,
+    pub summoner_id: i64,
+    pub tag_line: String,
+    pub team: u64,
+    pub ward_skin_id: i64,
+    pub slot_kind: OngoingGameSlotKind,
+}
+
+impl OngoingGameTeamMember {
+    pub(crate) fn from_lcu_member(member: &TeamMember, slot_kind: OngoingGameSlotKind) -> Self {
+        Self {
+            assigned_position: member.assigned_position,
+            cell_id: member.cell_id,
+            champion_id: member.champion_id,
+            champion_pick_intent: member.champion_pick_intent,
+            game_name: member.game_name.clone(),
+            internal_name: member.internal_name.clone(),
+            is_auto_filled: member.is_auto_filled,
+            is_humanoid: member.is_humanoid,
+            name_visibility_type: member.name_visibility_type.clone(),
+            obfuscate_puuid: member.obfuscate_puuid.clone(),
+            obfuscate_summoner_id: member.obfuscate_summoner_id,
+            pick_mode: member.pick_mode,
+            pick_turn: member.pick_turn,
+            player_alias: member.player_alias.clone(),
+            player_type: member.player_type.clone(),
+            puuid: member.puuid.clone(),
+            selected_skin_id: member.selected_skin_id,
+            spell1_id: member.spell1_id,
+            spell2_id: member.spell2_id,
+            summoner_id: member.summoner_id,
+            tag_line: member.tag_line.clone(),
+            team: member.team,
+            ward_skin_id: member.ward_skin_id,
+            slot_kind,
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Broadcast payloads
 // ---------------------------------------------------------------------------
@@ -85,7 +159,7 @@ pub struct OngoingGameUpdated {
     pub matchmaking_search: Option<MatchmakingSearchData>,
     pub ready_check: Option<MatchmakingReadyCheckData>,
     pub champ_select_session: Option<ChampSelectSessionData>,
-    pub team_members: Vec<TeamMember>,
+    pub team_members: Vec<OngoingGameTeamMember>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
