@@ -66,6 +66,16 @@ pub struct ReplayClient {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "replay.ts")]
 #[serde(rename_all = "camelCase")]
+pub struct ReplayLocalInstall {
+    pub family: ReplayClientFamily,
+    pub game_executable_path: String,
+    pub game_base_dir: String,
+    pub game_version: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "replay.ts")]
+#[serde(rename_all = "camelCase")]
 pub struct ReplayLaunchAvailability {
     pub can_launch: bool,
     pub reason: Option<String>,
@@ -105,6 +115,7 @@ pub struct ReplayEntry {
 pub struct ReplayLibrarySnapshot {
     pub folders: Vec<ReplayFolder>,
     pub clients: Vec<ReplayClient>,
+    pub installs: Vec<ReplayLocalInstall>,
     pub entries: Vec<ReplayEntry>,
 }
 

@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   FolderOpen,
+  HardDrive,
   Monitor,
   Play,
   RefreshCw,
@@ -32,6 +33,18 @@ type FamilyTone = "tencent" | "riot" | "unknown";
 const LCU_REFRESH_DEBOUNCE_MS = 180;
 const CDRAGON_CHAMPION_ICON_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons";
+
+type ReplayClientSnapshot = ReplayLibrarySnapshot["clients"][number];
+type ReplayLocalInstallSnapshot = ReplayLibrarySnapshot["installs"][number];
+
+type ExecutableResource = {
+  id: string;
+  family: ReplayClientFamily;
+  gameVersion: string | null;
+  gameExecutablePath: string | null;
+  gameBaseDir: string | null;
+  clients: ReplayClientSnapshot[];
+};
 
 function LoadingStatusRow({
   ariaLabel,
@@ -131,8 +144,144 @@ function familyTone(family: ReplayClientFamily | null | undefined): FamilyTone {
   }
 }
 
-function clientServerLabel(client: ReplayLibrarySnapshot["clients"][number]) {
+function clientServerLabel(client: ReplayClientSnapshot) {
   return client.serverId ?? `Client #${client.pid}`;
+}
+
+function normalizeExecutablePathKey(path: string | null | undefined): string {
+  if (!path) return "";
+  let normalized = path.trim().replaceAll("/", "\\").toLocaleLowerCase();
+  while (normalized.length > 3 && normalized.endsWith("\\")) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function installMatchesClient(
+  install: ReplayLocalInstallSnapshot,
+  client: ReplayClientSnapshot,
+): boolean {
+  if (install.family !== client.family) {
+    return false;
+  }
+
+  const installRoot = normalizeExecutablePathKey(install.gameBaseDir);
+  const clientRoot = normalizeExecutablePathKey(client.installDir);
+  if (!installRoot || !clientRoot) {
+    return false;
+  }
+
+  return (
+    clientRoot === installRoot ||
+    clientRoot.startsWith(`${installRoot}\\`) ||
+    installRoot.startsWith(`${clientRoot}\\`)
+  );
+}
+
+function buildExecutableResources(
+  snapshot: ReplayLibrarySnapshot | null,
+): ExecutableResource[] {
+  const installs = snapshot?.installs ?? [];
+  const clients = snapshot?.clients ?? [];
+  const matchedClientPids = new Set<number>();
+  const resources: ExecutableResource[] = installs.map((install) => {
+    const matchedClients = clients.filter((client) => {
+      const matched = installMatchesClient(install, client);
+      if (matched) {
+        matchedClientPids.add(client.pid);
+      }
+      return matched;
+    });
+
+    return {
+      id: `install:${normalizeExecutablePathKey(install.gameExecutablePath)}`,
+      family: install.family,
+      gameVersion:
+        install.gameVersion ??
+        matchedClients.find((client) => client.gameVersion)?.gameVersion ??
+        null,
+      gameExecutablePath: install.gameExecutablePath,
+      gameBaseDir: install.gameBaseDir,
+      clients: matchedClients,
+    };
+  });
+
+  for (const client of clients) {
+    if (matchedClientPids.has(client.pid)) {
+      continue;
+    }
+
+    resources.push({
+      id: `client:${client.pid}`,
+      family: client.family,
+      gameVersion: client.gameVersion,
+      gameExecutablePath: null,
+      gameBaseDir: client.installDir,
+      clients: [client],
+    });
+  }
+
+  return resources.sort(
+    (left, right) =>
+      familyLabel(left.family).localeCompare(familyLabel(right.family)) ||
+      normalizeExecutablePathKey(left.gameBaseDir).localeCompare(
+        normalizeExecutablePathKey(right.gameBaseDir),
+      ),
+  );
+}
+
+function executableStatusTone(
+  resource: ExecutableResource,
+): "running" | "local" {
+  return resource.clients.length > 0 ? "running" : "local";
+}
+
+function executableStatusLabel(
+  resource: ExecutableResource,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  if (resource.clients.length > 0) {
+    return t("replay.executableStatus.running");
+  }
+  return t("replay.executableStatus.local");
+}
+
+function executableDetailLabel(
+  resource: ExecutableResource,
+  t: ReturnType<typeof useTranslation>["t"],
+): string | null {
+  if (resource.clients.length > 1) {
+    return t("replay.executableHint.runningMultiple", {
+      count: resource.clients.length,
+    });
+  }
+
+  const client = resource.clients[0];
+  if (client) {
+    const server = clientServerLabel(client);
+    const labelKey = resource.gameExecutablePath
+      ? "replay.executableHint.runningServer"
+      : "replay.executableHint.unmatchedRunning";
+    return t(labelKey, {
+      server,
+      pid: client.pid,
+    });
+  }
+
+  if (resource.family === "RIOT") {
+    return t("replay.executableHint.riotRequiresRunningClient");
+  }
+  return null;
+}
+
+function executableReason(resource: ExecutableResource): string | null {
+  const reasons = resource.clients
+    .map((client) => client.reason)
+    .filter((reason): reason is string => Boolean(reason));
+  if (reasons.length === 0) {
+    return null;
+  }
+  return reasons.join("\n");
 }
 
 function folderCanRemove(folder: ReplayFolder): boolean {
@@ -240,9 +389,12 @@ function launchUnavailableReason(
     /^No running TENCENT client or local install has a compatible version for replay version (.+)$/,
   );
   if (tencentClientOrInstallVersionMismatch) {
-    return t("replay.playTooltip.reason.tencentClientOrInstallVersionMismatch", {
-      version: tencentClientOrInstallVersionMismatch[1],
-    });
+    return t(
+      "replay.playTooltip.reason.tencentClientOrInstallVersionMismatch",
+      {
+        version: tencentClientOrInstallVersionMismatch[1],
+      },
+    );
   }
 
   const versionMismatch = reason.match(
@@ -268,18 +420,14 @@ function playTooltip(
   }
 
   if (entry.launchAvailability.launchMethod === "localExecutable") {
-    return t("replay.playTooltip.localExecutable", {
-      version: entry.launchAvailability.clientGameVersion ?? "-",
-    });
+    return t("replay.playTooltip.localExecutable");
   }
 
-  const family = familyLabel(entry.launchAvailability.clientFamily);
-  const server = entry.launchAvailability.clientServerId ?? "-";
-  const version = entry.launchAvailability.clientGameVersion ?? "-";
+  const client =
+    entry.launchAvailability.clientServerId ??
+    familyLabel(entry.launchAvailability.clientFamily);
   return t("replay.playTooltip.matched", {
-    family,
-    server,
-    version,
+    client,
   });
 }
 
@@ -421,7 +569,10 @@ export function ReplayRoute() {
     [championCatalog, query, snapshot?.entries],
   );
   const folders = snapshot?.folders ?? [];
-  const clients = snapshot?.clients ?? [];
+  const executableResources = useMemo(
+    () => buildExecutableResources(snapshot),
+    [snapshot],
+  );
 
   const addFolderPath = useCallback(
     async (folderPath: string) => {
@@ -665,56 +816,75 @@ export function ReplayRoute() {
                   label={t("replay.loadingExecutables")}
                 />
               ) : null}
-              {!initialLoading && clients.length === 0 ? (
+              {!initialLoading && executableResources.length === 0 ? (
                 <span className={s.mutedText}>{t("replay.noExecutables")}</span>
               ) : null}
               {!initialLoading &&
-                clients.map((client) => (
-                  <div
-                    key={client.pid}
-                    className={`${s.resourceRow} ${s.appearIn} ${s.clientTone[familyTone(client.family)]}`}
-                  >
-                    <span className={s.resourceClientMain}>
-                      <span className={s.resourceIconSlot}>
-                        <Monitor size={14} aria-hidden="true" />
-                      </span>
-                      <span className={s.resourceText}>
-                        <span className={s.resourceTitleLine}>
-                          <span
-                            className={`${s.familyBadge} ${s.familyBadgeTone[familyTone(client.family)]}`}
-                          >
-                            {familyLabel(client.family)}
-                          </span>
-                          <span className={s.primaryText}>
-                            {clientServerLabel(client)}
-                          </span>
+                executableResources.map((resource) => {
+                  const reason = executableReason(resource);
+                  const detailLabel = executableDetailLabel(resource, t);
+                  return (
+                    <div
+                      key={resource.id}
+                      className={`${s.resourceRow} ${s.executableRow} ${s.appearIn} ${s.clientTone[familyTone(resource.family)]}`}
+                    >
+                      <span className={s.resourceClientMain}>
+                        <span className={s.resourceIconSlot}>
+                          {resource.clients.length > 0 ? (
+                            <Monitor size={14} aria-hidden="true" />
+                          ) : (
+                            <HardDrive size={14} aria-hidden="true" />
+                          )}
                         </span>
-                        <span className={s.mutedText}>
-                          {client.gameVersion ?? t("replay.unknownVersion")}
+                        <span className={s.resourceText}>
+                          <span className={s.resourceTitleLine}>
+                            <span
+                              className={`${s.familyBadge} ${s.familyBadgeTone[familyTone(resource.family)]}`}
+                            >
+                              {familyLabel(resource.family)}
+                            </span>
+                            <span className={s.primaryText}>
+                              League of Legends.exe
+                            </span>
+                          </span>
+                          <span className={s.mutedText}>
+                            {resource.gameVersion ?? t("replay.unknownVersion")}
+                          </span>
+                          {(resource.gameExecutablePath ??
+                          resource.gameBaseDir) ? (
+                            <AppTooltip
+                              content={
+                                resource.gameExecutablePath ??
+                                resource.gameBaseDir ??
+                                ""
+                              }
+                            >
+                              <span className={s.mutedText}>
+                                {resource.gameExecutablePath ??
+                                  resource.gameBaseDir}
+                              </span>
+                            </AppTooltip>
+                          ) : null}
+                          {detailLabel ? (
+                            <span className={s.mutedText}>{detailLabel}</span>
+                          ) : null}
+                          {reason ? (
+                            <AppTooltip content={reason}>
+                              <span className={s.metaWarning}>
+                                {t("replay.executableHint.clientUnavailable")}
+                              </span>
+                            </AppTooltip>
+                          ) : null}
                         </span>
-                        {client.installDir ? (
-                          <AppTooltip content={client.installDir}>
-                            <span className={s.mutedText}>
-                              {client.installDir}
-                            </span>
-                          </AppTooltip>
-                        ) : null}
-                        {client.reason ? (
-                          <AppTooltip content={client.reason}>
-                            <span className={s.metaWarning}>
-                              {client.reason}
-                            </span>
-                          </AppTooltip>
-                        ) : null}
                       </span>
-                    </span>
-                    {/*<span className={s.mutedText}>*/}
-                    {/*  {client.available*/}
-                    {/*    ? t("replay.enabled")*/}
-                    {/*    : t("replay.disabled")}*/}
-                    {/*</span>*/}
-                  </div>
-                ))}
+                      <span
+                        className={`${s.statusBadge} ${s.statusBadgeTone[executableStatusTone(resource)]}`}
+                      >
+                        {executableStatusLabel(resource, t)}
+                      </span>
+                    </div>
+                  );
+                })}
             </div>
           </section>
           {error ? <span className={s.error}>{error}</span> : null}

@@ -15,7 +15,7 @@ use jax::{depends, shard_id, Jax, Shard};
 use self::types::{
     ReplayClient, ReplayClientFamily, ReplayEntry, ReplayFolder, ReplayFolderSource,
     ReplayFolderSourceKind, ReplayLaunchAvailability, ReplayLaunchMethod, ReplayLibrarySnapshot,
-    ReplayMatchContext, ReplayMatchState,
+    ReplayLocalInstall, ReplayMatchContext, ReplayMatchState,
 };
 use crate::error::AppError;
 use crate::shards::lcu::installs::{
@@ -58,6 +58,7 @@ impl ReplayShard {
         Ok(ReplayLibrarySnapshot {
             folders,
             clients,
+            installs: installs.iter().map(replay_local_install).collect(),
             entries,
         })
     }
@@ -776,6 +777,22 @@ fn match_local_install<'a>(
                     is_compatible_game_version(replay_version, install_version)
                 })
     })
+}
+
+fn replay_local_install(install: &LolClientInstall) -> ReplayLocalInstall {
+    ReplayLocalInstall {
+        family: install_family(install.family),
+        game_executable_path: install.game_executable_path.to_string_lossy().to_string(),
+        game_base_dir: install.game_base_dir.to_string_lossy().to_string(),
+        game_version: install.game_version.clone(),
+    }
+}
+
+fn install_family(family: LolClientInstallFamily) -> ReplayClientFamily {
+    match family {
+        LolClientInstallFamily::Tencent => ReplayClientFamily::Tencent,
+        LolClientInstallFamily::Riot => ReplayClientFamily::Riot,
+    }
 }
 
 fn launch_local_replay(replay_path: &Path, install: &LolClientInstall) -> Result<(), AppError> {

@@ -43,8 +43,6 @@ export type ReplayClient = {
 
 export type ReplayClientFamily = "TENCENT" | "RIOT";
 
-export type ReplayLaunchMethod = "lcu" | "localExecutable";
-
 export type ReplayEntry = {
   id: string;
   path: string;
@@ -91,10 +89,20 @@ export type ReplayLaunchAvailability = {
   clientGameVersion: string | null;
 };
 
+export type ReplayLaunchMethod = "lcu" | "localExecutable";
+
 export type ReplayLibrarySnapshot = {
   folders: Array<ReplayFolder>;
   clients: Array<ReplayClient>;
+  installs: Array<ReplayLocalInstall>;
   entries: Array<ReplayEntry>;
+};
+
+export type ReplayLocalInstall = {
+  family: ReplayClientFamily;
+  gameExecutablePath: string;
+  gameBaseDir: string;
+  gameVersion: string | null;
 };
 
 export type ReplayMatchContext = {
