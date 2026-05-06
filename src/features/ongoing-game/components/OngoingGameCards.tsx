@@ -50,6 +50,7 @@ export function TeamRow(props: {
 
   const visibleSlots = slots.filter((slot) => shouldRenderSlot(slot, showBots));
   const teamCols = Math.max(minimumColumns, visibleSlots.length, 1);
+  const teamMinWidth = teamCols * 188 + (teamCols - 1) * 8;
   const noDataText = t("ongoingGame.noData", {
     defaultValue: "No player data yet",
   });
@@ -61,6 +62,7 @@ export function TeamRow(props: {
           className={s.teamRow({ layout })}
           style={assignInlineVars({
             [s.teamColsVar]: String(teamCols),
+            [s.teamMinWidthVar]: `${teamMinWidth}px`,
           })}
         >
           {visibleSlots.length === 0 ? (
