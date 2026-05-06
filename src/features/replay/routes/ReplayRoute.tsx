@@ -195,6 +195,18 @@ function launchUnavailableReason(
   if (reason === "Replay metadata does not expose game version") {
     return t("replay.playTooltip.reason.missingVersion");
   }
+  if (
+    reason ===
+    "No running League client or compatible local TENCENT install was detected"
+  ) {
+    return t("replay.playTooltip.reason.noRunningClientOrTencentInstall");
+  }
+  if (
+    reason ===
+    "No running RIOT client was detected; RIOT replays cannot use local executable fallback"
+  ) {
+    return t("replay.playTooltip.reason.riotLocalFallbackMissingClient");
+  }
 
   const noFamilyClient = reason.match(
     /^No running (RIOT|TENCENT) client was detected$/,
@@ -212,6 +224,24 @@ function launchUnavailableReason(
     return t("replay.playTooltip.reason.compatibleVersionMismatch", {
       family: compatibleVersionMismatch[1],
       version: compatibleVersionMismatch[2],
+    });
+  }
+
+  const riotLocalFallbackUnsupported = reason.match(
+    /^No running RIOT client has a compatible version for replay version (.+); RIOT replays cannot use local executable fallback$/,
+  );
+  if (riotLocalFallbackUnsupported) {
+    return t("replay.playTooltip.reason.riotLocalFallbackUnsupported", {
+      version: riotLocalFallbackUnsupported[1],
+    });
+  }
+
+  const tencentClientOrInstallVersionMismatch = reason.match(
+    /^No running TENCENT client or local install has a compatible version for replay version (.+)$/,
+  );
+  if (tencentClientOrInstallVersionMismatch) {
+    return t("replay.playTooltip.reason.tencentClientOrInstallVersionMismatch", {
+      version: tencentClientOrInstallVersionMismatch[1],
     });
   }
 
@@ -235,6 +265,12 @@ function playTooltip(
 ): string {
   if (!entry.launchAvailability.canLaunch) {
     return launchUnavailableReason(entry.launchAvailability.reason, t);
+  }
+
+  if (entry.launchAvailability.launchMethod === "localExecutable") {
+    return t("replay.playTooltip.localExecutable", {
+      version: entry.launchAvailability.clientGameVersion ?? "-",
+    });
   }
 
   const family = familyLabel(entry.launchAvailability.clientFamily);

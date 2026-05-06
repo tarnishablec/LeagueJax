@@ -34,6 +34,7 @@ tokio-util = { workspace = true }
 futures-util = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+serde_norway = { workspace = true }
 serde_path_to_error = { workspace = true }
 async-trait = { workspace = true }
 sysinfo = { workspace = true }
@@ -61,7 +62,6 @@ tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "sync
 
 [lints]
 workspace = true
-
 
 
 
