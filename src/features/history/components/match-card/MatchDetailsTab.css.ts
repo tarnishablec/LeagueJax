@@ -164,7 +164,7 @@ export const objectiveStat = style({
   gridTemplateColumns: "16px max-content",
   alignItems: "center",
   gap: 4,
-  padding: "0 6px",
+  padding: "0 2px",
   borderRadius: 6,
   border: `1px solid ${theme.color.border}`,
   background: `color-mix(in srgb, ${theme.color.surface} 68%, transparent)`,
