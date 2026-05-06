@@ -21,7 +21,7 @@
     "lint:fix_all": "bun run lint:biome:fix && bun run lint:clippy",
     "typecheck": "tsc --noEmit",
     "generate_updater_manifest": "bun run ./scripts/generate-updater-manifest.ts",
-    "sync_rs_types": "cd src-tauri && cargo test export_bindings && cd .. && bunx biome check --write ./src/bindings && bun run typecheck"
+    "sync_rs_types": "cargo test --manifest-path src-tauri/Cargo.toml export_bindings && bunx biome check --write ./src/bindings && bun run typecheck"
   },
   "dependencies": {
     "@ark-ui/react": "^5.36.2",
