@@ -29,8 +29,8 @@ export const teamSectionContent = style({
 
 export const teamRow = style({
   display: "grid",
-  gridTemplateColumns: `repeat(${teamColsVar}, minmax(230px, 300px))`,
-  gap: 10,
+  gridTemplateColumns: `repeat(${teamColsVar}, minmax(188px, 1fr))`,
+  gap: 8,
   height: "100%",
   placeItems: "center",
   justifyContent: "space-between",
@@ -350,7 +350,12 @@ export const historyListScroller = style({
   height: "100%",
   overflowX: "hidden",
   overflowY: "auto",
-  scrollbarGutter: "stable",
+  scrollbarWidth: "none",
+  selectors: {
+    "&::-webkit-scrollbar": {
+      display: "none",
+    },
+  },
 });
 
 export const historyRow = style({
