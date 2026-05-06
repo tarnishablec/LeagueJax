@@ -289,19 +289,30 @@ function hasOffFlashPosition(
     return false;
   }
 
+  let previousSpell1FlashCount = 0;
+  let previousSpell2FlashCount = 0;
+
   for (const match of matches) {
     const previousFlashSlot = flashSlotFromSpells(
       match.me.spell1Id,
       match.me.spell2Id,
     );
-    if (!previousFlashSlot) {
-      continue;
-    }
 
-    return previousFlashSlot !== currentFlashSlot;
+    if (previousFlashSlot === "spell1") {
+      previousSpell1FlashCount += 1;
+    } else if (previousFlashSlot === "spell2") {
+      previousSpell2FlashCount += 1;
+    }
   }
 
-  return false;
+  if (previousSpell1FlashCount === previousSpell2FlashCount) {
+    return false;
+  }
+
+  const previousMajorityFlashSlot =
+    previousSpell1FlashCount > previousSpell2FlashCount ? "spell1" : "spell2";
+
+  return previousMajorityFlashSlot !== currentFlashSlot;
 }
 
 export function hasEncounteredPlayer(
