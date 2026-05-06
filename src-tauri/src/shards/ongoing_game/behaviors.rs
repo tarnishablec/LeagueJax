@@ -4,9 +4,13 @@ use maokai_runner::{Behavior, EventReply, Transition};
 use maokai_tree::{State, TreeView};
 
 use crate::shards::lcu::api::OngoingSessionSeed;
-use crate::shards::lcu::concepts::champ_select_session::{NameVisibilityType, TeamMember};
+use crate::shards::lcu::concepts::champ_select_session::{
+    ChampSelectSessionData, NameVisibilityType, TeamMember,
+};
 use crate::shards::lcu::concepts::gameflow_phase::Phase as GameflowPhase;
+use crate::shards::lcu::concepts::gameflow_session::GameflowSessionData;
 use crate::shards::lcu::concepts::matchmaking_ready_check::ReadyCheckState;
+use crate::shards::lcu::concepts::matchmaking_search::MatchmakingSearchData;
 use crate::shards::lcu::concepts::summoner::SummonerInfo;
 use crate::shards::lcu::concepts::teambuilder_tbd_game::{
     TeambuilderCell, TeambuilderTbdGamePayload,
@@ -377,18 +381,25 @@ fn spawn_seed_task(envo: &Envo) {
                 (None, None)
             };
 
-            let (champ_select_session, teambuilder_payload) =
-                if matches!(phase, GameflowPhase::ChampSelect) {
-                    (
-                        champ_select_session.ok().flatten(),
-                        teambuilder_message
-                            .ok()
-                            .flatten()
-                            .map(|message| message.payload),
-                    )
-                } else {
-                    (None, None)
-                };
+            let champ_select_session = if matches!(phase, GameflowPhase::ChampSelect) {
+                champ_select_session.ok().flatten()
+            } else {
+                None
+            };
+
+            let teambuilder_payload = if matches!(phase, GameflowPhase::ChampSelect)
+                || (matches!(
+                    phase,
+                    GameflowPhase::GameStart | GameflowPhase::InProgress | GameflowPhase::InGame
+                ) && gameflow_session.is_some())
+            {
+                teambuilder_message
+                    .ok()
+                    .flatten()
+                    .map(|message| message.payload)
+            } else {
+                None
+            };
 
             Some(OngoingSessionSeed {
                 gameflow_session,
@@ -415,19 +426,52 @@ fn team_puuids(envo: &Envo) -> Vec<String> {
         .collect()
 }
 
-fn sync_lifecycle_ids_from_gameflow(envo: &Envo) {
+fn should_spawn_player_load(existing: Option<OngoingGamePlayerLoadStatus>) -> bool {
+    match existing {
+        None => true,
+        Some(OngoingGamePlayerLoadStatus::Idle) => true,
+        Some(_) => false,
+    }
+}
+
+fn resolve_lifecycle_game_id(
+    gameflow_session: Option<&GameflowSessionData>,
+    champ_select_session: Option<&ChampSelectSessionData>,
+    teambuilder_payload: Option<&TeambuilderTbdGamePayload>,
+) -> Option<u64> {
+    gameflow_session
+        .map(|session| session.game_data.game_id)
+        .or_else(|| champ_select_session.map(|session| session.game_id))
+        .or_else(|| teambuilder_payload.map(|payload| payload.game_id))
+}
+
+fn resolve_effective_queue_id(
+    gameflow_session: Option<&GameflowSessionData>,
+    matchmaking_search: Option<&MatchmakingSearchData>,
+    champ_select_session: Option<&ChampSelectSessionData>,
+    teambuilder_payload: Option<&TeambuilderTbdGamePayload>,
+) -> Option<u64> {
+    gameflow_session
+        .map(|session| session.game_data.queue.id)
+        .or_else(|| matchmaking_search.map(|search| search.queue_id))
+        .or_else(|| champ_select_session.map(|session| session.queue_id))
+        .or_else(|| teambuilder_payload.map(|payload| payload.queue_id))
+}
+
+fn sync_lifecycle_ids_from_sources(envo: &Envo) {
     let (game_id, queue_id) = {
         let ctx = envo.context();
-        let game_id = ctx.gameflow_session.as_ref().map(|gs| gs.game_data.game_id);
-        let queue_id = ctx
-            .gameflow_session
-            .as_ref()
-            .map(|gs| gs.game_data.queue.id)
-            .or_else(|| {
-                ctx.matchmaking_search
-                    .as_ref()
-                    .map(|search| search.queue_id)
-            });
+        let game_id = resolve_lifecycle_game_id(
+            ctx.gameflow_session.as_ref(),
+            ctx.champ_select_session.as_ref(),
+            ctx.teambuilder_payload.as_ref(),
+        );
+        let queue_id = resolve_effective_queue_id(
+            ctx.gameflow_session.as_ref(),
+            ctx.matchmaking_search.as_ref(),
+            ctx.champ_select_session.as_ref(),
+            ctx.teambuilder_payload.as_ref(),
+        );
         (game_id, queue_id)
     };
 
@@ -445,10 +489,7 @@ fn spawn_all_fetch_tasks(envo: &Envo) {
     for puuid in &puuids {
         let should_spawn = {
             let ctx = envo.context();
-            match ctx.summoner_states.get(puuid.as_str()) {
-                None => true,
-                Some(s) => s.status == OngoingGamePlayerLoadStatus::Idle,
-            }
+            should_spawn_player_load(ctx.summoner_states.get(puuid.as_str()).map(|s| s.status))
         };
         if should_spawn {
             init_summoner_state(envo, puuid);
@@ -459,10 +500,7 @@ fn spawn_all_fetch_tasks(envo: &Envo) {
     for puuid in &puuids {
         let should_spawn = {
             let ctx = envo.context();
-            match ctx.history_states.get(puuid.as_str()) {
-                None => true,
-                Some(s) => s.status == OngoingGamePlayerLoadStatus::Idle,
-            }
+            should_spawn_player_load(ctx.history_states.get(puuid.as_str()).map(|s| s.status))
         };
         if should_spawn {
             init_history_state(envo, puuid);
@@ -537,7 +575,7 @@ fn apply_seed(envo: &Envo, seed: &OngoingSessionSeed) {
         ctx.champ_select_session = seed.champ_select_session.clone();
         ctx.teambuilder_payload = seed.teambuilder_payload.clone();
     }
-    sync_lifecycle_ids_from_gameflow(envo);
+    sync_lifecycle_ids_from_sources(envo);
 }
 
 struct SummonerInfoSlot(SummonerInfo);
@@ -732,13 +770,13 @@ impl Behavior<OngoingGameInput, Envo> for IdleBehavior {
             }
             OngoingGameInput::GameflowSessionUpdated(data) => {
                 envo.context_mut().gameflow_session = Some((**data).clone());
-                sync_lifecycle_ids_from_gameflow(envo);
+                sync_lifecycle_ids_from_sources(envo);
                 request_transition_for_context(OngoingGamePhase::Idle, envo, "gameflow updated");
                 EventReply::Handled
             }
             OngoingGameInput::MatchmakingSearchUpdated(data) => {
                 envo.context_mut().matchmaking_search = Some((**data).clone());
-                sync_lifecycle_ids_from_gameflow(envo);
+                sync_lifecycle_ids_from_sources(envo);
                 request_transition_for_context(OngoingGamePhase::Idle, envo, "search updated");
                 EventReply::Handled
             }
@@ -791,7 +829,7 @@ impl Behavior<OngoingGameInput, Envo> for MatchmakingBehavior {
     fn on_enter(&self, _t: &Transition, envo: &mut Envo) {
         clear_gameplay_context(envo);
         envo.context_mut().ready_check = None;
-        sync_lifecycle_ids_from_gameflow(envo);
+        sync_lifecycle_ids_from_sources(envo);
         broadcast_updated(envo, OngoingGamePhase::Matchmaking);
     }
 
@@ -820,7 +858,7 @@ impl Behavior<OngoingGameInput, Envo> for MatchmakingBehavior {
             }
             OngoingGameInput::GameflowSessionUpdated(data) => {
                 envo.context_mut().gameflow_session = Some((**data).clone());
-                sync_lifecycle_ids_from_gameflow(envo);
+                sync_lifecycle_ids_from_sources(envo);
                 request_transition_for_context(
                     OngoingGamePhase::Matchmaking,
                     envo,
@@ -831,7 +869,7 @@ impl Behavior<OngoingGameInput, Envo> for MatchmakingBehavior {
             }
             OngoingGameInput::MatchmakingSearchUpdated(data) => {
                 envo.context_mut().matchmaking_search = Some((**data).clone());
-                sync_lifecycle_ids_from_gameflow(envo);
+                sync_lifecycle_ids_from_sources(envo);
                 request_transition_for_context(
                     OngoingGamePhase::Matchmaking,
                     envo,
@@ -896,7 +934,7 @@ pub struct ReadyCheckBehavior;
 impl Behavior<OngoingGameInput, Envo> for ReadyCheckBehavior {
     fn on_enter(&self, _t: &Transition, envo: &mut Envo) {
         clear_gameplay_context(envo);
-        sync_lifecycle_ids_from_gameflow(envo);
+        sync_lifecycle_ids_from_sources(envo);
         broadcast_updated(envo, OngoingGamePhase::ReadyCheck);
     }
 
@@ -925,7 +963,7 @@ impl Behavior<OngoingGameInput, Envo> for ReadyCheckBehavior {
             }
             OngoingGameInput::GameflowSessionUpdated(data) => {
                 envo.context_mut().gameflow_session = Some((**data).clone());
-                sync_lifecycle_ids_from_gameflow(envo);
+                sync_lifecycle_ids_from_sources(envo);
                 request_transition_for_context(
                     OngoingGamePhase::ReadyCheck,
                     envo,
@@ -936,7 +974,7 @@ impl Behavior<OngoingGameInput, Envo> for ReadyCheckBehavior {
             }
             OngoingGameInput::MatchmakingSearchUpdated(data) => {
                 envo.context_mut().matchmaking_search = Some((**data).clone());
-                sync_lifecycle_ids_from_gameflow(envo);
+                sync_lifecycle_ids_from_sources(envo);
                 request_transition_for_context(
                     OngoingGamePhase::ReadyCheck,
                     envo,
@@ -1011,7 +1049,7 @@ impl ChampSelectBehavior {
         };
 
         envo.context_mut().team_members = members;
-        sync_lifecycle_ids_from_gameflow(envo);
+        sync_lifecycle_ids_from_sources(envo);
     }
 }
 
@@ -1076,7 +1114,7 @@ impl Behavior<OngoingGameInput, Envo> for ChampSelectBehavior {
                         );
                     }
                     GameflowPhase::ChampSelect => {
-                        sync_lifecycle_ids_from_gameflow(envo);
+                        sync_lifecycle_ids_from_sources(envo);
                         if envo.context().effective_queue_id != prev_queue_id {
                             stop_history_tasks(envo);
                             restart_history_tasks(envo);
@@ -1137,41 +1175,19 @@ impl InGameBehavior {
                 return;
             };
 
-            let preserved = ctx.team_members.clone();
-            let (team_one_side, team_two_side) = resolve_gameflow_team_sides(
-                &preserved,
-                &gs.game_data.team_one,
-                &gs.game_data.team_two,
-            );
-
-            let mut members: Vec<TeamMember> = Vec::new();
-            for (index, player) in gs.game_data.team_one.iter().enumerate() {
-                let team = resolve_gameflow_team_for_player(
-                    gs.game_data.queue.id,
-                    gs.game_data.team_two.is_empty(),
-                    gs.game_data.team_one.len(),
-                    index,
-                    team_one_side,
-                );
-                members.push(build_team_member_from_gameflow(player, team));
-            }
-            for player in &gs.game_data.team_two {
-                members.push(build_team_member_from_gameflow(player, team_two_side));
-            }
-
-            let ally_side = preserved.first().map(|m| m.team).unwrap_or(team_two_side);
-            append_preserved_members(&mut members, &preserved, ally_side);
-
-            members
+            build_ingame_roster_from_sources(
+                gs,
+                &ctx.team_members,
+                ctx.teambuilder_payload.as_ref(),
+            )
         };
 
         {
             let mut ctx = envo.context_mut();
             ctx.team_members = members;
             ctx.champ_select_session = None;
-            ctx.teambuilder_payload = None;
         }
-        sync_lifecycle_ids_from_gameflow(envo);
+        sync_lifecycle_ids_from_sources(envo);
     }
 }
 
@@ -1294,6 +1310,97 @@ fn build_team_member_from_teambuilder_cell(cell: &TeambuilderCell) -> TeamMember
         tag_line: cell.tag_line.clone(),
         team: if cell.team_id == 0 { 1 } else { cell.team_id },
         ward_skin_id: 0,
+    }
+}
+
+fn build_ingame_roster_from_sources(
+    gameflow: &crate::shards::lcu::concepts::gameflow_session::GameflowSessionData,
+    preserved: &[TeamMember],
+    teambuilder: Option<&TeambuilderTbdGamePayload>,
+) -> Vec<TeamMember> {
+    let (team_one_side, team_two_side) = resolve_gameflow_team_sides(
+        preserved,
+        &gameflow.game_data.team_one,
+        &gameflow.game_data.team_two,
+    );
+
+    let mut members: Vec<TeamMember> = Vec::new();
+    for (index, player) in gameflow.game_data.team_one.iter().enumerate() {
+        let team = resolve_gameflow_team_for_player(
+            gameflow.game_data.queue.id,
+            gameflow.game_data.team_two.is_empty(),
+            gameflow.game_data.team_one.len(),
+            index,
+            team_one_side,
+        );
+        members.push(build_team_member_from_gameflow(player, team));
+    }
+    for player in &gameflow.game_data.team_two {
+        members.push(build_team_member_from_gameflow(player, team_two_side));
+    }
+
+    let fallback_ally_side = preserved.first().map(|m| m.team).unwrap_or(team_one_side);
+    let ally_side = infer_teambuilder_ally_side(&members, teambuilder, fallback_ally_side);
+    append_preserved_members(&mut members, preserved, ally_side);
+    merge_teambuilder_allies(&mut members, teambuilder, ally_side);
+
+    members
+}
+
+fn infer_teambuilder_ally_side(
+    members: &[TeamMember],
+    teambuilder: Option<&TeambuilderTbdGamePayload>,
+    fallback: u64,
+) -> u64 {
+    let Some(teambuilder) = teambuilder else {
+        return fallback;
+    };
+
+    teambuilder
+        .champion_select_state
+        .cells
+        .allied_team
+        .iter()
+        .find_map(|cell| {
+            members
+                .iter()
+                .find(|member| {
+                    (!cell.puuid.is_empty() && member.puuid == cell.puuid)
+                        || (cell.summoner_id > 0 && member.summoner_id == cell.summoner_id)
+                })
+                .map(|member| member.team)
+        })
+        .unwrap_or(fallback)
+}
+
+fn merge_teambuilder_allies(
+    members: &mut Vec<TeamMember>,
+    teambuilder: Option<&TeambuilderTbdGamePayload>,
+    ally_side: u64,
+) {
+    let Some(teambuilder) = teambuilder else {
+        return;
+    };
+
+    for cell in &teambuilder.champion_select_state.cells.allied_team {
+        if is_bot(&cell.puuid) {
+            continue;
+        }
+
+        if let Some(member) = members.iter_mut().find(|member| {
+            member.puuid == cell.puuid
+                || (cell.summoner_id > 0 && member.summoner_id == cell.summoner_id)
+        }) {
+            backfill_member_from_teambuilder(member, cell);
+            member.team = ally_side;
+            continue;
+        }
+
+        let mut member = build_team_member_from_teambuilder_cell(cell);
+        member.team = ally_side;
+        if is_real_champ_select_slot(&member) {
+            members.push(member);
+        }
     }
 }
 
@@ -1440,8 +1547,13 @@ impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
                 match data.phase {
                     GameflowPhase::GameStart
                     | GameflowPhase::InProgress
-                    | GameflowPhase::InGame => {}
+                    | GameflowPhase::InGame => {
+                        Self::build_roster_from_gameflow(envo);
+                        spawn_all_fetch_tasks(envo);
+                        broadcast_updated(envo, phase);
+                    }
                     _ => {
+                        clear_champ_select_context(envo);
                         request_transition_for_context(phase, envo, "gameflow moved out of game");
                     }
                 }
@@ -1468,6 +1580,13 @@ impl Behavior<OngoingGameInput, Envo> for InGameBehavior {
                 EventReply::Handled
             }
             OngoingGameInput::FocusChanged(change) => handle_focus_change(phase, envo, change),
+            OngoingGameInput::TeambuilderTbdGameUpdated(data) => {
+                envo.context_mut().teambuilder_payload = Some((**data).clone());
+                Self::build_roster_from_gameflow(envo);
+                spawn_all_fetch_tasks(envo);
+                broadcast_updated(envo, phase);
+                EventReply::Handled
+            }
             OngoingGameInput::Seeded(seed) => {
                 apply_seed(envo, seed);
                 Self::build_roster_from_gameflow(envo);
@@ -1614,6 +1733,73 @@ mod tests {
                 .map(|member| member.puuid.as_str())
                 .collect::<Vec<_>>(),
             vec!["live-player", "queued-ally"]
+        );
+    }
+
+    #[test]
+    fn ingame_roster_uses_teambuilder_allies_when_gameflow_is_missing_hidden_puuids() {
+        let mut gameflow = crate::shards::lcu::concepts::gameflow_session::GameflowSessionData {
+            phase: GameflowPhase::InProgress,
+            ..Default::default()
+        };
+        gameflow.game_data.queue.id = 420;
+        gameflow.game_data.team_one = vec![crate::shards::lcu::concepts::gameflow_session::Team {
+            puuid: "visible-player".to_owned(),
+            summoner_id: 42,
+            champion_id: 24,
+            ..Default::default()
+        }];
+        let payload = teambuilder_payload(vec![
+            teambuilder_cell(1, "visible-player", 42),
+            teambuilder_cell(2, "hidden-ally-one", 43),
+            teambuilder_cell(3, "hidden-ally-two", 44),
+        ]);
+
+        let roster = build_ingame_roster_from_sources(&gameflow, &[], Some(&payload));
+
+        assert_eq!(
+            roster
+                .iter()
+                .map(|member| member.puuid.as_str())
+                .collect::<Vec<_>>(),
+            vec!["visible-player", "hidden-ally-one", "hidden-ally-two"]
+        );
+        assert!(roster.iter().all(|member| member.team == 100));
+    }
+
+    #[test]
+    fn player_load_should_not_restart_active_states_for_existing_puuid() {
+        assert!(!should_spawn_player_load(Some(
+            OngoingGamePlayerLoadStatus::Loading,
+        )));
+        assert!(!should_spawn_player_load(Some(
+            OngoingGamePlayerLoadStatus::Ready,
+        )));
+        assert!(!should_spawn_player_load(Some(
+            OngoingGamePlayerLoadStatus::Failed,
+        )));
+        assert!(should_spawn_player_load(Some(
+            OngoingGamePlayerLoadStatus::Idle
+        )));
+        assert!(should_spawn_player_load(None));
+    }
+
+    #[test]
+    fn lifecycle_game_id_can_be_resolved_before_gameflow_session_exists() {
+        let champ_select = ChampSelectSessionData {
+            game_id: 101,
+            ..Default::default()
+        };
+        let mut teambuilder = teambuilder_payload(Vec::new());
+        teambuilder.game_id = 202;
+
+        assert_eq!(
+            resolve_lifecycle_game_id(None, Some(&champ_select), Some(&teambuilder)),
+            Some(101)
+        );
+        assert_eq!(
+            resolve_lifecycle_game_id(None, None, Some(&teambuilder)),
+            Some(202)
         );
     }
 
