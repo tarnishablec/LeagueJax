@@ -494,6 +494,7 @@ export const replayList = style({
   alignContent: "start",
   gap: 6,
   padding: 1,
+  scrollbarGutter: "stable"
 });
 
 export const replayRowShell = style({
