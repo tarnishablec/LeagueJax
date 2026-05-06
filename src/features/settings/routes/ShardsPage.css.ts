@@ -43,7 +43,7 @@ export const segmentActive = style([
   segment,
   {
     color: theme.color.foreground,
-    background: theme.color.deep,
+    background: theme.color.blurry,
     // boxShadow: `0 1px 2px oklch(0 0 0 / 0.06)`,
   },
 ]);
