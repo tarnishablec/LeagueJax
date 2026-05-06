@@ -197,7 +197,7 @@ export const scoreboardIconFallback = style({
 export const objectiveScroller = style({
   maxWidth: "100%",
   minWidth: 0,
-  overflowX: "auto",
+  overflowX: "hidden",
   overflowY: "hidden",
   scrollbarGutter: "stable",
   justifySelf: "end",
