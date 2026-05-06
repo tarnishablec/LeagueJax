@@ -29,52 +29,25 @@ import * as s from "./ReplayRoute.css";
 
 type FamilyTone = "tencent" | "riot" | "unknown";
 
-const CLIENT_LOADING_ROW_KEYS = [
-  "client-loading-1",
-  "client-loading-2",
-] as const;
-
-const REPLAY_LOADING_ROW_KEYS = [
-  "replay-loading-1",
-  "replay-loading-2",
-  "replay-loading-3",
-] as const;
-
 const LCU_REFRESH_DEBOUNCE_MS = 180;
 const CDRAGON_CHAMPION_ICON_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons";
 
-function LoadingResourceRow({ label }: { label: string }) {
+function LoadingStatusRow({
+  ariaLabel,
+  label,
+}: {
+  ariaLabel: string;
+  label: string;
+}) {
   return (
-    <div
-      className={s.loadingResourceRow}
-      role="status"
-      aria-label="Loading replay resources"
-    >
-      <span className={s.loadingResourceMain}>
-        <span className={s.loadingIcon} aria-hidden="true" />
-        <span className={s.loadingTextStack}>
-          <span className={s.loadingLabel}>{label}</span>
-          <span className={s.loadingLineShort} />
-        </span>
-      </span>
-      <span className={s.loadingAction} aria-hidden="true" />
-    </div>
-  );
-}
-
-function LoadingReplayRow({ label }: { label: string }) {
-  return (
-    <div
-      className={s.loadingReplayRow}
-      role="status"
-      aria-label="Loading replay list"
-    >
-      <span className={s.loadingTextStack}>
-        <span className={s.loadingLabel}>{label}</span>
-        <span className={s.loadingLine} />
-      </span>
-      <span className={s.loadingAction} aria-hidden="true" />
+    <div className={s.loadingStatusRow} role="status" aria-label={ariaLabel}>
+      <RefreshCw
+        className={`${s.loadingStatusIcon} ${s.spin}`}
+        size={14}
+        aria-hidden="true"
+      />
+      <span className={s.loadingLabel}>{label}</span>
     </div>
   );
 }
@@ -592,7 +565,10 @@ export function ReplayRoute() {
             </button>
             <div className={s.stack}>
               {initialLoading ? (
-                <LoadingResourceRow label={t("replay.loadingFolders")} />
+                <LoadingStatusRow
+                  ariaLabel="Loading replay resources"
+                  label={t("replay.loadingFolders")}
+                />
               ) : null}
               {!initialLoading &&
                 folders.map((folder) => {
@@ -647,14 +623,12 @@ export function ReplayRoute() {
           <section className={s.panel}>
             <span className={s.panelTitle}>{t("replay.executables")}</span>
             <div className={s.stack}>
-              {initialLoading
-                ? CLIENT_LOADING_ROW_KEYS.map((key) => (
-                    <LoadingResourceRow
-                      key={key}
-                      label={t("replay.loadingExecutables")}
-                    />
-                  ))
-                : null}
+              {initialLoading ? (
+                <LoadingStatusRow
+                  ariaLabel="Loading replay resources"
+                  label={t("replay.loadingExecutables")}
+                />
+              ) : null}
               {!initialLoading && clients.length === 0 ? (
                 <span className={s.mutedText}>{t("replay.noExecutables")}</span>
               ) : null}
@@ -662,7 +636,7 @@ export function ReplayRoute() {
                 clients.map((client) => (
                   <div
                     key={client.pid}
-                    className={`${s.resourceRow} ${s.clientTone[familyTone(client.family)]}`}
+                    className={`${s.resourceRow} ${s.appearIn} ${s.clientTone[familyTone(client.family)]}`}
                   >
                     <span className={s.resourceClientMain}>
                       <span className={s.resourceIconSlot}>
@@ -721,14 +695,12 @@ export function ReplayRoute() {
           </div>
 
           <div className={s.replayList}>
-            {initialLoading
-              ? REPLAY_LOADING_ROW_KEYS.map((key) => (
-                  <LoadingReplayRow
-                    key={key}
-                    label={t("replay.loadingReplays")}
-                  />
-                ))
-              : null}
+            {initialLoading ? (
+              <LoadingStatusRow
+                ariaLabel="Loading replay list"
+                label={t("replay.loadingReplays")}
+              />
+            ) : null}
             {!initialLoading && entries.length === 0 ? (
               <div className={s.empty}>{t("replay.empty")}</div>
             ) : null}
@@ -739,7 +711,10 @@ export function ReplayRoute() {
                   championCatalog,
                 );
                 return (
-                  <article key={entry.id} className={s.replayRowShell}>
+                  <article
+                    key={entry.id}
+                    className={`${s.replayRowShell} ${s.appearIn}`}
+                  >
                     <button
                       type="button"
                       className={s.replayRow}
