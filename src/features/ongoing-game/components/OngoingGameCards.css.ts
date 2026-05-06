@@ -9,6 +9,7 @@ import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
 export const teamColsVar = createVar();
+export const teamMinWidthVar = createVar();
 export const playerCardSquadColorVar = createVar();
 export const playerTagColorVar = createVar();
 
@@ -44,7 +45,7 @@ export const teamSectionContent = recipe({
     layout: {
       standard: {
         minWidth: "100%",
-        width: "max-content",
+        width: "100%",
       },
       compact: {
         minWidth: 0,
@@ -60,18 +61,21 @@ export const teamSectionContent = recipe({
 export const teamRow = recipe({
   base: {
     display: "grid",
-    gridTemplateColumns: `repeat(${teamColsVar}, minmax(188px, 1fr))`,
+    gridTemplateColumns: `repeat(${teamColsVar}, minmax(220px, 1fr))`,
     gap: 8,
     height: "100%",
+    width: "100%",
     placeItems: "center",
   },
   variants: {
     layout: {
       standard: {
         justifyContent: "space-between",
+        minWidth: teamMinWidthVar,
       },
       compact: {
         justifyContent: "stretch",
+        minWidth: 0,
       },
     },
   },
@@ -101,6 +105,7 @@ export const playerCard = style({
   padding: "10px 6px",
   background: theme.color.surface,
   height: "100%",
+  minWidth: 0,
   overflow: "hidden",
   width: "100%",
 });
@@ -140,6 +145,7 @@ export const playerNameButton = style({
   display: "grid",
   maxWidth: "100%",
   minWidth: 0,
+  width: "100%",
   padding: 0,
   border: "none",
   background: "transparent",
@@ -147,6 +153,7 @@ export const playerNameButton = style({
   font: "inherit",
   textAlign: "start",
   cursor: "pointer",
+  overflow: "hidden",
   selectors: {
     "&:hover": {
       vars: {
@@ -238,6 +245,8 @@ export const playerStats = style({
   alignItems: "center",
   gap: 6,
   minHeight: 16,
+  minWidth: 0,
+  overflow: "hidden",
 });
 
 export const winRateText = recipe({
@@ -247,6 +256,10 @@ export const winRateText = recipe({
     lineHeight: 1,
     whiteSpace: "nowrap",
     justifySelf: "start",
+    maxWidth: "100%",
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   variants: {
     tone: {
@@ -268,12 +281,14 @@ export const playerTagList = style({
   gap: 4,
   minHeight: 18,
   minWidth: 0,
+  overflow: "hidden",
 });
 
 export const playerTag = style({
   display: "inline-grid",
   placeItems: "center",
   minHeight: 18,
+  minWidth: 0,
   maxWidth: "100%",
   padding: "0 5px",
   borderRadius: 4,
@@ -319,7 +334,9 @@ export const rankValue = style({
   alignItems: "center",
   justifyContent: "start",
   gap: 4,
+  maxWidth: "100%",
   minWidth: 0,
+  overflow: "hidden",
 });
 
 export const rankIconTooltipTrigger = style({
@@ -404,13 +421,15 @@ export const historyListScroller = style({
 
 export const historyRow = style({
   display: "grid",
-  gridTemplateColumns: "auto 1fr auto",
+  gridTemplateColumns: "auto minmax(0, 1fr) auto",
   alignItems: "center",
   gap: 6,
   fontSize: "0.74rem",
   borderRadius: 6,
   padding: "0 6px",
   height: 40,
+  minWidth: 0,
+  overflow: "hidden",
   selectors: {
     "&:hover": {
       cursor: "pointer",
@@ -591,6 +610,9 @@ export const matchBriefDown = style({
   gap: 8,
   lineHeight: 1,
   alignItems: "center",
+  maxWidth: "100%",
+  minWidth: 0,
+  overflow: "hidden",
 });
 
 export const queueNameText = style({
@@ -610,6 +632,7 @@ export const queueNameRow = style({
   gap: 5,
   maxWidth: "100%",
   minWidth: 0,
+  overflow: "hidden",
 });
 
 export const historyPerformanceBadge = recipe({
