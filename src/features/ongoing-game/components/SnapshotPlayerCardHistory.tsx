@@ -8,6 +8,7 @@ import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
 import { MatchCard } from "@/features/history/components/match-card/MatchCard";
 import { normalizeHistoryPosition } from "@/features/history/hooks/use-match-card-view-model";
+import { useMatchPerformanceStrategy } from "@/features/history/hooks/use-match-performance-strategy";
 import { resolveMatchPerformanceBadgeForMatch } from "@/features/history/utils/match-performance-badge.ts";
 import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
 import { theme } from "@/styles/theme.css.ts";
@@ -45,10 +46,12 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
   const { t } = useTranslation();
   const result = resolveRecentGameResult(game);
   const queueName = useLcuQueueName(game.json.queueId);
+  const performanceStrategy = useMatchPerformanceStrategy();
   const performanceBadge = resolveMatchPerformanceBadgeForMatch(
     game,
     game.me,
     result === "Win",
+    performanceStrategy,
   );
   const championId = game.me.championId > 0 ? game.me.championId : null;
   const { mapId, gameMode } = game.json;

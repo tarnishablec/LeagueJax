@@ -10,6 +10,7 @@ import {
   resolveMatchParticipantGroups,
 } from "../utils/match-participant-groups.ts";
 import { resolveMatchPerformanceBadge } from "../utils/match-performance-badge.ts";
+import { useMatchPerformanceStrategy } from "./use-match-performance-strategy";
 import { useParticipantBrief } from "./use-participant-brief.ts";
 import { useRoleQuestSlot } from "./use-role-quest-slot.ts";
 
@@ -322,6 +323,7 @@ export function useMatchCardViewModel({
 
   const { data: map } = useLcuMapQuery(mapId, gameModeMutators, gameMode);
   const queueName = useLcuQueueName(queueId);
+  const performanceStrategy = useMatchPerformanceStrategy();
   const startedAt = formatStartTime(gameCreation);
   const { items, augments, outcome } = useParticipantBrief(me);
   const roleQuest = useRoleQuestSlot({
@@ -369,6 +371,7 @@ export function useMatchCardViewModel({
     me,
     teammates,
     isVictory: gameResult === "victory",
+    strategy: performanceStrategy,
   });
   const myGold = me.goldEarned ?? 0;
   const goldRank =
