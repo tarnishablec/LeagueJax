@@ -6,8 +6,11 @@ use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::error::AppError;
 use crate::shards::lcu::LcuShard;
-use crate::shards::replay::types::{ReplayLibrarySnapshot, ReplayMatchContext, ReplayMatchState};
+use crate::shards::replay::types::{
+    ReplayExecutableTarget, ReplayLibrarySnapshot, ReplayMatchContext, ReplayMatchState,
+};
 use crate::shards::replay::ReplayShard;
+use crate::shards::tauri_host::{RevealPathResult, TauriHost};
 
 fn dialog_folder_path_to_string(folder: FilePath) -> Result<String, AppError> {
     match folder {
@@ -79,10 +82,25 @@ pub async fn replay_open_folder(path: String, jax: State<'_, Arc<Jax>>) -> Resul
 }
 
 #[tauri::command]
-pub async fn replay_reveal_entry(path: String, jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
+pub async fn replay_reveal_entry(
+    path: String,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<RevealPathResult, AppError> {
     let replay = jax.get_shard::<ReplayShard>();
     let lcu = jax.get_shard::<LcuShard>();
-    replay.reveal_entry(&lcu, path).await
+    let host = jax.get_shard::<TauriHost>();
+    Ok(replay.reveal_entry(&lcu, &host, path).await)
+}
+
+#[tauri::command]
+pub async fn replay_reveal_executable(
+    target: ReplayExecutableTarget,
+    jax: State<'_, Arc<Jax>>,
+) -> Result<RevealPathResult, AppError> {
+    let replay = jax.get_shard::<ReplayShard>();
+    let lcu = jax.get_shard::<LcuShard>();
+    let host = jax.get_shard::<TauriHost>();
+    Ok(replay.reveal_executable(&lcu, &host, target).await)
 }
 
 #[tauri::command]

@@ -120,7 +120,7 @@ export const replayI18n: Resource = {
         runningServer: "{{server}} / PID {{pid}}",
         runningMultiple: "{{count}} 个运行中的客户端",
         unmatchedRunning: "{{server}} / PID {{pid}} / 未匹配本地 exe",
-        riotRequiresRunningClient: "直营服需要运行中的客户端",
+        riotRequiresRunningClient: "直营服回放需要运行中的客户端",
         clientUnavailable: "客户端不可用",
       },
       unknownVersion: "未知版本",

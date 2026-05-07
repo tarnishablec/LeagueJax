@@ -63,6 +63,13 @@ export type ReplayEntry = {
   launchAvailability: ReplayLaunchAvailability;
 };
 
+export type ReplayExecutableTarget = {
+  family: ReplayClientFamily;
+  gameExecutablePath: string | null;
+  gameBaseDir: string | null;
+  gameVersion: string | null;
+};
+
 export type ReplayFolder = {
   path: string;
   enabled: boolean;

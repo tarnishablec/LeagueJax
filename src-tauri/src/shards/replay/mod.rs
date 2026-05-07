@@ -13,9 +13,9 @@ use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 
 use self::types::{
-    ReplayClient, ReplayClientFamily, ReplayEntry, ReplayFolder, ReplayFolderSource,
-    ReplayFolderSourceKind, ReplayLaunchAvailability, ReplayLaunchMethod, ReplayLibrarySnapshot,
-    ReplayLocalInstall, ReplayMatchContext, ReplayMatchState,
+    ReplayClient, ReplayClientFamily, ReplayEntry, ReplayExecutableTarget, ReplayFolder,
+    ReplayFolderSource, ReplayFolderSourceKind, ReplayLaunchAvailability, ReplayLaunchMethod,
+    ReplayLibrarySnapshot, ReplayLocalInstall, ReplayMatchContext, ReplayMatchState,
 };
 use crate::error::AppError;
 use crate::shards::lcu::installs::{
@@ -25,6 +25,7 @@ use crate::shards::lcu::session::LcuSession;
 use crate::shards::lcu::LcuShard;
 use crate::shards::settings::types::{SettingDefinitionDto, SettingScopeDto};
 use crate::shards::settings::{SettingHandle, SettingsShard};
+use crate::shards::tauri_host::{RevealPathResult, TauriHost};
 use crate::utils::league_cmd_arg::LeagueClientCmdArgs;
 
 const REPLAY_FOLDERS_SETTING_ID: &str = "replay.library.folders";
@@ -111,18 +112,61 @@ impl ReplayShard {
         Ok(())
     }
 
-    pub async fn reveal_entry(&self, lcu_shard: &LcuShard, path: String) -> Result<(), AppError> {
-        let replay_path = PathBuf::from(normalize_path_string(&path)?);
-        if !replay_path.is_file() || !is_rofl_file(&replay_path) {
-            return Err(AppError::other("Replay entry is not a valid .rofl file"));
+    pub async fn reveal_entry(
+        &self,
+        lcu_shard: &LcuShard,
+        host: &TauriHost,
+        path: String,
+    ) -> RevealPathResult {
+        let replay_path = match validate_replay_entry_path(&path) {
+            Ok(path) => path,
+            Err(error) => return RevealPathResult::failed(path, error.to_string()),
+        };
+
+        let folders = match self.allowed_folder_paths(lcu_shard).await {
+            Ok(folders) => folders,
+            Err(error) => {
+                return RevealPathResult::failed(
+                    replay_path.to_string_lossy(),
+                    format!("Failed to validate replay folders: {error}"),
+                );
+            }
+        };
+
+        if let Err(error) = ensure_replay_path_allowed(&replay_path, &folders) {
+            return RevealPathResult::failed(replay_path.to_string_lossy(), error.to_string());
         }
 
-        let folders = self.allowed_folder_paths(lcu_shard).await?;
-        ensure_replay_path_allowed(&replay_path, &folders)?;
+        host.reveal_path(replay_path.to_string_lossy().to_string())
+    }
 
-        tauri_plugin_opener::reveal_item_in_dir(&replay_path)
-            .map_err(|error| AppError::other(format!("Failed to reveal replay entry: {error}")))?;
-        Ok(())
+    pub async fn reveal_executable(
+        &self,
+        lcu_shard: &LcuShard,
+        host: &TauriHost,
+        target: ReplayExecutableTarget,
+    ) -> RevealPathResult {
+        let clients = match self.refresh_clients(lcu_shard).await {
+            Ok(clients) => clients,
+            Err(error) => {
+                return RevealPathResult::failed(
+                    replay_executable_target_label(&target),
+                    format!("Failed to refresh League clients: {error}"),
+                );
+            }
+        };
+        let installs = discover_lol_client_installs();
+        let executable_path = match resolve_replay_executable_target(&target, &clients, &installs) {
+            Ok(path) => path,
+            Err(error) => {
+                return RevealPathResult::failed(
+                    replay_executable_target_label(&target),
+                    error.to_string(),
+                );
+            }
+        };
+
+        host.reveal_path(executable_path.to_string_lossy().to_string())
     }
 
     pub async fn prepare_match(
@@ -359,6 +403,17 @@ fn normalize_path_string(path: &str) -> Result<String, AppError> {
     Ok(PathBuf::from(trimmed).to_string_lossy().to_string())
 }
 
+fn validate_replay_entry_path(path: &str) -> Result<PathBuf, AppError> {
+    let replay_path = PathBuf::from(normalize_path_string(path)?);
+    if !replay_path.is_file() {
+        return Err(AppError::other("Replay entry path does not exist"));
+    }
+    if !is_rofl_file(&replay_path) {
+        return Err(AppError::other("Replay entry is not a valid .rofl file"));
+    }
+    Ok(replay_path)
+}
+
 fn default_replay_folders() -> Vec<String> {
     let Some(user_profile) = std::env::var_os("USERPROFILE") else {
         return Vec::new();
@@ -519,6 +574,144 @@ fn replay_folder_merge_key(path: &str) -> Result<String, AppError> {
     } else {
         Ok(key)
     }
+}
+
+fn league_executable_name() -> &'static str {
+    "League of Legends.exe"
+}
+
+fn is_league_game_executable_path(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case(league_executable_name()))
+}
+
+fn executable_candidate_paths(path: &Path) -> Vec<PathBuf> {
+    if is_league_game_executable_path(path) {
+        return vec![path.to_path_buf()];
+    }
+
+    let is_league_client_dir = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("LeagueClient"));
+    let mut candidates = Vec::new();
+
+    if is_league_client_dir {
+        if let Some(parent) = path.parent() {
+            candidates.push(parent.join("Game").join(league_executable_name()));
+        }
+    }
+
+    candidates.push(path.join("Game").join(league_executable_name()));
+    candidates.push(path.join(league_executable_name()));
+
+    if !is_league_client_dir {
+        if let Some(parent) = path.parent() {
+            candidates.push(parent.join("Game").join(league_executable_name()));
+        }
+    }
+
+    candidates
+}
+
+fn path_key(path: &Path) -> Result<String, AppError> {
+    replay_folder_merge_key(&path.to_string_lossy())
+}
+
+fn executable_path_keys(path: &Path) -> Result<BTreeSet<String>, AppError> {
+    executable_candidate_paths(path)
+        .into_iter()
+        .map(|candidate| path_key(&candidate))
+        .collect()
+}
+
+fn target_path_keys(target: &ReplayExecutableTarget) -> Result<BTreeSet<String>, AppError> {
+    let mut keys = BTreeSet::new();
+    for path in [&target.game_executable_path, &target.game_base_dir]
+        .into_iter()
+        .flatten()
+    {
+        keys.extend(executable_path_keys(Path::new(path))?);
+    }
+    Ok(keys)
+}
+
+fn target_version_matches(target_version: Option<&str>, candidate_version: Option<&str>) -> bool {
+    target_version.is_none_or(|target| candidate_version == Some(target))
+}
+
+fn replay_executable_target_label(target: &ReplayExecutableTarget) -> String {
+    target
+        .game_executable_path
+        .clone()
+        .or_else(|| target.game_base_dir.clone())
+        .unwrap_or_else(|| family_label(target.family).to_string())
+}
+
+fn matched_executable_candidate_path(
+    base_path: &Path,
+    target_keys: &BTreeSet<String>,
+) -> Result<Option<PathBuf>, AppError> {
+    for candidate in executable_candidate_paths(base_path) {
+        if target_keys.contains(&path_key(&candidate)?) {
+            return Ok(Some(candidate));
+        }
+    }
+    Ok(None)
+}
+
+fn resolve_replay_executable_target(
+    target: &ReplayExecutableTarget,
+    clients: &[ReplayClient],
+    installs: &[LolClientInstall],
+) -> Result<PathBuf, AppError> {
+    let target_keys = target_path_keys(target)?;
+    if target_keys.is_empty() {
+        return Err(AppError::other("League executable target path is missing"));
+    }
+
+    for install in installs {
+        if install_family(install.family) != target.family {
+            continue;
+        }
+        if !target_version_matches(
+            target.game_version.as_deref(),
+            install.game_version.as_deref(),
+        ) {
+            continue;
+        }
+        if executable_path_keys(&install.game_executable_path)?
+            .iter()
+            .any(|key| target_keys.contains(key))
+        {
+            return Ok(install.game_executable_path.clone());
+        }
+    }
+
+    for client in clients {
+        if client.family != target.family {
+            continue;
+        }
+        if !target_version_matches(
+            target.game_version.as_deref(),
+            client.game_version.as_deref(),
+        ) {
+            continue;
+        }
+        let Some(install_dir) = client.install_dir.as_deref() else {
+            continue;
+        };
+        if let Some(executable_path) =
+            matched_executable_candidate_path(Path::new(install_dir), &target_keys)?
+        {
+            return Ok(executable_path);
+        }
+    }
+
+    Err(AppError::other(
+        "League executable target is not a detected replay executable",
+    ))
 }
 
 fn scan_replay_entries(
@@ -1121,6 +1314,21 @@ mod tests {
         }
     }
 
+    fn executable_target(
+        family: ReplayClientFamily,
+        game_executable_path: Option<&Path>,
+        game_base_dir: Option<&Path>,
+        game_version: Option<&str>,
+    ) -> ReplayExecutableTarget {
+        ReplayExecutableTarget {
+            family,
+            game_executable_path: game_executable_path
+                .map(|path| path.to_string_lossy().to_string()),
+            game_base_dir: game_base_dir.map(|path| path.to_string_lossy().to_string()),
+            game_version: game_version.map(ToString::to_string),
+        }
+    }
+
     #[test]
     fn classifies_riot_and_tencent_platform_ids() {
         assert_eq!(replay_family(Some("JP1")), Some(ReplayClientFamily::Riot));
@@ -1312,6 +1520,57 @@ mod tests {
         assert!(!availability.can_launch);
         assert_eq!(availability.launch_method, None);
         assert!(availability.reason.is_some());
+    }
+
+    #[test]
+    fn resolves_executable_target_from_detected_install() -> Result<(), AppError> {
+        let install = local_install(LolClientInstallFamily::Tencent, "16.9.772.8292");
+        let target = executable_target(
+            ReplayClientFamily::Tencent,
+            Some(&install.game_executable_path),
+            Some(&install.game_base_dir),
+            install.game_version.as_deref(),
+        );
+
+        let resolved =
+            resolve_replay_executable_target(&target, &[], std::slice::from_ref(&install))?;
+
+        assert_eq!(resolved, install.game_executable_path);
+        Ok(())
+    }
+
+    #[test]
+    fn resolves_executable_target_from_running_client_install_dir() -> Result<(), AppError> {
+        let root = PathBuf::from("D:/Riot Games/League of Legends");
+        let client_dir = root.join("LeagueClient");
+        let mut client = replay_client(8, ReplayClientFamily::Riot, "NA1", "16.9.772.8292");
+        client.install_dir = Some(client_dir.to_string_lossy().to_string());
+        let target = executable_target(
+            ReplayClientFamily::Riot,
+            None,
+            Some(&client_dir),
+            client.game_version.as_deref(),
+        );
+
+        let resolved = resolve_replay_executable_target(&target, &[client], &[])?;
+
+        assert_eq!(resolved, root.join("Game").join("League of Legends.exe"));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_unmatched_executable_target() {
+        let install = local_install(LolClientInstallFamily::Tencent, "16.9.772.8292");
+        let target = executable_target(
+            ReplayClientFamily::Riot,
+            Some(&install.game_executable_path),
+            Some(&install.game_base_dir),
+            install.game_version.as_deref(),
+        );
+
+        let result = resolve_replay_executable_target(&target, &[], &[install]);
+
+        assert!(result.is_err());
     }
 
     #[test]

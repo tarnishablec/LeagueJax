@@ -358,6 +358,29 @@ export const folderOpenButton = style({
   },
 });
 
+export const executableOpenButton = style([
+  resourceRow,
+  executableRow,
+  {
+    width: "100%",
+    border: "none",
+    color: "inherit",
+    font: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
+    selectors: {
+      "&:disabled": {
+        cursor: "not-allowed",
+        opacity: 0.65,
+      },
+      "&:focus-visible": {
+        outline: `2px solid ${theme.color.primary}`,
+        outlineOffset: 2,
+      },
+    },
+  },
+]);
+
 export const resourceIconSlot = style({
   width: 24,
   height: 24,
@@ -384,6 +407,9 @@ export const primaryText = style({
     [`${folderOpenButton}:hover:not(:disabled) &`]: {
       color: theme.color.primary,
     },
+    [`${executableOpenButton}:hover:not(:disabled) &`]: {
+      color: theme.color.primary,
+    },
   },
 });
 
@@ -394,6 +420,23 @@ export const mutedText = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
+});
+
+export const tintText = style({
+  minWidth: 0,
+  width: "fit-content",
+  maxWidth: "100%",
+  boxSizing: "border-box",
+  color: theme.color.primary,
+  fontSize: "0.6875rem",
+  fontWeight: 800,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  borderRadius: 4,
+  padding: "2px 6px",
+  outline: `1px solid color-mix(in srgb, ${theme.color.primary} 36%, ${theme.color.border})`,
+  background: theme.color.tint,
 });
 
 const tencentColor = gameColorVars.augmentRarity.gold;
@@ -551,7 +594,7 @@ export const replayOpenContent = style({
 export const replayTitleLine = style({
   minWidth: 0,
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) max-content",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
   alignItems: "center",
   justifyContent: "start",
   gap: 10,

@@ -265,6 +265,7 @@ pub fn run() {
             replay_remove_folder,
             replay_open_folder,
             replay_reveal_entry,
+            replay_reveal_executable,
             replay_prepare_match,
             replay_get_match_metadata,
             replay_download_match,
