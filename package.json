@@ -1,7 +1,7 @@
 {
   "name": "league-jax",
   "private": true,
-  "version": "0.1.49",
+  "version": "0.1.50",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -42,8 +42,8 @@
     "i18next": "^26.0.9",
     "lucide-react": "^1.14.0",
     "pino": "^10.3.1",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "react-i18next": "^17.0.6",
     "react-loading-skeleton": "^3.5.0",
     "react-markdown": "^10.1.0",
