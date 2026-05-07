@@ -6,7 +6,6 @@ import type { OngoingLayoutProps } from "./OngoingLayout.types.ts";
 export function FiveVsFiveOngoingLayout(props: OngoingLayoutProps) {
   const {
     enabledPlayerCardTagIds,
-    excellentKdaThreshold,
     matchHistoryCount,
     playerCardTagColors,
     showBots,
@@ -24,7 +23,6 @@ export function FiveVsFiveOngoingLayout(props: OngoingLayoutProps) {
         <TeamRow
           key={`team:${normalizeTeamId(group.teamId)}`}
           enabledPlayerCardTagIds={enabledPlayerCardTagIds}
-          excellentKdaThreshold={excellentKdaThreshold}
           matchHistoryCount={matchHistoryCount}
           minimumColumns={5}
           playerCardTagColors={playerCardTagColors}

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { RankEntry } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
+import { useMatchPerformanceStrategy } from "@/features/history/hooks/use-match-performance-strategy.ts";
 import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
 import { useLcuStore } from "@/stores/lcu";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
@@ -89,11 +90,11 @@ export function useSnapshotPlayerCardState(
   matchHistoryCount: number,
   enabledPlayerCardTagIds: readonly string[],
   playerCardTagColors: Readonly<Record<string, string>>,
-  excellentKdaThreshold: number,
   squadAssignment: PlayerSquadAssignment | undefined,
 ) {
   const { t } = useTranslation();
   const phase = useOngoingGameStore((state) => state.phase);
+  const performanceStrategy = useMatchPerformanceStrategy();
 
   const isBot = isBotSlot(slot);
   const normalizedPuuid = !isBot ? slot.puuid.trim() : "";
@@ -217,7 +218,7 @@ export function useSnapshotPlayerCardState(
           enabledPlayerCardTagIds,
           playerCardTagColors,
           slot,
-          excellentKdaThreshold,
+          performanceStrategy,
           t,
         ),
         ...collectSpecialPlayerCardTags({
@@ -236,7 +237,7 @@ export function useSnapshotPlayerCardState(
       hasHistoryLoadFailed,
       isSelf,
       playerCardTagColors,
-      excellentKdaThreshold,
+      performanceStrategy,
       recentGames,
       slot,
       t,

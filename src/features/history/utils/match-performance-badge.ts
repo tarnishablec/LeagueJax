@@ -92,12 +92,34 @@ function computeObjectiveContribution(
   );
 }
 
+function computeDeathPenalty(
+  participant: RawMatchSummaryParticipant,
+  teamDeaths: number,
+): number {
+  const deaths = safeNumber(participant.deaths);
+  const excessiveDeathPenalty = Math.max(0, deaths - 6) * 1.25;
+  const deathSharePenalty = positiveRatio(deaths, teamDeaths) * 8;
+
+  return Math.min(24, excessiveDeathPenalty + deathSharePenalty);
+}
+
+function durabilityScoreMultiplier(
+  participant: RawMatchSummaryParticipant,
+): number {
+  const deaths = safeNumber(participant.deaths);
+  return Math.max(0.45, 1 - Math.max(0, deaths - 8) * 0.05);
+}
+
 function computeBalancedScore(
   participant: RawMatchSummaryParticipant,
   teammates: RawMatchSummaryParticipant[],
 ): number {
   const teamKills = teammates.reduce(
     (sum, teammate) => sum + safeNumber(teammate.kills),
+    0,
+  );
+  const teamDeaths = teammates.reduce(
+    (sum, teammate) => sum + safeNumber(teammate.deaths),
     0,
   );
   const maxChampionDamage = Math.max(
@@ -139,12 +161,14 @@ function computeBalancedScore(
     ) *
       20 +
     safeNumber(participant.challenges?.teamDamagePercentage) * 15;
-  const durabilityScore =
+  const rawDurabilityScore =
     positiveRatio(safeNumber(participant.totalDamageTaken), maxDamageTaken) *
       8 +
     positiveRatio(safeNumber(participant.damageSelfMitigated), maxMitigated) *
       8 +
     safeNumber(participant.challenges?.damageTakenOnTeamPercentage) * 8;
+  const durabilityScore =
+    rawDurabilityScore * durabilityScoreMultiplier(participant);
   const economyScore =
     positiveRatio(safeNumber(participant.goldEarned), maxGold) * 5;
   const csScore = positiveRatio(computeCs(participant), maxCs) * 4;
@@ -169,8 +193,25 @@ function computeBalancedScore(
     visionScore +
     utilityScore +
     controlScore +
-    objectiveScore
+    objectiveScore -
+    computeDeathPenalty(participant, teamDeaths)
   );
+}
+
+export function computeMatchPerformanceScore({
+  participant,
+  teammates,
+  strategy = DEFAULT_MATCH_PERFORMANCE_STRATEGY,
+}: {
+  participant: RawMatchSummaryParticipant;
+  teammates: RawMatchSummaryParticipant[];
+  strategy?: MatchPerformanceStrategy;
+}): number {
+  if (strategy === "kda") {
+    return computeKda(participant);
+  }
+
+  return computeBalancedScore(participant, teammates);
 }
 
 function compareBalancedPerformance(
@@ -230,6 +271,33 @@ function isSameParticipant(
   );
 }
 
+function resolveTeammatesForMatch(
+  match: RawMatchSummaryGame,
+  me: RawMatchSummaryParticipant,
+): RawMatchSummaryParticipant[] {
+  const groups = resolveMatchParticipantGroups(match);
+  const meGroup =
+    groups.find((group) =>
+      group.participants.some((participant) =>
+        isSameParticipant(participant, me),
+      ),
+    ) ?? null;
+
+  return meGroup?.participants ?? match.json.participants;
+}
+
+export function computeMatchPerformanceScoreForMatch(
+  match: RawMatchSummaryGame,
+  me: RawMatchSummaryParticipant,
+  strategy: MatchPerformanceStrategy = DEFAULT_MATCH_PERFORMANCE_STRATEGY,
+): number {
+  return computeMatchPerformanceScore({
+    participant: me,
+    teammates: resolveTeammatesForMatch(match, me),
+    strategy,
+  });
+}
+
 export function resolveMatchPerformanceBadge({
   me,
   teammates,
@@ -259,7 +327,7 @@ export function resolveMatchPerformanceBadge({
     if (
       best &&
       isSameParticipant(best, me) &&
-      computeBalancedScore(me, teammates) > 0
+      computeMatchPerformanceScore({ participant: me, teammates, strategy }) > 0
     ) {
       return isVictory ? "mvp" : "ace";
     }
@@ -281,17 +349,9 @@ export function resolveMatchPerformanceBadgeForMatch(
   isVictory: boolean,
   strategy: MatchPerformanceStrategy = DEFAULT_MATCH_PERFORMANCE_STRATEGY,
 ): MatchPerformanceBadge | null {
-  const groups = resolveMatchParticipantGroups(match);
-  const meGroup =
-    groups.find((group) =>
-      group.participants.some((participant) =>
-        isSameParticipant(participant, me),
-      ),
-    ) ?? null;
-
   return resolveMatchPerformanceBadge({
     me,
-    teammates: meGroup?.participants ?? match.json.participants,
+    teammates: resolveTeammatesForMatch(match, me),
     isVictory,
     strategy,
   });

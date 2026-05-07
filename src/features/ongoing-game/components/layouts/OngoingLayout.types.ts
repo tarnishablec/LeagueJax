@@ -8,7 +8,6 @@ export type OngoingTeamGroup = {
 
 export type OngoingLayoutProps = {
   enabledPlayerCardTagIds: readonly string[];
-  excellentKdaThreshold: number;
   matchHistoryCount: number;
   playerCardTagColors: Readonly<Record<string, string>>;
   showBots: boolean;

@@ -124,6 +124,106 @@ describe("resolveMatchPerformanceBadge", () => {
     ).toBe("mvp");
   });
 
+  test("balanced strategy does not award MVP to a high-death volume game when a cleaner carry has comparable output", () => {
+    const highDeathVolume = participant(1, {
+      kills: 8,
+      deaths: 19,
+      assists: 41,
+      totalDamageDealtToChampions: 64_709,
+      totalDamageTaken: 63_509,
+      damageSelfMitigated: 45_000,
+      goldEarned: 18_200,
+      totalMinionsKilled: 286,
+      neutralMinionsKilled: 14,
+      visionScore: 24,
+      totalTimeCcDealt: 42,
+      damageDealtToBuildings: 4_000,
+      damageDealtToObjectives: 5_800,
+      challenges: {
+        killParticipation: 0.75,
+        damageTakenOnTeamPercentage: 0.3,
+        teamDamagePercentage: 0.216,
+      } as RawMatchSummaryParticipant["challenges"],
+    });
+    const cleanerCarry = participant(2, {
+      kills: 20,
+      deaths: 6,
+      assists: 18,
+      totalDamageDealtToChampions: 76_446,
+      totalDamageTaken: 27_730,
+      damageSelfMitigated: 8_000,
+      goldEarned: 19_000,
+      totalMinionsKilled: 300,
+      neutralMinionsKilled: 18,
+      visionScore: 20,
+      totalTimeCcDealt: 18,
+      damageDealtToBuildings: 4_700,
+      damageDealtToObjectives: 6_200,
+      challenges: {
+        killParticipation: 0.7,
+        teamDamagePercentage: 0.255,
+      } as RawMatchSummaryParticipant["challenges"],
+    });
+    const teammate1 = participant(3, {
+      kills: 14,
+      deaths: 12,
+      assists: 22,
+      totalDamageDealtToChampions: 49_917,
+      totalDamageTaken: 72_946,
+      damageSelfMitigated: 24_000,
+      goldEarned: 16_400,
+      totalMinionsKilled: 118,
+      visionScore: 18,
+    });
+    const teammate2 = participant(4, {
+      kills: 21,
+      deaths: 8,
+      assists: 30,
+      totalDamageDealtToChampions: 67_764,
+      totalDamageTaken: 36_985,
+      damageSelfMitigated: 12_000,
+      goldEarned: 18_600,
+      totalMinionsKilled: 260,
+      visionScore: 21,
+    });
+    const teammate3 = participant(5, {
+      kills: 2,
+      deaths: 30,
+      assists: 33,
+      totalDamageDealtToChampions: 40_268,
+      totalDamageTaken: 113_496,
+      damageSelfMitigated: 74_000,
+      goldEarned: 13_000,
+      totalMinionsKilled: 96,
+      visionScore: 36,
+      totalTimeCcDealt: 86,
+    });
+    const teammates = [
+      highDeathVolume,
+      cleanerCarry,
+      teammate1,
+      teammate2,
+      teammate3,
+    ];
+
+    expect(
+      resolveMatchPerformanceBadge({
+        me: highDeathVolume,
+        teammates,
+        isVictory: true,
+        strategy: "balanced",
+      }),
+    ).toBeNull();
+    expect(
+      resolveMatchPerformanceBadge({
+        me: cleanerCarry,
+        teammates,
+        isVictory: true,
+        strategy: "balanced",
+      }),
+    ).toBe("mvp");
+  });
+
   test("match-level resolver applies the requested strategy", () => {
     const tank = participant(1, {
       kills: 3,

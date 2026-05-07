@@ -45,12 +45,9 @@ export const ongoingGameI18n: Resource = {
           },
         },
         playerCardTags: {
-          description: "Choose which tags can appear on player cards.",
+          description:
+            "Choose which tags can appear on player cards. Excellent follows the MVP/ACE strategy in History settings.",
           savedColors: "Saved Colors",
-          excellentKdaThreshold: {
-            label: "Excellent KDA threshold",
-            hint: "Show the excellent mark when average KDA is at least this value.",
-          },
           squadDetection: {
             enabled: {
               label: "Enable squad detection",
@@ -168,12 +165,9 @@ export const ongoingGameI18n: Resource = {
           },
         },
         playerCardTags: {
-          description: "这些标签会展示在玩家卡片上",
+          description:
+            "这些标签会展示在玩家卡片上。优异标记会跟随战绩设置中的 MVP/ACE 策略。",
           savedColors: "保存的颜色",
-          excellentKdaThreshold: {
-            label: "优异检测阈值",
-            hint: "平均 KDA 大于等于该值时，在玩家卡片上显示优异标记。",
-          },
           squadDetection: {
             enabled: {
               label: "启用小队检测",
@@ -291,12 +285,9 @@ export const ongoingGameI18n: Resource = {
           },
         },
         playerCardTags: {
-          description: "プレイヤーカードに表示するタグを選択します",
+          description:
+            "プレイヤーカードに表示するタグを選択します。優秀マークは戦績設定のMVP/ACE戦略に従います。",
           savedColors: "保存した色",
-          excellentKdaThreshold: {
-            label: "優秀判定KDAしきい値",
-            hint: "平均KDAがこの値以上の場合、プレイヤーカードに優秀マークを表示します。",
-          },
           squadDetection: {
             enabled: {
               label: "パーティー検出を有効化",
