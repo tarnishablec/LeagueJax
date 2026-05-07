@@ -61,7 +61,7 @@ export const kdaSeparator = style({
   color: theme.color.mutedForeground,
   fontSize: "0.78em",
   fontWeight: 500,
-  padding: "0 2px"
+  padding: "0 2px",
 });
 
 export const kdaDeaths = style({

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { ScrollArea } from "@/components/scroll-area";
 import { useSettings } from "@/features/settings/context";
 import { useMatchHistory } from "../hooks/use-match-history";
 import { useMatchListViewState } from "../hooks/use-match-list-view-state";
@@ -101,18 +102,22 @@ export function MatchList({
               })}
         </div>
       ) : (
-        <div className={s.listScroller}>
-          <div className={s.list}>
-            {matches?.map((match) => (
-              <MatchCard
-                key={match.json.gameId}
-                match={match}
-                me={match.me}
-                sgpServerId={sgpServerId}
-              />
-            ))}
-          </div>
-        </div>
+        <ScrollArea
+          className={s.listScroller}
+          contentClassName={s.list}
+          direction="vertical"
+          mode="outset"
+          outsetWidth="12px"
+        >
+          {matches?.map((match) => (
+            <MatchCard
+              key={match.json.gameId}
+              match={match}
+              me={match.me}
+              sgpServerId={sgpServerId}
+            />
+          ))}
+        </ScrollArea>
       )}
     </div>
   );

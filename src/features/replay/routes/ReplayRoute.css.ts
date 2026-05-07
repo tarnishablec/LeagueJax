@@ -2,6 +2,8 @@ import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { gameColorVars } from "@/styles/game-colors.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
+const pagePadding = "16px";
+
 const spinKeyframes = keyframes({
   to: {
     transform: "rotate(360deg)",
@@ -25,7 +27,7 @@ export const root = style({
   display: "grid",
   gridTemplateRows: "max-content minmax(0, 1fr)",
   gap: 12,
-  padding: 16,
+  padding: pagePadding,
   boxSizing: "border-box",
 });
 
@@ -487,14 +489,15 @@ export const searchRow = style({
   gridTemplateColumns: "minmax(0, 1fr)",
 });
 
-export const replayList = style({
+export const replayListScroller = style({
   minHeight: 0,
-  overflowY: "auto",
+});
+
+export const replayList = style({
   display: "grid",
   alignContent: "start",
   gap: 6,
   padding: 1,
-  scrollbarGutter: "stable",
 });
 
 export const replayRowShell = style({

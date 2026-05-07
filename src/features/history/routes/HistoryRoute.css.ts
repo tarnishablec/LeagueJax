@@ -1,13 +1,16 @@
 import { style } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css";
 
+const pagePadding = "12px";
+const pagePaddingTop = "4px";
+
 export const page = style({
   display: "grid",
   gridTemplateRows: "minmax(115px, auto) 1fr",
-  gap: 16,
+  gap: 12,
   height: "100%",
-  padding: "12px",
-  paddingTop: 4,
+  padding: pagePadding,
+  paddingTop: pagePaddingTop,
 });
 
 export const emptyState = style({

@@ -21,6 +21,7 @@ import type {
 } from "@/bindings/replay";
 import { AppTooltip } from "@/components/AppTooltip";
 import { LazyImage } from "@/components/LazyImage";
+import { ScrollArea } from "@/components/scroll-area";
 import {
   type CdragonChampionCatalog,
   championAliasKey,
@@ -900,7 +901,13 @@ export function ReplayRoute() {
             />
           </div>
 
-          <div className={s.replayList}>
+          <ScrollArea
+            className={s.replayListScroller}
+            contentClassName={s.replayList}
+            direction="vertical"
+            mode="outset"
+            outsetWidth="16px"
+          >
             {initialLoading ? (
               <LoadingStatusRow
                 ariaLabel="Loading replay list"
@@ -1014,7 +1021,7 @@ export function ReplayRoute() {
                   </article>
                 );
               })}
-          </div>
+          </ScrollArea>
         </section>
       </div>
     </section>

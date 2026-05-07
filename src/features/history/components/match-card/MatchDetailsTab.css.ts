@@ -215,7 +215,7 @@ export const objectiveList = style({
   alignItems: "center",
   gap: 6,
   minWidth: "fit-content",
-  overflowX: "hidden"
+  overflowX: "hidden",
 });
 
 export const objectiveStat = style({
