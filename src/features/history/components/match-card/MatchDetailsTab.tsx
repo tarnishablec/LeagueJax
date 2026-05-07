@@ -313,7 +313,7 @@ function computeTeamTotals(
       assists: totals.assists + safeNumber(participant.assists),
       gold: totals.gold + safeNumber(participant.goldEarned),
     }),
-    {kills: 0, deaths: 0, assists: 0, gold: 0},
+    { kills: 0, deaths: 0, assists: 0, gold: 0 },
   );
 }
 
@@ -459,9 +459,9 @@ function objectiveIconSources(
 }
 
 function MatchDetailsTooltip({
-                               content,
-                               children,
-                             }: {
+  content,
+  children,
+}: {
   content: string;
   children: ReactNode;
 }) {
@@ -480,10 +480,10 @@ function MatchDetailsTooltip({
 }
 
 function DamageBreakdownMeter({
-                                label,
-                                breakdown,
-                                maxDamage,
-                              }: {
+  label,
+  breakdown,
+  maxDamage,
+}: {
   label: string;
   breakdown: DamageBreakdown;
   maxDamage: number;
@@ -526,9 +526,9 @@ function DamageBreakdownMeter({
             ),
           })}
         >
-          <span className={s.damageSegment.physical}/>
-          <span className={s.damageSegment.magic}/>
-          <span className={s.damageSegment.trueDamage}/>
+          <span className={s.damageSegment.physical} />
+          <span className={s.damageSegment.magic} />
+          <span className={s.damageSegment.trueDamage} />
         </div>
       </div>
     </div>
@@ -536,15 +536,15 @@ function DamageBreakdownMeter({
 }
 
 function ObjectiveStat({
-                         objective,
-                         team,
-                         side,
-                       }: {
+  objective,
+  team,
+  side,
+}: {
   objective: ObjectiveConfig;
   team: RawMatchSummaryTeam | undefined;
   side: TeamSide;
 }) {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const count = objectiveKills(team, objective.key);
   const label = t(objective.labelKey, {
     defaultValue: objective.defaultLabel,
@@ -567,8 +567,8 @@ function ObjectiveStat({
   );
 }
 
-function TeamBans({team}: { team: RawMatchSummaryTeam | undefined }) {
-  const {t} = useTranslation();
+function TeamBans({ team }: { team: RawMatchSummaryTeam | undefined }) {
+  const { t } = useTranslation();
   const bans = resolveMatchTeamBanSlots(team);
   if (bans.length === 0) {
     return <div></div>;
@@ -599,9 +599,9 @@ function TeamBans({team}: { team: RawMatchSummaryTeam | undefined }) {
   );
 }
 
-function QuestSlot({slot}: { slot: RoleQuestSlot | null }) {
+function QuestSlot({ slot }: { slot: RoleQuestSlot | null }) {
   if (slot === null) {
-    return <span className={s.emptyQuestSlot} aria-hidden="true"/>;
+    return <span className={s.emptyQuestSlot} aria-hidden="true" />;
   }
 
   if (slot.kind === "quest") {
@@ -626,16 +626,16 @@ function QuestSlot({slot}: { slot: RoleQuestSlot | null }) {
 }
 
 function ScoreCell({
-                     type,
-                     value,
-                     muted = false,
-                   }: {
+  type,
+  value,
+  muted = false,
+}: {
   type: ScoreboardIconType;
   value: string;
   muted?: boolean;
 }) {
   return (
-    <span className={s.scoreCell({tone: muted ? "muted" : "default"})}>
+    <span className={s.scoreCell({ tone: muted ? "muted" : "default" })}>
       <ScoreboardIcon
         type={type}
         className={s.scoreCellIcon}
@@ -647,17 +647,17 @@ function ScoreCell({
 }
 
 function ParticipantRow({
-                          summary,
-                          detail,
-                          participant,
-                          sgpServerId,
-                        }: {
+  summary,
+  detail,
+  participant,
+  sgpServerId,
+}: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   participant: RawMatchSummaryParticipant;
   sgpServerId: string | null;
 }) {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const {
     showAugments,
     showPositionColumn,
@@ -679,7 +679,7 @@ function ParticipantRow({
     : null;
   const itemIds = getParticipantItems(participant);
   const augmentIds = getParticipantAugments(participant);
-  const {primaryRuneId, subStyleId} = getPerkIds(participant);
+  const { primaryRuneId, subStyleId } = getPerkIds(participant);
   const championName = participant.championName ?? `#${participant.championId}`;
   const record = `${safeNumber(participant.kills)}/${safeNumber(participant.deaths)}/${safeNumber(participant.assists)}`;
   const perfectLabel = t("history.matchDetails.perfectKda", {
@@ -701,7 +701,7 @@ function ParticipantRow({
     >
       {showPositionColumn ? (
         <div className={s.positionCell}>
-          <LeaguePositionIcon position={position} width={18} height={18}/>
+          <LeaguePositionIcon position={position} width={18} height={18} />
         </div>
       ) : null}
       <div className={s.summonerCell}>
@@ -731,7 +731,7 @@ function ParticipantRow({
       </div>
       <div className={s.loadoutCell}>
         {showAugments ? (
-          <MatchCardAugments augmentIds={augmentIds}/>
+          <MatchCardAugments augmentIds={augmentIds} />
         ) : (
           <MatchCardRunes
             perkPrimaryRuneId={primaryRuneId}
@@ -740,11 +740,11 @@ function ParticipantRow({
         )}
       </div>
       <div className={s.loadoutCell}>
-        <MatchCardItems gameId={summary.json.gameId} items={itemIds}/>
+        <MatchCardItems gameId={summary.json.gameId} items={itemIds} />
       </div>
       {showQuestColumn ? (
         <div className={s.centeredCell}>
-          <QuestSlot slot={roleQuest.slot}/>
+          <QuestSlot slot={roleQuest.slot} />
         </div>
       ) : null}
       <DamageBreakdownMeter
@@ -761,32 +761,32 @@ function ParticipantRow({
         type="gold"
         value={formatDamage(safeNumber(participant.goldEarned))}
       />
-      <ScoreCell type="record" value={record}/>
+      <ScoreCell type="record" value={record} />
       <ScoreCell
         type="kda"
         value={formatKda(participant, perfectLabel)}
         muted
       />
-      <ScoreCell type="cs" value={formatDamage(participantCs(participant))}/>
+      <ScoreCell type="cs" value={formatDamage(participantCs(participant))} />
     </div>
   );
 }
 
 function TeamBlock({
-                     summary,
-                     detail,
-                     group,
-                     sgpServerId,
-                   }: {
+  summary,
+  detail,
+  group,
+  sgpServerId,
+}: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   group: MatchParticipantGroup;
   sgpServerId: string | null;
 }) {
-  const {t} = useTranslation();
-  const {showPositionColumn, showQuestColumn, visibleObjectives} =
+  const { t } = useTranslation();
+  const { showPositionColumn, showQuestColumn, visibleObjectives } =
     useMatchDetailsTabModelContext();
-  const {participants} = group;
+  const { participants } = group;
   if (participants.length === 0) {
     return null;
   }
@@ -800,20 +800,20 @@ function TeamBlock({
       : group.tone === "red"
         ? t("history.redTeam")
         : t("history.matchDetails.team", {
-          number: group.labelNumber,
-          defaultValue: `Team ${group.labelNumber}`,
-        });
+            number: group.labelNumber,
+            defaultValue: `Team ${group.labelNumber}`,
+          });
   const placementLabel =
     group.placement !== null
       ? t("history.matchDetails.placement", {
-        placement: group.placement,
-        defaultValue: `#${group.placement}`,
-      })
+          placement: group.placement,
+          defaultValue: `#${group.placement}`,
+        })
       : null;
   const teamName = group.nameKey
     ? t(group.nameKey, {
-      defaultValue: teamLabel,
-    })
+        defaultValue: teamLabel,
+      })
     : null;
   // const headerLabels = {
   //   position: t("history.matchDetails.columns.position", {
@@ -856,14 +856,14 @@ function TeamBlock({
 
   return (
     <section
-      className={s.teamBlock({team: group.tone})}
+      className={s.teamBlock({ team: group.tone })}
       style={assignInlineVars({
         [s.teamAccentColorVar]: group.accentColor,
       })}
     >
       <header className={s.teamHeader}>
         <div className={s.teamTitleGroup}>
-          <span className={s.teamTitle({team: group.tone})}>
+          <span className={s.teamTitle({ team: group.tone })}>
             {placementLabel ? (
               <>
                 <span className={s.teamPlacement}>{placementLabel}</span>
@@ -892,7 +892,7 @@ function TeamBlock({
             {formatDamage(totals.gold)}
           </span>
         </div>
-        <TeamBans team={team}/>
+        <TeamBans team={team} />
         {group.showObjectives && visibleObjectives.length > 0 ? (
           <div className={s.objectiveScroller}>
             <div className={s.objectiveList}>
@@ -946,10 +946,10 @@ function TeamBlock({
 }
 
 export function MatchDetailsTab({
-                                  summary,
-                                  detail,
-                                  sgpServerId,
-                                }: {
+  summary,
+  detail,
+  sgpServerId,
+}: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   sgpServerId?: string | null;

@@ -16,9 +16,11 @@ import type { LcuInstanceInfo } from "@/bindings/lcu";
 import type {
   ReplayClientFamily,
   ReplayEntry,
+  ReplayExecutableTarget,
   ReplayFolder,
   ReplayLibrarySnapshot,
 } from "@/bindings/replay";
+import type { RevealPathResult } from "@/bindings/tauri_host";
 import { AppTooltip } from "@/components/AppTooltip";
 import { LazyImage } from "@/components/LazyImage";
 import { ScrollArea } from "@/components/scroll-area";
@@ -273,6 +275,28 @@ function executableDetailLabel(
     return t("replay.executableHint.riotRequiresRunningClient");
   }
   return null;
+}
+
+function executableRevealTarget(
+  resource: ExecutableResource,
+): ReplayExecutableTarget | null {
+  if (!resource.gameExecutablePath && !resource.gameBaseDir) {
+    return null;
+  }
+
+  return {
+    family: resource.family,
+    gameExecutablePath: resource.gameExecutablePath,
+    gameBaseDir: resource.gameBaseDir,
+    gameVersion: resource.gameVersion,
+  };
+}
+
+function executableDetailClassName(resource: ExecutableResource): string {
+  if (resource.family === "RIOT" && resource.clients.length === 0) {
+    return s.tintText;
+  }
+  return s.mutedText;
 }
 
 function executableReason(resource: ExecutableResource): string | null {
@@ -668,6 +692,31 @@ export function ReplayRoute() {
     }
   };
 
+  const showRevealResult = (result: RevealPathResult) => {
+    if (!result.ok) {
+      setError(
+        t("replay.operationFailed", {
+          reason: result.reason ?? "Failed to reveal path",
+        }),
+      );
+    }
+  };
+
+  const revealExecutable = async (target: ReplayExecutableTarget) => {
+    setError(null);
+    try {
+      const result = await invoke<RevealPathResult>(
+        "replay_reveal_executable",
+        {
+          target,
+        },
+      );
+      showRevealResult(result);
+    } catch (caught) {
+      setError(t("replay.operationFailed", { reason: String(caught) }));
+    }
+  };
+
   const removeFolder = async (path: string) => {
     setBusy(true);
     setError(null);
@@ -695,7 +744,10 @@ export function ReplayRoute() {
   const revealReplay = async (entry: ReplayEntry) => {
     setError(null);
     try {
-      await invoke("replay_reveal_entry", { path: entry.path });
+      const result = await invoke<RevealPathResult>("replay_reveal_entry", {
+        path: entry.path,
+      });
+      showRevealResult(result);
     } catch (caught) {
       setError(t("replay.operationFailed", { reason: String(caught) }));
     }
@@ -824,10 +876,19 @@ export function ReplayRoute() {
                 executableResources.map((resource) => {
                   const reason = executableReason(resource);
                   const detailLabel = executableDetailLabel(resource, t);
+                  const executableTarget = executableRevealTarget(resource);
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={resource.id}
-                      className={`${s.resourceRow} ${s.executableRow} ${s.appearIn} ${s.clientTone[familyTone(resource.family)]}`}
+                      className={`${s.executableOpenButton} ${s.appearIn} ${s.clientTone[familyTone(resource.family)]}`}
+                      aria-label="Reveal League executable"
+                      disabled={!executableTarget}
+                      onClick={() => {
+                        if (executableTarget) {
+                          void revealExecutable(executableTarget);
+                        }
+                      }}
                     >
                       <span className={s.resourceClientMain}>
                         <span className={s.resourceIconSlot}>
@@ -867,7 +928,11 @@ export function ReplayRoute() {
                             </AppTooltip>
                           ) : null}
                           {detailLabel ? (
-                            <span className={s.mutedText}>{detailLabel}</span>
+                            <span
+                              className={executableDetailClassName(resource)}
+                            >
+                              {detailLabel}
+                            </span>
                           ) : null}
                           {reason ? (
                             <AppTooltip content={reason}>
@@ -883,7 +948,7 @@ export function ReplayRoute() {
                       >
                         {executableStatusLabel(resource, t)}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
             </div>
@@ -938,13 +1003,13 @@ export function ReplayRoute() {
                     >
                       <span className={s.replayOpenContent}>
                         <span className={s.replayTitleLine}>
-                          <span className={s.primaryText}>
-                            {entry.fileName}
-                          </span>
                           <span
                             className={`${s.familyBadge} ${s.familyBadgeTone[familyTone(entry.family)]}`}
                           >
                             {familyLabel(entry.family)}
+                          </span>
+                          <span className={s.primaryText}>
+                            {entry.fileName}
                           </span>
                         </span>
                         <span className={s.replayMeta}>
