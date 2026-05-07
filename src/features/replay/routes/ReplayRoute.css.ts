@@ -27,6 +27,7 @@ export const root = style({
   display: "grid",
   gridTemplateRows: "max-content minmax(0, 1fr)",
   gap: 12,
+  overflowX: "hidden",
   padding: pagePadding,
   boxSizing: "border-box",
 });
@@ -103,6 +104,8 @@ export const appearIn = style({
 });
 
 export const layout = style({
+  width: "100%",
+  minWidth: 0,
   minHeight: 0,
   display: "grid",
   gridTemplateColumns: "minmax(280px, 340px) minmax(0, 1fr)",
@@ -110,12 +113,12 @@ export const layout = style({
   "@media": {
     "screen and (max-width: 980px)": {
       gridTemplateColumns: "1fr",
-      overflowY: "auto",
     },
   },
 });
 
 export const side = style({
+  minWidth: 0,
   minHeight: 0,
   display: "grid",
   alignContent: "start",
@@ -478,6 +481,7 @@ export const clientTone = styleVariants({
 });
 
 export const content = style({
+  minWidth: 0,
   minHeight: 0,
   display: "grid",
   gridTemplateRows: "max-content minmax(0, 1fr)",
@@ -547,7 +551,7 @@ export const replayOpenContent = style({
 export const replayTitleLine = style({
   minWidth: 0,
   display: "grid",
-  gridTemplateColumns: "minmax(0, max-content) max-content",
+  gridTemplateColumns: "minmax(0, 1fr) max-content",
   alignItems: "center",
   justifyContent: "start",
   gap: 10,

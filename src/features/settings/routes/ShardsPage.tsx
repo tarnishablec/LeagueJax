@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShardInfoDto, ShardsSnapshotDto } from "@/bindings/shards";
+import { ScrollArea } from "@/components/scroll-area";
 import { getJaxRuntime } from "@/features/registry";
 import { ShardsDag } from "../components/ShardsDag";
 import { ShardsTable } from "../components/ShardsTable";
@@ -127,9 +128,14 @@ export function ShardsPage() {
 
         <Carousel.ItemGroup className={s.carouselItemGroup}>
           <Carousel.Item index={0} className={s.carouselItem}>
-            <div className={s.tablePane}>
+            <ScrollArea
+              className={s.tablePane}
+              contentClassName={s.tablePaneContent}
+              direction="both"
+              mode="overlay"
+            >
               <ShardsTable shards={activeShards} labelMap={labelMap} />
-            </div>
+            </ScrollArea>
           </Carousel.Item>
           <Carousel.Item index={1} className={s.carouselItem}>
             <ShardsDag shards={activeShards} />
