@@ -7,7 +7,7 @@ const pagePaddingTop = "4px";
 export const page = style({
   display: "grid",
   gridTemplateRows: "minmax(115px, auto) 1fr",
-  gap: 12,
+  gap: 8,
   height: "100%",
   overflowX: "hidden",
   padding: pagePadding,
