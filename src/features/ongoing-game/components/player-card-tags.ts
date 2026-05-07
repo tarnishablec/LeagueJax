@@ -672,7 +672,7 @@ export function collectSquadPlayerCardTags(params: {
 export function collectSpecialPlayerCardTags(params: {
   colors: Readonly<Record<string, string>>;
   enabledIds: readonly string[];
-  hasHistoryLoadFailed: boolean;
+  hasHiddenCareer: boolean;
   isSelf: boolean;
   recentGames: PlayerCardMatch[];
   slot: PlayerSlot;
@@ -682,7 +682,7 @@ export function collectSpecialPlayerCardTags(params: {
   const {
     enabledIds,
     colors,
-    hasHistoryLoadFailed,
+    hasHiddenCareer,
     isSelf,
     recentGames,
     slot,
@@ -700,7 +700,7 @@ export function collectSpecialPlayerCardTags(params: {
     const matched =
       (tag.id === "offFlashPosition" &&
         hasOffFlashPosition(slot, recentGames)) ||
-      (tag.id === "hiddenCareer" && hasHistoryLoadFailed) ||
+      (tag.id === "hiddenCareer" && hasHiddenCareer) ||
       (tag.id === "self" && isSelf) ||
       (tag.id === "encountered" && wasEncountered);
 
