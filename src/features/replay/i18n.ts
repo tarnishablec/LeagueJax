@@ -180,7 +180,8 @@ export const replayI18n: Resource = {
       title: "リプレイライブラリ",
       subtitle: "ローカル ROFL ファイルと戦績からのリプレイを管理します。",
       scan: "読み込み",
-      scanTooltip: "左側のすべてのフォルダーからリプレイファイルを読み込みます。",
+      scanTooltip:
+        "左側のすべてのフォルダーからリプレイファイルを読み込みます。",
       addFolder: "フォルダーを追加",
       folderDropzone: "リプレイフォルダーを選択またはドロップ",
       directoryPathUnavailable:
