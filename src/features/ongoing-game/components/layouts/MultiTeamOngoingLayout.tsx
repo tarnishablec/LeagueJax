@@ -5,7 +5,6 @@ import type { OngoingLayoutProps } from "./OngoingLayout.types.ts";
 export function MultiTeamOngoingLayout(props: OngoingLayoutProps) {
   const {
     enabledPlayerCardTagIds,
-    excellentKdaThreshold,
     matchHistoryCount,
     playerCardTagColors,
     showBots,
@@ -19,7 +18,6 @@ export function MultiTeamOngoingLayout(props: OngoingLayoutProps) {
         <div key={`team:${group.teamId}`} className={s.teamGroup}>
           <TeamRow
             enabledPlayerCardTagIds={enabledPlayerCardTagIds}
-            excellentKdaThreshold={excellentKdaThreshold}
             layout="compact"
             matchHistoryCount={matchHistoryCount}
             minimumColumns={1}

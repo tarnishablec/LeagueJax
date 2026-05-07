@@ -3,6 +3,11 @@ import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
+import {
+  computeMatchPerformanceScoreForMatch,
+  type MatchPerformanceStrategy,
+  resolveMatchPerformanceBadgeForMatch,
+} from "@/features/history/utils/match-performance-badge.ts";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import type { PlayerSquadAssignment } from "./player-card-squads.ts";
@@ -11,9 +16,13 @@ const FLASH_SPELL_ID = 4;
 const MIN_STREAK_COUNT = 3;
 const DEFAULT_TAG_COLOR = "#F58200";
 const PLAYER_CARD_SQUAD_TAG_ID = "squad";
-export const DEFAULT_EXCELLENT_KDA_THRESHOLD = 6;
-export const EXCELLENT_KDA_THRESHOLD_SETTING_ID =
-  "ongoing.playerCardTags.excellentKdaThreshold" as const;
+const EXCELLENT_KDA_THRESHOLD = 6;
+const EXCELLENT_BALANCED_MIN_GAMES = 3;
+const EXCELLENT_BALANCED_SCORE_THRESHOLD = 70;
+const EXCELLENT_BALANCED_SCORE_WEIGHT = 0.75;
+const EXCELLENT_BALANCED_MVP_ACE_RATE_BONUS = 25;
+const EXCELLENT_BALANCED_RATE_MIN_GAMES = 5;
+const EXCELLENT_BALANCED_MVP_ACE_RATE_THRESHOLD = 0.35;
 export type PlayerCardTagGroupKey = `ongoing.playerCardTags.${string}`;
 export type PlayerCardTagColorSettingId = `${PlayerCardTagGroupKey}.color`;
 export type PlayerCardTagEnabledSettingId = `${PlayerCardTagGroupKey}.enabled`;
@@ -48,7 +57,7 @@ type PlayerCardMatchTagDefinition = {
   evaluate: (
     matches: PlayerCardMatch[],
     slot: PlayerSlot,
-    excellentKdaThreshold: number,
+    performanceStrategy: MatchPerformanceStrategy,
   ) => boolean;
   formatLabel: (
     matches: PlayerCardMatch[],
@@ -220,6 +229,77 @@ export function computeAverageKda(matches: PlayerCardMatch[]): number | null {
   return total / matches.length;
 }
 
+function computeAverageMatchPerformanceScore(
+  matches: PlayerCardMatch[],
+  strategy: MatchPerformanceStrategy,
+): number | null {
+  if (matches.length === 0) {
+    return null;
+  }
+
+  const total = matches.reduce(
+    (sum, match) =>
+      sum + computeMatchPerformanceScoreForMatch(match, match.me, strategy),
+    0,
+  );
+  return total / matches.length;
+}
+
+function countMatchPerformanceBadges(
+  matches: PlayerCardMatch[],
+  strategy: MatchPerformanceStrategy,
+): number {
+  return matches.reduce((count, match) => {
+    const result = resolveRecentGameResult(match);
+    if (result !== "Win" && result !== "Lose") {
+      return count;
+    }
+
+    return (
+      count +
+      (resolveMatchPerformanceBadgeForMatch(
+        match,
+        match.me,
+        result === "Win",
+        strategy,
+      )
+        ? 1
+        : 0)
+    );
+  }, 0);
+}
+
+function hasExcellentBalancedPerformance(matches: PlayerCardMatch[]): boolean {
+  if (matches.length < EXCELLENT_BALANCED_MIN_GAMES) {
+    return false;
+  }
+
+  const averageScore =
+    computeAverageMatchPerformanceScore(matches, "balanced") ?? 0;
+  const badgeRate =
+    countMatchPerformanceBadges(matches, "balanced") / matches.length;
+  const excellentScore =
+    averageScore * EXCELLENT_BALANCED_SCORE_WEIGHT +
+    badgeRate * EXCELLENT_BALANCED_MVP_ACE_RATE_BONUS;
+
+  return (
+    excellentScore >= EXCELLENT_BALANCED_SCORE_THRESHOLD ||
+    (matches.length >= EXCELLENT_BALANCED_RATE_MIN_GAMES &&
+      badgeRate >= EXCELLENT_BALANCED_MVP_ACE_RATE_THRESHOLD)
+  );
+}
+
+function hasExcellentPerformance(
+  matches: PlayerCardMatch[],
+  strategy: MatchPerformanceStrategy,
+): boolean {
+  if (strategy === "kda") {
+    return (computeAverageKda(matches) ?? 0) >= EXCELLENT_KDA_THRESHOLD;
+  }
+
+  return hasExcellentBalancedPerformance(matches);
+}
+
 function formatDecimal(value: number): string {
   return value.toFixed(1);
 }
@@ -338,7 +418,7 @@ export const PLAYER_CARD_MATCH_TAGS = [
     defaultEnabled: true,
     defaultColor: "#5BC352",
     tone: "good",
-    evaluate: (matches, _slot, _excellentKdaThreshold) => {
+    evaluate: (matches, _slot, _performanceStrategy) => {
       const streak = computeResultStreak(matches);
       return Boolean(
         streak?.kind === "win" && streak.count >= MIN_STREAK_COUNT,
@@ -362,7 +442,7 @@ export const PLAYER_CARD_MATCH_TAGS = [
     defaultEnabled: true,
     defaultColor: "#FF252B",
     tone: "bad",
-    evaluate: (matches, _slot, _excellentKdaThreshold) => {
+    evaluate: (matches, _slot, _performanceStrategy) => {
       const streak = computeResultStreak(matches);
       return Boolean(
         streak?.kind === "lose" && streak.count >= MIN_STREAK_COUNT,
@@ -386,7 +466,7 @@ export const PLAYER_CARD_MATCH_TAGS = [
     defaultEnabled: true,
     defaultColor: "#ff0057",
     tone: "warning",
-    evaluate: (matches, _slot, _excellentKdaThreshold) =>
+    evaluate: (matches, _slot, _performanceStrategy) =>
       (computeAverageSoloKills(matches) ?? 0) > 0,
     formatLabel: (matches, _slot) => {
       const value = formatDecimal(computeAverageSoloKills(matches) ?? 0);
@@ -406,8 +486,8 @@ export const PLAYER_CARD_MATCH_TAGS = [
     defaultEnabled: true,
     defaultColor: "#DB18AE",
     tone: "good",
-    evaluate: (matches, _slot, excellentKdaThreshold) =>
-      (computeAverageKda(matches) ?? 0) >= excellentKdaThreshold,
+    evaluate: (matches, _slot, performanceStrategy) =>
+      hasExcellentPerformance(matches, performanceStrategy),
     formatLabel: (_matches, _slot) => ({
       key: "ongoingGame.playerTags.excellent",
       options: {
@@ -545,14 +625,14 @@ export function collectMatchPlayerCardTags(
   enabledIds: readonly string[],
   colors: Readonly<Record<string, string>>,
   slot: PlayerSlot,
-  excellentKdaThreshold: number,
+  performanceStrategy: MatchPerformanceStrategy,
   t: TFunction,
 ): ResolvedPlayerCardTag[] {
   const enabled = new Set(enabledIds);
 
   return PLAYER_CARD_MATCH_TAGS.filter(
     (tag) =>
-      enabled.has(tag.id) && tag.evaluate(matches, slot, excellentKdaThreshold),
+      enabled.has(tag.id) && tag.evaluate(matches, slot, performanceStrategy),
   ).map((tag) => {
     const label = tag.formatLabel(matches, slot);
 

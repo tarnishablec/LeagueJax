@@ -11,8 +11,6 @@ import {
   resolvePlayerSquadAssignments,
 } from "../components/player-card-squads.ts";
 import {
-  DEFAULT_EXCELLENT_KDA_THRESHOLD,
-  EXCELLENT_KDA_THRESHOLD_SETTING_ID,
   getPlayerCardTagColorSettingItems,
   getPlayerCardTagEnabledSettingItems,
   normalizePlayerCardTagColor,
@@ -130,16 +128,6 @@ export function OngoingGameRoute() {
       settings.get<number>(ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING) ??
       DEFAULT_MIN_SHARED_SQUAD_GAMES,
   );
-  const excellentKdaThreshold = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(EXCELLENT_KDA_THRESHOLD_SETTING_ID, onStoreChange),
-    () =>
-      settings.get<number>(EXCELLENT_KDA_THRESHOLD_SETTING_ID) ??
-      DEFAULT_EXCELLENT_KDA_THRESHOLD,
-    () =>
-      settings.get<number>(EXCELLENT_KDA_THRESHOLD_SETTING_ID) ??
-      DEFAULT_EXCELLENT_KDA_THRESHOLD,
-  );
   const getEnabledPlayerCardTagIdsSnapshot = useMemo(
     () => createEnabledPlayerCardTagIdsSnapshot(settings),
     [settings],
@@ -233,7 +221,6 @@ export function OngoingGameRoute() {
 
   const layoutProps = {
     enabledPlayerCardTagIds,
-    excellentKdaThreshold,
     matchHistoryCount,
     playerCardTagColors,
     showBots,

@@ -26,7 +26,6 @@ function getSlotKey(slot: PlayerSlot, index: number): string {
 
 export function TeamRow(props: {
   enabledPlayerCardTagIds: readonly string[];
-  excellentKdaThreshold: number;
   layout?: TeamRowLayout;
   matchHistoryCount: number;
   minimumColumns?: number;
@@ -37,7 +36,6 @@ export function TeamRow(props: {
 }) {
   const {
     enabledPlayerCardTagIds,
-    excellentKdaThreshold,
     layout = "standard",
     matchHistoryCount,
     minimumColumns = 5,
@@ -72,7 +70,6 @@ export function TeamRow(props: {
               <SnapshotPlayerCard
                 key={getSlotKey(slot, index)}
                 enabledPlayerCardTagIds={enabledPlayerCardTagIds}
-                excellentKdaThreshold={excellentKdaThreshold}
                 matchHistoryCount={matchHistoryCount}
                 playerCardTagColors={playerCardTagColors}
                 squadAssignment={squadAssignments.byPuuid[slot.puuid.trim()]}
