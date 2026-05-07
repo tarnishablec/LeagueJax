@@ -23,6 +23,7 @@ export const settingsAboutI18n: Resource = {
             "<brand>League Jax</brand> is built on a focused set of open source dependencies spanning the desktop shell, UI runtime, routing, styling, state flow, and internal foundations.",
           roles: {
             arkUi: "Accessible UI primitives",
+            communityDragon: "League of Legends static data and asset source",
             jax: "Dependency-aware shard runtime and lifecycle orchestration used as the app's modular foundation.",
             lucide: "Application icon set",
             maokai:
@@ -77,6 +78,7 @@ export const settingsAboutI18n: Resource = {
             "<brand>League Jax</brand> 建立在一组聚焦的开源依赖之上，它们共同承担桌面运行时、界面渲染、路由、样式系统、状态流与内部基础能力。",
           roles: {
             arkUi: "无障碍交互组件基础",
+            communityDragon: "提供《英雄联盟》静态数据与游戏资源来源。",
             jax: "负责依赖感知的 shard 运行时与生命周期编排，是整个应用模块化架构的基础。",
             lucide: "应用图标集",
             maokai:
@@ -122,6 +124,8 @@ export const settingsAboutI18n: Resource = {
             "<brand>League Jax</brand> は、デスクトップランタイム、UI 描画、ルーティング、スタイリング、状態管理、内部基盤を支える厳選したオープンソース依存関係の上に成り立っています。",
           roles: {
             arkUi: "アクセシブルな UI プリミティブ",
+            communityDragon:
+              "League of Legends の静的データとゲームアセットの提供元。",
             jax: "依存関係を認識する shard ランタイムとライフサイクル制御を担い、アプリのモジュール基盤を支えます。",
             lucide: "アプリケーションのアイコンセット",
             maokai:
