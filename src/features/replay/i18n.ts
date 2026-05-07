@@ -8,7 +8,8 @@ export const replayI18n: Resource = {
     replay: {
       title: "Replay Library",
       subtitle: "Manage local ROFL files and match-history downloads.",
-      scan: "Scan",
+      scan: "Load",
+      scanTooltip: "Load replay files from all folders on the left.",
       addFolder: "Add Folder",
       folderDropzone: "Choose or drop a replay folder",
       directoryPathUnavailable:
@@ -94,7 +95,8 @@ export const replayI18n: Resource = {
     replay: {
       title: "回放库",
       subtitle: "管理本地 ROFL 文件和战绩下载回放。",
-      scan: "扫描",
+      scan: "加载",
+      scanTooltip: "加载左侧所有文件夹里的录像文件",
       addFolder: "添加文件夹",
       folderDropzone: "选择或拖入回放文件夹",
       directoryPathUnavailable: "无法从 WebView 文件选择器读取所选文件夹路径。",
@@ -177,7 +179,8 @@ export const replayI18n: Resource = {
     replay: {
       title: "リプレイライブラリ",
       subtitle: "ローカル ROFL ファイルと戦績からのリプレイを管理します。",
-      scan: "スキャン",
+      scan: "読み込み",
+      scanTooltip: "左側のすべてのフォルダーからリプレイファイルを読み込みます。",
       addFolder: "フォルダーを追加",
       folderDropzone: "リプレイフォルダーを選択またはドロップ",
       directoryPathUnavailable:

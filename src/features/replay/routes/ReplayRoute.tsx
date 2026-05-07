@@ -760,22 +760,26 @@ export function ReplayRoute() {
           {/*<h1 className={s.title}>{t("replay.title")}</h1>*/}
           <span className={s.subtitle}>{t("replay.subtitle")}</span>
         </div>
-        <button
-          type="button"
-          className={s.scanButton}
-          disabled={busy}
-          aria-label="Scan replay folders"
-          onClick={() => {
-            void loadSnapshot("replay_scan_folders");
-          }}
-        >
-          <RefreshCw
-            className={busy ? s.spin : undefined}
-            size={14}
-            aria-hidden="true"
-          />
-          {t("replay.scan")}
-        </button>
+        <AppTooltip content={t("replay.scanTooltip")}>
+          <span className={s.scanButtonTooltipTrigger}>
+            <button
+              type="button"
+              className={s.scanButton}
+              disabled={busy}
+              aria-label="Scan replay folders"
+              onClick={() => {
+                void loadSnapshot("replay_scan_folders");
+              }}
+            >
+              <RefreshCw
+                className={busy ? s.spin : undefined}
+                size={14}
+                aria-hidden="true"
+              />
+              {t("replay.scan")}
+            </button>
+          </span>
+        </AppTooltip>
       </header>
 
       <div className={s.layout}>

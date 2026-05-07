@@ -3,6 +3,7 @@ import { Tooltip } from "@ark-ui/react/tooltip";
 import { useTranslation } from "react-i18next";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
 import { ScoreboardIcon } from "@/components/ScoreboardIcon.tsx";
+import type { MatchPerformanceBadge } from "../../utils/match-performance-badge";
 import { MatchCardKdaRecord } from "./MatchCardKdaRecord";
 import * as s from "./MatchCardMetrics.css";
 
@@ -12,12 +13,14 @@ export function MatchCardMetrics({
   damageShare,
   damageRank,
   goldRank,
+  performanceBadge,
 }: {
   me: RawMatchSummaryParticipant;
   gameDuration: number;
   damageShare: number;
   damageRank: number;
   goldRank: number;
+  performanceBadge?: MatchPerformanceBadge | null;
 }) {
   const { t } = useTranslation();
   const csTotal = me.totalMinionsKilled + me.neutralMinionsKilled;
@@ -30,6 +33,7 @@ export function MatchCardMetrics({
   const damage = Math.max(0, me.totalDamageDealtToChampions ?? 0);
   const damageShareText = `${(Math.max(0, Number.isFinite(damageShare) ? damageShare : 0) * 100).toFixed(1)}%`;
   const damageShareRankText = `${damageShareText} (#${damageRank})`;
+  const kdaLabel = performanceBadge ? performanceBadge.toUpperCase() : "KDA";
   const numberFormatter = new Intl.NumberFormat();
 
   return (
@@ -44,7 +48,16 @@ export function MatchCardMetrics({
             />
           </span>
         </span>
-        <span className={s.metricSecondary}>KDA {kdaText}</span>
+        <span className={s.metricSecondary}>
+          {performanceBadge ? (
+            <span className={s.performanceBadge({ badge: performanceBadge })}>
+              {kdaLabel}
+            </span>
+          ) : (
+            kdaLabel
+          )}{" "}
+          {kdaText}
+        </span>
       </div>
       <div className={s.divider} />
       <div className={s.metricGroup}>

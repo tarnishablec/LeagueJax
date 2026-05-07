@@ -88,6 +88,10 @@ export const scanButton = style({
   },
 });
 
+export const scanButtonTooltipTrigger = style({
+  display: "inline-grid",
+});
+
 export const spin = style({
   animation: `${spinKeyframes} 900ms linear infinite`,
 });

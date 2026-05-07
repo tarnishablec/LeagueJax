@@ -315,27 +315,6 @@ export const metaPill = style({
   whiteSpace: "nowrap",
 });
 
-export const performanceBadge = recipe({
-  base: {
-    alignSelf: "center",
-    fontSize: "0.625rem",
-    fontWeight: 800,
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-    fontStyle: "italic",
-  },
-  variants: {
-    badge: {
-      mvp: {
-        color: "oklch(0.84 0.18 85)",
-      },
-      ace: {
-        color: "oklch(0.62 0.18 280)",
-      },
-    },
-  },
-});
-
 export const loadoutRow = style({
   display: "flex",
   flexWrap: "wrap",

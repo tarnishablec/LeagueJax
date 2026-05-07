@@ -137,6 +137,8 @@ export function useSnapshotPlayerCardState(
       !hasHistoryBucket &&
       phase !== "Idle",
   );
+  const hasHiddenCareer =
+    hasHistoryLoadFailed || summoner?.privacy === "PRIVATE";
 
   const recentGames = useMemo<EnrichedMatch[]>(() => {
     if (!puuid || !historyBucket || historyBucket.length === 0) {
@@ -224,7 +226,7 @@ export function useSnapshotPlayerCardState(
         ...collectSpecialPlayerCardTags({
           colors: playerCardTagColors,
           enabledIds: enabledPlayerCardTagIds,
-          hasHistoryLoadFailed,
+          hasHiddenCareer,
           isSelf,
           recentGames,
           slot,
@@ -234,7 +236,7 @@ export function useSnapshotPlayerCardState(
       ]),
     [
       enabledPlayerCardTagIds,
-      hasHistoryLoadFailed,
+      hasHiddenCareer,
       isSelf,
       playerCardTagColors,
       performanceStrategy,

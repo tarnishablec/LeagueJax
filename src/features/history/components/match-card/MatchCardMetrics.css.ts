@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { recipe } from "@vanilla-extract/recipes";
 import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
@@ -21,7 +22,7 @@ export const divider = style({
 export const metricGroup = style({
   display: "grid",
   alignItems: "center",
-  gap: 2,
+  gap: 3,
 });
 
 export const metricPrimary = style({
@@ -70,13 +71,35 @@ export const kdaDeaths = style({
 
 export const metricSecondary = style({
   display: "grid",
+  gridAutoFlow: "column",
+  gap: 6,
   height: "min-content",
   alignItems: "center",
+  justifyContent: "center",
+  lineHeight: 1,
   fontSize: "0.75rem",
   color: theme.color.mutedForeground,
   whiteSpace: "nowrap",
   textAlign: "center",
   textBoxTrim: "trim-both",
+});
+
+export const performanceBadge = recipe({
+  base: {
+    fontWeight: 800,
+    lineHeight: 1,
+    fontStyle: "italic",
+  },
+  variants: {
+    badge: {
+      mvp: {
+        color: "oklch(0.84 0.18 85)",
+      },
+      ace: {
+        color: "oklch(0.62 0.18 280)",
+      },
+    },
+  },
 });
 
 export const scoreboardIcon = style({

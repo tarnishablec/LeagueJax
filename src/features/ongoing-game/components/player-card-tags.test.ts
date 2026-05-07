@@ -98,13 +98,26 @@ function hasOffFlashPositionTag(
   return collectSpecialPlayerCardTags({
     colors: {},
     enabledIds: ["offFlashPosition"],
-    hasHistoryLoadFailed: false,
+    hasHiddenCareer: false,
     isSelf: false,
     recentGames,
     slot: currentSlot,
     t,
     wasEncountered: false,
   }).some((tag) => tag.id === "offFlashPosition");
+}
+
+function hasHiddenCareerTag(hasHiddenCareer: boolean): boolean {
+  return collectSpecialPlayerCardTags({
+    colors: {},
+    enabledIds: ["hiddenCareer"],
+    hasHiddenCareer,
+    isSelf: false,
+    recentGames: [],
+    slot: slot(FLASH_SPELL_ID, IGNITE_SPELL_ID),
+    t,
+    wasEncountered: false,
+  }).some((tag) => tag.id === "hiddenCareer");
 }
 
 function hasExcellentTag(
@@ -167,6 +180,14 @@ describe("collectSpecialPlayerCardTags", () => {
         match(SMITE_SPELL_ID, FLASH_SPELL_ID),
       ]),
     ).toBe(false);
+  });
+
+  test("marks hidden career when the summoner profile is private", () => {
+    expect(hasHiddenCareerTag(true)).toBe(true);
+  });
+
+  test("does not mark hidden career for public summoner profiles", () => {
+    expect(hasHiddenCareerTag(false)).toBe(false);
   });
 });
 
