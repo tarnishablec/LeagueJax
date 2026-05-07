@@ -67,12 +67,6 @@ function computeWinRateStat(
   return { text: `${percentage}% (${averageKdaText})`, tone };
 }
 
-function normalizeChampionId(slot: PlayerSlot): number | null {
-  const championId =
-    slot.championId > 0 ? slot.championId : slot.championPickIntent;
-  return championId > 0 ? championId : null;
-}
-
 function resolveSummonerIdentity(summoner: SummonerInfo | undefined) {
   const gameName = summoner?.gameName.trim() ?? "";
   if (gameName.length === 0) {
@@ -248,7 +242,6 @@ export function useSnapshotPlayerCardState(
   );
 
   return {
-    championId: normalizeChampionId(slot),
     hasHistoryLoadFailed,
     historyLoadFailedText: t("ongoingGame.historyLoadFailed", {
       defaultValue: "Failed to load history",
@@ -259,6 +252,7 @@ export function useSnapshotPlayerCardState(
     noHistoryText: t("ongoingGame.noHistory", {
       defaultValue: "No match history",
     }),
+    profileIconId: summoner?.profileIconId,
     historyPuuid: summoner?.puuid.trim() || undefined,
     identity,
     rankItems,

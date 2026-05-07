@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LcuChatFriend } from "@/bindings/lcu_chat";
+import { ProfileIcon } from "@/components/ProfileIcon";
 import { RefreshButton } from "@/components/RefreshButton";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import * as s from "./HistoryToolbar.css";
 
 type FriendShortcutListProps = {
@@ -133,16 +133,14 @@ function useFriendSections(
 }
 
 function FriendAvatar({ icon }: { icon: number }) {
-  const { src } = useCdragonStaticData({
-    type: "profile-icon",
-    profileIconId: icon,
-  });
-
-  if (!src) {
-    return <span className={s.friendAvatarFallback} aria-hidden="true" />;
-  }
-
-  return <img src={src} alt="" className={s.friendAvatar} />;
+  return (
+    <ProfileIcon
+      profileIconId={icon}
+      alt=""
+      className={s.friendAvatar}
+      fallbackClassName={s.friendAvatarFallback}
+    />
+  );
 }
 
 function FriendRow({

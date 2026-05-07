@@ -13,10 +13,9 @@ import { LoaderCircle, Unlink, Unplug } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
-import { LazyImage } from "@/components/LazyImage.tsx";
+import { ProfileIcon } from "@/components/ProfileIcon";
 import { SummonerID } from "@/components/SummonerID.tsx";
 import { useOpenHistoryTab } from "@/features/history/hooks/use-open-history-tab";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { selectIsFocused, useLcuStore } from "../stores/lcu";
 import * as s from "./ClientStatus.css";
 
@@ -41,14 +40,14 @@ function renderInstanceStateLabel(
 }
 
 function TriggerIcon({
-  avatarUrl,
+  profileIconId,
   hasSummoner,
   isConnecting,
   collapsed,
   detectedClientCount,
   showCollapsedDetectedBadge,
 }: {
-  avatarUrl: string | null;
+  profileIconId: number | null | undefined;
   hasSummoner: boolean;
   isConnecting: boolean;
   collapsed: boolean;
@@ -58,10 +57,10 @@ function TriggerIcon({
   const [imageErrored, setImageErrored] = useState(false);
   const iconScaleClassName = s.iconScale({ collapsed });
 
-  if (hasSummoner && avatarUrl && !imageErrored) {
+  if (hasSummoner && !imageErrored) {
     return (
-      <LazyImage
-        src={avatarUrl}
+      <ProfileIcon
+        profileIconId={profileIconId}
         alt="Profile icon"
         className={`${s.avatar} ${iconScaleClassName}`}
         style={assignInlineVars({
@@ -140,18 +139,14 @@ function ClientCardContent({
   isFocused: boolean;
 }) {
   const { t } = useTranslation();
-  const { src: avatarUrl } = useCdragonStaticData({
-    type: "profile-icon",
-    profileIconId: inst.summoner?.profileIconId ?? 0,
-  });
   const hasSummoner = !!inst.summoner;
   const stateLabel = renderInstanceStateLabel(displayState, t);
 
   return (
     <>
-      {hasSummoner && avatarUrl ? (
-        <LazyImage
-          src={avatarUrl}
+      {hasSummoner ? (
+        <ProfileIcon
+          profileIconId={inst.summoner?.profileIconId}
           alt="Profile icon"
           className={s.instanceIcon}
           fallbackClassName={s.instanceIconFallback}
@@ -281,10 +276,6 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
 
   const summoner = focusedReady?.summoner;
   const hasFocusedSummoner = !!(focusedReady && summoner);
-  const { src: avatarUrl } = useCdragonStaticData({
-    type: "profile-icon",
-    profileIconId: hasFocusedSummoner ? (summoner?.profileIconId ?? 0) : 0,
-  });
   const isConnecting = !!activeInstance && !hasFocusedSummoner;
   const [canShowExpandedDetectedBadge, setCanShowExpandedDetectedBadge] =
     useState(false);
@@ -349,7 +340,7 @@ export function ClientStatus({ collapsed }: ClientStatusProps) {
           onClick={handleClick}
         >
           <TriggerIcon
-            avatarUrl={avatarUrl}
+            profileIconId={hasFocusedSummoner ? summoner?.profileIconId : null}
             hasSummoner={hasFocusedSummoner}
             isConnecting={isConnecting}
             collapsed={collapsed}
