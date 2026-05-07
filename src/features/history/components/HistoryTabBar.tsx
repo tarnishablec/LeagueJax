@@ -10,25 +10,15 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { LazyImage } from "@/components/LazyImage";
+import { ProfileIcon } from "@/components/ProfileIcon";
 import { useSummonerInfo } from "@/features/history/hooks/use-summoner";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { type HistoryTabIdentity, useTabStore } from "@/stores/tabs.ts";
 import * as s from "./HistoryTabBar.css.ts";
 
 function TabIcon({ profileIconId }: { profileIconId: number }) {
-  const { src: avatarUrl } = useCdragonStaticData({
-    type: "profile-icon",
-    profileIconId,
-  });
-
-  if (!avatarUrl) {
-    return <span className={s.tabIconFallback} aria-hidden="true" />;
-  }
-
   return (
-    <LazyImage
-      src={avatarUrl}
+    <ProfileIcon
+      profileIconId={profileIconId}
       alt="Profile icon"
       className={s.tabIcon}
       fallbackClassName={s.tabIconFallback}

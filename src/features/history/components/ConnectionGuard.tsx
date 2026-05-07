@@ -3,18 +3,11 @@ import { Unplug } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
-import { LazyImage } from "@/components/LazyImage";
+import { ProfileIcon } from "@/components/ProfileIcon";
 import { SummonerID } from "@/components/SummonerID.tsx";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import * as s from "../routes/HistoryRoute.css";
 
 function InstanceCard({ instance }: { instance: LcuInstanceInfo }) {
-  const profileIconId = instance.summoner?.profileIconId ?? 0;
-  const { src: avatarUrl } = useCdragonStaticData({
-    type: "profile-icon",
-    profileIconId,
-  });
-
   return (
     <button
       type="button"
@@ -23,11 +16,12 @@ function InstanceCard({ instance }: { instance: LcuInstanceInfo }) {
     >
       <div className={s.focusPickerHeader}>
         <div className={s.focusPickerAvatarWrap}>
-          {avatarUrl ? (
-            <LazyImage src={avatarUrl} alt="" className={s.focusPickerAvatar} />
-          ) : (
-            <div className={s.focusPickerAvatarFallback} />
-          )}
+          <ProfileIcon
+            profileIconId={instance.summoner?.profileIconId}
+            alt=""
+            className={s.focusPickerAvatar}
+            fallbackClassName={s.focusPickerAvatarFallback}
+          />
         </div>
         <div className={s.focusPickerInfo}>
           {instance.summoner ? (

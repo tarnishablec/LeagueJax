@@ -1,18 +1,16 @@
 import type { SummonerSearchResult } from "@/bindings/summoner";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
+import { ProfileIcon } from "@/components/ProfileIcon";
 import * as s from "./HistoryToolbar.css";
 
 function ResultAvatar({ profileIconId }: { profileIconId: number }) {
-  const { src } = useCdragonStaticData({
-    type: "profile-icon",
-    profileIconId,
-  });
-
-  if (!src) {
-    return <span className={s.resultAvatarFallback} aria-hidden="true" />;
-  }
-
-  return <img src={src} alt="" className={s.resultAvatar} />;
+  return (
+    <ProfileIcon
+      profileIconId={profileIconId}
+      alt=""
+      className={s.resultAvatar}
+      fallbackClassName={s.resultAvatarFallback}
+    />
+  );
 }
 
 export function SearchResultItem({

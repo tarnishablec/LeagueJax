@@ -1,4 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { LazyImage } from "@/components/LazyImage";
 
@@ -7,7 +8,9 @@ type LcuImageProps = {
   alt: string;
   className: string;
   fallbackClassName?: string;
+  loadingClassName?: string;
   onError?: () => void;
+  style?: CSSProperties;
 };
 
 function resolveLcuImageUrl(src?: string | null): string | null {
@@ -66,7 +69,9 @@ export function LcuImage({
   alt,
   className,
   fallbackClassName,
+  loadingClassName,
   onError,
+  style,
 }: LcuImageProps) {
   const resolvedUrl = useMemo(() => resolveLcuImageUrl(src), [src]);
 
@@ -74,7 +79,9 @@ export function LcuImage({
     if (!fallbackClassName) {
       return null;
     }
-    return <span className={fallbackClassName} aria-hidden="true" />;
+    return (
+      <span className={fallbackClassName} style={style} aria-hidden="true" />
+    );
   }
 
   return (
@@ -83,7 +90,9 @@ export function LcuImage({
       alt={alt}
       className={className}
       fallbackClassName={fallbackClassName}
+      loadingClassName={loadingClassName}
       onError={onError}
+      style={style}
     />
   );
 }

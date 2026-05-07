@@ -1,8 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { LazyImage } from "@/components/LazyImage";
+import { ProfileIcon } from "@/components/ProfileIcon";
 import { useSettings } from "@/features/settings/context";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
 import { useTabStore } from "@/stores/tabs";
 import { ConnectionGuard } from "../components/ConnectionGuard";
@@ -50,12 +49,6 @@ function OwnSummonerButton({ serverId }: { serverId: string | null }) {
   const openHistoryTab = useOpenHistoryTab();
   const summoner = connected?.summoner ?? null;
 
-  const { src: avatarUrl } = useCdragonStaticData(
-    summoner?.profileIconId
-      ? { type: "profile-icon", profileIconId: summoner.profileIconId }
-      : { type: "profile-icon", profileIconId: 0 },
-  );
-
   if (!summoner) return null;
 
   const gameName = summoner.gameName || summoner.name || "Summoner";
@@ -78,16 +71,12 @@ function OwnSummonerButton({ serverId }: { serverId: string | null }) {
       >
         <div className={s.focusPickerHeader}>
           <div className={s.focusPickerAvatarWrap}>
-            {avatarUrl ? (
-              <LazyImage
-                src={avatarUrl}
-                alt="Profile icon"
-                className={s.focusPickerAvatar}
-                fallbackClassName={s.focusPickerAvatarFallback}
-              />
-            ) : (
-              <span className={s.focusPickerAvatarFallback} />
-            )}
+            <ProfileIcon
+              profileIconId={summoner.profileIconId}
+              alt="Profile icon"
+              className={s.focusPickerAvatar}
+              fallbackClassName={s.focusPickerAvatarFallback}
+            />
           </div>
           <div className={s.focusPickerInfo}>
             <span className={s.focusPickerName}>
