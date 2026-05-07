@@ -11,7 +11,7 @@ export const trueSegmentWidthVar = createVar();
 export const teamAccentColorVar = createVar();
 
 const positionColumn = "34px";
-const summonerColumn = "minmax(100px, max-content)";
+const summonerColumn = "minmax(100px, 150px)";
 const spellsColumn = "max-content";
 const runesColumn = "max-content";
 const itemsColumn = "max-content";
