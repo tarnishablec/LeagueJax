@@ -224,6 +224,7 @@ impl UpdaterShard {
         let app = self.app_handle()?;
         let updater = app
             .updater_builder()
+            .no_proxy()
             .timeout(self.network_config()?.request_timeout())
             .endpoints(vec![Url::parse(&probe.manifest_url).map_err(|error| {
                 AppError::other(format!("Invalid updater endpoint: {error}"))
@@ -369,6 +370,7 @@ impl UpdaterShard {
         source: UpdaterSourceDto,
     ) -> Result<ManifestProbe, AppError> {
         let client = Client::builder()
+            .no_proxy()
             .user_agent(USER_AGENT)
             .timeout(self.network_config()?.request_timeout())
             .build()
