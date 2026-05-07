@@ -16,9 +16,11 @@ export const outlet = style({
   display: "grid",
   minHeight: 0,
   height: "100%",
-  overflowX: "hidden",
-  overflowY: "auto",
-  scrollbarGutter: "stable",
+});
+
+export const outletContent = style({
+  display: "grid",
+  minHeight: "100%",
 });
 
 export const title = style({

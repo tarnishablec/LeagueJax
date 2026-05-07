@@ -1,5 +1,6 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { Outlet } from "react-router";
+import { ScrollArea } from "@/components/scroll-area";
 import { useSettings } from "@/features/settings/context";
 import * as s from "./SettingsHub.css";
 import { buildSettingsPages } from "./SettingsHub.utils";
@@ -30,9 +31,15 @@ export function SettingsHub() {
   return (
     <div className={s.page}>
       <SettingsPageTabs pages={pages} />
-      <div className={s.outlet}>
+      <ScrollArea
+        className={s.outlet}
+        contentClassName={s.outletContent}
+        direction="vertical"
+        mode="outset"
+        outsetWidth="12px"
+      >
         <Outlet context={outletContext} />
-      </div>
+      </ScrollArea>
     </div>
   );
 }

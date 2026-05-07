@@ -82,6 +82,9 @@ export const carouselItemContent = style({
 export const tablePane = style({
   height: "100%",
   minHeight: 0,
-  overflow: "scroll",
-  scrollbarGutter: "stable",
+});
+
+export const tablePaneContent = style({
+  minWidth: "100%",
+  minHeight: "100%",
 });

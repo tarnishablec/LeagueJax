@@ -9,6 +9,7 @@ export const page = style({
   gridTemplateRows: "minmax(115px, auto) 1fr",
   gap: 12,
   height: "100%",
+  overflowX: "hidden",
   padding: pagePadding,
   paddingTop: pagePaddingTop,
 });
