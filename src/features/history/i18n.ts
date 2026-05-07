@@ -26,6 +26,14 @@ export const historyI18n: Resource = {
           label: "Show augment details",
           hint: "Loads extra resources and parses augment descriptions when enabled. This may increase computation and resource usage.",
         },
+        mvpAceStrategy: {
+          label: "MVP/ACE strategy",
+          hint: "Controls MVP/ACE badges on both History and Ongoing Game history rows. KDA only uses the highest team KDA. Balanced weighs KDA, kill participation, damage, durability, economy, CS, vision, healing and shielding, crowd control, and objective or structure contribution.",
+          options: {
+            balanced: "Balanced",
+            kda: "KDA",
+          },
+        },
       },
     },
     history: {
@@ -211,6 +219,14 @@ export const historyI18n: Resource = {
           label: "显示海克斯详情",
           hint: "开启后会加载额外资源并解析强化描述，可能增加计算和资源占用。",
         },
+        mvpAceStrategy: {
+          label: "MVP/ACE 策略",
+          hint: "控制战绩页面和对局页面近期战绩行的 MVP/ACE 标记。KDA 只按队内 KDA 最高判定；平衡会综合 KDA、参团、伤害、承伤、经济、补刀、视野、治疗护盾、控制和资源/建筑贡献。",
+          options: {
+            balanced: "平衡",
+            kda: "KDA",
+          },
+        },
       },
     },
     history: {
@@ -395,6 +411,14 @@ export const historyI18n: Resource = {
         showAugmentDetails: {
           label: "オーグメント詳細を表示",
           hint: "有効にすると追加リソースを読み込み、オーグメント説明を解析します。計算量とリソース使用量が増える場合があります。",
+        },
+        mvpAceStrategy: {
+          label: "MVP/ACE 判定方式",
+          hint: "履歴画面と進行中ゲームの履歴行に表示する MVP/ACE バッジの判定方式です。KDA はチーム内最高 KDA のみで判定します。バランスは KDA、キル関与、ダメージ、耐久、ゴールド、CS、視界、回復とシールド、行動妨害、オブジェクトや建造物への貢献を総合します。",
+          options: {
+            balanced: "バランス",
+            kda: "KDA",
+          },
         },
       },
     },

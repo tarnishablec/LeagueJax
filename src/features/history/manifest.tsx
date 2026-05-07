@@ -11,6 +11,7 @@ import { useTabStore } from "@/stores/tabs";
 import { SHARD_IDS } from "../shard-ids";
 import { HistoryToolbar } from "./components/HistoryToolbar";
 import { historyI18n } from "./i18n";
+import { DEFAULT_MATCH_PERFORMANCE_STRATEGY } from "./utils/match-performance-badge";
 
 const HistoryRoute = lazy(() =>
   import("./routes/HistoryRoute").then((module) => ({
@@ -24,6 +25,8 @@ export const HISTORY_AUTO_OPEN_OWN_TAB_SETTING =
   "history.behavior.autoOpenOwnTab";
 export const HISTORY_SHOW_AUGMENT_DETAILS_SETTING =
   "history.display.showAugmentDetails";
+export const HISTORY_MVP_ACE_STRATEGY_SETTING =
+  "history.display.mvpAceStrategy";
 const HISTORY_BEHAVIOR_SECTION = "history.behavior" as const;
 const HISTORY_DISPLAY_SECTION = "history.display" as const;
 
@@ -81,6 +84,28 @@ export class HistoryShard implements WebShard {
       zod: z.boolean(),
       defaultValue: false,
       order: 20,
+      onSet: () => {},
+    });
+
+    settingsShard.registerSetting({
+      id: HISTORY_MVP_ACE_STRATEGY_SETTING,
+      labelKey: "settings.history.mvpAceStrategy.label",
+      hintKey: "settings.history.mvpAceStrategy.hint",
+      scope: "frontend",
+      control: { kind: "select" },
+      options: [
+        {
+          value: "balanced",
+          labelKey: "settings.history.mvpAceStrategy.options.balanced",
+        },
+        {
+          value: "kda",
+          labelKey: "settings.history.mvpAceStrategy.options.kda",
+        },
+      ],
+      zod: z.enum(["kda", "balanced"]),
+      defaultValue: DEFAULT_MATCH_PERFORMANCE_STRATEGY,
+      order: 21,
       onSet: () => {},
     });
   }
