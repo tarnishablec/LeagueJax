@@ -15,10 +15,12 @@ export const tagPill = recipe({
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    boxSizing: "border-box",
+    height: "24px",
     fontSize: "0.6875rem",
     fontWeight: 700,
     lineHeight: 1,
-    padding: "4px 8px",
+    padding: "0 8px",
     borderRadius: 999,
     whiteSpace: "nowrap",
   },
@@ -160,12 +162,16 @@ export const soloKillContent = style({
   display: "inline-flex",
   alignItems: "center",
   gap: 4,
+  fontSize: "inherit",
+  lineHeight: 1,
 });
 
 export const soloKillCount = style({
   display: "inline-flex",
   alignItems: "center",
   gap: 1,
+  fontSize: "inherit",
+  lineHeight: 1,
 });
 
 export const soloKillMultiply = style({

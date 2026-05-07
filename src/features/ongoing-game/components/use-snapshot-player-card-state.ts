@@ -242,6 +242,7 @@ export function useSnapshotPlayerCardState(
   );
 
   return {
+    championId: slot.championId > 0 ? slot.championId : null,
     hasHistoryLoadFailed,
     historyLoadFailedText: t("ongoingGame.historyLoadFailed", {
       defaultValue: "Failed to load history",
