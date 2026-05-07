@@ -50,6 +50,24 @@ export const metricPrimaryText = style({
   fontSize: "1rem",
 });
 
+export const kdaRecord = style({
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  alignItems: "center",
+  gap: 2,
+});
+
+export const kdaSeparator = style({
+  color: theme.color.mutedForeground,
+  fontSize: "0.78em",
+  fontWeight: 500,
+  padding: "0 2px"
+});
+
+export const kdaDeaths = style({
+  color: `color-mix(in oklch, ${theme.color.error} 72%, ${theme.color.foreground})`,
+});
+
 export const metricSecondary = style({
   display: "grid",
   height: "min-content",

@@ -3,6 +3,7 @@ import { Tooltip } from "@ark-ui/react/tooltip";
 import { useTranslation } from "react-i18next";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
 import { ScoreboardIcon } from "@/components/ScoreboardIcon.tsx";
+import { MatchCardKdaRecord } from "./MatchCardKdaRecord";
 import * as s from "./MatchCardMetrics.css";
 
 export function MatchCardMetrics({
@@ -36,9 +37,11 @@ export function MatchCardMetrics({
       <div className={s.metricGroup}>
         <span className={s.metricPrimaryInline}>
           <span className={s.metricPrimaryText}>
-            <span style={{ textBoxTrim: "trim-both" }}>
-              {me.kills ?? 0}/{me.deaths ?? 0}/{me.assists ?? 0}
-            </span>
+            <MatchCardKdaRecord
+              kills={me.kills ?? 0}
+              deaths={me.deaths ?? 0}
+              assists={me.assists ?? 0}
+            />
           </span>
         </span>
         <span className={s.metricSecondary}>KDA {kdaText}</span>
