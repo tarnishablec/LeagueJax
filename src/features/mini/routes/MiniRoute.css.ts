@@ -78,7 +78,6 @@ export const footer = style({
   border: "1px solid oklch(1 0 0 / 0.06)",
 });
 
-
 globalStyle(`${footer} ${settingsFieldRow}`, {
   gridTemplateColumns: "13rem minmax(0, 1fr)",
 });
