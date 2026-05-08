@@ -6,12 +6,16 @@ import {
   cloneElement,
   isValidElement,
   lazy,
+  type ReactNode,
   Suspense,
+  useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet, useLocation } from "react-router";
+import { NavLink, useLocation, useOutlet } from "react-router";
 import { JaxLogo } from "@/components/JaxLogo";
 import { TitleBar } from "@/components/TitleBar";
 import {
@@ -34,9 +38,89 @@ const DebugCommandPanel = import.meta.env.DEV
     )
   : null;
 
+const ROUTE_TRANSITION_MS = 180;
+
 interface SidebarNavLinkProps extends NavItem {
   collapsed: boolean;
   label: string;
+}
+
+interface RouteTransitionLayer {
+  id: number;
+  routeKey: string;
+  node: ReactNode;
+  state: "enter" | "exit";
+}
+
+function getMainRouteKey(pathname: string): string {
+  const [, layout, route] = pathname.split("/");
+  if (!layout || !route) {
+    return pathname;
+  }
+
+  return `/${layout}/${route}`;
+}
+
+function MainRouteOutlet({ pathname }: { pathname: string }) {
+  const outlet = useOutlet();
+  const routeKey = getMainRouteKey(pathname);
+  const nextLayerId = useRef(1);
+  const [layers, setLayers] = useState<RouteTransitionLayer[]>(() => [
+    {
+      id: 0,
+      routeKey,
+      node: outlet,
+      state: "enter",
+    },
+  ]);
+
+  useLayoutEffect(() => {
+    setLayers((current) => {
+      const activeLayer =
+        current.find((layer) => layer.state === "enter") ??
+        current[current.length - 1];
+
+      if (activeLayer?.routeKey === routeKey) {
+        return current.map((layer) =>
+          layer.id === activeLayer.id ? { ...layer, node: outlet } : layer,
+        );
+      }
+
+      const enteringLayer: RouteTransitionLayer = {
+        id: nextLayerId.current,
+        routeKey,
+        node: outlet,
+        state: "enter",
+      };
+      nextLayerId.current += 1;
+
+      return activeLayer
+        ? [{ ...activeLayer, state: "exit" }, enteringLayer]
+        : [enteringLayer];
+    });
+  }, [outlet, routeKey]);
+
+  useEffect(() => {
+    if (!layers.some((layer) => layer.state === "exit")) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setLayers((current) => current.filter((layer) => layer.state !== "exit"));
+    }, ROUTE_TRANSITION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [layers]);
+
+  return (
+    <div className={s.routeTransitionSurface}>
+      {layers.map((layer) => (
+        <div key={layer.id} className={s.routeLayer({ state: layer.state })}>
+          {layer.node}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function SidebarNavLink({
@@ -186,7 +270,7 @@ export function MainWindowLayout() {
       </aside>
 
       <main className={s.main}>
-        <Outlet />
+        <MainRouteOutlet pathname={pathname} />
       </main>
       {DebugCommandPanel ? (
         <Suspense fallback={null}>
