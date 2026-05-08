@@ -166,7 +166,7 @@ export const resolveActivePage = (
   }
 
   if (!pageId) {
-    return null;
+    return pages[0];
   }
 
   return pages.find((entry) => entry.id === pageId) ?? null;

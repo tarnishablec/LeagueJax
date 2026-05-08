@@ -2,6 +2,7 @@ import { Tabs } from "@ark-ui/react/tabs";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 import * as s from "./SettingsHub.css";
+import { resolveActivePage } from "./SettingsHub.utils";
 import type { PageEntry } from "./settings-view-model";
 
 interface SettingsPageTabsProps {
@@ -38,8 +39,7 @@ const utilityPages = [
 export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
   const { t } = useTranslation();
   const { pageId } = useParams();
-  const activePrimaryPageId =
-    pageId && pages.some((page) => page.id === pageId) ? pageId : null;
+  const activePrimaryPageId = resolveActivePage(pages, pageId)?.id ?? null;
   const activeUtilityPageId =
     pageId && utilityPages.some((page) => page.id === pageId) ? pageId : null;
 

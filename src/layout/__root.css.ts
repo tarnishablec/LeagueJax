@@ -1,4 +1,9 @@
-import { createVar, type StyleRule, style } from "@vanilla-extract/css";
+import {
+  createVar,
+  keyframes,
+  type StyleRule,
+  style,
+} from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { layers } from "../styles/layers.css";
 import { theme } from "../styles/theme.css";
@@ -221,4 +226,65 @@ export const toolbarSlot = style({
 export const main = style({
   overflow: "hidden",
   // padding: 16,
+});
+
+const routeFadeOut = keyframes({
+  from: {
+    opacity: 1,
+  },
+  to: {
+    opacity: 0,
+  },
+});
+
+const routeFadeIn = keyframes({
+  from: {
+    opacity: 0,
+  },
+  to: {
+    opacity: 1,
+  },
+});
+
+export const routeTransitionSurface = style({
+  display: "grid",
+  height: "100%",
+  minHeight: 0,
+  overflow: "hidden",
+  position: "relative",
+});
+
+export const routeLayer = recipe({
+  base: {
+    gridArea: "1 / 1",
+    height: "100%",
+    minHeight: 0,
+    overflow: "hidden",
+  },
+  variants: {
+    state: {
+      enter: {
+        zIndex: 1,
+        animation: `${routeFadeIn} 180ms ease-out both`,
+        "@media": {
+          "(prefers-reduced-motion: reduce)": {
+            animation: "none",
+          },
+        },
+      },
+      exit: {
+        zIndex: 0,
+        pointerEvents: "none",
+        animation: `${routeFadeOut} 120ms ease-out both`,
+        "@media": {
+          "(prefers-reduced-motion: reduce)": {
+            animation: "none",
+          },
+        },
+      },
+    },
+  },
+  defaultVariants: {
+    state: "enter",
+  },
 });
