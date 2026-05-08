@@ -116,6 +116,7 @@ export const historyI18n: Resource = {
       matchDetails: {
         team: "Team {{number}}",
         placement: "#{{placement}}",
+        noParticipantData: "No participant data",
         tabs: {
           details: "Details",
           runes: "Runes",
@@ -318,6 +319,7 @@ export const historyI18n: Resource = {
       matchDetails: {
         team: "队伍 {{number}}",
         placement: "第 {{placement}} 名",
+        noParticipantData: "暂无玩家数据",
         tabs: {
           details: "详情",
           runes: "符文",
@@ -520,6 +522,7 @@ export const historyI18n: Resource = {
       matchDetails: {
         team: "チーム {{number}}",
         placement: "{{placement}}位",
+        noParticipantData: "参加者データがありません",
         tabs: {
           details: "詳細",
           runes: "ルーン",

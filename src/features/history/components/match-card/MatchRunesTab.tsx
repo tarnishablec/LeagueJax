@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import type {
-  RawMatchDetailsGame,
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
   RawMatchSummaryPerkSelection,
@@ -21,13 +20,8 @@ import {
 } from "../../hooks/use-cdragon-game-data-catalog.ts";
 import { HISTORY_SHOW_AUGMENT_DETAILS_SETTING } from "../../manifest.tsx";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
-import {
-  MatchParticipantPicker,
-  MatchSelectedParticipantHeader,
-} from "./MatchParticipantPicker";
 import * as s from "./MatchRunesTab.css";
 import { CDRAGON_PERK_STYLE_ICON_BY_ID } from "./match-card-display";
-import { useMatchParticipantSelection } from "./match-participant-selection";
 
 type AugmentRarityVariant =
   | "default"
@@ -304,7 +298,12 @@ function GameDataTooltip({
   const statLines = stats ?? [];
 
   return (
-    <Tooltip.Root openDelay={120} closeDelay={0}>
+    <Tooltip.Root
+      openDelay={120}
+      closeDelay={0}
+      closeOnPointerDown={false}
+      closeOnClick={false}
+    >
       <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
       <Portal>
         <Tooltip.Positioner className={s.tooltipPositioner}>
@@ -717,13 +716,11 @@ function SelectedParticipantContent({
 
 export function MatchRunesTab({
   summary,
-  detail: _detail,
+  participant,
 }: {
   summary: RawMatchSummaryGame;
-  detail: RawMatchDetailsGame | undefined;
+  participant: RawMatchSummaryParticipant;
 }) {
-  void _detail;
-  const { t } = useTranslation();
   const settings = useSettings();
   const showAugmentDetails = useSyncExternalStore(
     (callback) =>
@@ -743,39 +740,12 @@ export function MatchRunesTab({
       augmentIds,
     },
   );
-  const { selectedEntry, selectedKey, setSelectedKey } =
-    useMatchParticipantSelection(participants);
-
-  if (!selectedEntry) {
-    return (
-      <span className={s.emptyState}>
-        {t("history.matchRunes.noData", {
-          defaultValue: "No rune data",
-        })}
-      </span>
-    );
-  }
 
   return (
-    <div className={s.root}>
-      <MatchParticipantPicker
-        summary={summary}
-        participants={participants}
-        selectedKey={selectedKey}
-        onSelectedKeyChange={setSelectedKey}
-        ariaLabel="Match participant rune tabs"
-        actionLabel={(displayName) => `Show runes for ${displayName}`}
-      />
-      <div className={s.content}>
-        <MatchSelectedParticipantHeader
-          participant={selectedEntry.participant}
-        />
-        <SelectedParticipantContent
-          catalog={catalog}
-          summary={summary}
-          participant={selectedEntry.participant}
-        />
-      </div>
-    </div>
+    <SelectedParticipantContent
+      catalog={catalog}
+      summary={summary}
+      participant={participant}
+    />
   );
 }

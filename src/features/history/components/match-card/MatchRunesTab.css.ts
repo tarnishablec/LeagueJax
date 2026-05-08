@@ -4,22 +4,6 @@ import { gameColorVars } from "@/styles/game-colors.css.ts";
 import { layers } from "@/styles/layers.css.ts";
 import { theme } from "@/styles/theme.css.ts";
 
-export const root = style({
-  minWidth: 0,
-  display: "grid",
-  gap: 10,
-});
-
-export const content = style({
-  minWidth: 0,
-  display: "grid",
-  gap: 10,
-  padding: 10,
-  borderRadius: 8,
-  outline: `1px solid ${theme.color.border}`,
-  background: `color-mix(in srgb, ${theme.color.background} 20%, transparent)`,
-});
-
 export const sectionGrid = style({
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 0.72fr)",
