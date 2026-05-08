@@ -1,5 +1,11 @@
-import { style } from "@vanilla-extract/css";
+import { keyframes, style } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css";
+
+const spin = keyframes({
+  to: {
+    transform: "rotate(360deg)",
+  },
+});
 
 export const panel = style({
   display: "grid",
@@ -90,7 +96,6 @@ export const listMotionLayer = style({
   minWidth: 0,
   minHeight: 0,
   height: "100%",
-  overflow: "hidden",
 });
 
 export const listScroller = style({
@@ -104,4 +109,9 @@ export const emptyState = style({
   height: "100%",
   color: theme.color.mutedForeground,
   fontSize: "0.875rem",
+});
+
+export const loadingSpinner = style({
+  color: theme.color.mutedForeground,
+  animation: `${spin} 900ms linear infinite`,
 });
