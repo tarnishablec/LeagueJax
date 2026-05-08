@@ -85,6 +85,14 @@ export const list = style({
   alignContent: "start",
 });
 
+export const listMotionLayer = style({
+  display: "grid",
+  minWidth: 0,
+  minHeight: 0,
+  height: "100%",
+  overflow: "hidden",
+});
+
 export const listScroller = style({
   minWidth: 0,
   minHeight: 0,

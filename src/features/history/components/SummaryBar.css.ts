@@ -177,6 +177,7 @@ export const rankCard = style({
   gridTemplateColumns: "minmax(0, 1fr) auto",
   alignItems: "center",
   height: "88px",
+  width: 180,
   gap: 10,
   borderRadius: 8,
   border: `1px solid ${theme.color.border}`,

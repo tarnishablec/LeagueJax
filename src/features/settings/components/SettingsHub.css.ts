@@ -23,6 +23,13 @@ export const outletContent = style({
   minHeight: "100%",
 });
 
+export const outletRouteLayer = style({
+  display: "grid",
+  width: "100%",
+  minWidth: 0,
+  minHeight: "100%",
+});
+
 export const title = style({
   fontSize: "1.125rem",
   fontWeight: 600,
@@ -88,7 +95,7 @@ export const primaryTab = style({
   fontSize: "0.875rem",
   lineHeight: 1,
   whiteSpace: "nowrap",
-  transition: "color 120ms ease-out, background 120ms ease-out",
+  transition: "background 120ms ease-out",
   selectors: {
     "&:hover": {
       color: theme.color.foreground,

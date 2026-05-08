@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { resolveActivePage } from "./SettingsHub.utils";
+import {
+  resolveActivePage,
+  resolveSettingsTransitionKey,
+} from "./SettingsHub.utils";
 import type { PageEntry } from "./settings-view-model";
 
 function page(id: string): PageEntry {
@@ -21,5 +24,19 @@ describe("resolveActivePage", () => {
 
   test("returns null when the requested page id is not registered", () => {
     expect(resolveActivePage([page("system")], "missing")).toBeNull();
+  });
+});
+
+describe("resolveSettingsTransitionKey", () => {
+  test("keeps the settings index route key independent from registered pages", () => {
+    expect(resolveSettingsTransitionKey("/main/settings")).toBe(
+      "/main/settings",
+    );
+  });
+
+  test("keeps explicit settings child route keys stable", () => {
+    expect(resolveSettingsTransitionKey("/main/settings/about")).toBe(
+      "/main/settings/about",
+    );
   });
 });

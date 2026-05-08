@@ -60,9 +60,9 @@ function MainRouteOutlet({ pathname }: { pathname: string }) {
         <motion.div
           key={routeKey}
           className={s.routeLayer}
-          initial={reduceMotion ? false : { opacity: 0 }}
+          initial={reduceMotion ? false : { opacity: 0.65 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.16, ease: "easeOut" }}
+          transition={{ duration: 0.26, ease: "easeOut" }}
         >
           {outlet}
         </motion.div>
