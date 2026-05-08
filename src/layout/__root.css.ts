@@ -85,6 +85,7 @@ const navBase: StyleRule = {
   whiteSpace: "nowrap",
   overflow: "hidden",
   textDecoration: "none",
+  position: "relative",
 } as const;
 
 const tooltipSurface = `oklch(from ${theme.color.foreground} 0.26 0.012 h / 0.96)`;
@@ -108,6 +109,10 @@ export const navItem = recipe({
       true: {},
     },
     active: {
+      false: {},
+      true: {},
+    },
+    adorned: {
       false: {},
       true: {},
     },
@@ -141,6 +146,7 @@ export const navItem = recipe({
   defaultVariants: {
     collapsed: false,
     active: false,
+    adorned: false,
   },
 });
 
@@ -178,6 +184,37 @@ export const navLabel = recipe({
     collapsed: {
       false: { opacity: 1 },
       true: { opacity: 0 },
+    },
+    adorned: {
+      false: {},
+      true: {
+        paddingInlineEnd: 24,
+      },
+    },
+  },
+  defaultVariants: {
+    collapsed: false,
+    adorned: false,
+  },
+});
+
+export const navEndAdornment = recipe({
+  base: {
+    position: "absolute",
+    insetBlockStart: "50%",
+    display: "grid",
+    placeItems: "center",
+    transform: "translateY(-50%)",
+    pointerEvents: "none",
+  },
+  variants: {
+    collapsed: {
+      false: {
+        insetInlineEnd: 10,
+      },
+      true: {
+        insetInlineEnd: 6,
+      },
     },
   },
   defaultVariants: {
