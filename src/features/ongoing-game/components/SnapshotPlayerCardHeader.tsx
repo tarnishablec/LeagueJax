@@ -1,10 +1,8 @@
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { MiniRankDisplay } from "@/components/mini-rank-display";
-import { ProfileIcon } from "@/components/ProfileIcon";
 import { SummonerID } from "@/components/SummonerID.tsx";
 import * as s from "./OngoingGameCards.css.ts";
-import { resolvePlayerCardAvatarSource } from "./player-card-avatar.ts";
 import type { PlayerCardRankDisplayItem } from "./use-snapshot-player-card-state.ts";
 
 type SnapshotPlayerCardHeaderProps = {
@@ -13,7 +11,6 @@ type SnapshotPlayerCardHeaderProps = {
   isBot: boolean;
   level: number;
   onOpenHistory?: () => void;
-  profileIconId: number | null | undefined;
   rankItems: readonly PlayerCardRankDisplayItem[];
   showRank: boolean;
   squadTag?: {
@@ -28,7 +25,6 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
     isBot,
     level,
     onOpenHistory,
-    profileIconId,
     rankItems,
     showRank,
     squadTag,
@@ -36,34 +32,28 @@ export function SnapshotPlayerCardHeader(props: SnapshotPlayerCardHeaderProps) {
   const squadBadge = squadTag ? (
     <span className={s.playerSquadBadge}>{squadTag.text}</span>
   ) : null;
-  const avatarSource = resolvePlayerCardAvatarSource({
-    championId,
-    profileIconId,
-  });
-  const avatar =
-    avatarSource.kind === "champion" ? (
-      <ChampionAvatar
-        championId={avatarSource.championId}
-        imageClassName={s.championAvatar}
-        fallbackClassName={s.championAvatarFallback}
-        wrapperClassName={s.playerAvatarWrap}
-        level={level}
-        levelClassName={s.levelBadge}
-      />
-    ) : (
-      <span className={s.playerAvatarWrap}>
-        <ProfileIcon
-          profileIconId={avatarSource.profileIconId}
-          className={s.championAvatar}
-          fallbackClassName={s.championAvatarFallback}
-        />
-        {level > 0 ? <span className={s.levelBadge}>{level}</span> : null}
-      </span>
-    );
+  const showChampionAvatar =
+    typeof championId === "number" &&
+    Number.isFinite(championId) &&
+    championId > 0;
 
   return (
     <div className={s.playerHeader}>
-      {avatar}
+      {showChampionAvatar ? (
+        <ChampionAvatar
+          championId={championId}
+          imageClassName={s.championAvatar}
+          fallbackClassName={s.championAvatarFallback}
+          wrapperClassName={s.playerAvatarWrap}
+          level={level}
+          levelClassName={s.levelBadge}
+        />
+      ) : (
+        <span className={s.playerAvatarWrap}>
+          <span className={s.playerAvatarPlaceholder} aria-hidden="true" />
+          {level > 0 ? <span className={s.levelBadge}>{level}</span> : null}
+        </span>
+      )}
 
       <div className={s.playerIdentity}>
         {isBot ? (

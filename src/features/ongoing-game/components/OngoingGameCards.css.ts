@@ -189,6 +189,16 @@ export const playerAvatarWrap = style({
   height: 40,
 });
 
+export const playerAvatarPlaceholder = style({
+  display: "block",
+  width: "100%",
+  height: "100%",
+  borderRadius: 6,
+  background: `color-mix(in oklch, ${theme.color.surface} 74%, ${theme.color.background})`,
+  outline: `1px solid color-mix(in oklch, ${theme.color.border} 72%, transparent)`,
+  boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${theme.color.foreground} 4%, transparent)`,
+});
+
 export const championAvatar = style({
   width: "100%",
   height: "100%",
@@ -307,7 +317,7 @@ export const rankGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
   alignItems: "center",
-  columnGap: 6,
+  columnGap: 2,
   minWidth: 0,
 });
 
@@ -315,7 +325,7 @@ export const rankItem = style({
   display: "grid",
   gridTemplateColumns: "auto minmax(0, 1fr)",
   alignItems: "center",
-  gap: 5,
+  gap: 3,
   lineHeight: 1,
   minWidth: 0,
 });

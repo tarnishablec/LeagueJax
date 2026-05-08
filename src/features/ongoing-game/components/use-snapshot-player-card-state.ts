@@ -253,7 +253,6 @@ export function useSnapshotPlayerCardState(
     noHistoryText: t("ongoingGame.noHistory", {
       defaultValue: "No match history",
     }),
-    profileIconId: summoner?.profileIconId,
     historyPuuid: summoner?.puuid.trim() || undefined,
     identity,
     rankItems,

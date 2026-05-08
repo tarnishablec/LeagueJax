@@ -10,8 +10,16 @@ import { useLcuStore } from "@/stores/lcu";
 import { useTabStore } from "@/stores/tabs";
 import { SHARD_IDS } from "../shard-ids";
 import { HistoryToolbar } from "./components/HistoryToolbar";
+import {
+  createHistoryFocusSyncController,
+  type HistoryFocusSyncController,
+} from "./hooks/use-focus-sync";
 import { historyI18n } from "./i18n";
 import { DEFAULT_MATCH_PERFORMANCE_STRATEGY } from "./utils/match-performance-badge";
+import {
+  deriveSgpServerIdFromClientArgs,
+  deriveSgpServerIdFromRegion,
+} from "./utils/server-display";
 
 const HistoryRoute = lazy(() =>
   import("./routes/HistoryRoute").then((module) => ({
@@ -31,6 +39,8 @@ const HISTORY_BEHAVIOR_SECTION = "history.behavior" as const;
 const HISTORY_DISPLAY_SECTION = "history.display" as const;
 
 export class HistoryShard implements WebShard {
+  private focusSyncController: HistoryFocusSyncController | null = null;
+
   public label() {
     return "HistoryShard";
   }
@@ -108,6 +118,41 @@ export class HistoryShard implements WebShard {
       order: 21,
       onSet: () => {},
     });
+
+    this.focusSyncController = createHistoryFocusSyncController({
+      closeAllTabs: () => useTabStore.getState().closeAllTabs(),
+      getAutoOpenOwnTab: () =>
+        settingsShard.get<boolean>(HISTORY_AUTO_OPEN_OWN_TAB_SETTING) ?? false,
+      getConnected: () =>
+        useLcuStore
+          .getState()
+          .instances.find(
+            (instance) => instance.isFocused && instance.state === "ready",
+          ),
+      getFocusedServerId: () => {
+        const connected = useLcuStore
+          .getState()
+          .instances.find(
+            (instance) => instance.isFocused && instance.state === "ready",
+          );
+        return (
+          deriveSgpServerIdFromClientArgs(connected?.cmdArgs) ??
+          deriveSgpServerIdFromRegion(connected?.region)
+        );
+      },
+      hasExistingTabs: () => useTabStore.getState().tabs.length > 0,
+      openTab: (puuid, sgpServerId) =>
+        useTabStore.getState().openTab(puuid, sgpServerId),
+      subscribeAutoOpenOwnTab: (listener) =>
+        settingsShard.subscribe(HISTORY_AUTO_OPEN_OWN_TAB_SETTING, listener),
+      subscribeFocusedClient: (listener) => useLcuStore.subscribe(listener),
+    });
+    this.focusSyncController.start();
+  }
+
+  public teardown(): void {
+    this.focusSyncController?.stop();
+    this.focusSyncController = null;
   }
 
   public routes() {
