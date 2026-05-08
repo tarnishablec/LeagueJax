@@ -228,6 +228,8 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
   example `src/bindings/client_shard.ts`).
 - Run `bun run sync_rs_types` from the project root to regenerate bindings (Rust export tests + Biome format +
   typecheck).
+- When running `ts-rs` export or regenerating TypeScript bindings, always run the full `bun run sync_rs_types` command
+  from the project root. Do not run only partial export tests or ad hoc `ts-rs` commands.
 - TS should always import these types from `src/bindings/`.
 
 ## Rust Code Style
