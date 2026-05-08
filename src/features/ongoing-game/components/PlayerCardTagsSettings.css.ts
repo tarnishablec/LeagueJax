@@ -29,7 +29,7 @@ export const itemRow = style({
 
 export const checkboxRoot = style({
   display: "inline-grid",
-  gridTemplateColumns: "auto minmax(0, 1fr)",
+  gridTemplateColumns: "auto auto auto",
   alignItems: "center",
   justifyContent: "start",
   gap: 8,

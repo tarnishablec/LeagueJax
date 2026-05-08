@@ -45,8 +45,7 @@ export const ongoingGameI18n: Resource = {
           },
         },
         playerCardTags: {
-          description:
-            "Choose which tags can appear on player cards. Excellent follows the MVP/ACE strategy in History settings.",
+          description: "Choose which tags can appear on player cards.",
           savedColors: "Saved Colors",
           squadDetection: {
             enabled: {
@@ -62,7 +61,10 @@ export const ongoingGameI18n: Resource = {
             winStreak: "Win streak",
             loseStreak: "Lose streak",
             averageSoloKills: "Average solo kills",
-            excellent: "Excellent mark",
+            excellent: {
+              label: "Excellent mark",
+              hint: "Excellent mark follows the MVP/ACE strategy in History settings.",
+            },
             offFlashPosition: "Flash position check",
             hiddenCareer: "Hidden career mark",
             self: "Self mark",
@@ -165,8 +167,7 @@ export const ongoingGameI18n: Resource = {
           },
         },
         playerCardTags: {
-          description:
-            "这些标签会展示在玩家卡片上。优异标记会跟随战绩设置中的 MVP/ACE 策略。",
+          description: "这些标签会展示在玩家卡片上。",
           savedColors: "保存的颜色",
           squadDetection: {
             enabled: {
@@ -182,7 +183,10 @@ export const ongoingGameI18n: Resource = {
             winStreak: "连胜场次",
             loseStreak: "连败场次",
             averageSoloKills: "场均单杀次数",
-            excellent: "优异标记",
+            excellent: {
+              label: "优异标记",
+              hint: "优异标记会跟随战绩设置中的 MVP/ACE 策略。",
+            },
             offFlashPosition: "闪现异常位置检测",
             hiddenCareer: "生涯隐藏标记",
             self: "自己标记",
@@ -285,8 +289,7 @@ export const ongoingGameI18n: Resource = {
           },
         },
         playerCardTags: {
-          description:
-            "プレイヤーカードに表示するタグを選択します。優秀マークは戦績設定のMVP/ACE戦略に従います。",
+          description: "プレイヤーカードに表示するタグを選択します。",
           savedColors: "保存した色",
           squadDetection: {
             enabled: {
@@ -302,7 +305,10 @@ export const ongoingGameI18n: Resource = {
             winStreak: "連勝数",
             loseStreak: "連敗数",
             averageSoloKills: "平均ソロキル",
-            excellent: "優秀マーク",
+            excellent: {
+              label: "優秀マーク",
+              hint: "優秀マークは戦績設定の MVP/ACE 戦略に従います。",
+            },
             offFlashPosition: "フラッシュ位置チェック",
             hiddenCareer: "戦績非公開マーク",
             self: "自分マーク",

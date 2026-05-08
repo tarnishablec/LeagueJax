@@ -1,14 +1,12 @@
-import { Portal } from "@ark-ui/react/portal";
-import { Tooltip } from "@ark-ui/react/tooltip";
-import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import * as s from "./SettingsFieldRow.css";
+import { SettingsHint, type SettingsHintTone } from "./SettingsHint";
 
 interface SettingsFieldRowProps {
   controlAlign?: "stretch" | "start" | "end";
   label: string;
   hint?: string;
-  hintTone?: "info" | "warning" | "error";
+  hintTone?: SettingsHintTone;
   settingId?: string;
   scopeTag?: string;
   children?: ReactNode;
@@ -28,38 +26,7 @@ export function SettingsFieldRow({
       <span className={s.label}>
         <span className={s.labelText}>
           <span>{label}</span>
-          {hint ? (
-            <Tooltip.Root
-              lazyMount
-              unmountOnExit
-              openDelay={200}
-              closeDelay={80}
-              positioning={{
-                placement: "bottom-start",
-                gutter: 8,
-                slide: false,
-                flip: false,
-                strategy: "fixed",
-              }}
-            >
-              <Tooltip.Trigger asChild>
-                <span
-                  className={`${s.hintTrigger} ${s.hintTriggerTone[hintTone]}`}
-                >
-                  <CircleAlert size={14} />
-                </span>
-              </Tooltip.Trigger>
-              <Portal>
-                <Tooltip.Positioner className={s.hintPositioner}>
-                  <Tooltip.Content
-                    className={`${s.hintContent} ${s.hintContentTone[hintTone]}`}
-                  >
-                    {hint}
-                  </Tooltip.Content>
-                </Tooltip.Positioner>
-              </Portal>
-            </Tooltip.Root>
-          ) : null}
+          {hint ? <SettingsHint hint={hint} tone={hintTone} /> : null}
         </span>
         <span className={s.scopeBadge}>{scopeTag ?? ""}</span>
       </span>

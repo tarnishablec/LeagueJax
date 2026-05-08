@@ -4,6 +4,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   FolderOpen,
   HardDrive,
+  Loader,
   Monitor,
   Play,
   RefreshCw,
@@ -58,7 +59,7 @@ function LoadingStatusRow({
 }) {
   return (
     <div className={s.loadingStatusRow} role="status" aria-label={ariaLabel}>
-      <RefreshCw
+      <Loader
         className={`${s.loadingStatusIcon} ${s.spin}`}
         size={14}
         aria-hidden="true"

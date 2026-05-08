@@ -39,9 +39,9 @@ const toScope = (scope?: RegisteredSetting["scope"]): string => {
 const columnHelper = createColumnHelper<RegisteredSetting>();
 
 export function SettingsRegistryList({
-  definitions,
-}: SettingsRegistryListProps) {
-  const { t, i18n } = useTranslation();
+                                       definitions,
+                                     }: SettingsRegistryListProps) {
+  const {t, i18n} = useTranslation();
   const currentLocale = normalizeLocale(i18n.resolvedLanguage ?? i18n.language);
   const showCurrentLanguageColumn = currentLocale !== "en";
 
@@ -57,14 +57,14 @@ export function SettingsRegistryList({
     const cols: ColumnDef<RegisteredSetting, any>[] = [
       columnHelper.accessor("id", {
         header: () =>
-          t("settings.registry.columns.key", { defaultValue: "Key" }),
-        meta: { className: monospace },
-        cell: ({ getValue }) => {
+          t("settings.registry.columns.key", {defaultValue: "Key"}),
+        meta: {className: monospace},
+        cell: ({getValue}) => {
           const id = getValue();
           return (
             <span className={s.keyCell}>
               <span className={s.keyText}>{id}</span>
-              <CopyButton text={id} className={s.copyButton} />
+              <CopyButton text={id} className={s.copyButton}/>
             </span>
           );
         },
@@ -76,8 +76,8 @@ export function SettingsRegistryList({
         columnHelper.accessor("labelKey", {
           id: "currentLang",
           header: () => localeLabel[currentLocale],
-          meta: { className: mutedCell },
-          cell: ({ row }) =>
+          meta: {className: mutedCell},
+          cell: ({row}) =>
             t(row.original.labelKey, {
               lng: currentLocale,
               defaultValue: row.original.labelKey,
@@ -93,8 +93,8 @@ export function SettingsRegistryList({
           t("settings.registry.columns.en", {
             defaultValue: "English",
           }),
-        meta: { className: mutedCell },
-        cell: ({ row }) =>
+        meta: {className: mutedCell},
+        cell: ({row}) =>
           t(row.original.labelKey, {
             lng: "en",
             defaultValue: row.original.labelKey,
@@ -106,7 +106,9 @@ export function SettingsRegistryList({
           t("settings.registry.columns.scope", {
             defaultValue: "Scope",
           }),
-        cell: ({ row }) => (
+        size: 100,
+        meta: {},
+        cell: ({row}) => (
           <span className={s.scope}>{toScope(row.original.scope)}</span>
         ),
       }),
@@ -117,7 +119,7 @@ export function SettingsRegistryList({
 
   return (
     <div className={s.registryPage}>
-      <DataTable data={rows} columns={columns} />
+      <DataTable data={rows} columns={columns}/>
     </div>
   );
 }

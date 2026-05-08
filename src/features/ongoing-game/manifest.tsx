@@ -166,6 +166,7 @@ export class OngoingGameShard implements WebShard {
       settings.registerSetting({
         id: enabledSetting.id,
         labelKey: enabledSetting.labelKey,
+        hintKey: enabledSetting.hintKey,
         scope: "frontend",
         control: { kind: "toggle" },
         zod: z.boolean(),

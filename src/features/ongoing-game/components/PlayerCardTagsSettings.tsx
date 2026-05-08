@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import type React from "react";
 import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { SettingsColorPicker } from "@/components/settings-ui";
+import { SettingsColorPicker, SettingsHint } from "@/components/settings-ui";
 import { SettingsFieldRenderer } from "@/features/settings/components/SettingsFieldRenderer";
 import { useSettings } from "@/features/settings/context";
 import type { SettingsSectionRendererProps } from "@/features/settings/types";
@@ -54,8 +54,8 @@ function PlayerCardTagColorPicker(props: {
   label: string;
   style?: React.CSSProperties;
 }) {
-  const { colorSetting, label } = props;
-  const { t } = useTranslation();
+  const {colorSetting, label} = props;
+  const {t} = useTranslation();
   const settings = useSettings();
   const color = usePlayerCardTagColor(colorSetting);
 
@@ -84,9 +84,11 @@ function PlayerCardTagColorPicker(props: {
 }
 
 function PlayerCardTagSettingsRow(props: { item: PlayerCardTagSettingItem }) {
-  const { item } = props;
+  const {item} = props;
+  const {t} = useTranslation();
   const settings = useSettings();
   const enabled = usePlayerCardTagEnabled(item);
+  const hint = item.hintKey ? t(item.hintKey) : undefined;
 
   const updateEnabled = (checked: boolean) => {
     settings.set(item.enabledSettingId, checked);
@@ -102,15 +104,16 @@ function PlayerCardTagSettingsRow(props: { item: PlayerCardTagSettingItem }) {
           updateEnabled(details.checked === true);
         }}
       >
-        <Checkbox.HiddenInput />
+        <Checkbox.HiddenInput/>
         <Checkbox.Control className={s.checkboxControl}>
           <Checkbox.Indicator className={s.checkboxIndicator}>
-            <Check size={14} aria-hidden="true" />
+            <Check size={14} aria-hidden="true"/>
           </Checkbox.Indicator>
         </Checkbox.Control>
         <Checkbox.Label className={s.checkboxLabel}>
           {item.label}
         </Checkbox.Label>
+        {hint ? <SettingsHint hint={hint}/> : <div></div>}
       </Checkbox.Root>
       {item.colorSettings.length > 0 ? (
         <div className={s.colorPickerGroup}>
@@ -128,21 +131,21 @@ function PlayerCardTagSettingsRow(props: { item: PlayerCardTagSettingItem }) {
 }
 
 export function PlayerCardTagsSettings(props: SettingsSectionRendererProps) {
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   const items = useMemo(() => getPlayerCardTagSettingItems(t), [t]);
   const visibleFields = props.fields.filter((field) => field.visible);
 
   return (
     <div className={s.root}>
       {visibleFields.map((field) => (
-        <SettingsFieldRenderer key={field.id} field={field} />
+        <SettingsFieldRenderer key={field.id} field={field}/>
       ))}
       <div className={s.description}>
         {t("settings.ongoing.playerCardTags.description")}
       </div>
       <div className={s.list}>
         {items.map((item) => (
-          <PlayerCardTagSettingsRow key={item.id} item={item} />
+          <PlayerCardTagSettingsRow key={item.id} item={item}/>
         ))}
       </div>
     </div>
