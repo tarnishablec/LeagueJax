@@ -1,9 +1,13 @@
-import { useMemo, useSyncExternalStore } from "react";
-import { Outlet } from "react-router";
+import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useLocation, useOutlet } from "react-router";
 import { ScrollArea } from "@/components/scroll-area";
 import { useSettings } from "@/features/settings/context";
 import * as s from "./SettingsHub.css";
-import { buildSettingsPages } from "./SettingsHub.utils";
+import {
+  buildSettingsPages,
+  resolveSettingsTransitionKey,
+} from "./SettingsHub.utils";
 import { SettingsPageTabs } from "./SettingsPageTabs";
 import type { PageEntry } from "./settings-view-model";
 
@@ -11,8 +15,40 @@ export interface SettingsOutletContext {
   pages: PageEntry[];
 }
 
+function SettingsRouteOutlet({
+  outletContext,
+  pathname,
+}: {
+  outletContext: SettingsOutletContext;
+  pathname: string;
+}) {
+  const outlet = useOutlet(outletContext);
+  const reduceMotion = useReducedMotion();
+  const hasMountedRef = useRef(false);
+  const routeKey = resolveSettingsTransitionKey(pathname);
+
+  useEffect(() => {
+    hasMountedRef.current = true;
+  }, []);
+
+  return outlet ? (
+    <motion.div
+      key={routeKey}
+      className={s.outletRouteLayer}
+      initial={
+        reduceMotion || !hasMountedRef.current ? false : { opacity: 0.72, y: 3 }
+      }
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: "easeOut" }}
+    >
+      {outlet}
+    </motion.div>
+  ) : null;
+}
+
 export function SettingsHub() {
   const settings = useSettings();
+  const { pathname } = useLocation();
   const definitionsVersion = useSyncExternalStore(
     (onStoreChange) => settings.subscribeDefinitions(onStoreChange),
     () => settings.getDefinitionsVersion(),
@@ -38,7 +74,10 @@ export function SettingsHub() {
         mode="outset"
         outsetWidth="12px"
       >
-        <Outlet context={outletContext} />
+        <SettingsRouteOutlet
+          outletContext={outletContext}
+          pathname={pathname}
+        />
       </ScrollArea>
     </div>
   );

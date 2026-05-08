@@ -171,3 +171,6 @@ export const resolveActivePage = (
 
   return pages.find((entry) => entry.id === pageId) ?? null;
 };
+
+export const resolveSettingsTransitionKey = (pathname: string): string =>
+  pathname.replace(/\/+$/, "") || "/";
