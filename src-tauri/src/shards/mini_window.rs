@@ -24,9 +24,9 @@ const MAIN_WINDOW_LABEL: &str = "main";
 const MINI_AUTO_OPEN_SETTING_ID: &str = "mini.preference.autoOpen";
 const MINI_PIN_SETTING_ID: &str = "mini.preference.pin";
 
-const MINI_WINDOW_WIDTH: f64 = 420.0;
+const MINI_WINDOW_WIDTH: f64 = 380.0;
 const MINI_WINDOW_HEIGHT: f64 = 680.0;
-const MINI_WINDOW_MIN_WIDTH: f64 = 400.0;
+const MINI_WINDOW_MIN_WIDTH: f64 = 380.0;
 const MINI_WINDOW_MIN_HEIGHT: f64 = 520.0;
 const MINI_WINDOW_GAP_PX: i32 = 4;
 const MINI_AUTO_OPEN_RETRY_ATTEMPTS: usize = 8;

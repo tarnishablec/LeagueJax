@@ -1234,7 +1234,7 @@ fn backfill_member_from_teambuilder(member: &mut TeamMember, cell: &TeambuilderC
 
 fn build_champ_select_roster(
     champ_select: Option<
-        &crate::shards::lcu::concepts::champ_select_session::ChampSelectSessionData,
+        &ChampSelectSessionData,
     >,
     teambuilder: Option<&TeambuilderTbdGamePayload>,
 ) -> Vec<TeamMember> {
@@ -1314,7 +1314,7 @@ fn build_team_member_from_teambuilder_cell(cell: &TeambuilderCell) -> TeamMember
 }
 
 fn build_ingame_roster_from_sources(
-    gameflow: &crate::shards::lcu::concepts::gameflow_session::GameflowSessionData,
+    gameflow: &GameflowSessionData,
     preserved: &[TeamMember],
     teambuilder: Option<&TeambuilderTbdGamePayload>,
 ) -> Vec<TeamMember> {
@@ -1343,6 +1343,20 @@ fn build_ingame_roster_from_sources(
     let ally_side = infer_teambuilder_ally_side(&members, teambuilder, fallback_ally_side);
     append_preserved_members(&mut members, preserved, ally_side);
     merge_teambuilder_allies(&mut members, teambuilder, ally_side);
+    let fallback_selection_team = side_pair(ally_side)
+        .map(|(_, enemy_side)| enemy_side)
+        .unwrap_or_else(|| {
+            if team_two_side != ally_side {
+                team_two_side
+            } else {
+                team_one_side
+            }
+        });
+    append_missing_player_champion_selections(
+        &mut members,
+        &gameflow.game_data.player_champion_selections,
+        fallback_selection_team,
+    );
 
     members
 }
@@ -1422,6 +1436,49 @@ fn append_preserved_members(
         let mut clone = entry.clone();
         clone.team = ally_side;
         members.push(clone);
+    }
+}
+
+fn append_missing_player_champion_selections(
+    members: &mut Vec<TeamMember>,
+    selections: &[crate::shards::lcu::concepts::gameflow_session::PlayerChampionSelection],
+    fallback_team: u64,
+) {
+    for selection in selections {
+        if is_bot(&selection.puuid) {
+            continue;
+        }
+
+        if members.iter().any(|member| member.puuid == selection.puuid) {
+            continue;
+        }
+
+        members.push(build_team_member_from_champion_selection(
+            selection,
+            fallback_team,
+        ));
+    }
+}
+
+fn build_team_member_from_champion_selection(
+    selection: &crate::shards::lcu::concepts::gameflow_session::PlayerChampionSelection,
+    team: u64,
+) -> TeamMember {
+    TeamMember {
+        puuid: selection.puuid.clone(),
+        team,
+        champion_id: if selection.champion_id > 0 {
+            selection.champion_id as u64
+        } else {
+            0
+        },
+        is_humanoid: true,
+        name_visibility_type: NameVisibilityType::VISIBLE,
+        player_type: "player".to_owned(),
+        selected_skin_id: selection.selected_skin_index,
+        spell1_id: selection.spell1_id,
+        spell2_id: selection.spell2_id,
+        ..Default::default()
     }
 }
 
@@ -1738,7 +1795,7 @@ mod tests {
 
     #[test]
     fn ingame_roster_uses_teambuilder_allies_when_gameflow_is_missing_hidden_puuids() {
-        let mut gameflow = crate::shards::lcu::concepts::gameflow_session::GameflowSessionData {
+        let mut gameflow = GameflowSessionData {
             phase: GameflowPhase::InProgress,
             ..Default::default()
         };
@@ -1765,6 +1822,70 @@ mod tests {
             vec!["visible-player", "hidden-ally-one", "hidden-ally-two"]
         );
         assert!(roster.iter().all(|member| member.team == 100));
+    }
+
+    #[test]
+    fn ingame_roster_fills_missing_puuid_from_game_start_champion_selection_as_enemy() {
+        let mut gameflow = GameflowSessionData {
+            phase: GameflowPhase::GameStart,
+            ..Default::default()
+        };
+        gameflow.game_data.queue.id = 2400;
+        gameflow.game_data.team_one = (0..5)
+            .map(
+                |index| crate::shards::lcu::concepts::gameflow_session::Team {
+                    puuid: format!("ally-{index}"),
+                    champion_id: 10 + index,
+                    ..Default::default()
+                },
+            )
+            .collect();
+        gameflow.game_data.team_two = (0..4)
+            .map(
+                |index| crate::shards::lcu::concepts::gameflow_session::Team {
+                    puuid: format!("enemy-{index}"),
+                    champion_id: 20 + index,
+                    ..Default::default()
+                },
+            )
+            .collect();
+        gameflow.game_data.player_champion_selections = vec![
+            "ally-0",
+            "ally-1",
+            "ally-2",
+            "ally-3",
+            "ally-4",
+            "enemy-0",
+            "enemy-1",
+            "enemy-2",
+            "enemy-3",
+            "fd5fa056-9ab0-542f-a008-9b929b8195ba",
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(index, puuid)| {
+            crate::shards::lcu::concepts::gameflow_session::PlayerChampionSelection {
+                puuid: puuid.to_owned(),
+                champion_id: if index == 9 { 154 } else { 30 + index as i64 },
+                selected_skin_index: 3,
+                spell1_id: 4,
+                spell2_id: 32,
+            }
+        })
+        .collect();
+
+        let roster = build_ingame_roster_from_sources(&gameflow, &[], None);
+        let missing = roster
+            .iter()
+            .find(|member| member.puuid == "fd5fa056-9ab0-542f-a008-9b929b8195ba")
+            .expect("missing player should be backfilled from champion selections");
+
+        assert_eq!(roster.len(), 10);
+        assert_eq!(missing.team, 200);
+        assert_eq!(missing.champion_id, 154);
+        assert_eq!(missing.spell1_id, 4);
+        assert_eq!(missing.spell2_id, 32);
+        assert_eq!(missing.selected_skin_id, 3);
     }
 
     #[test]
