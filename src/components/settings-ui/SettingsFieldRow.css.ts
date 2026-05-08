@@ -4,7 +4,7 @@ import { theme } from "@/styles/theme.css";
 
 export const row = style({
   display: "grid",
-  gridTemplateColumns: "16rem minmax(0, 1fr)",
+  gridTemplateColumns: "15rem minmax(0, 1fr)",
   alignItems: "center",
   height: 32,
   gap: 12,
