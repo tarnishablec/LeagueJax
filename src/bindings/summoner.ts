@@ -22,3 +22,13 @@ export type SummonerInfo = {
   nameChangeFlag: boolean;
   unnamed: boolean;
 };
+
+export type SummonerSearchResult = {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  profileIconId: number;
+  summonerLevel: number;
+  sgpServerId: string;
+  privacy: string;
+};

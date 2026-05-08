@@ -65,6 +65,8 @@ export type ChatDetails = {
   multiUserChatPassword: string;
 };
 
+export type EventType = "Update" | "Create" | "Delete";
+
 export type GameClient = {
   observerServerIp: string;
   observerServerPort: number;
