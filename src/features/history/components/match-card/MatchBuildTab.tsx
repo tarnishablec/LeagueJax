@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   RawMatchDetailsGame,
-  RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches";
 import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
@@ -13,11 +12,6 @@ import {
 } from "../../hooks/match-build-timeline";
 import * as s from "./MatchBuildTab.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
-import {
-  MatchParticipantPicker,
-  MatchSelectedParticipantHeader,
-} from "./MatchParticipantPicker";
-import { useMatchParticipantSelection } from "./match-participant-selection";
 
 function SkillBuildSection({
   skills,
@@ -166,49 +160,19 @@ function SelectedParticipantBuild({
 }
 
 export function MatchBuildTab({
-  summary,
   detail,
   detailLoading,
+  participant,
 }: {
-  summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   detailLoading: boolean;
+  participant: RawMatchSummaryParticipant;
 }) {
-  const { t } = useTranslation();
-  const participants = summary.json.participants;
-  const { selectedEntry, selectedKey, setSelectedKey } =
-    useMatchParticipantSelection(participants);
-
-  if (!selectedEntry) {
-    return (
-      <span className={s.emptyState}>
-        {t("history.matchBuild.noData", {
-          defaultValue: "No build data",
-        })}
-      </span>
-    );
-  }
-
   return (
-    <div className={s.root}>
-      <MatchParticipantPicker
-        summary={summary}
-        participants={participants}
-        selectedKey={selectedKey}
-        onSelectedKeyChange={setSelectedKey}
-        ariaLabel="Match participant build tabs"
-        actionLabel={(displayName) => `Show build for ${displayName}`}
-      />
-      <div className={s.content}>
-        <MatchSelectedParticipantHeader
-          participant={selectedEntry.participant}
-        />
-        <SelectedParticipantBuild
-          detail={detail}
-          detailLoading={detailLoading}
-          participant={selectedEntry.participant}
-        />
-      </div>
-    </div>
+    <SelectedParticipantBuild
+      detail={detail}
+      detailLoading={detailLoading}
+      participant={participant}
+    />
   );
 }

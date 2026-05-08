@@ -28,22 +28,22 @@ export const tabList = style({
   display: "grid",
   gridAutoFlow: "column",
   gridAutoColumns: "minmax(0, 1fr)",
-  gap: 2,
-  // padding: 4,
+  gap: 4,
   borderRadius: 8,
-  outline: `1px solid color-mix(in srgb, ${theme.color.border} 82%, transparent)`,
-  background: `color-mix(in srgb, ${theme.color.deep} 38%, transparent)`,
+  padding: 3,
+  outline: `1px solid color-mix(in srgb, ${theme.color.border} 68%, transparent)`,
+  background: `color-mix(in srgb, ${theme.color.deep} 30%, transparent)`,
   overflowX: "auto",
 });
 
 export const tabTrigger = style({
   minWidth: 0,
-  height: 30,
+  height: 28,
   border: "none",
-  borderRadius: 8,
+  borderRadius: 6,
   padding: "0 12px",
-  color: theme.color.mutedForeground,
-  background: "transparent",
+  color: `color-mix(in srgb, ${theme.color.mutedForeground} 78%, transparent)`,
+  background: `color-mix(in srgb, ${theme.color.accent} 68%, transparent)`,
   fontSize: "0.75rem",
   fontWeight: 650,
   lineHeight: 1,
@@ -52,16 +52,16 @@ export const tabTrigger = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   cursor: "pointer",
-  transition: "background 140ms, color 140ms, box-shadow 140ms",
+  transition: "background 140ms, color 140ms, outline-color 140ms",
   selectors: {
     "&:hover": {
       color: theme.color.foreground,
-      background: theme.color.tintHover,
+      background: `color-mix(in srgb, ${theme.color.accent} 88%, transparent)`,
     },
     "&[data-state='on']": {
       color: theme.color.foreground,
-      background: theme.color.tint,
-      outline: `1px solid ${theme.color.primary}`,
+      background: `color-mix(in srgb, ${theme.color.primary} 16%, ${theme.color.accent})`,
+      outline: `1px solid color-mix(in srgb, ${theme.color.primary} 48%, transparent)`,
       outlineOffset: -1,
     },
     "&:focus-visible": {
@@ -73,4 +73,33 @@ export const tabTrigger = style({
 
 export const tabPanel = style({
   minWidth: 0,
+});
+
+export const participantTabRoot = style({
+  minWidth: 0,
+  display: "grid",
+  gap: 10,
+});
+
+export const participantTabContent = style({
+  minWidth: 0,
+  display: "grid",
+  gap: 10,
+  padding: 10,
+  borderRadius: 8,
+  outline: `1px solid ${theme.color.border}`,
+  background: `color-mix(in srgb, ${theme.color.background} 20%, transparent)`,
+});
+
+export const participantEmptyState = style({
+  minHeight: 92,
+  display: "grid",
+  placeItems: "center",
+  padding: 12,
+  borderRadius: 8,
+  outline: `1px solid ${theme.color.border}`,
+  background: `color-mix(in srgb, ${theme.color.surface} 54%, transparent)`,
+  color: theme.color.mutedForeground,
+  fontSize: "0.75rem",
+  fontWeight: 650,
 });

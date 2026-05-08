@@ -12,7 +12,12 @@ import {
 import { MatchBuildTab } from "./MatchBuildTab";
 import * as s from "./MatchCardExpandedContent.css";
 import { MatchDetailsTab } from "./MatchDetailsTab";
+import {
+  MatchParticipantPicker,
+  MatchSelectedParticipantHeader,
+} from "./MatchParticipantPicker";
 import { MatchRunesTab } from "./MatchRunesTab";
+import { useMatchParticipantSelection } from "./match-participant-selection";
 
 const DETAILS_TAB_ID = "details";
 const RUNES_TAB_ID = "runes";
@@ -35,6 +40,12 @@ export function MatchCardExpandedContent({
     () => replayMatchContextFromSummary(summary, sgpServerId),
     [summary, sgpServerId],
   );
+  const participants = summary.json.participants;
+  const { selectedEntry, selectedKey, setSelectedKey } =
+    useMatchParticipantSelection(participants);
+  const runesActive = activeTab.includes(RUNES_TAB_ID);
+  const buildActive = activeTab.includes(BUILD_TAB_ID);
+  const participantTabActive = runesActive || buildActive;
 
   return (
     <div className={s.expandedRoot}>
@@ -78,15 +89,51 @@ export function MatchCardExpandedContent({
             sgpServerId={sgpServerId}
           />
         ) : null}
-        {activeTab.includes(RUNES_TAB_ID) ? (
-          <MatchRunesTab summary={summary} detail={detail} />
-        ) : null}
-        {activeTab.includes(BUILD_TAB_ID) ? (
-          <MatchBuildTab
-            summary={summary}
-            detail={detail}
-            detailLoading={detailLoading}
-          />
+        {participantTabActive ? (
+          selectedEntry ? (
+            <div className={s.participantTabRoot}>
+              <MatchParticipantPicker
+                summary={summary}
+                participants={participants}
+                selectedKey={selectedKey}
+                onSelectedKeyChange={setSelectedKey}
+                ariaLabel={
+                  runesActive
+                    ? "Match participant rune tabs"
+                    : "Match participant build tabs"
+                }
+                actionLabel={(displayName) =>
+                  runesActive
+                    ? `Show runes for ${displayName}`
+                    : `Show build for ${displayName}`
+                }
+              />
+              <div className={s.participantTabContent}>
+                <MatchSelectedParticipantHeader
+                  participant={selectedEntry.participant}
+                />
+                {runesActive ? (
+                  <MatchRunesTab
+                    summary={summary}
+                    participant={selectedEntry.participant}
+                  />
+                ) : null}
+                {buildActive ? (
+                  <MatchBuildTab
+                    detail={detail}
+                    detailLoading={detailLoading}
+                    participant={selectedEntry.participant}
+                  />
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <span className={s.participantEmptyState}>
+              {t("history.matchDetails.noParticipantData", {
+                defaultValue: "No participant data",
+              })}
+            </span>
+          )
         ) : null}
       </div>
     </div>

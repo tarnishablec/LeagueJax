@@ -2,22 +2,6 @@ import { style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { theme } from "@/styles/theme.css.ts";
 
-export const root = style({
-  minWidth: 0,
-  display: "grid",
-  gap: 10,
-});
-
-export const content = style({
-  minWidth: 0,
-  display: "grid",
-  gap: 10,
-  padding: 10,
-  borderRadius: 8,
-  outline: `1px solid ${theme.color.border}`,
-  background: `color-mix(in srgb, ${theme.color.background} 20%, transparent)`,
-});
-
 export const sectionGrid = style({
   minWidth: 0,
   display: "grid",
