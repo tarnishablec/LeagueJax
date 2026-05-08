@@ -1,3 +1,4 @@
+import { Loader } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,7 +26,6 @@ interface MatchListBodyProps {
   sgpServerId: string | null;
   listAnimationKey: string | null;
   reduceMotion: boolean | null;
-  loadingLabel: string;
   loadFailedLabel: string;
   noMatchesLabel: string;
   noMatchesInFilterLabel: string;
@@ -69,13 +69,16 @@ function MatchListBody({
   sgpServerId,
   listAnimationKey,
   reduceMotion,
-  loadingLabel,
   loadFailedLabel,
   noMatchesLabel,
   noMatchesInFilterLabel,
 }: MatchListBodyProps) {
   if (isLoading) {
-    return <div className={s.emptyState}>{loadingLabel}</div>;
+    return (
+      <div className={s.emptyState}>
+        <Loader size={18} aria-hidden="true" className={s.loadingSpinner} />
+      </div>
+    );
   }
 
   if (hasError) {
@@ -210,7 +213,6 @@ export function MatchList({
         sgpServerId={sgpServerId}
         listAnimationKey={listAnimationKey}
         reduceMotion={reduceMotion}
-        loadingLabel={t("common.loading")}
         loadFailedLabel={t("history.loadFailed", {
           defaultValue: "Failed to load match history",
         })}
