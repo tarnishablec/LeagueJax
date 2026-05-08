@@ -12,6 +12,7 @@ import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
 import { SettingsShard } from "../settings/manifest";
 import { SHARD_IDS } from "../shard-ids";
+import { OngoingGameNavStatusDot } from "./components/OngoingGameNavStatusDot";
 import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
 import { PlayerCardTagsSettings } from "./components/PlayerCardTagsSettings";
 import { DEFAULT_MIN_SHARED_SQUAD_GAMES } from "./components/player-card-squads.ts";
@@ -283,6 +284,7 @@ export class OngoingGameShard implements WebShard {
         to: "/main/game",
         labelKey: "nav.game",
         icon: Gamepad2,
+        endAdornment: <OngoingGameNavStatusDot />,
         section: "main" as const,
         order: 20,
       },

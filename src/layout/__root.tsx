@@ -76,15 +76,28 @@ function SidebarNavLink({
   icon: Icon,
   collapsed,
   label,
+  endAdornment,
 }: SidebarNavLinkProps) {
+  const hasEndAdornment = !!endAdornment;
   const link = (
     <NavLink
       to={to}
-      className={({ isActive }) => s.navItem({ collapsed, active: isActive })}
+      className={({ isActive }) =>
+        s.navItem({
+          collapsed,
+          active: isActive,
+          adorned: hasEndAdornment,
+        })
+      }
       draggable={false}
     >
       <Icon size={16} aria-hidden="true" className={s.navIcon({ collapsed })} />
-      <span className={s.navLabel({ collapsed })}>{label}</span>
+      <span className={s.navLabel({ collapsed, adorned: hasEndAdornment })}>
+        {label}
+      </span>
+      {endAdornment ? (
+        <span className={s.navEndAdornment({ collapsed })}>{endAdornment}</span>
+      ) : null}
     </NavLink>
   );
 

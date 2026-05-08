@@ -11,6 +11,7 @@ export interface NavItem {
   to: string;
   labelKey: string;
   icon: LucideIcon;
+  endAdornment?: React.ReactElement;
   section?: NavSection;
   order?: number;
 }
