@@ -9,6 +9,7 @@ import type { PlayerSlot } from "../routes/ongoing-game.types";
 import {
   collectMatchPlayerCardTags,
   collectSpecialPlayerCardTags,
+  getPlayerCardTagSettingItems,
   type PlayerCardMatch,
 } from "./player-card-tags";
 
@@ -352,5 +353,17 @@ describe("collectMatchPlayerCardTags", () => {
         "balanced",
       ),
     ).toBe(false);
+  });
+});
+
+describe("getPlayerCardTagSettingItems", () => {
+  test("exposes an excellent mark hint key for the custom settings row", () => {
+    const excellent = getPlayerCardTagSettingItems(t).find(
+      (item) => item.id === "excellent",
+    );
+
+    expect(excellent?.hintKey).toBe(
+      "settings.ongoing.playerCardTags.items.excellent.hint",
+    );
   });
 });

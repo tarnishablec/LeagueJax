@@ -50,6 +50,7 @@ export type ResolvedPlayerCardTag = {
 type PlayerCardMatchTagDefinition = {
   id: string;
   settingLabelKey: string;
+  settingHintKey?: string;
   order: number;
   defaultEnabled: boolean;
   defaultColor: string;
@@ -73,6 +74,7 @@ type PlayerCardTagLabel = {
 type PlayerCardSpecialTagDefinition = {
   id: string;
   settingLabelKey: string;
+  settingHintKey?: string;
   cardLabelKey: string;
   order: number;
   defaultEnabled: boolean;
@@ -86,6 +88,7 @@ export type PlayerCardTagSettingItem = {
   defaultColor: string;
   enabledSettingId: PlayerCardTagEnabledSettingId;
   groupKey: PlayerCardTagGroupKey;
+  hintKey?: string;
   id: string;
   label: string;
   order: number;
@@ -94,6 +97,7 @@ export type PlayerCardTagSettingItem = {
 
 export type PlayerCardTagEnabledSettingItem = {
   defaultEnabled: boolean;
+  hintKey?: string;
   id: PlayerCardTagEnabledSettingId;
   labelKey: string;
   order: number;
@@ -481,7 +485,8 @@ export const PLAYER_CARD_MATCH_TAGS = [
   },
   {
     id: "excellent",
-    settingLabelKey: "settings.ongoing.playerCardTags.items.excellent",
+    settingLabelKey: "settings.ongoing.playerCardTags.items.excellent.label",
+    settingHintKey: "settings.ongoing.playerCardTags.items.excellent.hint",
     order: 40,
     defaultEnabled: true,
     defaultColor: "#DB18AE",
@@ -542,6 +547,12 @@ const SINGLE_COLOR_TAG_DEFINITIONS = [
   ...PLAYER_CARD_SPECIAL_TAGS,
 ];
 
+function getPlayerCardTagSettingHintKey(
+  tag: (typeof SINGLE_COLOR_TAG_DEFINITIONS)[number],
+): string | undefined {
+  return "settingHintKey" in tag ? tag.settingHintKey : undefined;
+}
+
 export function getPlayerCardTagGroupKey(tagId: string): PlayerCardTagGroupKey {
   return `ongoing.playerCardTags.${tagId}`;
 }
@@ -562,6 +573,7 @@ export function getPlayerCardTagEnabledSettingItems(): PlayerCardTagEnabledSetti
   return SINGLE_COLOR_TAG_DEFINITIONS.map((tag) => ({
     defaultEnabled: tag.defaultEnabled,
     id: getPlayerCardTagEnabledSettingId(tag.id),
+    hintKey: getPlayerCardTagSettingHintKey(tag),
     labelKey: tag.settingLabelKey,
     order: tag.order,
     tagId: tag.id,
@@ -612,6 +624,7 @@ export function getPlayerCardTagSettingItems(
       defaultColor: firstColorSetting?.defaultColor ?? DEFAULT_TAG_COLOR,
       enabledSettingId: getPlayerCardTagEnabledSettingId(tag.id),
       groupKey: getPlayerCardTagGroupKey(tag.id),
+      hintKey: getPlayerCardTagSettingHintKey(tag),
       id: tag.id,
       label: t(tag.settingLabelKey),
       order: tag.order,
