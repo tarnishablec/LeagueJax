@@ -164,6 +164,14 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
   layout structure whenever possible; avoid large DOM replacements after loading completes. Prefer skeletons, reserved
   space, stable grid tracks, progressive content fill, or state changes inside existing containers.
 
+## Frontend Testing
+
+- For frontend **UI/presentation-only** changes such as visual styling, layout tuning, static markup composition, icon
+  placement, and small interaction polish, agents may avoid adding tests when behavior is already covered by TypeScript,
+  Biome, and build verification.
+- Still add focused tests for business/domain logic, data transforms, shared state, complex hooks, request workflows,
+  cross-component contracts, and bugfix regressions where a test can catch future breakage.
+
 ## Accessibility
 
 - All `aria-label` values must be written in **English**.

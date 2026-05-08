@@ -50,7 +50,6 @@ export const SnapshotPlayerCard = memo(function SnapshotPlayerCard(props: {
         isBot={cardState.isBot}
         level={cardState.level}
         onOpenHistory={handleOpenHistory}
-        profileIconId={cardState.profileIconId}
         rankItems={cardState.rankItems}
         showRank={cardState.showRank}
         squadTag={cardState.squadTag}

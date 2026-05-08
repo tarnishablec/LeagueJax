@@ -7,13 +7,9 @@ import { useTabStore } from "@/stores/tabs";
 import { ConnectionGuard } from "../components/ConnectionGuard";
 import { MatchList } from "../components/MatchList";
 import { SummaryBar } from "../components/SummaryBar";
-import { useFocusSync } from "../hooks/use-focus-sync.ts";
 import { useOpenHistoryTab } from "../hooks/use-open-history-tab";
 import { useSummonerInfo } from "../hooks/use-summoner";
-import {
-  HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
-  HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
-} from "../manifest";
+import { HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING } from "../manifest";
 import {
   deriveSgpServerIdFromClientArgs,
   deriveSgpServerIdFromRegion,
@@ -124,19 +120,12 @@ export function HistoryRoute() {
   );
 
   const settings = useSettings();
-  const autoOpenOwnTab = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(HISTORY_AUTO_OPEN_OWN_TAB_SETTING, onStoreChange),
-    () => settings.get<boolean>(HISTORY_AUTO_OPEN_OWN_TAB_SETTING),
-  );
   const autoRefreshOnSwitch = useSyncExternalStore(
     (cb) => settings.subscribe(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING, cb),
     () =>
       settings.get<boolean>(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING) ??
       false,
   );
-
-  useFocusSync(connected, autoOpenOwnTab, focusedServerId);
 
   if (!connected) {
     return <ConnectionGuard instances={instances} />;

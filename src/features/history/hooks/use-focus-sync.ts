@@ -1,14 +1,27 @@
-import { useEffect } from "react";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
-import { useTabStore } from "@/stores/tabs";
-
-/** Track the last synced pid outside of React so it survives unmount/remount. */
-let lastSyncedPid: number | undefined;
 
 export type FocusSyncActions = {
   closeAllTabs: boolean;
   nextSyncedPid: number | undefined;
   openOwnTab: boolean;
+};
+
+type Unsubscribe = () => void;
+
+export type HistoryFocusSyncController = {
+  start: () => void;
+  stop: () => void;
+};
+
+export type HistoryFocusSyncControllerOptions = {
+  closeAllTabs: () => void;
+  getAutoOpenOwnTab: () => boolean;
+  getConnected: () => LcuInstanceInfo | null | undefined;
+  getFocusedServerId: () => string | null;
+  hasExistingTabs: () => boolean;
+  openTab: (puuid: string, sgpServerId: string | null) => void;
+  subscribeAutoOpenOwnTab: (listener: () => void) => Unsubscribe;
+  subscribeFocusedClient: (listener: () => void) => Unsubscribe;
 };
 
 export function resolveFocusSyncActions({
@@ -57,22 +70,20 @@ export function resolveFocusSyncActions({
   };
 }
 
-export function useFocusSync(
-  connected: LcuInstanceInfo | null | undefined,
-  autoOpenOwnTab: boolean,
-  focusedServerId: string | null,
-) {
-  const openTab = useTabStore((state) => state.openTab);
-  const closeAllTabs = useTabStore((state) => state.closeAllTabs);
-  const hasExistingTabs = useTabStore((state) => state.tabs.length > 0);
+export function createHistoryFocusSyncController(
+  options: HistoryFocusSyncControllerOptions,
+): HistoryFocusSyncController {
+  let started = false;
+  let lastSyncedPid: number | undefined;
+  let unsubscribes: Unsubscribe[] = [];
 
-  useEffect(() => {
-    const focusedPid = connected?.pid;
+  const sync = () => {
+    const connected = options.getConnected();
     const actions = resolveFocusSyncActions({
-      autoOpenOwnTab,
+      autoOpenOwnTab: options.getAutoOpenOwnTab(),
       connectedHasSummoner: Boolean(connected?.summoner),
-      focusedPid,
-      hasExistingTabs,
+      focusedPid: connected?.pid,
+      hasExistingTabs: options.hasExistingTabs(),
       lastSyncedPid,
     });
 
@@ -87,18 +98,39 @@ export function useFocusSync(
     lastSyncedPid = actions.nextSyncedPid;
 
     if (actions.closeAllTabs) {
-      closeAllTabs();
+      options.closeAllTabs();
     }
 
     if (actions.openOwnTab && connected?.summoner) {
-      openTab(connected.summoner.puuid, focusedServerId);
+      options.openTab(connected.summoner.puuid, options.getFocusedServerId());
     }
-  }, [
-    connected,
-    autoOpenOwnTab,
-    focusedServerId,
-    hasExistingTabs,
-    openTab,
-    closeAllTabs,
-  ]);
+  };
+
+  return {
+    start: () => {
+      if (started) {
+        return;
+      }
+
+      started = true;
+      unsubscribes = [
+        options.subscribeFocusedClient(sync),
+        options.subscribeAutoOpenOwnTab(sync),
+      ];
+      sync();
+    },
+    stop: () => {
+      if (!started) {
+        return;
+      }
+
+      for (const unsubscribe of unsubscribes) {
+        unsubscribe();
+      }
+
+      started = false;
+      lastSyncedPid = undefined;
+      unsubscribes = [];
+    },
+  };
 }
