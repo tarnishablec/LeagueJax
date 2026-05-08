@@ -1,8 +1,7 @@
 import { Portal } from "@ark-ui/react/portal";
-import { ToggleGroup } from "@ark-ui/react/toggle-group";
 import { Tooltip } from "@ark-ui/react/tooltip";
 import type { ReactElement } from "react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   RawMatchDetailsGame,
@@ -12,7 +11,6 @@ import type {
   RawMatchSummaryStatPerks,
   RawMatchSummaryStyle,
 } from "@/bindings/matches.ts";
-import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { useSettings } from "@/features/settings/context";
 import {
   type CdragonGameDataCatalog,
@@ -22,14 +20,14 @@ import {
   useCdragonGameDataCatalog,
 } from "../../hooks/use-cdragon-game-data-catalog.ts";
 import { HISTORY_SHOW_AUGMENT_DETAILS_SETTING } from "../../manifest.tsx";
-import {
-  matchUsesSideTeams,
-  type TeamTone,
-  teamToneFromId,
-} from "../../utils/match-participant-groups";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
+import {
+  MatchParticipantPicker,
+  MatchSelectedParticipantHeader,
+} from "./MatchParticipantPicker";
 import * as s from "./MatchRunesTab.css";
 import { CDRAGON_PERK_STYLE_ICON_BY_ID } from "./match-card-display";
+import { useMatchParticipantSelection } from "./match-participant-selection";
 
 type AugmentRarityVariant =
   | "default"
@@ -66,50 +64,6 @@ function classNames(...values: Array<string | false | null | undefined>) {
 
 function safeNumber(value: number | null | undefined): number {
   return Math.max(0, value ?? 0);
-}
-
-function participantKey(
-  participant: RawMatchSummaryParticipant,
-  index: number,
-): string {
-  if (participant.participantId !== null) {
-    return `participant-${participant.participantId}`;
-  }
-
-  return `participant-${participant.puuid ?? "unknown"}-${participant.championId}-${index}`;
-}
-
-function participantTeamTone(
-  participant: RawMatchSummaryParticipant,
-  summary: RawMatchSummaryGame,
-): TeamTone {
-  if (!matchUsesSideTeams(summary)) {
-    return "neutral";
-  }
-
-  return teamToneFromId(participant.teamId);
-}
-
-function participantDisplayName(
-  participant: RawMatchSummaryParticipant,
-): string {
-  const riotName = (participant.riotIdGameName ?? "").trim();
-  if (riotName.length > 0) {
-    return riotName;
-  }
-
-  const fallbackName = (
-    participant.summonerName ??
-    participant.puuid ??
-    ""
-  ).trim();
-  return fallbackName.length > 0 ? fallbackName : "Unknown";
-}
-
-function participantChampionName(
-  participant: RawMatchSummaryParticipant,
-): string {
-  return participant.championName ?? `#${participant.championId}`;
 }
 
 function getParticipantAugments(participant: RawMatchSummaryParticipant) {
@@ -745,81 +699,6 @@ function AugmentPanel({
   );
 }
 
-function SelectedParticipantHeader({
-  participant,
-}: {
-  participant: RawMatchSummaryParticipant;
-}) {
-  const displayName = participantDisplayName(participant);
-  const championName = participantChampionName(participant);
-
-  return (
-    <header className={s.selectedHeader}>
-      <ChampionAvatar
-        championId={participant.championId}
-        imageClassName={s.selectedChampionIcon}
-        fallbackClassName={s.selectedChampionFallback}
-        level={participant.champLevel}
-        alt={championName}
-      />
-      <span className={s.selectedText}>
-        <span className={s.selectedName}>{displayName}</span>
-        <span className={s.selectedChampionName}>{championName}</span>
-      </span>
-    </header>
-  );
-}
-
-function ParticipantPicker({
-  summary,
-  participants,
-  selectedKey,
-  onSelectedKeyChange,
-}: {
-  summary: RawMatchSummaryGame;
-  participants: RawMatchSummaryParticipant[];
-  selectedKey: string;
-  onSelectedKeyChange: (value: string) => void;
-}) {
-  return (
-    <ToggleGroup.Root
-      className={s.participantPicker}
-      value={selectedKey ? [selectedKey] : []}
-      deselectable={false}
-      onValueChange={({ value }) => {
-        if (value[0]) {
-          onSelectedKeyChange(value[0]);
-        }
-      }}
-      aria-label="Match participant rune tabs"
-    >
-      {participants.map((participant, index) => {
-        const key = participantKey(participant, index);
-        const championName = participantChampionName(participant);
-        const displayName = participantDisplayName(participant);
-
-        return (
-          <ToggleGroup.Item
-            key={key}
-            value={key}
-            className={s.participantTrigger({
-              team: participantTeamTone(participant, summary),
-            })}
-            aria-label={`Show runes for ${displayName}`}
-          >
-            <ChampionAvatar
-              championId={participant.championId}
-              imageClassName={s.participantChampionIcon}
-              fallbackClassName={s.participantChampionFallback}
-              alt={championName}
-            />
-          </ToggleGroup.Item>
-        );
-      })}
-    </ToggleGroup.Root>
-  );
-}
-
 function SelectedParticipantContent({
   catalog,
   summary,
@@ -864,21 +743,8 @@ export function MatchRunesTab({
       augmentIds,
     },
   );
-  const participantEntries = useMemo(
-    () =>
-      participants.map((participant, index) => ({
-        participant,
-        key: participantKey(participant, index),
-      })),
-    [participants],
-  );
-  const initialKey = participantEntries[0]?.key ?? "";
-  const [requestedParticipantKey, setRequestedParticipantKey] =
-    useState(initialKey);
-  const selectedEntry =
-    participantEntries.find((entry) => entry.key === requestedParticipantKey) ??
-    participantEntries[0] ??
-    null;
+  const { selectedEntry, selectedKey, setSelectedKey } =
+    useMatchParticipantSelection(participants);
 
   if (!selectedEntry) {
     return (
@@ -892,14 +758,18 @@ export function MatchRunesTab({
 
   return (
     <div className={s.root}>
-      <ParticipantPicker
+      <MatchParticipantPicker
         summary={summary}
         participants={participants}
-        selectedKey={selectedEntry.key}
-        onSelectedKeyChange={setRequestedParticipantKey}
+        selectedKey={selectedKey}
+        onSelectedKeyChange={setSelectedKey}
+        ariaLabel="Match participant rune tabs"
+        actionLabel={(displayName) => `Show runes for ${displayName}`}
       />
       <div className={s.content}>
-        <SelectedParticipantHeader participant={selectedEntry.participant} />
+        <MatchSelectedParticipantHeader
+          participant={selectedEntry.participant}
+        />
         <SelectedParticipantContent
           catalog={catalog}
           summary={summary}

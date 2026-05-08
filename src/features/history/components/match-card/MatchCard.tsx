@@ -168,6 +168,7 @@ export function MatchCard({
         <MatchCardExpandedContent
           summary={match}
           detail={matchDetails}
+          detailLoading={isMatchDetailsValidating && !matchDetails}
           sgpServerId={sgpServerId}
         />
       )}

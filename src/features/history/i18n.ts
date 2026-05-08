@@ -119,6 +119,7 @@ export const historyI18n: Resource = {
         tabs: {
           details: "Details",
           runes: "Runes",
+          build: "Build",
         },
         perfectKda: "Perfect",
         bans: {
@@ -180,6 +181,14 @@ export const historyI18n: Resource = {
           kPrismatic: "Prismatic",
           null: "Unknown",
         },
+      },
+      matchBuild: {
+        skillOrder: "Skill order",
+        itemPurchases: "Item purchases",
+        loading: "Loading build data...",
+        noData: "No build data",
+        noSkillData: "No skill order data",
+        noItemData: "No item purchase data",
       },
       summary: {
         solo: "Solo/Duo",
@@ -312,6 +321,7 @@ export const historyI18n: Resource = {
         tabs: {
           details: "详情",
           runes: "符文",
+          build: "构筑",
         },
         perfectKda: "完美",
         bans: {
@@ -373,6 +383,14 @@ export const historyI18n: Resource = {
           kPrismatic: "棱彩",
           null: "未知",
         },
+      },
+      matchBuild: {
+        skillOrder: "技能加点",
+        itemPurchases: "装备购买",
+        loading: "正在加载构筑数据...",
+        noData: "暂无构筑数据",
+        noSkillData: "暂无技能加点数据",
+        noItemData: "暂无装备购买数据",
       },
       summary: {
         solo: "单/双排",
@@ -505,6 +523,7 @@ export const historyI18n: Resource = {
         tabs: {
           details: "詳細",
           runes: "ルーン",
+          build: "ビルド",
         },
         perfectKda: "Perfect",
         bans: {
@@ -566,6 +585,14 @@ export const historyI18n: Resource = {
           kPrismatic: "プリズム",
           null: "不明",
         },
+      },
+      matchBuild: {
+        skillOrder: "スキル順",
+        itemPurchases: "アイテム購入",
+        loading: "ビルドデータを読み込み中...",
+        noData: "ビルドデータがありません",
+        noSkillData: "スキル順データがありません",
+        noItemData: "アイテム購入データがありません",
       },
       summary: {
         solo: "ソロ/デュオ",
