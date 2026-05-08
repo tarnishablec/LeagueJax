@@ -7,6 +7,7 @@ export type RawMatchDetailsEvent = {
   itemId: number | null;
   beforeId: number | null;
   afterId: number | null;
+  skillSlot: number | null;
 };
 
 export type RawMatchDetailsFrame = {

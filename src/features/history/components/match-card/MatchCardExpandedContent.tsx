@@ -9,20 +9,24 @@ import {
   MatchReplayControl,
   replayMatchContextFromSummary,
 } from "@/features/replay/public";
+import { MatchBuildTab } from "./MatchBuildTab";
 import * as s from "./MatchCardExpandedContent.css";
 import { MatchDetailsTab } from "./MatchDetailsTab";
 import { MatchRunesTab } from "./MatchRunesTab";
 
 const DETAILS_TAB_ID = "details";
 const RUNES_TAB_ID = "runes";
+const BUILD_TAB_ID = "build";
 
 export function MatchCardExpandedContent({
   summary,
   detail,
+  detailLoading,
   sgpServerId,
 }: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
+  detailLoading: boolean;
   sgpServerId: string | null;
 }) {
   const { t } = useTranslation();
@@ -56,6 +60,11 @@ export function MatchCardExpandedContent({
               defaultValue: "Runes",
             })}
           </ToggleGroup.Item>
+          <ToggleGroup.Item value={BUILD_TAB_ID} className={s.tabTrigger}>
+            {t("history.matchDetails.tabs.build", {
+              defaultValue: "Build",
+            })}
+          </ToggleGroup.Item>
         </ToggleGroup.Root>
 
         <MatchReplayControl context={replayContext} />
@@ -71,6 +80,13 @@ export function MatchCardExpandedContent({
         ) : null}
         {activeTab.includes(RUNES_TAB_ID) ? (
           <MatchRunesTab summary={summary} detail={detail} />
+        ) : null}
+        {activeTab.includes(BUILD_TAB_ID) ? (
+          <MatchBuildTab
+            summary={summary}
+            detail={detail}
+            detailLoading={detailLoading}
+          />
         ) : null}
       </div>
     </div>

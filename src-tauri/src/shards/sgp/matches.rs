@@ -57,6 +57,7 @@ pub struct RawMatchDetailsEvent {
     pub item_id: Option<i64>,
     pub before_id: Option<i64>,
     pub after_id: Option<i64>,
+    pub skill_slot: Option<i64>,
 }
 
 #[derive(TS)]
