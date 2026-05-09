@@ -7,4 +7,11 @@ export const root = style({
   borderRadius: "50%",
   flexShrink: 0,
   background: theme.color.primary,
+  selectors: {
+    "[data-collapsed='true'] &": {
+      width: 8,
+      height: 8,
+      background: theme.color.error,
+    },
+  },
 });

@@ -201,19 +201,21 @@ export const navLabel = recipe({
 export const navEndAdornment = recipe({
   base: {
     position: "absolute",
-    insetBlockStart: "50%",
     display: "grid",
     placeItems: "center",
-    transform: "translateY(-50%)",
     pointerEvents: "none",
   },
   variants: {
     collapsed: {
       false: {
+        insetBlockStart: "50%",
         insetInlineEnd: 10,
+        transform: "translateY(-50%)",
       },
       true: {
-        insetInlineEnd: 6,
+        insetBlockStart: 7,
+        insetInlineEnd: 8,
+        transform: "none",
       },
     },
   },

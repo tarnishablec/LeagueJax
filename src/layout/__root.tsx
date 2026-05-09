@@ -8,7 +8,9 @@ import {
   isValidElement,
   lazy,
   Suspense,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,10 +36,12 @@ const DebugCommandPanel = import.meta.env.DEV
       })),
     )
   : null;
+const SIDEBAR_TRANSITION_MS = 200;
 
 interface SidebarNavLinkProps extends NavItem {
   collapsed: boolean;
   label: string;
+  showEndAdornment: boolean;
 }
 
 function getMainRouteKey(pathname: string): string {
@@ -77,8 +81,10 @@ function SidebarNavLink({
   collapsed,
   label,
   endAdornment,
+  showEndAdornment,
 }: SidebarNavLinkProps) {
-  const hasEndAdornment = !!endAdornment;
+  const visibleEndAdornment = showEndAdornment ? endAdornment : null;
+  const hasEndAdornment = !!visibleEndAdornment;
   const link = (
     <NavLink
       to={to}
@@ -95,8 +101,13 @@ function SidebarNavLink({
       <span className={s.navLabel({ collapsed, adorned: hasEndAdornment })}>
         {label}
       </span>
-      {endAdornment ? (
-        <span className={s.navEndAdornment({ collapsed })}>{endAdornment}</span>
+      {visibleEndAdornment ? (
+        <span
+          className={s.navEndAdornment({ collapsed })}
+          data-collapsed={collapsed ? "true" : undefined}
+        >
+          {visibleEndAdornment}
+        </span>
       ) : null}
     </NavLink>
   );
@@ -127,10 +138,26 @@ export function MainWindowLayout() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [showNavEndAdornment, setShowNavEndAdornment] = useState(true);
+  const previousCollapsedRef = useRef(collapsed);
 
   useWindowEffectBackgroundFallback();
   useLcuEvents();
   useTheme();
+
+  useEffect(() => {
+    if (previousCollapsedRef.current === collapsed) {
+      return;
+    }
+
+    previousCollapsedRef.current = collapsed;
+    setShowNavEndAdornment(false);
+    const timer = window.setTimeout(() => {
+      setShowNavEndAdornment(true);
+    }, SIDEBAR_TRANSITION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [collapsed]);
 
   const iconSize = collapsed ? 20 : 16;
   const mainNavItems = useMemo(() => getNavItems("main"), []);
@@ -211,6 +238,7 @@ export function MainWindowLayout() {
               {...item}
               collapsed={collapsed}
               label={t(item.labelKey)}
+              showEndAdornment={showNavEndAdornment}
             />
           ))}
         </nav>
@@ -225,6 +253,7 @@ export function MainWindowLayout() {
               {...item}
               collapsed={collapsed}
               label={t(item.labelKey)}
+              showEndAdornment={showNavEndAdornment}
             />
           ))}
         </div>
