@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { useChampSelectPickableChampionIds } from "../hooks/use-champ-select-pickable-champion-ids";
 import type { MiniWindowModel } from "../hooks/use-mini-window-model";
-import { MiniChampSelectDodgeSection } from "./MiniChampSelectDodgeSection";
+import { MiniBottomPanel } from "./MiniBottomPanel";
 import * as s from "./MiniChampSelectView.css";
 
 type ChampSelectModel = NonNullable<MiniWindowModel["champSelect"]>;
@@ -258,10 +258,13 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
         queueName={model.queueName}
       />
       <div className={s.spacer} />
-      <MiniChampSelectDodgeSection
-        pending={dodgePending}
-        error={error}
-        onDodge={handleDodge}
+      <MiniBottomPanel
+        model={model}
+        champSelectDodge={{
+          pending: dodgePending,
+          error,
+          onDodge: handleDodge,
+        }}
       />
     </section>
   );

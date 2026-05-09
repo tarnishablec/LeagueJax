@@ -1,5 +1,4 @@
-import { globalStyle, style } from "@vanilla-extract/css";
-import { row as settingsFieldRow } from "@/components/settings-ui/SettingsFieldRow.css";
+import { style } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css";
 
 export const root = style({
@@ -67,17 +66,4 @@ export const autoAcceptCountdown = style({
   fontSize: "12px",
   lineHeight: 1.35,
   color: theme.color.success,
-});
-
-export const footer = style({
-  display: "grid",
-  gap: "8px",
-  padding: "8px",
-  borderRadius: "8px",
-  background: "oklch(0 0 0 / 0.16)",
-  border: "1px solid oklch(1 0 0 / 0.06)",
-});
-
-globalStyle(`${footer} ${settingsFieldRow}`, {
-  gridTemplateColumns: "13rem minmax(0, 1fr)",
 });
