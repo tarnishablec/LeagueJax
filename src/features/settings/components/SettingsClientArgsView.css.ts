@@ -4,6 +4,7 @@ import { theme } from "@/styles/theme.css";
 export const page = style({
   display: "grid",
   gap: 12,
+  gridTemplateRows: "auto 1fr",
 });
 
 export const card = style({
@@ -13,6 +14,7 @@ export const card = style({
   borderRadius: 10,
   background: theme.color.surface,
   padding: 12,
+  gridTemplateRows: "auto 1fr",
 });
 
 export const sectionTitle = style({
@@ -23,7 +25,7 @@ export const sectionTitle = style({
 
 export const commandBox = style({
   width: "100%",
-  minHeight: 84,
+  minHeight: 130,
   resize: "vertical",
   borderRadius: 8,
   border: `1px solid ${theme.color.border}`,
