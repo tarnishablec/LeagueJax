@@ -71,7 +71,7 @@ export function MiniTitleBar() {
           className={[trafficButton({ variant: "close" }), s.windowButton]
             .filter(Boolean)
             .join(" ")}
-          onClick={() => void getCurrentWindow().hide()}
+          onClick={() => void getCurrentWindow().close()}
         >
           <CloseIcon />
         </button>

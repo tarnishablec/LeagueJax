@@ -16,9 +16,9 @@ export interface SettingsOutletContext {
 }
 
 function SettingsRouteOutlet({
-                               outletContext,
-                               pathname,
-                             }: {
+  outletContext,
+  pathname,
+}: {
   outletContext: SettingsOutletContext;
   pathname: string;
 }) {
@@ -35,11 +35,9 @@ function SettingsRouteOutlet({
     <motion.div
       key={routeKey}
       className={s.outletRouteLayer}
-      initial={
-        reduceMotion || !hasMountedRef.current ? false : {opacity: 0}
-      }
-      animate={{opacity: 1}}
-      transition={{duration: 0.75, ease: "easeIn"}}
+      initial={reduceMotion || !hasMountedRef.current ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.75, ease: "easeIn" }}
     >
       {outlet}
     </motion.div>
@@ -48,7 +46,7 @@ function SettingsRouteOutlet({
 
 export function SettingsHub() {
   const settings = useSettings();
-  const {pathname} = useLocation();
+  const { pathname } = useLocation();
   const definitionsVersion = useSyncExternalStore(
     (onStoreChange) => settings.subscribeDefinitions(onStoreChange),
     () => settings.getDefinitionsVersion(),
@@ -62,11 +60,11 @@ export function SettingsHub() {
       settings.listSections(),
     );
   }, [settings, definitionsVersion]);
-  const outletContext: SettingsOutletContext = {pages};
+  const outletContext: SettingsOutletContext = { pages };
 
   return (
     <div className={s.page}>
-      <SettingsPageTabs pages={pages}/>
+      <SettingsPageTabs pages={pages} />
       <ScrollArea
         className={s.outlet}
         contentClassName={s.outletContent}

@@ -1,17 +1,17 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { SettingsProvider } from "@/features/settings/context";
-import { SettingsShard } from "@/features/settings/manifest";
+import type { SettingsReader } from "@/features/settings/types";
 import "./styles/theme.css";
 import "./styles/global.css";
-import "react-loading-skeleton/dist/skeleton.css";
-import App from "./App";
-import { initializeMainWebShards } from "./features/main-registry";
+import { initializeMiniWebShards } from "./features/mini-registry";
 import { getJaxRuntime } from "./features/registry";
+import { SHARD_IDS } from "./features/shard-ids";
 import { toErrorMessage } from "./infra/errors";
 import { createLogger } from "./infra/logger";
+import MiniApp from "./MiniApp";
 
-const logger = createLogger("bootstrap");
+const logger = createLogger("mini-bootstrap");
 
 function resolveUiPlatform(): string {
   const userAgent = navigator.userAgent;
@@ -42,24 +42,26 @@ async function bootstrap(): Promise<void> {
   const root = ReactDOM.createRoot(rootElement);
 
   try {
-    logger.info("Starting app bootstrap");
-    await initializeMainWebShards();
-    const settings = getJaxRuntime().getShard(SettingsShard);
+    logger.info("Starting mini app bootstrap");
+    await initializeMiniWebShards();
+    const settings = getJaxRuntime().getShardById(
+      SHARD_IDS.SETTINGS,
+    ) as unknown as SettingsReader;
 
     root.render(
       <React.StrictMode>
         <SettingsProvider value={settings}>
-          <App />
+          <MiniApp />
         </SettingsProvider>
       </React.StrictMode>,
     );
-    logger.info("App bootstrap completed");
+    logger.info("Mini app bootstrap completed");
   } catch (error) {
-    logger.error({ error }, "App bootstrap failed");
+    logger.error({ error }, "Mini app bootstrap failed");
     const message = toErrorMessage(error);
     root.render(
       <pre style={{ padding: 16, whiteSpace: "pre-wrap" }}>
-        {`App bootstrap failed:\n${message}`}
+        {`Mini app bootstrap failed:\n${message}`}
       </pre>,
     );
   }

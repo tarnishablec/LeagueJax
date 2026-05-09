@@ -298,6 +298,7 @@ pub fn run() {
             get_system_locale,
             toggle_mini_window,
             set_mini_pin,
+            mini_window_ready,
             execute_setting_action,
             get_updater_state,
             run_updater_action

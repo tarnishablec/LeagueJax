@@ -5,8 +5,8 @@ use euclid::{default::Point2D, default::Rect, default::Size2D};
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
-use tokio::sync::Mutex as AsyncMutex;
-use tokio::time::{sleep, Duration};
+use tokio::sync::{Mutex as AsyncMutex, Notify};
+use tokio::time::{sleep, timeout, Duration};
 
 use crate::error::AppError;
 use crate::shards::lcu::manager::{LcuManager, LcuManagerStateEvent};
@@ -18,7 +18,6 @@ use crate::shards::window_effect::WindowEffectShard;
 use crate::utils::webview::apply_release_webview_hardening;
 
 const MINI_WINDOW_LABEL: &str = "mini";
-const MINI_WINDOW_ROUTE: &str = "/mini";
 const MINI_WINDOW_TITLE: &str = "League Jax - Mini";
 const MAIN_WINDOW_LABEL: &str = "main";
 const MINI_AUTO_OPEN_SETTING_ID: &str = "mini.preference.autoOpen";
@@ -31,6 +30,7 @@ const MINI_WINDOW_MIN_HEIGHT: f64 = 520.0;
 const MINI_WINDOW_GAP_PX: i32 = 4;
 const MINI_AUTO_OPEN_RETRY_ATTEMPTS: usize = 8;
 const MINI_AUTO_OPEN_RETRY_INTERVAL: Duration = Duration::from_millis(250);
+const MINI_READY_TIMEOUT: Duration = Duration::from_millis(1200);
 
 type PxPoint = Point2D<i32>;
 type PxSize = Size2D<i32>;
@@ -57,12 +57,14 @@ enum InitState {
 #[derive(Debug)]
 struct MiniWindowState {
     init_state: InitState,
+    ready: bool,
 }
 
 impl Default for MiniWindowState {
     fn default() -> Self {
         Self {
             init_state: InitState::Uninitialized,
+            ready: false,
         }
     }
 }
@@ -99,9 +101,11 @@ pub struct MiniWindowShard {
     lcu_manager: OnceLock<Arc<LcuManager>>,
     auto_open_setting: OnceLock<SettingHandle>,
     pin_setting: OnceLock<SettingHandle>,
+    self_ref: OnceLock<Arc<MiniWindowShard>>,
 
     state: Mutex<MiniWindowState>,
     toggle_lock: AsyncMutex<()>,
+    ready_notify: Notify,
 
     follow_controller: native_window::FollowController,
 }
@@ -115,8 +119,10 @@ impl MiniWindowShard {
             lcu_manager: OnceLock::new(),
             auto_open_setting: OnceLock::new(),
             pin_setting: OnceLock::new(),
+            self_ref: OnceLock::new(),
             state: Mutex::new(MiniWindowState::default()),
             toggle_lock: AsyncMutex::new(()),
+            ready_notify: Notify::new(),
             follow_controller: native_window::FollowController::new(),
         }
     }
@@ -160,7 +166,7 @@ impl MiniWindowShard {
         let window = WebviewWindowBuilder::new(
             app,
             MINI_WINDOW_LABEL,
-            WebviewUrl::App(MINI_WINDOW_ROUTE.into()),
+            WebviewUrl::App("mini.html".into()),
         )
         .title(MINI_WINDOW_TITLE)
         .inner_size(MINI_WINDOW_WIDTH, MINI_WINDOW_HEIGHT)
@@ -177,6 +183,12 @@ impl MiniWindowShard {
         apply_release_webview_hardening(&window)
             .map_err(|error| AppError::other(format!("failed to harden mini webview: {error}")))?;
         self.try_apply_window_effect(&window);
+        self.reset_window_state()?;
+        if let Some(shard) = self.self_ref.get().cloned() {
+            window.on_window_event(move |event| {
+                shard.handle_window_event(event);
+            });
+        }
         Ok(window)
     }
 
@@ -267,6 +279,34 @@ impl MiniWindowShard {
     fn mark_initialized(&self) -> Result<(), AppError> {
         let mut guard = self.state.lock().map_err(|_| AppError::MutexPoisoned)?;
         guard.init_state = InitState::Positioned;
+        Ok(())
+    }
+
+    fn reset_window_state(&self) -> Result<(), AppError> {
+        let mut guard = self.state.lock().map_err(|_| AppError::MutexPoisoned)?;
+        guard.init_state = InitState::Uninitialized;
+        guard.ready = false;
+        Ok(())
+    }
+
+    fn mark_window_ready(&self) -> Result<(), AppError> {
+        let mut guard = self.state.lock().map_err(|_| AppError::MutexPoisoned)?;
+        guard.ready = true;
+        self.ready_notify.notify_waiters();
+        Ok(())
+    }
+
+    fn is_window_ready(&self) -> Result<bool, AppError> {
+        let guard = self.state.lock().map_err(|_| AppError::MutexPoisoned)?;
+        Ok(guard.ready)
+    }
+
+    async fn wait_for_window_ready(&self) -> Result<(), AppError> {
+        if self.is_window_ready()? {
+            return Ok(());
+        }
+
+        let _ = timeout(MINI_READY_TIMEOUT, self.ready_notify.notified()).await;
         Ok(())
     }
 
@@ -367,6 +407,7 @@ impl MiniWindowShard {
 
     async fn show_window(&self, window: &WebviewWindow) -> Result<(), AppError> {
         self.position_window_before_show(window).await?;
+        self.wait_for_window_ready().await?;
 
         window
             .show()
@@ -397,6 +438,7 @@ impl MiniWindowShard {
         let docked = DockLayout::dock_right_of(target.rect, mini_rect.size);
         self.move_window_to_inner_rect(window, docked)?;
         self.mark_initialized()?;
+        self.wait_for_window_ready().await?;
 
         window
             .show()
@@ -443,8 +485,8 @@ impl MiniWindowShard {
         self.follow_controller.clear();
 
         window
-            .hide()
-            .map_err(|error| AppError::other(format!("failed to hide mini window: {error}")))?;
+            .close()
+            .map_err(|error| AppError::other(format!("failed to close mini window: {error}")))?;
 
         Ok(())
     }
@@ -494,6 +536,9 @@ impl MiniWindowShard {
             }
             tauri::WindowEvent::Destroyed => {
                 self.follow_controller.clear();
+                if let Err(error) = self.reset_window_state() {
+                    tracing::warn!(error = %error, "Failed to reset mini window state");
+                }
             }
             _ => {}
         }
@@ -527,6 +572,10 @@ impl MiniWindowShard {
 
         handle.set_value(value)?;
         self.sync_follow_controller().await
+    }
+
+    pub fn ready(&self) -> Result<(), AppError> {
+        self.mark_window_ready()
     }
 }
 
@@ -594,8 +643,13 @@ impl Shard for MiniWindowShard {
         if self.pin_setting.set(pin_setting.clone()).is_err() {
             tracing::warn!("MiniWindowShard pin_setting already initialized");
         }
-
-        let mini_window = self.ensure_window().map_err(Box::new)?;
+        if self
+            .self_ref
+            .set(jax.get_shard::<MiniWindowShard>().clone())
+            .is_err()
+        {
+            tracing::warn!("MiniWindowShard self_ref already initialized");
+        }
 
         let shard_for_auto_open_setting = jax.get_shard::<MiniWindowShard>().clone();
         auto_open_setting.spawn_watch(false, move |value| {
@@ -639,12 +693,6 @@ impl Shard for MiniWindowShard {
                 }
             }
         });
-
-        let shard_for_window_events = jax.get_shard::<MiniWindowShard>().clone();
-        mini_window.on_window_event(move |event| {
-            shard_for_window_events.handle_window_event(event);
-        });
-
         Ok(())
     }
 }
