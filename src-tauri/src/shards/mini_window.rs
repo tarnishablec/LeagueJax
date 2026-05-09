@@ -157,9 +157,7 @@ impl MiniWindowShard {
     fn apply_always_on_top_to_window(&self, window: &WebviewWindow) -> Result<(), AppError> {
         window
             .set_always_on_top(self.current_always_on_top_enabled())
-            .map_err(|error| {
-                AppError::other(format!("failed to set mini always on top: {error}"))
-            })
+            .map_err(|error| AppError::other(format!("failed to set mini always on top: {error}")))
     }
 
     fn sync_always_on_top(&self) -> Result<(), AppError> {
@@ -190,22 +188,21 @@ impl MiniWindowShard {
             return Ok(window);
         }
 
-        let window = WebviewWindowBuilder::new(
-            app,
-            MINI_WINDOW_LABEL,
-            WebviewUrl::App("mini.html".into()),
-        )
-        .title(MINI_WINDOW_TITLE)
-        .inner_size(MINI_WINDOW_WIDTH, MINI_WINDOW_HEIGHT)
-        .min_inner_size(MINI_WINDOW_MIN_WIDTH, MINI_WINDOW_MIN_HEIGHT)
-        .decorations(false)
-        .transparent(true)
-        .resizable(true)
-        .maximizable(false)
-        .visible(false)
-        .focused(false)
-        .build()
-        .map_err(|error| AppError::other(format!("failed to create mini window: {error}")))?;
+        let window =
+            WebviewWindowBuilder::new(app, MINI_WINDOW_LABEL, WebviewUrl::App("mini.html".into()))
+                .title(MINI_WINDOW_TITLE)
+                .inner_size(MINI_WINDOW_WIDTH, MINI_WINDOW_HEIGHT)
+                .min_inner_size(MINI_WINDOW_MIN_WIDTH, MINI_WINDOW_MIN_HEIGHT)
+                .decorations(false)
+                .transparent(true)
+                .resizable(true)
+                .maximizable(false)
+                .visible(false)
+                .focused(false)
+                .build()
+                .map_err(|error| {
+                    AppError::other(format!("failed to create mini window: {error}"))
+                })?;
 
         apply_release_webview_hardening(&window)
             .map_err(|error| AppError::other(format!("failed to harden mini webview: {error}")))?;
