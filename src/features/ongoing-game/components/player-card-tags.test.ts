@@ -245,7 +245,7 @@ describe("collectMatchPlayerCardTags", () => {
         [
           performanceMatch(
             {
-              kills: 1,
+              kills: 5,
               deaths: 5,
               assists: 23,
               totalDamageDealtToChampions: 10_000,
@@ -271,8 +271,8 @@ describe("collectMatchPlayerCardTags", () => {
           ),
           performanceMatch(
             {
-              kills: 2,
-              deaths: 6,
+              kills: 5,
+              deaths: 5,
               assists: 24,
               totalDamageDealtToChampions: 12_000,
               totalDamageTaken: 25_500,
@@ -296,7 +296,7 @@ describe("collectMatchPlayerCardTags", () => {
           ),
           performanceMatch(
             {
-              kills: 1,
+              kills: 4,
               deaths: 4,
               assists: 21,
               totalDamageDealtToChampions: 11_000,
@@ -349,6 +349,74 @@ describe("collectMatchPlayerCardTags", () => {
               teamDamagePercentage: 0.18,
             } as RawMatchSummaryParticipant["challenges"],
           }),
+        ],
+        "balanced",
+      ),
+    ).toBe(false);
+  });
+
+  test("does not mark excellent under balanced strategy when MVP or ACE rate is below sixty percent", () => {
+    const strongerTeammate = performanceParticipant(2, {
+      kills: 6,
+      deaths: 1,
+      assists: 2,
+      totalDamageDealtToChampions: 12_000,
+      goldEarned: 8_000,
+    });
+
+    expect(
+      hasExcellentTag(
+        [
+          performanceMatch({ kills: 1, deaths: 1 }),
+          performanceMatch({ kills: 1, deaths: 1 }, [strongerTeammate]),
+          performanceMatch({ kills: 1, deaths: 1 }, [strongerTeammate]),
+          performanceMatch({ kills: 1, deaths: 1 }, [strongerTeammate]),
+        ],
+        "balanced",
+      ),
+    ).toBe(false);
+  });
+
+  test("marks excellent under balanced strategy when MVP or ACE rate reaches sixty percent without a negative kill-death record", () => {
+    expect(
+      hasExcellentTag(
+        [
+          performanceMatch({ kills: 1, deaths: 1 }),
+          performanceMatch({ kills: 1, deaths: 1 }),
+          performanceMatch({ kills: 1, deaths: 1 }),
+          performanceMatch({ kills: 1, deaths: 1 }, [
+            performanceParticipant(2, {
+              kills: 6,
+              deaths: 1,
+              assists: 2,
+              totalDamageDealtToChampions: 12_000,
+              goldEarned: 8_000,
+            }),
+          ]),
+          performanceMatch({ kills: 1, deaths: 1 }, [
+            performanceParticipant(2, {
+              kills: 6,
+              deaths: 1,
+              assists: 2,
+              totalDamageDealtToChampions: 12_000,
+              goldEarned: 8_000,
+            }),
+          ]),
+        ],
+        "balanced",
+      ),
+    ).toBe(true);
+  });
+
+  test("does not mark excellent under balanced strategy from repeated MVP or ACE games with a negative kill-death record", () => {
+    expect(
+      hasExcellentTag(
+        [
+          performanceMatch({ kills: 1, deaths: 2 }),
+          performanceMatch({ kills: 1, deaths: 2 }),
+          performanceMatch({ kills: 1, deaths: 2 }),
+          performanceMatch({ kills: 1, deaths: 2 }),
+          performanceMatch({ kills: 1, deaths: 2 }),
         ],
         "balanced",
       ),
