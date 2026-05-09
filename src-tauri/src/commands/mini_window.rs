@@ -20,6 +20,12 @@ pub async fn set_mini_pin(enabled: bool, jax: State<'_, Arc<Jax>>) -> Result<(),
 }
 
 #[tauri::command]
+pub fn set_mini_always_on_top(enabled: bool, jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
+    jax.get_shard::<MiniWindowShard>()
+        .set_always_on_top_value(Value::Bool(enabled))
+}
+
+#[tauri::command]
 pub fn mini_window_ready(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
     jax.get_shard::<MiniWindowShard>().ready()
 }

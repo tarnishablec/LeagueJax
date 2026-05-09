@@ -22,6 +22,7 @@ const MINI_WINDOW_TITLE: &str = "League Jax - Mini";
 const MAIN_WINDOW_LABEL: &str = "main";
 const MINI_AUTO_OPEN_SETTING_ID: &str = "mini.preference.autoOpen";
 const MINI_PIN_SETTING_ID: &str = "mini.preference.pin";
+const MINI_ALWAYS_ON_TOP_SETTING_ID: &str = "mini.preference.alwaysOnTop";
 
 const MINI_WINDOW_WIDTH: f64 = 380.0;
 const MINI_WINDOW_HEIGHT: f64 = 680.0;
@@ -101,6 +102,7 @@ pub struct MiniWindowShard {
     lcu_manager: OnceLock<Arc<LcuManager>>,
     auto_open_setting: OnceLock<SettingHandle>,
     pin_setting: OnceLock<SettingHandle>,
+    always_on_top_setting: OnceLock<SettingHandle>,
     self_ref: OnceLock<Arc<MiniWindowShard>>,
 
     state: Mutex<MiniWindowState>,
@@ -119,6 +121,7 @@ impl MiniWindowShard {
             lcu_manager: OnceLock::new(),
             auto_open_setting: OnceLock::new(),
             pin_setting: OnceLock::new(),
+            always_on_top_setting: OnceLock::new(),
             self_ref: OnceLock::new(),
             state: Mutex::new(MiniWindowState::default()),
             toggle_lock: AsyncMutex::new(()),
@@ -141,6 +144,30 @@ impl MiniWindowShard {
             .and_then(|handle| handle.get_value().ok())
             .and_then(|value| value.as_bool())
             .unwrap_or(true)
+    }
+
+    fn current_always_on_top_enabled(&self) -> bool {
+        self.always_on_top_setting
+            .get()
+            .and_then(|handle| handle.get_value().ok())
+            .and_then(|value| value.as_bool())
+            .unwrap_or(true)
+    }
+
+    fn apply_always_on_top_to_window(&self, window: &WebviewWindow) -> Result<(), AppError> {
+        window
+            .set_always_on_top(self.current_always_on_top_enabled())
+            .map_err(|error| {
+                AppError::other(format!("failed to set mini always on top: {error}"))
+            })
+    }
+
+    fn sync_always_on_top(&self) -> Result<(), AppError> {
+        if let Some(window) = self.mini_window() {
+            self.apply_always_on_top_to_window(&window)?;
+        }
+
+        Ok(())
     }
 
     fn try_apply_window_effect(&self, window: &WebviewWindow) {
@@ -183,6 +210,7 @@ impl MiniWindowShard {
         apply_release_webview_hardening(&window)
             .map_err(|error| AppError::other(format!("failed to harden mini webview: {error}")))?;
         self.try_apply_window_effect(&window);
+        self.apply_always_on_top_to_window(&window)?;
         self.reset_window_state()?;
         if let Some(shard) = self.self_ref.get().cloned() {
             window.on_window_event(move |event| {
@@ -485,8 +513,8 @@ impl MiniWindowShard {
         self.follow_controller.clear();
 
         window
-            .close()
-            .map_err(|error| AppError::other(format!("failed to close mini window: {error}")))?;
+            .hide()
+            .map_err(|error| AppError::other(format!("failed to hide mini window: {error}")))?;
 
         Ok(())
     }
@@ -574,6 +602,16 @@ impl MiniWindowShard {
         self.sync_follow_controller().await
     }
 
+    pub fn set_always_on_top_value(&self, value: Value) -> Result<(), AppError> {
+        let handle = self
+            .always_on_top_setting
+            .get()
+            .ok_or_else(|| AppError::other("mini always on top setting is not initialized"))?;
+
+        handle.set_value(value)?;
+        self.sync_always_on_top()
+    }
+
     pub fn ready(&self) -> Result<(), AppError> {
         self.mark_window_ready()
     }
@@ -621,6 +659,18 @@ impl Shard for MiniWindowShard {
             options: None,
         })?;
 
+        let always_on_top_setting = settings.register_definition(SettingDefinitionDto {
+            id: MINI_ALWAYS_ON_TOP_SETTING_ID.to_string(),
+            label_key: "settings.mini.alwaysOnTop.label".to_string(),
+            hint_key: Some("settings.mini.alwaysOnTop.hint".to_string()),
+            scope: SettingScopeDto::Shared,
+            control: Some(SettingControlDto::Toggle),
+            default_value: Value::Bool(true),
+            order: Some(15),
+            visible: Some(true),
+            options: None,
+        })?;
+
         if self.host.set(host.clone()).is_err() {
             tracing::warn!("MiniWindowShard host already initialized");
         }
@@ -642,6 +692,13 @@ impl Shard for MiniWindowShard {
         }
         if self.pin_setting.set(pin_setting.clone()).is_err() {
             tracing::warn!("MiniWindowShard pin_setting already initialized");
+        }
+        if self
+            .always_on_top_setting
+            .set(always_on_top_setting.clone())
+            .is_err()
+        {
+            tracing::warn!("MiniWindowShard always_on_top_setting already initialized");
         }
         if self
             .self_ref
@@ -671,6 +728,16 @@ impl Shard for MiniWindowShard {
             async move {
                 if let Err(error) = shard.sync_follow_controller().await {
                     tracing::warn!(error = %error, "Failed to refresh mini follow after pin setting change");
+                }
+            }
+        })?;
+
+        let shard_for_always_on_top_setting = jax.get_shard::<MiniWindowShard>().clone();
+        always_on_top_setting.spawn_watch(false, move |_value| {
+            let shard = shard_for_always_on_top_setting.clone();
+            async move {
+                if let Err(error) = shard.sync_always_on_top() {
+                    tracing::warn!(error = %error, "Failed to refresh mini always-on-top after setting change");
                 }
             }
         })?;

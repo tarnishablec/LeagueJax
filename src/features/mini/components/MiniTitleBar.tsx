@@ -1,27 +1,38 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Pin } from "lucide-react";
+import { ArrowUpToLine, Pin } from "lucide-react";
 import { type MouseEvent, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
+import { AppTooltip } from "@/components/AppTooltip";
 import { trafficButton } from "@/components/WindowControlButton.css.ts";
 import { CloseIcon, MinimizeIcon } from "@/components/WindowControlIcons.tsx";
 import { useSettings } from "@/features/settings/context";
-import { MINI_PIN_SETTING_ID } from "../settings";
+import type { SettingId } from "@/features/settings/types";
+import {
+  MINI_ALWAYS_ON_TOP_SETTING_ID,
+  MINI_PIN_SETTING_ID,
+} from "../settings";
 import * as s from "./MiniTitleBar.css.ts";
 
-function useMiniPinValue(): boolean {
+function useMiniBooleanSetting(id: SettingId, fallback: boolean): boolean {
   const settings = useSettings();
   const value = useSyncExternalStore(
-    (onStoreChange) => settings.subscribe(MINI_PIN_SETTING_ID, onStoreChange),
-    () => settings.get<boolean>(MINI_PIN_SETTING_ID),
-    () => settings.get<boolean>(MINI_PIN_SETTING_ID),
+    (onStoreChange) => settings.subscribe(id, onStoreChange),
+    () => settings.get<boolean>(id),
+    () => settings.get<boolean>(id),
   );
 
-  return value ?? true;
+  return value ?? fallback;
 }
 
 export function MiniTitleBar() {
   const settings = useSettings();
-  const isPinned = useMiniPinValue();
+  const { t } = useTranslation();
+  const isPinned = useMiniBooleanSetting(MINI_PIN_SETTING_ID, true);
+  const isAlwaysOnTop = useMiniBooleanSetting(
+    MINI_ALWAYS_ON_TOP_SETTING_ID,
+    true,
+  );
   const handleDragStart = async (event: MouseEvent<HTMLDivElement>) => {
     if (event.button !== 0) {
       return;
@@ -42,19 +53,39 @@ export function MiniTitleBar() {
       </div>
 
       <div role="toolbar" aria-label="Window controls" className={s.controls}>
-        <button
-          type="button"
-          aria-label="Toggle pin mini window"
-          aria-pressed={isPinned}
-          className={[trafficButton({ variant: "default" }), s.windowButton]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={() => {
-            settings.set(MINI_PIN_SETTING_ID, !isPinned);
-          }}
+        <AppTooltip content={t("mini.controls.pinTooltip")} placement="bottom">
+          <button
+            type="button"
+            aria-label="Toggle pin mini window"
+            aria-pressed={isPinned}
+            className={[trafficButton({ variant: "default" }), s.windowButton]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => {
+              settings.set(MINI_PIN_SETTING_ID, !isPinned);
+            }}
+          >
+            <Pin size={14} aria-hidden="true" />
+          </button>
+        </AppTooltip>
+        <AppTooltip
+          content={t("mini.controls.alwaysOnTopTooltip")}
+          placement="bottom"
         >
-          <Pin size={14} aria-hidden="true" />
-        </button>
+          <button
+            type="button"
+            aria-label="Toggle always on top mini window"
+            aria-pressed={isAlwaysOnTop}
+            className={[trafficButton({ variant: "default" }), s.windowButton]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => {
+              settings.set(MINI_ALWAYS_ON_TOP_SETTING_ID, !isAlwaysOnTop);
+            }}
+          >
+            <ArrowUpToLine size={14} aria-hidden="true" />
+          </button>
+        </AppTooltip>
         <button
           type="button"
           aria-label="Minimize"
@@ -71,7 +102,7 @@ export function MiniTitleBar() {
           className={[trafficButton({ variant: "close" }), s.windowButton]
             .filter(Boolean)
             .join(" ")}
-          onClick={() => void getCurrentWindow().close()}
+          onClick={() => void getCurrentWindow().hide()}
         >
           <CloseIcon />
         </button>
