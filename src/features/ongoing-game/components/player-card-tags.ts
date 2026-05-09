@@ -22,7 +22,7 @@ const EXCELLENT_BALANCED_SCORE_THRESHOLD = 70;
 const EXCELLENT_BALANCED_SCORE_WEIGHT = 0.75;
 const EXCELLENT_BALANCED_MVP_ACE_RATE_BONUS = 25;
 const EXCELLENT_BALANCED_RATE_MIN_GAMES = 5;
-const EXCELLENT_BALANCED_MVP_ACE_RATE_THRESHOLD = 0.35;
+const EXCELLENT_BALANCED_MVP_ACE_RATE_THRESHOLD = 0.6;
 export type PlayerCardTagGroupKey = `ongoing.playerCardTags.${string}`;
 export type PlayerCardTagColorSettingId = `${PlayerCardTagGroupKey}.color`;
 export type PlayerCardTagEnabledSettingId = `${PlayerCardTagGroupKey}.enabled`;
@@ -273,8 +273,24 @@ function countMatchPerformanceBadges(
   }, 0);
 }
 
+function hasMostlyNegativeKillDeathRecord(matches: PlayerCardMatch[]): boolean {
+  if (matches.length === 0) {
+    return false;
+  }
+
+  const negativeGames = matches.filter(
+    (match) => (match.me.kills ?? 0) < (match.me.deaths ?? 0),
+  ).length;
+
+  return negativeGames > matches.length / 2;
+}
+
 function hasExcellentBalancedPerformance(matches: PlayerCardMatch[]): boolean {
   if (matches.length < EXCELLENT_BALANCED_MIN_GAMES) {
+    return false;
+  }
+
+  if (hasMostlyNegativeKillDeathRecord(matches)) {
     return false;
   }
 
