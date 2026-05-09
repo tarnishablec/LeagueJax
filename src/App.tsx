@@ -6,36 +6,8 @@ import { SWRConfig } from "swr";
 import { AppToaster } from "@/components/AppToaster";
 import { getRouteContributions } from "@/features/registry";
 import { UpdaterToastBridge } from "@/features/updater/components/UpdaterToastBridge";
-import { MiniWindowLayout } from "@/layout/__mini";
 import { MainWindowLayout } from "@/layout/__root";
-import type { RouteContribution, RouteLayout } from "@/runtime/web-contract";
-
-const ROUTE_LAYOUTS: Record<
-  RouteLayout,
-  {
-    path: string;
-    element: RouteObject["element"];
-    children: (routes: RouteObject[]) => RouteObject[];
-  }
-> = {
-  main: {
-    path: "/main",
-    element: <MainWindowLayout />,
-    children: (routes) => [
-      {
-        index: true,
-        element: <Navigate to="/main/history" replace />,
-      },
-      ...routes,
-    ],
-  },
-  mini: {
-    path: "/mini",
-    element: <MiniWindowLayout />,
-    children: (routes) => routes,
-  },
-};
-const ROUTE_LAYOUT_ORDER: RouteLayout[] = ["main", "mini"];
+import type { RouteContribution } from "@/runtime/web-contract";
 
 const toRouteObject = (route: RouteContribution): RouteObject =>
   ({
@@ -66,34 +38,24 @@ normalizeInitialHashRoute();
 
 export default function App() {
   const router = useMemo(() => {
-    const routeBuckets = getRouteContributions().reduce<
-      Record<RouteLayout, RouteObject[]>
-    >(
-      (buckets, route) => {
-        const layout = route.layout ?? "main";
-        buckets[layout].push(toRouteObject(route));
-        return buckets;
-      },
-      {
-        main: [],
-        mini: [],
-      },
-    );
+    const mainRoutes = getRouteContributions("main").map(toRouteObject);
 
     return createHashRouter([
       {
         path: "/",
         element: <Navigate to="/main/history" replace />,
       },
-      ...ROUTE_LAYOUT_ORDER.map((layout) => {
-        const config = ROUTE_LAYOUTS[layout];
-
-        return {
-          path: config.path,
-          element: config.element,
-          children: config.children(routeBuckets[layout]),
-        };
-      }),
+      {
+        path: "/main",
+        element: <MainWindowLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/main/history" replace />,
+          },
+          ...mainRoutes,
+        ],
+      },
     ]);
   }, []);
 

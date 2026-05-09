@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { useSettings } from "@/features/settings/context";
 import {
   SYSTEM_THEME_SETTING_ID,
@@ -15,7 +15,7 @@ export function useTheme() {
       () => settings.get<Theme>(SYSTEM_THEME_SETTING_ID),
     ) ?? "system";
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
 
     function apply(dark: boolean) {

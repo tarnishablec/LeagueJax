@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useLayoutEffect, useSyncExternalStore } from "react";
 import { useSettings } from "@/features/settings/context";
 import { THEME_BACKDROP_OVERRIDE_PROPERTY } from "@/styles/theme.css";
 import {
@@ -26,7 +26,7 @@ export function useWindowEffectBackgroundFallback() {
     () => settings.get<string>(WINDOW_EFFECT_BASE_COLOR_SETTING_ID),
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const baseColor = normalizeWindowEffectBaseColor(windowEffectBaseColor);
 

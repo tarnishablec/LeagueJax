@@ -6,7 +6,7 @@ import { initializeI18n } from "@/i18n";
 import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
-import { SettingsShard } from "../settings/manifest";
+import type { SettingsShardApi } from "../settings/types";
 import { SHARD_IDS } from "../shard-ids";
 import { i18nShardI18n } from "./i18n";
 import {
@@ -37,7 +37,9 @@ export class I18nShard implements WebShard {
   }
 
   public async setup(jax: Jax): Promise<void> {
-    const settings = jax.getShard(SettingsShard);
+    const settings = jax.getShardById(
+      SHARD_IDS.SETTINGS,
+    ) as unknown as SettingsShardApi;
     this.defaultLanguage = await this.resolveDefaultLanguage();
     settings.registerSetting(
       createLanguageSettingDefinition(this.defaultLanguage),
@@ -91,7 +93,7 @@ export class I18nShard implements WebShard {
     }
   }
 
-  private getLanguage(settings: SettingsShard): Language {
+  private getLanguage(settings: SettingsShardApi): Language {
     return (
       settings.get<Language>(SYSTEM_LANGUAGE_SETTING_ID) ?? this.defaultLanguage
     );

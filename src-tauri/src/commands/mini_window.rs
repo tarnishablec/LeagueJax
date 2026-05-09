@@ -18,3 +18,8 @@ pub async fn set_mini_pin(enabled: bool, jax: State<'_, Arc<Jax>>) -> Result<(),
         .set_pin_value(Value::Bool(enabled))
         .await
 }
+
+#[tauri::command]
+pub fn mini_window_ready(jax: State<'_, Arc<Jax>>) -> Result<(), AppError> {
+    jax.get_shard::<MiniWindowShard>().ready()
+}

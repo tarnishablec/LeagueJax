@@ -6,22 +6,10 @@ import { Jax } from "@/jax";
 import type {
   NavItem,
   RouteContribution,
+  RouteLayout,
   SidebarSlotContext,
   WebShard,
 } from "@/runtime/web-contract";
-import { AutomationShard } from "./automation/manifest";
-import { HistoryShard } from "./history/manifest";
-import { I18nShard } from "./i18n/manifest";
-import { MiniShard } from "./mini/manifest";
-import { OngoingGameShard } from "./ongoing-game/manifest";
-import { ReplayShard } from "./replay/manifest";
-import { SettingsShard } from "./settings/manifest";
-import { ShellShard } from "./shell/manifest";
-import { StaticCacheShard } from "./static-cache/manifest";
-import { ToolsShard } from "./tools/manifest";
-import { TrayShard } from "./tray/manifest";
-import { UpdaterFeature } from "./updater/manifest";
-import { WindowEffectShard } from "./window-effect/manifest";
 
 export interface RenderedSlot {
   id: string;
@@ -76,7 +64,9 @@ const listWebShards = (): WebShard[] => {
   return getJaxRuntime().listShards() as WebShard[];
 };
 
-export const initializeWebShards = async (): Promise<void> => {
+export const initializeWebShards = async (
+  shards: WebShard[],
+): Promise<void> => {
   if (jaxRuntime) {
     logger.debug("Web shards already initialized; skipping");
     return;
@@ -89,21 +79,9 @@ export const initializeWebShards = async (): Promise<void> => {
   }
 
   jaxInitialization = (async () => {
-    logger.info("Initializing web shards");
-    const runtime = new Jax()
-      .register(new SettingsShard())
-      .register(new WindowEffectShard())
-      .register(new I18nShard())
-      .register(new UpdaterFeature())
-      .register(new ShellShard())
-      .register(new StaticCacheShard())
-      .register(new TrayShard())
-      .register(new MiniShard())
-      .register(new HistoryShard())
-      .register(new ReplayShard())
-      .register(new OngoingGameShard())
-      .register(new AutomationShard())
-      .register(new ToolsShard())
+    logger.info({ shardCount: shards.length }, "Initializing web shards");
+    const runtime = shards
+      .reduce((runtime, shard) => runtime.register(shard), new Jax())
       .build();
     const report = await runtime.start();
     if (report.failed.length > 0) {
@@ -151,8 +129,14 @@ export const shutdownWebShards = async (): Promise<void> => {
   logger.info("Web shard shutdown completed");
 };
 
-export const getRouteContributions = (): RouteContribution[] => {
-  const routes = listWebShards().flatMap((shard) => shard.routes?.() ?? []);
+export const getRouteContributions = (
+  layout: RouteLayout = "main",
+): RouteContribution[] => {
+  const routes = listWebShards().flatMap((shard) =>
+    (shard.routes?.() ?? []).filter(
+      (route) => (route.layout ?? "main") === layout,
+    ),
+  );
   return sortByOrder(routes);
 };
 

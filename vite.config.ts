@@ -39,6 +39,10 @@ export default defineConfig(async ({ command }) => ({
   ],
   build: {
     rolldownOptions: {
+      input: {
+        main: path.resolve(dirname, "index.html"),
+        mini: path.resolve(dirname, "mini.html"),
+      },
       output: {
         codeSplitting:
           command === "serve"
@@ -47,8 +51,13 @@ export default defineConfig(async ({ command }) => ({
                 groups: [
                   {
                     name: "vendor-react",
-                    test: /node_modules[\\/](react|react-dom|react-router|scheduler)/,
+                    test: /node_modules[\\/](react|react-dom|scheduler)([\\/]|$)/,
                     priority: 20,
+                  },
+                  {
+                    name: "vendor-router",
+                    test: /node_modules[\\/]react-router([\\/]|$)/,
+                    priority: 19,
                   },
                   {
                     name: "vendor-ui",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SettingsShard } from "@/features/settings/manifest";
+import type { SettingsShardApi } from "@/features/settings/types";
 import { SHARD_IDS } from "@/features/shard-ids";
 import type { Jax } from "@/jax";
 import type { WebShard } from "@/runtime/web-contract";
@@ -32,7 +32,9 @@ export class WindowEffectShard implements WebShard {
   }
 
   public setup(jax: Jax): void {
-    const settings = jax.getShard(SettingsShard);
+    const settings = jax.getShardById(
+      SHARD_IDS.SETTINGS,
+    ) as unknown as SettingsShardApi;
 
     settings.registerSetting({
       id: WINDOW_EFFECT_BASE_COLOR_SETTING_ID,
