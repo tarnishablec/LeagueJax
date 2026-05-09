@@ -18,6 +18,10 @@ export const miniI18n: Resource = {
       autoAccept: {
         countdown: "Auto accept: {{count}}s",
       },
+      controls: {
+        pinTooltip: "Dock to League Client",
+        alwaysOnTopTooltip: "Always on Top",
+      },
       champSelect: {
         selected: "Selected",
         notSelected: "Not selected",
@@ -56,6 +60,10 @@ export const miniI18n: Resource = {
           label: "Pin Mini Window",
           hint: "Keep the mini window docked to the League client while the client is available.",
         },
+        alwaysOnTop: {
+          label: "Always on Top",
+          hint: "Keep the mini window above other windows.",
+        },
       },
     },
   },
@@ -75,6 +83,10 @@ export const miniI18n: Resource = {
       },
       autoAccept: {
         countdown: "自动接受：{{count}}秒",
+      },
+      controls: {
+        pinTooltip: "吸附 LOL 客户端",
+        alwaysOnTopTooltip: "窗口置顶",
       },
       champSelect: {
         selected: "已选择",
@@ -114,6 +126,10 @@ export const miniI18n: Resource = {
           label: "钉住小窗",
           hint: "启用后，只要英雄联盟客户端可用，小窗就会持续吸附在客户端右侧。",
         },
+        alwaysOnTop: {
+          label: "窗口置顶",
+          hint: "让小窗保持在其他窗口上方。",
+        },
       },
     },
   },
@@ -133,6 +149,10 @@ export const miniI18n: Resource = {
       },
       autoAccept: {
         countdown: "自動承認: {{count}}秒",
+      },
+      controls: {
+        pinTooltip: "League クライアントに吸着",
+        alwaysOnTopTooltip: "常に最前面",
       },
       champSelect: {
         selected: "選択済み",
@@ -171,6 +191,10 @@ export const miniI18n: Resource = {
         pin: {
           label: "ミニウィンドウを固定",
           hint: "有効にすると、League クライアントが利用できる間はミニウィンドウを右側に吸着し続けます。",
+        },
+        alwaysOnTop: {
+          label: "常に最前面",
+          hint: "ミニウィンドウを他のウィンドウより前に表示します。",
         },
       },
     },
