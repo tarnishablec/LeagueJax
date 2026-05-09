@@ -1,7 +1,7 @@
 {
   "name": "league-jax",
   "private": true,
-  "version": "0.1.61",
+  "version": "0.1.62",
   "type": "module",
   "scripts": {
     "dev": "vite",
