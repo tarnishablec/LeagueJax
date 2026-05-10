@@ -94,10 +94,10 @@ cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
 ```bash
 # Check Rust code
-cargo check --manifest-path src-tauri/Cargo.toml
+cargo check
 
 # Run Rust tests
-cargo test --manifest-path src-tauri/Cargo.toml
+cargo test
 ```
 
 ## Architecture
@@ -246,6 +246,15 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
   proper error handling.
 - **Never use `#[allow(dead_code)]`** — leave dead_code warnings for the user to handle. Do not add `allow` attributes
   or delete unused code to silence these warnings.
+
+## Rust Logging
+
+- For all Rust-side application/runtime logging, call `tracing` macros directly, following the structured logging style
+  in `src-tauri/src/shards/log.rs`.
+- Prefer structured fields over interpolated message text, for example `tracing::info!(record_to_file, "Updated file
+  logging")` and `tracing::error!(error = %error, "Failed to resolve log directory")`.
+- Do not use `println!`, `eprintln!`, `dbg!`, or ad hoc logging wrappers for normal Rust application logs. Only add
+  logging infrastructure code when working on generic tracing subscriber, sink, or filtering behavior.
 
 ## Linting
 
