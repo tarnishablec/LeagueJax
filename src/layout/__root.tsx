@@ -198,6 +198,7 @@ export function MainWindowLayout() {
   return (
     <div
       className={s.shell}
+      data-tauri-drag-region
       style={assignInlineVars({
         [s.sidebarWidth]: collapsed
           ? `calc(${s.iconCol} + ${s.navPad} * 2) 1fr`
