@@ -103,7 +103,6 @@ pub struct MiniWindowShard {
     auto_open_setting: OnceLock<SettingHandle>,
     pin_setting: OnceLock<SettingHandle>,
     always_on_top_setting: OnceLock<SettingHandle>,
-    self_ref: OnceLock<Arc<MiniWindowShard>>,
 
     state: Mutex<MiniWindowState>,
     toggle_lock: AsyncMutex<()>,
@@ -122,7 +121,6 @@ impl MiniWindowShard {
             auto_open_setting: OnceLock::new(),
             pin_setting: OnceLock::new(),
             always_on_top_setting: OnceLock::new(),
-            self_ref: OnceLock::new(),
             state: Mutex::new(MiniWindowState::default()),
             toggle_lock: AsyncMutex::new(()),
             ready_notify: Notify::new(),
@@ -176,8 +174,8 @@ impl MiniWindowShard {
         }
     }
 
-    fn ensure_window(&self) -> Result<WebviewWindow, AppError> {
-        let host = self
+    fn ensure_window(shard: &Arc<Self>) -> Result<WebviewWindow, AppError> {
+        let host = shard
             .host
             .get()
             .ok_or_else(|| AppError::other("mini window shard is not initialized"))?;
@@ -206,14 +204,17 @@ impl MiniWindowShard {
 
         apply_release_webview_hardening(&window)
             .map_err(|error| AppError::other(format!("failed to harden mini webview: {error}")))?;
-        self.try_apply_window_effect(&window);
-        self.apply_always_on_top_to_window(&window)?;
-        self.reset_window_state()?;
-        if let Some(shard) = self.self_ref.get().cloned() {
-            window.on_window_event(move |event| {
+        shard.try_apply_window_effect(&window);
+        shard.apply_always_on_top_to_window(&window)?;
+        shard.reset_window_state()?;
+
+        let shard = Arc::downgrade(shard);
+        window.on_window_event(move |event| {
+            if let Some(shard) = shard.upgrade() {
                 shard.handle_window_event(event);
-            });
-        }
+            }
+        });
+
         Ok(window)
     }
 
@@ -479,23 +480,23 @@ impl MiniWindowShard {
         Ok(())
     }
 
-    async fn auto_open_for_focused_client(&self) -> Result<(), AppError> {
-        if !self.current_auto_open_enabled() {
+    async fn auto_open_for_focused_client(shard: &Arc<Self>) -> Result<(), AppError> {
+        if !shard.current_auto_open_enabled() {
             return Ok(());
         }
 
-        let _lock = self.toggle_lock.lock().await;
+        let _lock = shard.toggle_lock.lock().await;
 
-        if !self.current_auto_open_enabled() {
+        if !shard.current_auto_open_enabled() {
             return Ok(());
         }
 
-        let Some(target) = self.focused_league_client_window_target_with_retry().await else {
+        let Some(target) = shard.focused_league_client_window_target_with_retry().await else {
             return Ok(());
         };
 
-        let window = self.ensure_window()?;
-        self.show_window_docked_to_target(&window, target).await
+        let window = Self::ensure_window(shard)?;
+        shard.show_window_docked_to_target(&window, target).await
     }
 
     async fn restore_minimized_window(&self, window: &WebviewWindow) -> Result<(), AppError> {
@@ -569,20 +570,20 @@ impl MiniWindowShard {
         }
     }
 
-    pub async fn toggle(&self) -> Result<(), AppError> {
-        let _lock = self.toggle_lock.lock().await;
+    pub async fn toggle(shard: &Arc<Self>) -> Result<(), AppError> {
+        let _lock = shard.toggle_lock.lock().await;
 
-        let window = self.ensure_window()?;
+        let window = Self::ensure_window(shard)?;
 
-        match self.classify_window_state(&window)? {
+        match shard.classify_window_state(&window)? {
             MiniWindowVisibilityState::Minimized => {
-                self.restore_minimized_window(&window).await?;
+                shard.restore_minimized_window(&window).await?;
             }
             MiniWindowVisibilityState::Visible => {
-                self.hide_window(&window).await?;
+                shard.hide_window(&window).await?;
             }
             MiniWindowVisibilityState::Hidden => {
-                self.show_window(&window).await?;
+                shard.show_window(&window).await?;
             }
         }
 
@@ -697,14 +698,6 @@ impl Shard for MiniWindowShard {
         {
             tracing::warn!("MiniWindowShard always_on_top_setting already initialized");
         }
-        if self
-            .self_ref
-            .set(jax.get_shard::<MiniWindowShard>().clone())
-            .is_err()
-        {
-            tracing::warn!("MiniWindowShard self_ref already initialized");
-        }
-
         let shard_for_auto_open_setting = jax.get_shard::<MiniWindowShard>().clone();
         auto_open_setting.spawn_watch(false, move |value| {
             let shard = shard_for_auto_open_setting.clone();
@@ -713,7 +706,7 @@ impl Shard for MiniWindowShard {
                     return;
                 }
 
-                if let Err(error) = shard.auto_open_for_focused_client().await {
+                if let Err(error) = MiniWindowShard::auto_open_for_focused_client(&shard).await {
                     tracing::warn!(error = %error, "Failed to auto-open mini window after setting change");
                 }
             }
@@ -747,7 +740,7 @@ impl Shard for MiniWindowShard {
                     &event,
                     LcuManagerStateEvent::FocusChanged(change) if change.current.is_some()
                 ) {
-                    if let Err(error) = shard.auto_open_for_focused_client().await {
+                    if let Err(error) = MiniWindowShard::auto_open_for_focused_client(&shard).await {
                         tracing::warn!(error = %error, "Failed to auto-open mini window after LCU focus change");
                     }
                 }
