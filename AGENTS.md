@@ -42,6 +42,14 @@ This file provides guidance to Ai agents (Codex/claude code etc.) when working w
 - Read-only inspection is allowed before approval when needed to prepare an accurate plan.
 - This rule also applies to subagents.
 
+## Code Comments
+
+- For every newly added function, if the function contains a special design choice, non-obvious constraint, workaround,
+  architectural boundary decision, or important tradeoff, add an English comment immediately above the function
+  explaining why that design exists.
+- Do not add comments that merely restate obvious control flow or assignments. The comment should clarify intent,
+  constraints, or reasoning that would not be clear from the code itself.
+
 ## Design Reference
 
 This project takes [League Akari](https://github.com/Hanxven/LeagueAkari) as its design reference. When building UI:
