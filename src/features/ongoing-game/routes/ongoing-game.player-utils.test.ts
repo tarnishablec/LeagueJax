@@ -122,6 +122,19 @@ describe("resolveOwnOngoingTeamSide", () => {
     ).toBeNull();
   });
 
+  test("resolves a side for Hextech ARAM queues", () => {
+    expect(
+      resolveOwnOngoingTeamSide({
+        phase: "InGame",
+        teamMembers: [playerSlotOnTeam(1, 100), playerSlotOnTeam(2, 200)],
+        gameflowSession: null,
+        champSelectSession: null,
+        effectiveQueueId: 3140,
+        ownPuuid: "player-1",
+      }),
+    ).toBe("blue");
+  });
+
   test("falls back to champ-select local player cell id when puuid is hidden", () => {
     expect(
       resolveOwnOngoingTeamSide({

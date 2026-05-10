@@ -29,7 +29,7 @@ use super::types::{
 };
 
 const BOT_PUUID: &str = "BOT";
-const MULTI_TEAM_QUEUE_IDS: &[u64] = &[1700, 1710, 1720, 3140];
+const MULTI_TEAM_QUEUE_IDS: &[u64] = &[1700, 1710, 1720];
 const INFERRED_MULTI_TEAM_ID_OFFSET: u64 = 1000;
 const MULTI_TEAM_FALLBACK_GROUP_SIZE: usize = 2;
 const FIVE_V_FIVE_TEAM_SIZE: usize = 5;
@@ -1342,17 +1342,12 @@ fn build_ingame_roster_from_sources(
     let ally_side = infer_teambuilder_ally_side(&members, teambuilder, fallback_ally_side);
     append_preserved_members(&mut members, preserved, ally_side);
     merge_teambuilder_allies(&mut members, teambuilder, ally_side);
-    let fallback_selection_team = missing_player_champion_selection_team(
-        gameflow,
-        &members,
-        ally_side,
-        team_one_side,
-        team_two_side,
-    );
+    let selection_policy =
+        missing_player_champion_selection_policy(gameflow, ally_side, team_one_side, team_two_side);
     append_missing_player_champion_selections(
         &mut members,
         &gameflow.game_data.player_champion_selections,
-        fallback_selection_team,
+        selection_policy,
     );
 
     members
@@ -1439,9 +1434,9 @@ fn append_preserved_members(
 fn append_missing_player_champion_selections(
     members: &mut Vec<TeamMember>,
     selections: &[crate::shards::lcu::concepts::gameflow_session::PlayerChampionSelection],
-    fallback_team: u64,
+    policy: MissingChampionSelectionPolicy,
 ) {
-    for selection in selections {
+    for (selection_index, selection) in selections.iter().enumerate() {
         if is_bot(&selection.puuid) {
             continue;
         }
@@ -1450,20 +1445,29 @@ fn append_missing_player_champion_selections(
             continue;
         }
 
-        members.push(build_team_member_from_champion_selection(
-            selection,
-            fallback_team,
-        ));
+        let Some(team) = missing_player_champion_selection_team(selection_index, members, policy)
+        else {
+            continue;
+        };
+
+        members.push(build_team_member_from_champion_selection(selection, team));
     }
 }
 
-fn missing_player_champion_selection_team(
+#[derive(Clone, Copy)]
+struct MissingChampionSelectionPolicy {
+    ally_side: u64,
+    enemy_side: u64,
+    fallback_team: u64,
+    max_team_size: Option<usize>,
+}
+
+fn missing_player_champion_selection_policy(
     gameflow: &GameflowSessionData,
-    members: &[TeamMember],
     ally_side: u64,
     team_one_side: u64,
     team_two_side: u64,
-) -> u64 {
+) -> MissingChampionSelectionPolicy {
     let fallback_team = side_pair(ally_side)
         .map(|(_, enemy_side)| enemy_side)
         .unwrap_or_else(|| {
@@ -1473,16 +1477,43 @@ fn missing_player_champion_selection_team(
                 team_one_side
             }
         });
+    let enemy_side = opposing_side_for_ally(ally_side, team_one_side, team_two_side)
+        .or_else(|| side_pair(ally_side).map(|(_, enemy_side)| enemy_side))
+        .unwrap_or(fallback_team);
 
-    if is_five_vs_five_gameflow(gameflow)
-        && real_team_member_count(members, ally_side) >= FIVE_V_FIVE_TEAM_SIZE
-    {
-        return opposing_side_for_ally(ally_side, team_one_side, team_two_side)
-            .or_else(|| side_pair(ally_side).map(|(_, enemy_side)| enemy_side))
-            .unwrap_or(fallback_team);
+    MissingChampionSelectionPolicy {
+        ally_side,
+        enemy_side,
+        fallback_team,
+        max_team_size: if is_five_vs_five_gameflow(gameflow) {
+            Some(FIVE_V_FIVE_TEAM_SIZE)
+        } else {
+            None
+        },
+    }
+}
+
+fn missing_player_champion_selection_team(
+    selection_index: usize,
+    members: &[TeamMember],
+    policy: MissingChampionSelectionPolicy,
+) -> Option<u64> {
+    let Some(max_team_size) = policy.max_team_size else {
+        return Some(policy.fallback_team);
+    };
+    let preferred_team = if selection_index < max_team_size {
+        policy.ally_side
+    } else if selection_index < max_team_size * 2 {
+        policy.enemy_side
+    } else {
+        return None;
+    };
+
+    if real_team_member_count(members, preferred_team) >= max_team_size {
+        return None;
     }
 
-    fallback_team
+    Some(preferred_team)
 }
 
 fn is_five_vs_five_gameflow(gameflow: &GameflowSessionData) -> bool {
@@ -2017,6 +2048,59 @@ mod tests {
     }
 
     #[test]
+    fn five_v_five_ignores_extra_champion_selection_when_both_sides_are_full() {
+        let mut gameflow = GameflowSessionData {
+            phase: GameflowPhase::InProgress,
+            ..Default::default()
+        };
+        gameflow.game_data.queue.id = 2400;
+        gameflow.game_data.queue.maximum_participant_list_size = FIVE_V_FIVE_TEAM_SIZE as u64;
+        gameflow.game_data.team_one = (0..FIVE_V_FIVE_TEAM_SIZE)
+            .map(|index| gameflow_player(&format!("enemy-{index}"), 20 + index as u64))
+            .collect();
+        gameflow.game_data.team_two = (0..FIVE_V_FIVE_TEAM_SIZE)
+            .map(|index| gameflow_player(&format!("ally-{index}"), 10 + index as u64))
+            .collect();
+        gameflow.game_data.player_champion_selections = [
+            "ally-0",
+            "ally-1",
+            "ally-2",
+            "ally-3",
+            "ally-4",
+            "enemy-0",
+            "enemy-1",
+            "enemy-2",
+            "enemy-3",
+            "enemy-4",
+            "stale-extra-player",
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(index, puuid)| champion_selection(puuid, 30 + index as i64))
+        .collect();
+
+        let preserved = (0..FIVE_V_FIVE_TEAM_SIZE)
+            .map(|index| TeamMember {
+                puuid: format!("ally-{index}"),
+                summoner_id: 100 + index as i64,
+                team: 2,
+                ..Default::default()
+            })
+            .collect::<Vec<_>>();
+
+        let roster = build_ingame_roster_from_sources(&gameflow, &preserved, None);
+        let ally_count = roster.iter().filter(|member| member.team == 2).count();
+        let enemy_count = roster.iter().filter(|member| member.team == 1).count();
+
+        assert_eq!(roster.len(), FIVE_V_FIVE_TEAM_SIZE * 2);
+        assert_eq!(ally_count, FIVE_V_FIVE_TEAM_SIZE);
+        assert_eq!(enemy_count, FIVE_V_FIVE_TEAM_SIZE);
+        assert!(!roster
+            .iter()
+            .any(|member| member.puuid == "stale-extra-player"));
+    }
+
+    #[test]
     fn player_load_should_not_restart_active_states_for_existing_puuid() {
         assert!(!should_spawn_player_load(Some(
             OngoingGamePlayerLoadStatus::Loading,
@@ -2094,5 +2178,9 @@ mod tests {
             ]
         );
         assert_eq!(resolve_gameflow_team_for_player(420, true, 10, 0, 100), 100);
+        assert_eq!(
+            resolve_gameflow_team_for_player(3140, true, 10, 0, 100),
+            100
+        );
     }
 }

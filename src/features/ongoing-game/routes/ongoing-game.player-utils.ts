@@ -9,7 +9,6 @@ const MULTI_TEAM_QUEUE_IDS = new Set<number>([
   1700, // Arena 2v2v2v2
   1710, // Arena variants
   1720, // Arena variants
-  3140, // Hextech ARAM variants
 ]);
 
 function isMultiTeamQueueId(queueId: number | null): boolean {

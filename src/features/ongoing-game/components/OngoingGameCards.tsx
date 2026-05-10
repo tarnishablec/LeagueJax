@@ -7,6 +7,8 @@ import type { PlayerSquadAssignments } from "./player-card-squads.ts";
 import { SnapshotPlayerCard } from "./SnapshotPlayerCard.tsx";
 
 type TeamRowLayout = "standard" | "compact";
+const PLAYER_CARD_MIN_WIDTH_PX = 220;
+const TEAM_CARD_GAP_PX = 8;
 
 function getSlotKey(slot: PlayerSlot, index: number): string {
   if (slot.cellId > 0) {
@@ -48,7 +50,8 @@ export function TeamRow(props: {
 
   const visibleSlots = slots.filter((slot) => shouldRenderSlot(slot, showBots));
   const teamCols = Math.max(minimumColumns, visibleSlots.length, 1);
-  const teamMinWidth = teamCols * 188 + (teamCols - 1) * 8;
+  const teamMinWidth =
+    teamCols * PLAYER_CARD_MIN_WIDTH_PX + (teamCols - 1) * TEAM_CARD_GAP_PX;
   const noDataText = t("ongoingGame.noData", {
     defaultValue: "No player data yet",
   });
