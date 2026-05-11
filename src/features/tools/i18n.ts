@@ -15,6 +15,7 @@ export const toolsI18n: Resource = {
         lastRun: "Last run {{time}}",
         claimSelected: "Claim {{count}}",
         claimAll: "Claim all",
+        focusedClient: "Focused client:",
         noFocusedClient:
           "No focused client. Claiming only works when a ready client is focused.",
         empty: "No claimable items",
@@ -54,6 +55,7 @@ export const toolsI18n: Resource = {
         lastRun: "上次运行 {{time}}",
         claimSelected: "领取 {{count}} 项",
         claimAll: "领取全部",
+        focusedClient: "当前客户端：",
         noFocusedClient:
           "当前没有聚焦的客户端，领取功能只能在聚焦的客户端存在时工作。",
         empty: "无可领取条目",

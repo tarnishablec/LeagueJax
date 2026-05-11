@@ -88,23 +88,12 @@ export const actionButton = style({
   },
 });
 
-export const errorState = style({
+export const statusRow = style({
   minHeight: 34,
-  display: "grid",
+  display: "flex",
   alignItems: "center",
-  borderRadius: 7,
-  padding: "0 10px",
-  color: theme.color.error,
-  background: `color-mix(in oklch, ${theme.color.error} 12%, transparent)`,
-  outline: `1px solid color-mix(in oklch, ${theme.color.error} 26%, transparent)`,
-  outlineOffset: -1,
-  fontSize: "0.8125rem",
-});
-
-export const noticeState = style({
-  minHeight: 34,
-  display: "grid",
-  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
   borderRadius: 7,
   padding: "0 10px",
   color: theme.color.mutedForeground,
@@ -112,6 +101,25 @@ export const noticeState = style({
   outline: `1px solid ${theme.color.border}`,
   outlineOffset: -1,
   fontSize: "0.8125rem",
+  selectors: {
+    '&[data-tone="error"]': {
+      color: theme.color.error,
+      background: `color-mix(in oklch, ${theme.color.error} 12%, transparent)`,
+      outlineColor: `color-mix(in oklch, ${theme.color.error} 26%, transparent)`,
+    },
+  },
+});
+
+export const statusLabel = style({
+  flex: "0 0 auto",
+  color: theme.color.mutedForeground,
+});
+
+export const statusText = style({
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const sections = style({
