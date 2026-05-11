@@ -407,6 +407,12 @@ export const emptyState = style({
   borderTop: `1px solid ${theme.color.border}`,
 });
 
+export const emptyPlaceholder = style({
+  minHeight: 0,
+  height: "100%",
+  borderTop: `1px solid ${theme.color.border}`,
+});
+
 export const activitySection = style([section]);
 
 export const panelBusyOverlay = style({

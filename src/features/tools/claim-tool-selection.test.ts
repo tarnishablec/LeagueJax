@@ -5,6 +5,9 @@ import type {
 } from "@/bindings/claim_tool";
 import {
   addHiddenClaimedIds,
+  applyBucketSelection,
+  bucketHasClaimableItems,
+  bucketSelectionCheckedState,
   createEmptyClaimBucketIds,
   filterClaimablesByHiddenIds,
   pruneHiddenClaimedIds,
@@ -22,6 +25,14 @@ function claimableItem(id: string): ClaimToolItemDto {
     status: "claimable",
     reason: null,
     children: [],
+  };
+}
+
+function skippedItem(id: string): ClaimToolItemDto {
+  return {
+    ...claimableItem(id),
+    status: "skipped",
+    reason: "Multiple choices",
   };
 }
 
@@ -75,5 +86,50 @@ describe("claim tool selection helpers", () => {
     );
 
     expect(visible.rewards.map((item) => item.id)).toEqual(["reward-1"]);
+  });
+
+  test("reports bucket checkbox state from claimable item selection", () => {
+    const items = [
+      claimableItem("reward-1"),
+      claimableItem("reward-2"),
+      skippedItem("reward-skipped"),
+    ];
+
+    expect(bucketHasClaimableItems(items)).toBe(true);
+    expect(bucketSelectionCheckedState(items, new Set())).toBe(false);
+    expect(bucketSelectionCheckedState(items, new Set(["reward-1"]))).toBe(
+      "indeterminate",
+    );
+    expect(
+      bucketSelectionCheckedState(items, new Set(["reward-1", "reward-2"])),
+    ).toBe(true);
+    expect(bucketHasClaimableItems([skippedItem("reward-skipped")])).toBe(
+      false,
+    );
+  });
+
+  test("selects and clears only claimable ids in the target bucket", () => {
+    const selection = createEmptyClaimBucketIds();
+    selection.missions.add("mission-1");
+
+    const selected = applyBucketSelection(
+      selection,
+      "rewards",
+      [claimableItem("reward-1"), skippedItem("reward-skipped")],
+      true,
+    );
+
+    expect([...selected.rewards]).toEqual(["reward-1"]);
+    expect([...selected.missions]).toEqual(["mission-1"]);
+
+    const cleared = applyBucketSelection(
+      selected,
+      "rewards",
+      [claimableItem("reward-1"), skippedItem("reward-skipped")],
+      false,
+    );
+
+    expect([...cleared.rewards]).toEqual([]);
+    expect([...cleared.missions]).toEqual(["mission-1"]);
   });
 });
