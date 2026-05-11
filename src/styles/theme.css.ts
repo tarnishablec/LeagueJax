@@ -48,7 +48,7 @@ createGlobalTheme(":root", theme, {
     mutedForeground: "rgba(0, 0, 0, 0.875)",
     border: "rgba(152, 152, 152, 0.2)",
     popoverBorder: theme.color.border,
-    popupBackground: `rgb(255 255 255 / 0.82)`,
+    popupBackground: `rgb(255 255 255 / 0.96)`,
   },
 });
 
@@ -70,6 +70,6 @@ createGlobalTheme(":root.dark", theme, {
     mutedForeground: "rgba(255, 255, 255, 0.5)",
     border: `rgb(255 255 255 / 0.05)`,
     popoverBorder: "rgba(255, 255, 255, 0.12)",
-    popupBackground: `rgb(25 26 28 / 0.95)`,
+    popupBackground: `rgb(25 26 28 / 0.98)`,
   },
 });

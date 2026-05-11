@@ -1,6 +1,12 @@
-import { style } from "@vanilla-extract/css";
+import { keyframes, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import { theme } from "@/styles/theme.css";
+
+const spin = keyframes({
+  to: {
+    transform: "rotate(360deg)",
+  },
+});
 
 export const root = style({
   display: "grid",
@@ -141,6 +147,7 @@ export const sections = style({
 export const section = style({
   display: "grid",
   gridTemplateRows: "auto 1fr",
+  position: "relative",
   minWidth: 0,
   minHeight: 0,
   height: "100%",
@@ -149,6 +156,11 @@ export const section = style({
   background: `color-mix(in oklch, ${theme.color.background} 82%, ${theme.color.surface})`,
   outline: `1px solid ${theme.color.border}`,
   outlineOffset: -1,
+  selectors: {
+    '&[data-busy="true"]': {
+      cursor: "progress",
+    },
+  },
 });
 
 export const sectionHeader = style({
@@ -186,12 +198,13 @@ export const sectionCount = style({
 
 export const itemList = style({
   display: "grid",
-  alignContent: "stretch",
+  alignContent: "start",
 });
 
 export const itemRow = style({
   display: "grid",
-  gridTemplateColumns: "20px 32px minmax(0, 1fr) auto",
+  gridTemplateColumns: "20px 32px 1fr auto",
+  width: "100%",
   alignItems: "center",
   justifySelf: "start",
   gap: 8,
@@ -387,6 +400,7 @@ export const statusPill = recipe({
 export const emptyState = style({
   display: "grid",
   placeItems: "center",
+  minHeight: 0,
   height: "100%",
   color: theme.color.mutedForeground,
   fontSize: "0.875rem",
@@ -395,9 +409,24 @@ export const emptyState = style({
 
 export const activitySection = style([section]);
 
+export const panelBusyOverlay = style({
+  position: "absolute",
+  inset: "38px 0 0",
+  zIndex: 1,
+  display: "grid",
+  placeItems: "center",
+  background: `color-mix(in oklch, ${theme.color.background} 68%, transparent)`,
+  color: theme.color.primary,
+  pointerEvents: "auto",
+});
+
+export const busyIcon = style({
+  animation: `${spin} 900ms linear infinite`,
+});
+
 export const activityList = style({
   display: "grid",
-  alignContent: "stretch",
+  alignContent: "start",
 });
 
 export const activityRow = style({
@@ -405,7 +434,8 @@ export const activityRow = style({
   gridTemplateColumns: "4.5rem 5rem minmax(0, 1fr)",
   gap: 8,
   alignItems: "center",
-  minHeight: 34,
+  justifySelf: "start",
+  height: "min-content",
   padding: "6px 10px",
   borderTop: `1px solid ${theme.color.border}`,
   color: theme.color.foreground,

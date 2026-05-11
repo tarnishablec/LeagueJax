@@ -7,11 +7,20 @@ const DEFAULT_NOTIFICATION_LIMIT = 100;
 export class NotificationsStore {
   private readonly subscribers = new Set<NotificationsSubscriber>();
   private notifications: AppNotification[] = [];
+  private revision = 0;
 
   public constructor(private readonly limit = DEFAULT_NOTIFICATION_LIMIT) {}
 
   public list(): AppNotification[] {
     return [...this.notifications];
+  }
+
+  public version(): number {
+    return this.revision;
+  }
+
+  public unreadCount(): number {
+    return this.notifications.filter((item) => item.readAt == null).length;
   }
 
   public subscribe(subscriber: NotificationsSubscriber): () => void {
@@ -40,6 +49,7 @@ export class NotificationsStore {
       readAt: existing?.readAt,
       system: draft.system ?? "respectUserSetting",
       systemSettingId: draft.systemSettingId,
+      onClick: draft.onClick,
     };
 
     this.notifications =
@@ -70,6 +80,27 @@ export class NotificationsStore {
     return updated;
   }
 
+  public async activate(id: string, readAt = Date.now()): Promise<boolean> {
+    const existing = this.notifications.find((item) => item.id === id);
+    if (!existing) {
+      return false;
+    }
+
+    this.markRead(id, readAt);
+    const notification =
+      this.notifications.find((item) => item.id === id) ?? existing;
+    if (!notification.onClick) {
+      return true;
+    }
+
+    try {
+      await notification.onClick(notification);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   public clear(): void {
     if (this.notifications.length === 0) {
       return;
@@ -79,6 +110,7 @@ export class NotificationsStore {
   }
 
   private notify(): void {
+    this.revision += 1;
     for (const subscriber of this.subscribers) {
       subscriber();
     }

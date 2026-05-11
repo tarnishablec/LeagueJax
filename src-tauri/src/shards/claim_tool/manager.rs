@@ -27,6 +27,12 @@ struct ClaimToolState {
     recent_activity: VecDeque<ClaimToolActivityEntryDto>,
 }
 
+impl ClaimToolState {
+    fn clear_recent_activity(&mut self) {
+        self.recent_activity.clear();
+    }
+}
+
 #[derive(Default)]
 struct ClaimCounters {
     claimed: u32,
@@ -107,6 +113,12 @@ impl ClaimToolManager {
         request: ClaimToolClaimRequestDto,
     ) -> Result<ClaimToolRunResultDto, AppError> {
         self.claim_matching(Some(request)).await
+    }
+
+    pub fn clear_recent_activity(&self) {
+        self.mutate_state(|state| {
+            state.clear_recent_activity();
+        });
     }
 
     async fn claim_matching(
@@ -469,4 +481,36 @@ fn now_ms() -> i64 {
         .duration_since(UNIX_EPOCH)
         .map(|duration| i64::try_from(duration.as_millis()).unwrap_or(i64::MAX))
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn activity_entry(message: &str) -> ClaimToolActivityEntryDto {
+        ClaimToolActivityEntryDto {
+            timestamp_ms: 1,
+            level: ClaimToolActivityLevel::Info,
+            category: Some(ClaimToolCategory::Reward),
+            action: "claim".to_string(),
+            message: message.to_string(),
+        }
+    }
+
+    #[test]
+    fn clear_recent_activity_preserves_run_state() {
+        let mut state = ClaimToolState {
+            is_running: true,
+            last_run_at_ms: Some(123),
+            last_error: Some("previous error".to_string()),
+            recent_activity: VecDeque::from([activity_entry("one"), activity_entry("two")]),
+        };
+
+        state.clear_recent_activity();
+
+        assert!(state.recent_activity.is_empty());
+        assert!(state.is_running);
+        assert_eq!(state.last_run_at_ms, Some(123));
+        assert_eq!(state.last_error.as_deref(), Some("previous error"));
+    }
 }
