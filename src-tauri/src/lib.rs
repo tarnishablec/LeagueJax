@@ -17,6 +17,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
 
 use crate::commands::auto_accept::*;
+use crate::commands::claim_tool::*;
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
@@ -247,6 +248,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             auto_accept_accept_ready_check,
+            claim_tool_get_snapshot,
+            claim_tool_refresh,
+            claim_tool_claim_all,
+            claim_tool_claim_selected,
             lcu_update_focus,
             get_current_summoner,
             get_current_sgp_server_id,
@@ -348,6 +353,7 @@ pub fn run() {
                 .register(Arc::new(shards::replay::ReplayShard::new()))
                 .register(Arc::new(shards::auto_select::AutoSelectShard::new()))
                 .register(Arc::new(shards::auto_accept::AutoAcceptShard::new()))
+                .register(Arc::new(shards::claim_tool::ClaimToolShard::new()))
                 .register(Arc::new(shards::auto_reply::AutoReplyShard::new()))
                 .register(Arc::new(shards::ongoing_game::OngoingGameShard::new()))
                 .register(Arc::new(shards::saved_player::SavedPlayerShard::new()))
