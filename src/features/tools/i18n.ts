@@ -10,7 +10,7 @@ export const toolsI18n: Resource = {
         claim: "Claim Tool",
       },
       claimTool: {
-        autoClaimText: "Auto claim",
+        claimNotificationText: "Claim notifications",
         idle: "Idle",
         lastRun: "Last run {{time}}",
         claimSelected: "Claim {{count}}",
@@ -34,9 +34,15 @@ export const toolsI18n: Resource = {
           empty: "No activity",
           system: "System",
         },
-        autoClaim: {
-          label: "Auto claim",
-          hint: "ClaimTool scans focused LCU client and skips multi-choice rewards.",
+        claimNotification: {
+          label: "Claim notifications",
+          hint: "Notify when the focused LCU client has rewards that can be claimed.",
+        },
+        notifications: {
+          available: {
+            title: "Claimable rewards available",
+            body: "Claim Tool has {{count}} claimable items.",
+          },
         },
       },
     },
@@ -50,7 +56,7 @@ export const toolsI18n: Resource = {
         claim: "领取工具",
       },
       claimTool: {
-        autoClaimText: "自动领取",
+        claimNotificationText: "领取通知",
         idle: "空闲",
         lastRun: "上次运行 {{time}}",
         claimSelected: "领取 {{count}} 项",
@@ -74,9 +80,15 @@ export const toolsI18n: Resource = {
           empty: "暂无活动",
           system: "系统",
         },
-        autoClaim: {
-          label: "自动领取",
-          hint: "ClaimTool 扫描当前 LCU 客户端，并跳过多选奖励。",
+        claimNotification: {
+          label: "领取通知",
+          hint: "当前聚焦的 LCU 客户端存在可领取奖励时发送通知。",
+        },
+        notifications: {
+          available: {
+            title: "有可领取奖励",
+            body: "领取工具中有 {{count}} 个可领取条目。",
+          },
         },
       },
     },

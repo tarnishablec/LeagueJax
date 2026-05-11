@@ -55,7 +55,7 @@ impl ClaimToolManager {
     pub fn snapshot(&self) -> ClaimToolSnapshotDto {
         let state = self.state.lock().ok();
         ClaimToolSnapshotDto {
-            auto_claim_enabled: self.settings.auto_claim_enabled(),
+            claim_notification_enabled: self.settings.claim_notification_enabled(),
             is_running: state.as_ref().is_some_and(|state| state.is_running),
             last_run_at_ms: state.as_ref().and_then(|state| state.last_run_at_ms),
             last_error: state

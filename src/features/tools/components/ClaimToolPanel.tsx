@@ -23,6 +23,7 @@ import useSWR from "swr";
 import type {
   ClaimToolActivityEntryDto,
   ClaimToolCategory,
+  ClaimToolClaimablesAvailableEventDto,
   ClaimToolClaimablesDto,
   ClaimToolClaimRequestDto,
   ClaimToolItemDto,
@@ -34,14 +35,14 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { SummonerID } from "@/components/SummonerID";
 import { SettingsToggle } from "@/components/settings-ui";
 import { useSettings } from "@/features/settings/context";
-import type { SettingId } from "@/features/settings/types";
 import { toErrorMessage } from "@/infra/errors";
 import { selectIsFocused, useLcuStore } from "@/stores/lcu";
+import {
+  CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT,
+  CLAIM_TOOL_NOTIFICATION_SETTING_ID,
+} from "../claim-tool-notifications";
 import * as s from "./ClaimToolPanel.css";
 
-const AUTO_CLAIM_SETTING_ID =
-  "tools.claimTool.autoClaimEnabled" as const satisfies SettingId;
-const CLAIM_TOOL_RUN_COMPLETED_EVENT = "claim-tool-run-completed";
 const CLAIM_TOOL_SNAPSHOT_REFRESH_INTERVAL_MS = 5000;
 
 type ClaimBucket = "rewards" | "missions" | "eventHub";
@@ -71,12 +72,13 @@ const sectionConfig = [
   },
 ] as const;
 
-function useAutoClaimEnabled(): boolean {
+function useClaimNotificationEnabled(): boolean {
   const settings = useSettings();
   return useSyncExternalStore(
-    (onStoreChange) => settings.subscribe(AUTO_CLAIM_SETTING_ID, onStoreChange),
-    () => settings.get<boolean>(AUTO_CLAIM_SETTING_ID) ?? false,
-    () => settings.get<boolean>(AUTO_CLAIM_SETTING_ID) ?? false,
+    (onStoreChange) =>
+      settings.subscribe(CLAIM_TOOL_NOTIFICATION_SETTING_ID, onStoreChange),
+    () => settings.get<boolean>(CLAIM_TOOL_NOTIFICATION_SETTING_ID) ?? false,
+    () => settings.get<boolean>(CLAIM_TOOL_NOTIFICATION_SETTING_ID) ?? false,
   );
 }
 
@@ -377,7 +379,7 @@ export function ClaimToolPanel() {
   const settings = useSettings();
   const focusedClient = useLcuStore(selectIsFocused);
   const hasFocusedClient = focusedClient !== undefined;
-  const autoClaimEnabled = useAutoClaimEnabled();
+  const claimNotificationEnabled = useClaimNotificationEnabled();
   const [selection, setSelection] = useState<SelectionState>(() =>
     emptySelection(),
   );
@@ -442,26 +444,26 @@ export function ClaimToolPanel() {
     await snapshot.mutate();
   };
 
-  const handleRunCompleted = useEffectEvent((result: ClaimToolRunResultDto) => {
-    void snapshot.mutate(result.snapshot, { revalidate: false });
-    if (hasFocusedClient) {
-      void claimables.mutate();
-    }
-  });
+  const handleClaimablesAvailable = useEffectEvent(
+    (payload: ClaimToolClaimablesAvailableEventDto) => {
+      void snapshot.mutate(payload.snapshot, { revalidate: false });
+      void claimables.mutate(payload.claimables, { revalidate: false });
+    },
+  );
 
   useEffect(() => {
     let cancelled = false;
     let unlisten: UnlistenFn | null = null;
 
     const setup = async () => {
-      unlisten = await listen<ClaimToolRunResultDto>(
-        CLAIM_TOOL_RUN_COMPLETED_EVENT,
+      unlisten = await listen<ClaimToolClaimablesAvailableEventDto>(
+        CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT,
         (event) => {
           if (cancelled) {
             return;
           }
 
-          handleRunCompleted(event.payload);
+          handleClaimablesAvailable(event.payload);
         },
       );
     };
@@ -540,13 +542,13 @@ export function ClaimToolPanel() {
         </div>
 
         <div className={s.actions}>
-          <div className={s.autoClaimControl}>
-            <span>{t("tools.claimTool.autoClaimText")}</span>
+          <div className={s.notificationControl}>
+            <span>{t("tools.claimTool.claimNotificationText")}</span>
             <SettingsToggle
-              ariaLabel="Toggle automatic reward claim"
-              checked={autoClaimEnabled}
+              ariaLabel="Toggle claim notifications"
+              checked={claimNotificationEnabled}
               onCheckedChange={(checked) => {
-                settings.set(AUTO_CLAIM_SETTING_ID, checked);
+                settings.set(CLAIM_TOOL_NOTIFICATION_SETTING_ID, checked);
                 void snapshot.mutate();
               }}
             />

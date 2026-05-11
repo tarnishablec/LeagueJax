@@ -43,7 +43,7 @@ export const actions = style({
   flexWrap: "wrap",
 });
 
-export const autoClaimControl = style({
+export const notificationControl = style({
   display: "grid",
   gridAutoFlow: "column",
   alignItems: "center",

@@ -6,9 +6,10 @@ use crate::shards::lcu::concepts::claim::{
     LcuMissionReward, LcuRewardGrant,
 };
 
-pub const CLAIM_TOOL_AUTO_CLAIM_SETTING_ID: &str = "tools.claimTool.autoClaimEnabled";
-pub const CLAIM_TOOL_AUTO_CLAIM_DEFAULT: bool = false;
-pub const CLAIM_TOOL_AUTO_SCAN_INTERVAL_SECONDS: u64 = 15;
+pub const CLAIM_TOOL_CLAIM_NOTIFICATION_SETTING_ID: &str =
+    "tools.claimTool.claimNotificationEnabled";
+pub const CLAIM_TOOL_CLAIM_NOTIFICATION_DEFAULT: bool = false;
+pub const CLAIM_TOOL_NOTIFICATION_SCAN_INTERVAL_SECONDS: u64 = 15;
 pub const CLAIM_TOOL_RECENT_ACTIVITY_LIMIT: usize = 40;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
@@ -74,6 +75,38 @@ pub struct ClaimToolClaimablesDto {
     pub refreshed_at_ms: i64,
 }
 
+pub fn claimables_claimable_count(claimables: &ClaimToolClaimablesDto) -> usize {
+    claimables
+        .rewards
+        .iter()
+        .chain(claimables.missions.iter())
+        .chain(claimables.event_hub.iter())
+        .filter(|item| item.status == ClaimToolItemStatus::Claimable)
+        .count()
+}
+
+// The fingerprint only includes actionable items so skipped multi-choice rewards do not spam notifications.
+pub fn claimables_notification_fingerprint(claimables: &ClaimToolClaimablesDto) -> Option<String> {
+    let mut keys = Vec::new();
+    push_claimable_keys(&mut keys, "reward", &claimables.rewards);
+    push_claimable_keys(&mut keys, "mission", &claimables.missions);
+    push_claimable_keys(&mut keys, "eventHub", &claimables.event_hub);
+    if keys.is_empty() {
+        return None;
+    }
+    keys.sort();
+    Some(keys.join("|"))
+}
+
+fn push_claimable_keys(keys: &mut Vec<String>, category: &str, items: &[ClaimToolItemDto]) {
+    keys.extend(
+        items
+            .iter()
+            .filter(|item| item.status == ClaimToolItemStatus::Claimable)
+            .map(|item| format!("{category}:{}", item.id)),
+    );
+}
+
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export, export_to = "claim_tool.ts")]
 #[serde(rename_all = "camelCase")]
@@ -89,11 +122,21 @@ pub struct ClaimToolActivityEntryDto {
 #[ts(export, export_to = "claim_tool.ts")]
 #[serde(rename_all = "camelCase")]
 pub struct ClaimToolSnapshotDto {
-    pub auto_claim_enabled: bool,
+    pub claim_notification_enabled: bool,
     pub is_running: bool,
     pub last_run_at_ms: Option<i64>,
     pub last_error: Option<String>,
     pub recent_activity: Vec<ClaimToolActivityEntryDto>,
+}
+
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "claim_tool.ts")]
+#[serde(rename_all = "camelCase")]
+pub struct ClaimToolClaimablesAvailableEventDto {
+    pub snapshot: ClaimToolSnapshotDto,
+    pub claimables: ClaimToolClaimablesDto,
+    pub claimable_count: u32,
+    pub fingerprint: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, TS)]
@@ -438,8 +481,10 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        resolve_event_hub_claim, resolve_mission_claim, resolve_reward_grant_claim,
-        ClaimResolution, EventHubClaim, MissionClaim, RewardGrantClaim,
+        claimables_claimable_count, claimables_notification_fingerprint, resolve_event_hub_claim,
+        resolve_mission_claim, resolve_reward_grant_claim, ClaimResolution, ClaimToolCategory,
+        ClaimToolClaimablesDto, ClaimToolItemDto, ClaimToolItemStatus, EventHubClaim, MissionClaim,
+        RewardGrantClaim,
     };
     use crate::shards::lcu::concepts::claim::{
         LcuEventHubEvent, LcuEventHubRewardTrackItem, LcuMission, LcuRewardGrant,
@@ -499,8 +544,27 @@ mod tests {
         .unwrap_or_default()
     }
 
+    fn claim_tool_item(
+        category: ClaimToolCategory,
+        id: &str,
+        status: ClaimToolItemStatus,
+    ) -> ClaimToolItemDto {
+        ClaimToolItemDto {
+            id: id.to_string(),
+            category,
+            title: id.to_string(),
+            subtitle: None,
+            icon_url: None,
+            quantity: None,
+            choice_count: 1,
+            status,
+            reason: None,
+            children: Vec::new(),
+        }
+    }
+
     #[test]
-    fn single_reward_grant_is_auto_claimable() {
+    fn single_reward_grant_is_claimable() {
         let grant = reward_grant(json!([
             {
                 "id": "reward-1",
@@ -541,7 +605,7 @@ mod tests {
     }
 
     #[test]
-    fn single_reward_mission_is_auto_claimable() {
+    fn single_reward_mission_is_claimable() {
         let mission = mission(json!([
             {
                 "rewardGroup": "mission-group-1",
@@ -574,7 +638,7 @@ mod tests {
     }
 
     #[test]
-    fn event_with_single_unselected_reward_is_auto_claimable() {
+    fn event_with_single_unselected_reward_is_claimable() {
         let event = event(1);
         let track = track_item(json!([
             {
@@ -606,5 +670,62 @@ mod tests {
         let result = resolve_event_hub_claim(&event, &[track], &[]);
 
         assert!(matches!(result, ClaimResolution::Skipped(_)));
+    }
+
+    #[test]
+    fn claimables_notification_fingerprint_ignores_skipped_items_and_order() {
+        let claimables = ClaimToolClaimablesDto {
+            rewards: vec![
+                claim_tool_item(
+                    ClaimToolCategory::Reward,
+                    "reward-2",
+                    ClaimToolItemStatus::Claimable,
+                ),
+                claim_tool_item(
+                    ClaimToolCategory::Reward,
+                    "reward-skipped",
+                    ClaimToolItemStatus::Skipped,
+                ),
+                claim_tool_item(
+                    ClaimToolCategory::Reward,
+                    "reward-1",
+                    ClaimToolItemStatus::Claimable,
+                ),
+            ],
+            missions: vec![claim_tool_item(
+                ClaimToolCategory::Mission,
+                "mission-1",
+                ClaimToolItemStatus::Claimable,
+            )],
+            event_hub: vec![claim_tool_item(
+                ClaimToolCategory::EventHub,
+                "event-1",
+                ClaimToolItemStatus::Claimable,
+            )],
+            refreshed_at_ms: 100,
+        };
+
+        assert_eq!(claimables_claimable_count(&claimables), 4);
+        assert_eq!(
+            claimables_notification_fingerprint(&claimables),
+            Some("eventHub:event-1|mission:mission-1|reward:reward-1|reward:reward-2".to_string())
+        );
+    }
+
+    #[test]
+    fn claimables_notification_fingerprint_is_none_without_claimable_items() {
+        let claimables = ClaimToolClaimablesDto {
+            rewards: vec![claim_tool_item(
+                ClaimToolCategory::Reward,
+                "reward-skipped",
+                ClaimToolItemStatus::Skipped,
+            )],
+            missions: Vec::new(),
+            event_hub: Vec::new(),
+            refreshed_at_ms: 100,
+        };
+
+        assert_eq!(claimables_claimable_count(&claimables), 0);
+        assert_eq!(claimables_notification_fingerprint(&claimables), None);
     }
 }
