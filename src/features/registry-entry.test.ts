@@ -12,6 +12,7 @@ describe("window-specific web shard registries", () => {
       SHARD_IDS.SETTINGS,
       SHARD_IDS.WINDOW_EFFECT,
       SHARD_IDS.I18N,
+      SHARD_IDS.NOTIFICATIONS,
       SHARD_IDS.UPDATER,
       SHARD_IDS.SHELL,
       SHARD_IDS.STATIC_CACHE,

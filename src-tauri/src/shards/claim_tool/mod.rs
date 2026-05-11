@@ -22,24 +22,25 @@ use crate::shards::tauri_host::TauriHost;
 
 pub use self::manager::ClaimToolManager;
 use self::types::{
-    CLAIM_TOOL_AUTO_CLAIM_DEFAULT, CLAIM_TOOL_AUTO_CLAIM_SETTING_ID,
-    CLAIM_TOOL_AUTO_SCAN_INTERVAL_SECONDS,
+    claimables_claimable_count, claimables_notification_fingerprint,
+    ClaimToolClaimablesAvailableEventDto, CLAIM_TOOL_CLAIM_NOTIFICATION_DEFAULT,
+    CLAIM_TOOL_CLAIM_NOTIFICATION_SETTING_ID, CLAIM_TOOL_NOTIFICATION_SCAN_INTERVAL_SECONDS,
 };
 
-const CLAIM_TOOL_RUN_COMPLETED_EVENT: &str = "claim-tool-run-completed";
+const CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT: &str = "claim-tool-claimables-available";
 
 #[derive(Clone)]
 pub(super) struct ClaimToolSettings {
-    auto_claim_enabled: SettingHandle,
+    claim_notification_enabled: SettingHandle,
 }
 
 impl ClaimToolSettings {
-    pub(super) fn auto_claim_enabled(&self) -> bool {
-        self.auto_claim_enabled
+    pub(super) fn claim_notification_enabled(&self) -> bool {
+        self.claim_notification_enabled
             .get_value()
             .ok()
             .and_then(|value| value.as_bool())
-            .unwrap_or(CLAIM_TOOL_AUTO_CLAIM_DEFAULT)
+            .unwrap_or(CLAIM_TOOL_CLAIM_NOTIFICATION_DEFAULT)
     }
 }
 
@@ -62,19 +63,21 @@ impl ClaimToolShard {
         &self,
         settings: &Arc<SettingsShard>,
     ) -> Result<ClaimToolSettings, AppError> {
-        let auto_claim_enabled = settings.register_definition(SettingDefinitionDto {
-            id: CLAIM_TOOL_AUTO_CLAIM_SETTING_ID.to_string(),
-            label_key: "tools.claimTool.autoClaim.label".to_string(),
-            hint_key: Some("tools.claimTool.autoClaim.hint".to_string()),
+        let claim_notification_enabled = settings.register_definition(SettingDefinitionDto {
+            id: CLAIM_TOOL_CLAIM_NOTIFICATION_SETTING_ID.to_string(),
+            label_key: "tools.claimTool.claimNotification.label".to_string(),
+            hint_key: Some("tools.claimTool.claimNotification.hint".to_string()),
             scope: SettingScopeDto::Backend,
             control: Some(SettingControlDto::Toggle),
-            default_value: Value::Bool(CLAIM_TOOL_AUTO_CLAIM_DEFAULT),
+            default_value: Value::Bool(CLAIM_TOOL_CLAIM_NOTIFICATION_DEFAULT),
             order: Some(10),
             visible: Some(false),
             options: None,
         })?;
 
-        Ok(ClaimToolSettings { auto_claim_enabled })
+        Ok(ClaimToolSettings {
+            claim_notification_enabled,
+        })
     }
 
     fn setup_runtime(
@@ -89,7 +92,7 @@ impl ClaimToolShard {
 
         let app = tauri_host.app.clone();
         tauri_host.spawn(async move {
-            run_auto_claim_loop(manager, trigger_rx, app).await;
+            run_claim_notification_loop(manager, trigger_rx, app).await;
         });
     }
 }
@@ -139,13 +142,16 @@ fn subscribe_lcu_triggers(lcu_manager: Arc<LcuManager>, trigger_tx: mpsc::Sender
     });
 }
 
-async fn run_auto_claim_loop(
+async fn run_claim_notification_loop(
     manager: ClaimToolManager,
     mut trigger_rx: mpsc::Receiver<()>,
     app: tauri::AppHandle,
 ) {
-    let mut ticker = interval(Duration::from_secs(CLAIM_TOOL_AUTO_SCAN_INTERVAL_SECONDS));
+    let mut ticker = interval(Duration::from_secs(
+        CLAIM_TOOL_NOTIFICATION_SCAN_INTERVAL_SECONDS,
+    ));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    let mut last_fingerprint: Option<String> = None;
 
     loop {
         tokio::select! {
@@ -159,30 +165,55 @@ async fn run_auto_claim_loop(
             }
         }
 
-        if !manager.snapshot().auto_claim_enabled {
+        if !manager.snapshot().claim_notification_enabled {
+            last_fingerprint = None;
             continue;
         }
 
         if !manager.has_focused_session().await {
+            last_fingerprint = None;
             continue;
         }
 
-        match manager.claim_all().await {
-            Ok(result) => {
-                if let Err(error) = app.emit(CLAIM_TOOL_RUN_COMPLETED_EVENT, result) {
+        match manager.get_claimables().await {
+            Ok(claimables) => {
+                let Some(fingerprint) = claimables_notification_fingerprint(&claimables) else {
+                    last_fingerprint = None;
+                    continue;
+                };
+                if last_fingerprint.as_deref() == Some(fingerprint.as_str()) {
+                    continue;
+                }
+
+                let claimable_count =
+                    claimables_claimable_count(&claimables).min(u32::MAX as usize) as u32;
+                let event = ClaimToolClaimablesAvailableEventDto {
+                    snapshot: manager.snapshot(),
+                    claimables,
+                    claimable_count,
+                    fingerprint: fingerprint.clone(),
+                };
+
+                if let Err(error) = app.emit(CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT, event) {
                     tracing::warn!(
                         channel = "claim-tool",
                         error = %error,
-                        "Failed to emit automatic claim completion"
+                        "Failed to emit claimables notification event"
                     );
                 }
+                tracing::info!(
+                    channel = "claim-tool",
+                    claimable_count,
+                    "Claimable items available"
+                );
+                last_fingerprint = Some(fingerprint);
             }
             Err(error) => {
                 if !matches!(error, AppError::LcuNotConnected) {
                     tracing::warn!(
                         channel = "claim-tool",
                         error = %error,
-                        "Automatic claim run failed"
+                        "Claim notification scan failed"
                     );
                 }
             }

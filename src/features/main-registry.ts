@@ -3,6 +3,7 @@ import { AutomationShard } from "./automation/manifest";
 import { HistoryShard } from "./history/manifest";
 import { I18nShard } from "./i18n/manifest";
 import { MiniShard } from "./mini/manifest";
+import { NotificationsShard } from "./notifications/manifest";
 import { OngoingGameShard } from "./ongoing-game/manifest";
 import { initializeWebShards } from "./registry";
 import { ReplayShard } from "./replay/manifest";
@@ -19,6 +20,7 @@ export function createMainWebShards(): WebShard[] {
     new SettingsShard(),
     new WindowEffectShard(),
     new I18nShard(),
+    new NotificationsShard(),
     new UpdaterFeature(),
     new ShellShard(),
     new StaticCacheShard(),

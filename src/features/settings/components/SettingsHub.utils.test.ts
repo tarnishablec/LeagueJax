@@ -79,7 +79,7 @@ const customSection = (
 describe("buildSettingsPages", () => {
   test("does not create page or section from invisible-only settings", () => {
     const pages = buildSettingsPages(
-      [setting("tools.claimTool.autoClaimEnabled", false)],
+      [setting("tools.claimTool.claimNotificationEnabled", false)],
       [],
       [],
     );
