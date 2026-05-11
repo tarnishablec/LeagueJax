@@ -193,8 +193,9 @@ export const itemRow = style({
   display: "grid",
   gridTemplateColumns: "20px 32px minmax(0, 1fr) auto",
   alignItems: "center",
+  justifySelf: "start",
   gap: 8,
-  minHeight: 58,
+  height: "min-content",
   padding: "8px 10px",
   borderTop: `1px solid ${theme.color.border}`,
   selectors: {
