@@ -171,6 +171,7 @@ function ClaimItemRow({
 }) {
   const { t } = useTranslation();
   const claimable = item.status === "claimable";
+  const hasMeta = Boolean(item.subtitle || item.choiceCount > 1 || item.reason);
 
   return (
     <div className={s.itemRow} data-status={item.status}>
@@ -200,19 +201,21 @@ function ClaimItemRow({
             <span className={s.quantity}>x{item.quantity}</span>
           ) : null}
         </div>
-        <div className={s.itemMeta}>
-          {item.subtitle ? (
-            <span className={s.itemMetaText}>{item.subtitle}</span>
-          ) : null}
-          {item.choiceCount > 1 ? (
-            <span className={s.itemMetaText}>
-              {t("tools.claimTool.choiceCount", { count: item.choiceCount })}
-            </span>
-          ) : null}
-          {item.reason ? (
-            <span className={s.itemMetaText}>{item.reason}</span>
-          ) : null}
-        </div>
+        {hasMeta ? (
+          <div className={s.itemMeta}>
+            {item.subtitle ? (
+              <span className={s.itemMetaText}>{item.subtitle}</span>
+            ) : null}
+            {item.choiceCount > 1 ? (
+              <span className={s.itemMetaText}>
+                {t("tools.claimTool.choiceCount", { count: item.choiceCount })}
+              </span>
+            ) : null}
+            {item.reason ? (
+              <span className={s.itemMetaText}>{item.reason}</span>
+            ) : null}
+          </div>
+        ) : null}
         {item.children.length > 0 ? (
           <div className={s.childList}>
             {item.children.map((child) => (
