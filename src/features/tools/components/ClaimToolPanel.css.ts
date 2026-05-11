@@ -10,9 +10,11 @@ const spin = keyframes({
 
 export const root = style({
   display: "grid",
-  gridTemplateRows: "min-content min-content 1fr 1fr",
+  gridTemplateRows: "min-content min-content minmax(0, 1fr) minmax(0, 1fr)",
   gap: 12,
+  height: "100%",
   minHeight: 0,
+  overflow: "hidden",
 });
 
 export const toolbar = style({
@@ -131,9 +133,11 @@ export const statusText = style({
 export const sections = style({
   display: "grid",
   gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-  alignItems: "start",
+  alignItems: "stretch",
   gap: 12,
   minWidth: 0,
+  minHeight: 0,
+  height: "100%",
   "@media": {
     "(max-width: 1320px)": {
       gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -199,6 +203,9 @@ export const sectionCount = style({
 export const itemList = style({
   display: "grid",
   alignContent: "start",
+  minHeight: 0,
+  overflowX: "hidden",
+  overflowY: "auto",
 });
 
 export const itemRow = style({
@@ -402,6 +409,7 @@ export const emptyState = style({
   placeItems: "center",
   minHeight: 0,
   height: "100%",
+  overflow: "hidden",
   color: theme.color.mutedForeground,
   fontSize: "0.875rem",
   borderTop: `1px solid ${theme.color.border}`,
@@ -410,6 +418,7 @@ export const emptyState = style({
 export const emptyPlaceholder = style({
   minHeight: 0,
   height: "100%",
+  overflow: "hidden",
   borderTop: `1px solid ${theme.color.border}`,
 });
 
@@ -433,6 +442,9 @@ export const busyIcon = style({
 export const activityList = style({
   display: "grid",
   alignContent: "start",
+  minHeight: 0,
+  overflowX: "hidden",
+  overflowY: "auto",
 });
 
 export const activityRow = style({
