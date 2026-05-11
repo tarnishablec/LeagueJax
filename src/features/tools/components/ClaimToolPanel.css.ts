@@ -198,6 +198,9 @@ export const sectionTitleText = style({
 export const sectionCount = style({
   color: theme.color.mutedForeground,
   fontSize: "0.75rem",
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  gap: 10
 });
 
 export const itemList = style({
