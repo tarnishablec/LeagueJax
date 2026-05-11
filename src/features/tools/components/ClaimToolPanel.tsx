@@ -7,6 +7,7 @@ import {
   Check,
   Gift,
   ListChecks,
+  Loader,
   type LucideIcon,
   PackageX,
   Play,
@@ -25,7 +26,6 @@ import type {
   ClaimToolCategory,
   ClaimToolClaimablesAvailableEventDto,
   ClaimToolClaimablesDto,
-  ClaimToolClaimRequestDto,
   ClaimToolItemDto,
   ClaimToolRunResultDto,
   ClaimToolSnapshotDto,
@@ -41,18 +41,21 @@ import {
   CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT,
   CLAIM_TOOL_NOTIFICATION_SETTING_ID,
 } from "../claim-tool-notifications";
+import {
+  addHiddenClaimedIds,
+  type ClaimBucket,
+  type ClaimBucketIds,
+  claimableIds,
+  createEmptyClaimBucketIds,
+  filterClaimablesByHiddenIds,
+  pruneHiddenClaimedIds,
+  requestFromSelection,
+  selectedCount,
+} from "../claim-tool-selection";
 import * as s from "./ClaimToolPanel.css";
 
 const CLAIM_TOOL_SNAPSHOT_REFRESH_INTERVAL_MS = 5000;
-
-type ClaimBucket = "rewards" | "missions" | "eventHub";
-type SelectionState = Record<ClaimBucket, Set<string>>;
-
-const emptySelection = (): SelectionState => ({
-  rewards: new Set<string>(),
-  missions: new Set<string>(),
-  eventHub: new Set<string>(),
-});
+const CLAIM_TOOL_MIN_CLAIMING_MS = 1000;
 
 const sectionConfig = [
   {
@@ -82,38 +85,6 @@ function useClaimNotificationEnabled(): boolean {
   );
 }
 
-function claimableIds(
-  data: ClaimToolClaimablesDto | undefined,
-): SelectionState {
-  const next = emptySelection();
-  if (!data) {
-    return next;
-  }
-
-  for (const section of sectionConfig) {
-    for (const item of data[section.key]) {
-      if (item.status === "claimable") {
-        next[section.key].add(item.id);
-      }
-    }
-  }
-  return next;
-}
-
-function selectedCount(selection: SelectionState): number {
-  return Object.values(selection).reduce((count, ids) => count + ids.size, 0);
-}
-
-function requestFromSelection(
-  selection: SelectionState,
-): ClaimToolClaimRequestDto {
-  return {
-    rewards: [...selection.rewards],
-    missions: [...selection.missions],
-    eventHub: [...selection.eventHub],
-  };
-}
-
 function categoryLabelKey(category: ClaimToolCategory | null): string {
   switch (category) {
     case "reward":
@@ -135,6 +106,19 @@ function formatActivityTime(timestampMs: number, language: string): string {
   return date.toLocaleTimeString(language, {
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+// Fast claim requests can otherwise flash the busy overlay too briefly to read as a stable state.
+async function waitForMinimumClaimingDuration(startedAtMs: number) {
+  const elapsedMs = performance.now() - startedAtMs;
+  const remainingMs = Math.max(0, CLAIM_TOOL_MIN_CLAIMING_MS - elapsedMs);
+  if (remainingMs <= 0) {
+    return;
+  }
+
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, remainingMs);
   });
 }
 
@@ -163,11 +147,13 @@ function ItemIcon({ item }: { item: ClaimToolItemDto }) {
 function ClaimItemRow({
   bucket,
   checked,
+  disabled,
   item,
   onCheckedChange,
 }: {
   bucket: ClaimBucket;
   checked: boolean;
+  disabled: boolean;
   item: ClaimToolItemDto;
   onCheckedChange: (bucket: ClaimBucket, id: string, checked: boolean) => void;
 }) {
@@ -180,9 +166,12 @@ function ClaimItemRow({
       <Checkbox.Root
         aria-label={`Select claim item ${item.id}`}
         checked={checked}
-        disabled={!claimable}
+        disabled={!claimable || disabled}
         className={s.checkboxRoot}
         onCheckedChange={(details) => {
+          if (disabled) {
+            return;
+          }
           onCheckedChange(bucket, item.id, details.checked === true);
         }}
       >
@@ -248,6 +237,7 @@ function ClaimItemRow({
 
 function ClaimSection({
   bucket,
+  busy,
   icon: Icon,
   items,
   selected,
@@ -255,6 +245,7 @@ function ClaimSection({
   onCheckedChange,
 }: {
   bucket: ClaimBucket;
+  busy: boolean;
   icon: LucideIcon;
   items: ClaimToolItemDto[];
   selected: Set<string>;
@@ -267,7 +258,7 @@ function ClaimSection({
   ).length;
 
   return (
-    <section className={s.section}>
+    <section className={s.section} aria-busy={busy} data-busy={busy}>
       <div className={s.sectionHeader}>
         <div className={s.sectionTitle}>
           <Icon size={16} aria-hidden="true" />
@@ -278,30 +269,42 @@ function ClaimSection({
         </span>
       </div>
 
-      <div className={s.itemList}>
-        {items.length > 0 ? (
-          items.map((item) => (
+      {items.length > 0 ? (
+        <div className={s.itemList}>
+          {items.map((item) => (
             <ClaimItemRow
               key={item.id}
               bucket={bucket}
+              disabled={busy}
               item={item}
               checked={selected.has(item.id)}
               onCheckedChange={onCheckedChange}
             />
-          ))
-        ) : (
-          <div className={s.emptyState}>{t("tools.claimTool.empty")}</div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className={s.emptyState}>{t("tools.claimTool.empty")}</div>
+      )}
+      {busy ? (
+        <div className={s.panelBusyOverlay} aria-hidden="true">
+          <Loader size={18} className={s.busyIcon} />
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function ActivityList({ entries }: { entries: ClaimToolActivityEntryDto[] }) {
+function ActivityList({
+  busy,
+  entries,
+}: {
+  busy: boolean;
+  entries: ClaimToolActivityEntryDto[];
+}) {
   const { i18n, t } = useTranslation();
 
   return (
-    <section className={s.activitySection}>
+    <section className={s.activitySection} aria-busy={busy} data-busy={busy}>
       <div className={s.sectionHeader}>
         <div className={s.sectionTitle}>
           <Activity size={16} aria-hidden="true" />
@@ -310,9 +313,9 @@ function ActivityList({ entries }: { entries: ClaimToolActivityEntryDto[] }) {
           </span>
         </div>
       </div>
-      <div className={s.activityList}>
-        {entries.length > 0 ? (
-          entries.map((entry) => (
+      {entries.length > 0 ? (
+        <div className={s.activityList}>
+          {entries.map((entry) => (
             <div
               className={s.activityRow}
               data-level={entry.level}
@@ -324,13 +327,18 @@ function ActivityList({ entries }: { entries: ClaimToolActivityEntryDto[] }) {
               <span>{t(categoryLabelKey(entry.category))}</span>
               <span className={s.activityMessage}>{entry.message}</span>
             </div>
-          ))
-        ) : (
-          <div className={s.emptyState}>
-            {t("tools.claimTool.activity.empty")}
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className={s.emptyState}>
+          {t("tools.claimTool.activity.empty")}
+        </div>
+      )}
+      {busy ? (
+        <div className={s.panelBusyOverlay} aria-hidden="true">
+          <Loader size={18} className={s.busyIcon} />
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -380,10 +388,14 @@ export function ClaimToolPanel() {
   const focusedClient = useLcuStore(selectIsFocused);
   const hasFocusedClient = focusedClient !== undefined;
   const claimNotificationEnabled = useClaimNotificationEnabled();
-  const [selection, setSelection] = useState<SelectionState>(() =>
-    emptySelection(),
+  const [selection, setSelection] = useState<ClaimBucketIds>(() =>
+    createEmptyClaimBucketIds(),
+  );
+  const [hiddenClaimedIds, setHiddenClaimedIds] = useState<ClaimBucketIds>(() =>
+    createEmptyClaimBucketIds(),
   );
   const [isClaiming, setIsClaiming] = useState(false);
+  const focusedClientKey = focusedClient ? String(focusedClient.pid) : null;
 
   const claimables = useSWR(
     hasFocusedClient ? "claim_tool_refresh" : null,
@@ -402,15 +414,33 @@ export function ClaimToolPanel() {
       revalidateOnReconnect: false,
     },
   );
-  const claimablesData = hasFocusedClient ? claimables.data : undefined;
+  const rawClaimablesData = hasFocusedClient ? claimables.data : undefined;
+  const claimablesData = useMemo(
+    () => filterClaimablesByHiddenIds(rawClaimablesData, hiddenClaimedIds),
+    [hiddenClaimedIds, rawClaimablesData],
+  );
+
+  useEffect(() => {
+    if (focusedClientKey === null) {
+      setHiddenClaimedIds(createEmptyClaimBucketIds());
+      return;
+    }
+    setHiddenClaimedIds(createEmptyClaimBucketIds());
+  }, [focusedClientKey]);
+
+  useEffect(() => {
+    setHiddenClaimedIds((current) =>
+      pruneHiddenClaimedIds(current, rawClaimablesData),
+    );
+  }, [rawClaimablesData]);
 
   useEffect(() => {
     setSelection(claimableIds(claimablesData));
   }, [claimablesData]);
 
   const count = selectedCount(selection);
-  const canClaim = hasFocusedClient && count > 0 && !isClaiming;
   const isBusy = isClaiming || snapshot.data?.isRunning === true;
+  const canClaim = hasFocusedClient && count > 0 && !isBusy;
   const errorMessage =
     hasFocusedClient && claimables.error
       ? toErrorMessage(claimables.error)
@@ -478,7 +508,14 @@ export function ClaimToolPanel() {
     };
   }, []);
 
-  const applyRunResult = async (result: ClaimToolRunResultDto) => {
+  const applyRunResult = async (
+    result: ClaimToolRunResultDto,
+    requestedIds: ClaimBucketIds,
+  ) => {
+    const request = requestFromSelection(requestedIds);
+    setHiddenClaimedIds((current) =>
+      addHiddenClaimedIds(current, request, result),
+    );
     await snapshot.mutate(result.snapshot, { revalidate: false });
     if (hasFocusedClient) {
       await claimables.mutate();
@@ -489,14 +526,21 @@ export function ClaimToolPanel() {
     if (!canClaim) {
       return;
     }
+    const requestedIds = {
+      rewards: new Set(selection.rewards),
+      missions: new Set(selection.missions),
+      eventHub: new Set(selection.eventHub),
+    };
+    const claimingStartedAtMs = performance.now();
     setIsClaiming(true);
     try {
       const result = await invoke<ClaimToolRunResultDto>(
         "claim_tool_claim_selected",
-        { request: requestFromSelection(selection) },
+        { request: requestFromSelection(requestedIds) },
       );
-      await applyRunResult(result);
+      await applyRunResult(result, requestedIds);
     } finally {
+      await waitForMinimumClaimingDuration(claimingStartedAtMs);
       setIsClaiming(false);
     }
   };
@@ -505,13 +549,16 @@ export function ClaimToolPanel() {
     if (!hasFocusedClient) {
       return;
     }
+    const requestedIds = claimableIds(claimablesData);
+    const claimingStartedAtMs = performance.now();
     setIsClaiming(true);
     try {
       const result = await invoke<ClaimToolRunResultDto>(
         "claim_tool_claim_all",
       );
-      await applyRunResult(result);
+      await applyRunResult(result, requestedIds);
     } finally {
+      await waitForMinimumClaimingDuration(claimingStartedAtMs);
       setIsClaiming(false);
     }
   };
@@ -547,6 +594,7 @@ export function ClaimToolPanel() {
             <SettingsToggle
               ariaLabel="Toggle claim notifications"
               checked={claimNotificationEnabled}
+              disabled={isBusy}
               onCheckedChange={(checked) => {
                 settings.set(CLAIM_TOOL_NOTIFICATION_SETTING_ID, checked);
                 void snapshot.mutate();
@@ -555,7 +603,7 @@ export function ClaimToolPanel() {
           </div>
           <RefreshButton
             ariaLabel="Refresh claimable rewards"
-            loading={claimables.isValidating}
+            loading={claimables.isValidating || isClaiming}
             disabled={!hasFocusedClient || isBusy}
             onClick={() => {
               void refresh();
@@ -593,6 +641,7 @@ export function ClaimToolPanel() {
           <ClaimSection
             key={section.key}
             bucket={section.key}
+            busy={isBusy}
             icon={section.icon}
             title={t(section.titleKey)}
             items={section.items}
@@ -602,7 +651,10 @@ export function ClaimToolPanel() {
         ))}
       </div>
 
-      <ActivityList entries={snapshot.data?.recentActivity ?? []} />
+      <ActivityList
+        busy={isBusy}
+        entries={snapshot.data?.recentActivity ?? []}
+      />
     </div>
   );
 }

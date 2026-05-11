@@ -15,7 +15,7 @@ export const button = recipe({
     cursor: "pointer",
     color: theme.color.foreground,
     selectors: {
-      "&:hover": {
+      "&:hover:not(:disabled)": {
         borderColor: `oklch(from ${theme.color.primary} l c h / 0.45)`,
       },
       "&:focus-visible": {

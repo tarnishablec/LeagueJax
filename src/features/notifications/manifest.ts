@@ -4,11 +4,14 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import i18n from "i18next";
+import { createElement } from "react";
 import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
+import type { ToolbarSlot, WebShard } from "@/runtime/web-contract";
 import type { SettingsShardApi } from "../settings/types";
 import { SHARD_IDS } from "../shard-ids";
+import { notificationsI18n } from "./i18n";
+import { NotificationCenterButton } from "./NotificationCenterButton";
 import { createNotificationsStore, type NotificationsStore } from "./store";
 import type { AppNotification, NotificationDraft } from "./types";
 
@@ -44,6 +47,21 @@ export class NotificationsShard implements WebShard {
 
   public notifications(): NotificationsStore {
     return this.store;
+  }
+
+  public toolbarSlots(): ToolbarSlot[] {
+    return [
+      {
+        id: "notification-center",
+        node: createElement(NotificationCenterButton, { store: this.store }),
+        order: 94,
+        routes: ["*"],
+      },
+    ];
+  }
+
+  public i18nResources() {
+    return notificationsI18n;
   }
 
   public publish(draft: NotificationDraft): AppNotification {

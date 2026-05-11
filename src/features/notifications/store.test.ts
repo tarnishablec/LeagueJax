@@ -72,4 +72,59 @@ describe("createNotificationsStore", () => {
 
     expect(store.list()).toHaveLength(2);
   });
+
+  test("counts unread notifications and clears the list", () => {
+    const store = createNotificationsStore();
+    const first = store.publish({
+      source: "claim-tool",
+      level: "info",
+      titleKey: "notifications.claimTool.available.title",
+    });
+    store.publish({
+      source: "claim-tool",
+      level: "info",
+      titleKey: "notifications.claimTool.available.title",
+    });
+
+    expect(store.unreadCount()).toBe(2);
+    expect(store.markRead(first.id, 300)).toBe(true);
+    expect(store.unreadCount()).toBe(1);
+
+    store.clear();
+
+    expect(store.list()).toEqual([]);
+    expect(store.unreadCount()).toBe(0);
+  });
+
+  test("activates notification callbacks and marks notifications as read", async () => {
+    const store = createNotificationsStore();
+    const activated: string[] = [];
+    const notification = store.publish({
+      source: "claim-tool",
+      level: "info",
+      titleKey: "notifications.claimTool.available.title",
+      onClick: (item) => {
+        activated.push(item.id);
+      },
+    });
+
+    await expect(store.activate(notification.id, 400)).resolves.toBe(true);
+
+    expect(activated).toEqual([notification.id]);
+    expect(store.list()[0].readAt).toBe(400);
+    expect(store.unreadCount()).toBe(0);
+  });
+
+  test("activates notifications without callbacks by marking them as read", async () => {
+    const store = createNotificationsStore();
+    const notification = store.publish({
+      source: "claim-tool",
+      level: "info",
+      titleKey: "notifications.claimTool.available.title",
+    });
+
+    await expect(store.activate(notification.id, 500)).resolves.toBe(true);
+
+    expect(store.list()[0].readAt).toBe(500);
+  });
 });

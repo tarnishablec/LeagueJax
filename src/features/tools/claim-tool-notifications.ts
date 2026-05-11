@@ -30,6 +30,9 @@ export async function setupClaimToolNotifications(
         dedupeKey: `claim-tool:${event.payload.fingerprint}`,
         system: "respectUserSetting",
         systemSettingId: CLAIM_TOOL_NOTIFICATION_SETTING_ID,
+        onClick: () => {
+          window.location.hash = "#/main/tools";
+        },
       });
     },
   );

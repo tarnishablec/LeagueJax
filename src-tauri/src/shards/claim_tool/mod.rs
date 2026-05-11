@@ -88,7 +88,7 @@ impl ClaimToolShard {
     ) {
         let (trigger_tx, trigger_rx) = mpsc::channel(32);
 
-        subscribe_lcu_triggers(lcu_manager, trigger_tx);
+        subscribe_lcu_triggers(lcu_manager, trigger_tx, manager.clone());
 
         let app = tauri_host.app.clone();
         tauri_host.spawn(async move {
@@ -121,12 +121,18 @@ impl Shard for ClaimToolShard {
     }
 }
 
-fn subscribe_lcu_triggers(lcu_manager: Arc<LcuManager>, trigger_tx: mpsc::Sender<()>) {
+fn subscribe_lcu_triggers(
+    lcu_manager: Arc<LcuManager>,
+    trigger_tx: mpsc::Sender<()>,
+    manager: ClaimToolManager,
+) {
     let state_trigger_tx = trigger_tx.clone();
     lcu_manager.clone().subscribe_state_fn(move |event| {
         let state_trigger_tx = state_trigger_tx.clone();
+        let manager = manager.clone();
         async move {
             if matches!(event, LcuManagerStateEvent::FocusChanged(_)) {
+                manager.clear_recent_activity();
                 let _ = state_trigger_tx.send(()).await;
             }
         }
