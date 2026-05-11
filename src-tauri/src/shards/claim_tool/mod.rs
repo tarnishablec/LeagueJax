@@ -8,6 +8,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
+use tauri::Emitter;
 use tokio::sync::mpsc;
 use tokio::time::{interval, MissedTickBehavior};
 
@@ -24,6 +25,8 @@ use self::types::{
     CLAIM_TOOL_AUTO_CLAIM_DEFAULT, CLAIM_TOOL_AUTO_CLAIM_SETTING_ID,
     CLAIM_TOOL_AUTO_SCAN_INTERVAL_SECONDS,
 };
+
+const CLAIM_TOOL_RUN_COMPLETED_EVENT: &str = "claim-tool-run-completed";
 
 #[derive(Clone)]
 pub(super) struct ClaimToolSettings {
@@ -84,8 +87,9 @@ impl ClaimToolShard {
 
         subscribe_lcu_triggers(lcu_manager, trigger_tx);
 
+        let app = tauri_host.app.clone();
         tauri_host.spawn(async move {
-            run_auto_claim_loop(manager, trigger_rx).await;
+            run_auto_claim_loop(manager, trigger_rx, app).await;
         });
     }
 }
@@ -135,7 +139,11 @@ fn subscribe_lcu_triggers(lcu_manager: Arc<LcuManager>, trigger_tx: mpsc::Sender
     });
 }
 
-async fn run_auto_claim_loop(manager: ClaimToolManager, mut trigger_rx: mpsc::Receiver<()>) {
+async fn run_auto_claim_loop(
+    manager: ClaimToolManager,
+    mut trigger_rx: mpsc::Receiver<()>,
+    app: tauri::AppHandle,
+) {
     let mut ticker = interval(Duration::from_secs(CLAIM_TOOL_AUTO_SCAN_INTERVAL_SECONDS));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
@@ -159,13 +167,24 @@ async fn run_auto_claim_loop(manager: ClaimToolManager, mut trigger_rx: mpsc::Re
             continue;
         }
 
-        if let Err(error) = manager.claim_all().await {
-            if !matches!(error, AppError::LcuNotConnected) {
-                tracing::warn!(
-                    channel = "claim-tool",
-                    error = %error,
-                    "Automatic claim run failed"
-                );
+        match manager.claim_all().await {
+            Ok(result) => {
+                if let Err(error) = app.emit(CLAIM_TOOL_RUN_COMPLETED_EVENT, result) {
+                    tracing::warn!(
+                        channel = "claim-tool",
+                        error = %error,
+                        "Failed to emit automatic claim completion"
+                    );
+                }
+            }
+            Err(error) => {
+                if !matches!(error, AppError::LcuNotConnected) {
+                    tracing::warn!(
+                        channel = "claim-tool",
+                        error = %error,
+                        "Automatic claim run failed"
+                    );
+                }
             }
         }
     }

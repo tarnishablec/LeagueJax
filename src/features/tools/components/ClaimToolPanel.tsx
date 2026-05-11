@@ -1,5 +1,6 @@
 import { Checkbox } from "@ark-ui/react/checkbox";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   Activity,
   CalendarCheck,
@@ -10,7 +11,13 @@ import {
   PackageX,
   Play,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import type {
@@ -24,6 +31,7 @@ import type {
 } from "@/bindings/claim_tool";
 import { LcuImage } from "@/components/LcuImage";
 import { RefreshButton } from "@/components/RefreshButton";
+import { SummonerID } from "@/components/SummonerID";
 import { SettingsToggle } from "@/components/settings-ui";
 import { useSettings } from "@/features/settings/context";
 import type { SettingId } from "@/features/settings/types";
@@ -33,6 +41,8 @@ import * as s from "./ClaimToolPanel.css";
 
 const AUTO_CLAIM_SETTING_ID =
   "tools.claimTool.autoClaimEnabled" as const satisfies SettingId;
+const CLAIM_TOOL_RUN_COMPLETED_EVENT = "claim-tool-run-completed";
+const CLAIM_TOOL_SNAPSHOT_REFRESH_INTERVAL_MS = 5000;
 
 type ClaimBucket = "rewards" | "missions" | "eventHub";
 type SelectionState = Record<ClaimBucket, Set<string>>;
@@ -320,6 +330,45 @@ function ActivityList({ entries }: { entries: ClaimToolActivityEntryDto[] }) {
   );
 }
 
+function StatusRow({
+  errorMessage,
+  focusedClient,
+}: {
+  errorMessage: string | null;
+  focusedClient: ReturnType<typeof selectIsFocused>;
+}) {
+  const { t } = useTranslation();
+
+  if (!focusedClient) {
+    return (
+      <div className={s.statusRow} data-tone="neutral">
+        {t("tools.claimTool.noFocusedClient")}
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className={s.statusRow} data-tone="error">
+        {errorMessage}
+      </div>
+    );
+  }
+
+  return (
+    <div className={s.statusRow} data-tone="neutral">
+      <span className={s.statusLabel}>
+        {t("tools.claimTool.focusedClient")}
+      </span>
+      {focusedClient.summoner ? (
+        <SummonerID summoner={focusedClient.summoner} />
+      ) : (
+        <span className={s.statusText}>PID: {focusedClient.pid}</span>
+      )}
+    </div>
+  );
+}
+
 export function ClaimToolPanel() {
   const { t } = useTranslation();
   const settings = useSettings();
@@ -343,7 +392,7 @@ export function ClaimToolPanel() {
     "claim_tool_get_snapshot",
     () => invoke<ClaimToolSnapshotDto>("claim_tool_get_snapshot"),
     {
-      refreshInterval: 2500,
+      refreshInterval: CLAIM_TOOL_SNAPSHOT_REFRESH_INTERVAL_MS,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
     },
@@ -390,9 +439,45 @@ export function ClaimToolPanel() {
     await snapshot.mutate();
   };
 
+  const handleRunCompleted = useEffectEvent((result: ClaimToolRunResultDto) => {
+    void snapshot.mutate(result.snapshot, { revalidate: false });
+    if (hasFocusedClient) {
+      void claimables.mutate();
+    }
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    let unlisten: UnlistenFn | null = null;
+
+    const setup = async () => {
+      unlisten = await listen<ClaimToolRunResultDto>(
+        CLAIM_TOOL_RUN_COMPLETED_EVENT,
+        (event) => {
+          if (cancelled) {
+            return;
+          }
+
+          handleRunCompleted(event.payload);
+        },
+      );
+    };
+
+    void setup();
+
+    return () => {
+      cancelled = true;
+      if (unlisten) {
+        void unlisten();
+      }
+    };
+  }, []);
+
   const applyRunResult = async (result: ClaimToolRunResultDto) => {
     await snapshot.mutate(result.snapshot, { revalidate: false });
-    await claimables.mutate();
+    if (hasFocusedClient) {
+      await claimables.mutate();
+    }
   };
 
   const claimSelected = async () => {
@@ -496,12 +581,7 @@ export function ClaimToolPanel() {
         </div>
       </div>
 
-      {errorMessage ? <div className={s.errorState}>{errorMessage}</div> : null}
-      {!hasFocusedClient ? (
-        <div className={s.noticeState}>
-          {t("tools.claimTool.noFocusedClient")}
-        </div>
-      ) : null}
+      <StatusRow errorMessage={errorMessage} focusedClient={focusedClient} />
 
       <div className={s.sections}>
         {sections.map((section) => (
