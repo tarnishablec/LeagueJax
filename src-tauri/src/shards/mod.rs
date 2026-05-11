@@ -2,6 +2,7 @@ pub mod auto_accept;
 pub mod auto_reply;
 pub mod auto_select;
 pub mod cdragon_static_data;
+pub mod claim_tool;
 pub mod keyboard;
 pub mod lcu;
 pub mod league_bridge;

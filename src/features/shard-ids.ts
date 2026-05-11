@@ -21,6 +21,7 @@ export const SHARD_IDS = {
   SETTINGS: shardId("b59f17b0-24ef-4ce1-a106-f430ec20457e"),
   AUTO_SELECT: shardId("2c98048a-4233-4aa4-b9d7-5d11282e1ad6"),
   AUTO_GAMEFLOW: shardId("e2701f9c-c27c-4ad8-8ff0-a993c7fb98ef"),
+  CLAIM_TOOL: shardId("6df55ec3-2b54-4c72-9e6a-f403f23a22dd"),
   AUTO_REPLY: shardId("4201e831-e67b-4264-b2c0-46f2397a2da3"),
   ONGOING_GAME: shardId("38121643-b79d-4382-9592-c647da511c1b"),
   SAVED_PLAYERS: shardId("0885405c-362d-45b6-b212-f943046c401f"),

@@ -1,4 +1,5 @@
 pub mod auto_accept;
+pub mod claim_tool;
 pub mod history;
 pub mod lcu;
 pub mod map;
