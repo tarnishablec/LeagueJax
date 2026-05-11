@@ -1,6 +1,7 @@
 import type {
   ClaimToolClaimablesDto,
   ClaimToolClaimRequestDto,
+  ClaimToolItemDto,
   ClaimToolRunResultDto,
 } from "@/bindings/claim_tool";
 
@@ -8,6 +9,7 @@ export const claimBuckets = ["rewards", "missions", "eventHub"] as const;
 
 export type ClaimBucket = (typeof claimBuckets)[number];
 export type ClaimBucketIds = Record<ClaimBucket, Set<string>>;
+export type ClaimBucketCheckedState = boolean | "indeterminate";
 
 type ClaimRunVisibilityResult = Pick<
   ClaimToolRunResultDto,
@@ -52,6 +54,58 @@ export function requestFromSelection(
     missions: [...selection.missions],
     eventHub: [...selection.eventHub],
   };
+}
+
+export function bucketHasClaimableItems(items: ClaimToolItemDto[]): boolean {
+  return items.some((item) => item.status === "claimable");
+}
+
+export function bucketSelectionCheckedState(
+  items: ClaimToolItemDto[],
+  selectedIds: Set<string>,
+): ClaimBucketCheckedState {
+  const claimableIds = items
+    .filter((item) => item.status === "claimable")
+    .map((item) => item.id);
+  if (claimableIds.length === 0) {
+    return false;
+  }
+
+  const selectedCount = claimableIds.filter((id) => selectedIds.has(id)).length;
+  if (selectedCount === 0) {
+    return false;
+  }
+
+  return selectedCount === claimableIds.length ? true : "indeterminate";
+}
+
+export function applyBucketSelection(
+  current: ClaimBucketIds,
+  bucket: ClaimBucket,
+  items: ClaimToolItemDto[],
+  checked: boolean,
+): ClaimBucketIds {
+  const claimableIds = items
+    .filter((item) => item.status === "claimable")
+    .map((item) => item.id);
+  if (claimableIds.length === 0) {
+    return current;
+  }
+
+  const next = cloneClaimBucketIds(current);
+  let changed = false;
+  for (const id of claimableIds) {
+    if (checked) {
+      if (!next[bucket].has(id)) {
+        next[bucket].add(id);
+        changed = true;
+      }
+      continue;
+    }
+
+    changed ||= next[bucket].delete(id);
+  }
+  return changed ? next : current;
 }
 
 // The LCU can briefly return already-claimed items after a successful claim request, so the UI keeps them hidden until a later refresh confirms they are gone.

@@ -93,4 +93,50 @@ export const toolsI18n: Resource = {
       },
     },
   },
+  "ja-JP": {
+    nav: {
+      tools: "ツール",
+    },
+    tools: {
+      pages: {
+        claim: "受け取りツール",
+      },
+      claimTool: {
+        claimNotificationText: "受け取り通知",
+        idle: "待機中",
+        lastRun: "最終実行 {{time}}",
+        claimSelected: "{{count}} 件を受け取る",
+        claimAll: "すべて受け取る",
+        focusedClient: "現在のクライアント：",
+        noFocusedClient:
+          "フォーカス中のクライアントがありません。受け取り機能は準備完了したクライアントがフォーカスされている場合のみ動作します。",
+        empty: "受け取れる項目はありません",
+        choiceCount: "{{count}} 個の選択肢",
+        sections: {
+          rewards: "報酬",
+          missions: "ミッション",
+          eventHub: "イベントセンター",
+        },
+        status: {
+          claimable: "受け取り可",
+          skipped: "スキップ",
+        },
+        activity: {
+          title: "最近のアクティビティ",
+          empty: "アクティビティはありません",
+          system: "システム",
+        },
+        claimNotification: {
+          label: "受け取り通知",
+          hint: "フォーカス中の LCU クライアントに受け取れる報酬がある場合に通知します。",
+        },
+        notifications: {
+          available: {
+            title: "受け取れる報酬があります",
+            body: "受け取りツールに {{count}} 件の受け取れる項目があります。",
+          },
+        },
+      },
+    },
+  },
 };

@@ -9,6 +9,7 @@ import {
   ListChecks,
   Loader,
   type LucideIcon,
+  Minus,
   PackageX,
   Play,
 } from "lucide-react";
@@ -43,6 +44,9 @@ import {
 } from "../claim-tool-notifications";
 import {
   addHiddenClaimedIds,
+  applyBucketSelection,
+  bucketHasClaimableItems,
+  bucketSelectionCheckedState,
   type ClaimBucket,
   type ClaimBucketIds,
   claimableIds,
@@ -95,6 +99,17 @@ function categoryLabelKey(category: ClaimToolCategory | null): string {
       return "tools.claimTool.sections.eventHub";
     default:
       return "tools.claimTool.activity.system";
+  }
+}
+
+function bucketSelectAllAriaLabel(bucket: ClaimBucket): string {
+  switch (bucket) {
+    case "rewards":
+      return "Toggle all reward claim items";
+    case "missions":
+      return "Toggle all mission claim items";
+    case "eventHub":
+      return "Toggle all event hub claim items";
   }
 }
 
@@ -242,6 +257,7 @@ function ClaimSection({
   items,
   selected,
   title,
+  onBucketCheckedChange,
   onCheckedChange,
 }: {
   bucket: ClaimBucket;
@@ -250,17 +266,51 @@ function ClaimSection({
   items: ClaimToolItemDto[];
   selected: Set<string>;
   title: string;
+  onBucketCheckedChange: (
+    bucket: ClaimBucket,
+    items: ClaimToolItemDto[],
+    checked: boolean,
+  ) => void;
   onCheckedChange: (bucket: ClaimBucket, id: string, checked: boolean) => void;
 }) {
   const { t } = useTranslation();
   const claimableCount = items.filter(
     (item) => item.status === "claimable",
   ).length;
+  const bucketCheckedState = bucketSelectionCheckedState(items, selected);
+  const canToggleBucket = !busy && bucketHasClaimableItems(items);
 
   return (
     <section className={s.section} aria-busy={busy} data-busy={busy}>
       <div className={s.sectionHeader}>
         <div className={s.sectionTitle}>
+          <Checkbox.Root
+            aria-label={bucketSelectAllAriaLabel(bucket)}
+            checked={bucketCheckedState}
+            disabled={!canToggleBucket}
+            className={s.checkboxRoot}
+            onCheckedChange={() => {
+              if (!canToggleBucket) {
+                return;
+              }
+              onBucketCheckedChange(
+                bucket,
+                items,
+                bucketCheckedState === false,
+              );
+            }}
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control className={s.checkboxControl}>
+              <Checkbox.Indicator className={s.checkboxIndicator}>
+                {bucketCheckedState === "indeterminate" ? (
+                  <Minus size={13} aria-hidden="true" />
+                ) : (
+                  <Check size={13} aria-hidden="true" />
+                )}
+              </Checkbox.Indicator>
+            </Checkbox.Control>
+          </Checkbox.Root>
           <Icon size={16} aria-hidden="true" />
           <span className={s.sectionTitleText}>{title}</span>
         </div>
@@ -282,6 +332,8 @@ function ClaimSection({
             />
           ))}
         </div>
+      ) : busy ? (
+        <div className={s.emptyPlaceholder} />
       ) : (
         <div className={s.emptyState}>{t("tools.claimTool.empty")}</div>
       )}
@@ -329,6 +381,8 @@ function ActivityList({
             </div>
           ))}
         </div>
+      ) : busy ? (
+        <div className={s.emptyPlaceholder} />
       ) : (
         <div className={s.emptyState}>
           {t("tools.claimTool.activity.empty")}
@@ -464,6 +518,16 @@ export function ClaimToolPanel() {
       }
       return next;
     });
+  };
+
+  const toggleBucketSelection = (
+    bucket: ClaimBucket,
+    items: ClaimToolItemDto[],
+    checked: boolean,
+  ) => {
+    setSelection((current) =>
+      applyBucketSelection(current, bucket, items, checked),
+    );
   };
 
   const refresh = async () => {
@@ -646,6 +710,7 @@ export function ClaimToolPanel() {
             title={t(section.titleKey)}
             items={section.items}
             selected={selection[section.key]}
+            onBucketCheckedChange={toggleBucketSelection}
             onCheckedChange={toggleSelection}
           />
         ))}
