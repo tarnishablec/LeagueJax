@@ -28,6 +28,74 @@ use self::types::{
 };
 
 const CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT: &str = "claim-tool-claimables-available";
+const CLAIM_TOOL_NOTIFICATION_COLLECTION_SAMPLE_MS: u64 = 500;
+const CLAIM_TOOL_NOTIFICATION_COLLECTION_MAX_SAMPLES: u8 = 5;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClaimNotificationTrigger {
+    FocusChanged,
+    ClaimRelatedWs,
+    Periodic,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClaimNotificationCollectionDecision {
+    Continue,
+    Ready,
+}
+
+struct ClaimNotificationCollector {
+    previous_fingerprint: Option<String>,
+    sample_count: u8,
+    saw_focus_changed: bool,
+}
+
+struct ClaimNotificationCollectionOutcome {
+    claimables: self::types::ClaimToolClaimablesDto,
+    saw_focus_changed: bool,
+}
+
+impl ClaimNotificationCollector {
+    fn new() -> Self {
+        Self {
+            previous_fingerprint: None,
+            sample_count: 0,
+            saw_focus_changed: false,
+        }
+    }
+
+    fn apply_trigger(&mut self, trigger: ClaimNotificationTrigger) {
+        if matches!(trigger, ClaimNotificationTrigger::FocusChanged) {
+            self.previous_fingerprint = None;
+            self.sample_count = 0;
+            self.saw_focus_changed = true;
+        }
+    }
+
+    fn saw_focus_changed(&self) -> bool {
+        self.saw_focus_changed
+    }
+
+    fn observe(
+        &mut self,
+        fingerprint: Option<String>,
+    ) -> ClaimNotificationCollectionDecision {
+        self.sample_count = self.sample_count.saturating_add(1);
+
+        let Some(fingerprint) = fingerprint else {
+            self.previous_fingerprint = None;
+            return ClaimNotificationCollectionDecision::Ready;
+        };
+
+        let stable = self.previous_fingerprint.as_deref() == Some(fingerprint.as_str());
+        self.previous_fingerprint = Some(fingerprint);
+        if stable || self.sample_count >= CLAIM_TOOL_NOTIFICATION_COLLECTION_MAX_SAMPLES {
+            ClaimNotificationCollectionDecision::Ready
+        } else {
+            ClaimNotificationCollectionDecision::Continue
+        }
+    }
+}
 
 #[derive(Clone)]
 pub(super) struct ClaimToolSettings {
@@ -123,7 +191,7 @@ impl Shard for ClaimToolShard {
 
 fn subscribe_lcu_triggers(
     lcu_manager: Arc<LcuManager>,
-    trigger_tx: mpsc::Sender<()>,
+    trigger_tx: mpsc::Sender<ClaimNotificationTrigger>,
     manager: ClaimToolManager,
 ) {
     let state_trigger_tx = trigger_tx.clone();
@@ -133,7 +201,9 @@ fn subscribe_lcu_triggers(
         async move {
             if matches!(event, LcuManagerStateEvent::FocusChanged(_)) {
                 manager.clear_recent_activity();
-                let _ = state_trigger_tx.send(()).await;
+                let _ = state_trigger_tx
+                    .send(ClaimNotificationTrigger::FocusChanged)
+                    .await;
             }
         }
     });
@@ -142,7 +212,9 @@ fn subscribe_lcu_triggers(
         let trigger_tx = trigger_tx.clone();
         async move {
             if is_claim_related_ws_event(&event) {
-                let _ = trigger_tx.send(()).await;
+                let _ = trigger_tx
+                    .send(ClaimNotificationTrigger::ClaimRelatedWs)
+                    .await;
             }
         }
     });
@@ -150,7 +222,7 @@ fn subscribe_lcu_triggers(
 
 async fn run_claim_notification_loop(
     manager: ClaimToolManager,
-    mut trigger_rx: mpsc::Receiver<()>,
+    mut trigger_rx: mpsc::Receiver<ClaimNotificationTrigger>,
     app: tauri::AppHandle,
 ) {
     let mut ticker = interval(Duration::from_secs(
@@ -160,16 +232,17 @@ async fn run_claim_notification_loop(
     let mut last_fingerprint: Option<String> = None;
 
     loop {
-        tokio::select! {
-            _ = ticker.tick() => {}
-            received = trigger_rx.recv() => {
-                if received.is_none() {
-                    break;
-                }
-                tokio::time::sleep(Duration::from_millis(600)).await;
-                while trigger_rx.try_recv().is_ok() {}
+        let initial_trigger = tokio::select! {
+            _ = ticker.tick() => {
+                ClaimNotificationTrigger::Periodic
             }
-        }
+            received = trigger_rx.recv() => {
+                let Some(trigger) = received else {
+                    break;
+                };
+                trigger
+            }
+        };
 
         if !manager.snapshot().claim_notification_enabled {
             last_fingerprint = None;
@@ -181,8 +254,13 @@ async fn run_claim_notification_loop(
             continue;
         }
 
-        match manager.get_claimables().await {
-            Ok(claimables) => {
+        match collect_stable_claimables(&manager, &mut trigger_rx, initial_trigger).await {
+            None => break,
+            Some(Ok(outcome)) => {
+                if outcome.saw_focus_changed {
+                    last_fingerprint = None;
+                }
+                let claimables = outcome.claimables;
                 let Some(fingerprint) = claimables_notification_fingerprint(&claimables) else {
                     last_fingerprint = None;
                     continue;
@@ -214,13 +292,62 @@ async fn run_claim_notification_loop(
                 );
                 last_fingerprint = Some(fingerprint);
             }
-            Err(error) => {
+            Some(Err(error)) => {
                 if !matches!(error, AppError::LcuNotConnected) {
                     tracing::warn!(
                         channel = "claim-tool",
                         error = %error,
                         "Claim notification scan failed"
                     );
+                }
+            }
+        }
+    }
+}
+
+async fn collect_stable_claimables(
+    manager: &ClaimToolManager,
+    trigger_rx: &mut mpsc::Receiver<ClaimNotificationTrigger>,
+    initial_trigger: ClaimNotificationTrigger,
+) -> Option<Result<ClaimNotificationCollectionOutcome, AppError>> {
+    let mut collector = ClaimNotificationCollector::new();
+    collector.apply_trigger(initial_trigger);
+
+    loop {
+        let claimables = match manager.get_claimables().await {
+            Ok(claimables) => claimables,
+            Err(error) => return Some(Err(error)),
+        };
+        let fingerprint = claimables_notification_fingerprint(&claimables);
+        if collector.observe(fingerprint) == ClaimNotificationCollectionDecision::Ready {
+            return Some(Ok(ClaimNotificationCollectionOutcome {
+                claimables,
+                saw_focus_changed: collector.saw_focus_changed(),
+            }));
+        }
+
+        if !wait_for_next_collection_sample(&mut collector, trigger_rx).await {
+            return None;
+        }
+    }
+}
+
+async fn wait_for_next_collection_sample(
+    collector: &mut ClaimNotificationCollector,
+    trigger_rx: &mut mpsc::Receiver<ClaimNotificationTrigger>,
+) -> bool {
+    loop {
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_millis(CLAIM_TOOL_NOTIFICATION_COLLECTION_SAMPLE_MS)) => {
+                return true;
+            }
+            received = trigger_rx.recv() => {
+                let Some(trigger) = received else {
+                    return false;
+                };
+                collector.apply_trigger(trigger);
+                while let Ok(trigger) = trigger_rx.try_recv() {
+                    collector.apply_trigger(trigger);
                 }
             }
         }
@@ -241,5 +368,61 @@ fn ws_event_uri(event: &LcuWsEvent) -> Option<&str> {
     match event {
         LcuWsEvent::Other(value) => value.get("uri").and_then(|value| value.as_str()),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn notification_collector_waits_until_fingerprint_is_stable() {
+        let mut collector = ClaimNotificationCollector::new();
+
+        assert_eq!(
+            collector.observe(Some("reward:1".to_string())),
+            ClaimNotificationCollectionDecision::Continue
+        );
+        assert_eq!(
+            collector.observe(Some("reward:1|mission:1|mission:2|mission:3".to_string())),
+            ClaimNotificationCollectionDecision::Continue
+        );
+        assert_eq!(
+            collector.observe(Some("reward:1|mission:1|mission:2|mission:3".to_string())),
+            ClaimNotificationCollectionDecision::Ready
+        );
+    }
+
+    #[test]
+    fn notification_collector_emits_last_fingerprint_at_sample_limit() {
+        let mut collector = ClaimNotificationCollector::new();
+
+        for fingerprint in ["a", "b", "c", "d"] {
+            assert_eq!(
+                collector.observe(Some(fingerprint.to_string())),
+                ClaimNotificationCollectionDecision::Continue
+            );
+        }
+        assert_eq!(
+            collector.observe(Some("e".to_string())),
+            ClaimNotificationCollectionDecision::Ready
+        );
+    }
+
+    #[test]
+    fn notification_collector_focus_trigger_resets_candidate() {
+        let mut collector = ClaimNotificationCollector::new();
+
+        assert_eq!(
+            collector.observe(Some("reward:1".to_string())),
+            ClaimNotificationCollectionDecision::Continue
+        );
+        collector.apply_trigger(ClaimNotificationTrigger::FocusChanged);
+        assert!(collector.saw_focus_changed());
+
+        assert_eq!(
+            collector.observe(Some("reward:1".to_string())),
+            ClaimNotificationCollectionDecision::Continue
+        );
     }
 }

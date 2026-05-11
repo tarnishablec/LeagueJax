@@ -80,10 +80,7 @@ export const segmentItem = style({
 
 export const content = style({
   display: "grid",
+  height: "100%",
   minHeight: 0,
-});
-
-export const contentInner = style({
-  display: "grid",
-  minHeight: "100%",
+  overflow: "hidden",
 });

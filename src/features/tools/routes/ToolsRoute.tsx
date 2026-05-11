@@ -1,6 +1,5 @@
 import { SegmentGroup } from "@ark-ui/react/segment-group";
 import { useTranslation } from "react-i18next";
-import { ScrollArea } from "@/components/scroll-area";
 import { ClaimToolPanel } from "../components/ClaimToolPanel";
 import * as s from "./ToolsRoute.css";
 
@@ -32,15 +31,9 @@ export function ToolsRoute() {
         ))}
       </SegmentGroup.Root>
 
-      <ScrollArea
-        className={s.content}
-        contentClassName={s.contentInner}
-        direction="vertical"
-        mode="outset"
-        outsetWidth="12px"
-      >
+      <div className={s.content}>
         <ClaimToolPanel />
-      </ScrollArea>
+      </div>
     </div>
   );
 }
