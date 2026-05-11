@@ -1,7 +1,7 @@
 {
   "name": "league-jax",
   "private": true,
-  "version": "0.1.67",
+  "version": "0.1.68",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -59,7 +59,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.14",
+    "@biomejs/biome": "^2.4.15",
     "@rollup/plugin-swc": "^0.4.0",
     "@swc/core": "^1.15.33",
     "@tauri-apps/cli": "^2.11.1",
