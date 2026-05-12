@@ -486,7 +486,7 @@ export const historyDialogPositioner = style({
 });
 
 export const historyDialogContent = style({
-  width: "min(820px, calc(100vw - 40px))",
+  width: "min(900px, calc(100vw - 40px))",
   maxHeight: "calc(100vh - 40px)",
   overflow: "hidden",
   borderRadius: 12,
