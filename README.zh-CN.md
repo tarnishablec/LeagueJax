@@ -2,7 +2,8 @@
 
 [English](README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-[![GitHub Release](https://img.shields.io/github/v/release/tarnishablec/LeagueJax?label=github%20release)](https://github.com/tarnishablec/LeagueJax/releases)
+[![GitHub Releases](https://img.shields.io/badge/GitHub-Releases-0969da?logo=github)](https://github.com/tarnishablec/LeagueJax/releases)
+[![Gitee Releases](https://img.shields.io/badge/Gitee-Releases-c71d23)](https://gitee.com/tarnishablec/league-jax-releases/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
 LeagueJax 是一个面向《英雄联盟》玩家的桌面伴侣工具。它把客户端状态、对局信息、战绩记录、玩家查询、小窗提醒和常用辅助操作整理到一个更清晰、更顺手的桌面体验里。
