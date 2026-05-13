@@ -108,15 +108,18 @@ a {
 }
 
 .brand {
-  gap: 10px;
+  gap: 12px;
   color: var(--text);
   font-size: 15px;
   font-weight: 740;
 }
 
 .brand img {
-  border-radius: 7px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.34));
 }
 
 .nav-links {

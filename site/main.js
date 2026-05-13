@@ -226,7 +226,10 @@ const setLanguage = (language) => {
   });
 
   document.querySelectorAll("[data-language]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.language === language);
+    button.classList.toggle(
+      "is-active",
+      button.getAttribute("data-language") === language,
+    );
   });
 
   localStorage.setItem("leaguejax-language", language);
@@ -234,7 +237,7 @@ const setLanguage = (language) => {
 
 document.querySelectorAll("[data-language]").forEach((button) => {
   button.addEventListener("click", () => {
-    setLanguage(button.dataset.language || "en");
+    setLanguage(button.getAttribute("data-language") || "en");
   });
 });
 

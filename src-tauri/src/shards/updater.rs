@@ -17,14 +17,15 @@ use ts_rs::TS;
 
 use crate::error::AppError;
 use crate::shards::network::{NetworkConfig, NetworkShard};
+use crate::shards::settings::{SettingHandle, SettingsShard};
 use crate::shards::settings::types::{
     SettingControlDto, SettingDefinitionDto, SettingOptionDto, SettingScopeDto,
 };
-use crate::shards::settings::SettingsShard;
 use crate::shards::tauri_host::TauriHost;
 
 const UPDATE_SOURCE_SETTING_ID: &str = "system.update.source";
 const AUTO_CHECK_SETTING_ID: &str = "system.update.autoCheckOnStartup";
+const USE_SYSTEM_PROXY_SETTING_ID: &str = "system.network.useSystemProxy";
 const GITHUB_RELEASE_API: &str =
     "https://api.github.com/repos/tarnishablec/LeagueJax/releases/latest";
 const GITEE_RELEASE_API: &str =
@@ -128,6 +129,7 @@ pub struct UpdaterShard {
     app: OnceLock<tauri::AppHandle>,
     settings: OnceLock<Arc<SettingsShard>>,
     network_config: OnceLock<Arc<NetworkConfig>>,
+    use_system_proxy: OnceLock<SettingHandle>,
     state: RwLock<UpdaterStateDto>,
     pending_update: Mutex<Option<Update>>,
     action_lock: Mutex<()>,
@@ -139,6 +141,7 @@ impl UpdaterShard {
             app: OnceLock::new(),
             settings: OnceLock::new(),
             network_config: OnceLock::new(),
+            use_system_proxy: OnceLock::new(),
             state: RwLock::new(UpdaterStateDto {
                 kind: UpdaterStatusKindDto::Idle,
                 current_version: String::new(),
@@ -222,16 +225,21 @@ impl UpdaterShard {
         // Runtime source selection (`auto` / `gitee` / `github`) is applied here.
         // This endpoint list overrides the static default endpoint from tauri.conf.json.
         let app = self.app_handle()?;
-        let updater = app
+        let mut updater_builder = app
             .updater_builder()
-            .no_proxy()
             .timeout(self.network_config()?.request_timeout())
             .endpoints(vec![Url::parse(&probe.manifest_url).map_err(|error| {
                 AppError::other(format!("Invalid updater endpoint: {error}"))
             })?])
             .map_err(|error| {
                 AppError::other(format!("Failed to configure updater endpoints: {error}"))
-            })?
+            })?;
+
+        if should_disable_updater_proxy(self.use_system_proxy()?) {
+            updater_builder = updater_builder.no_proxy();
+        }
+
+        let updater = updater_builder
             .build()
             .map_err(|error| AppError::other(format!("Failed to build updater: {error}")))?;
 
@@ -369,10 +377,15 @@ impl UpdaterShard {
         &self,
         source: UpdaterSourceDto,
     ) -> Result<ManifestProbe, AppError> {
-        let client = Client::builder()
-            .no_proxy()
+        let mut client_builder = Client::builder()
             .user_agent(USER_AGENT)
-            .timeout(self.network_config()?.request_timeout())
+            .timeout(self.network_config()?.request_timeout());
+
+        if should_disable_updater_proxy(self.use_system_proxy()?) {
+            client_builder = client_builder.no_proxy();
+        }
+
+        let client = client_builder
             .build()
             .map_err(|error| AppError::other(format!("Failed to build updater client: {error}")))?;
 
@@ -486,6 +499,16 @@ impl UpdaterShard {
             .ok_or_else(|| AppError::other("Updater network config is not initialized"))
     }
 
+    fn use_system_proxy(&self) -> Result<bool, AppError> {
+        Ok(self
+            .use_system_proxy
+            .get()
+            .ok_or_else(|| AppError::other("Updater proxy setting is not initialized"))?
+            .get_value()?
+            .as_bool()
+            .unwrap_or(false))
+    }
+
     fn app_handle(&self) -> Result<tauri::AppHandle, AppError> {
         self.app
             .get()
@@ -565,6 +588,9 @@ impl Shard for UpdaterShard {
         self.network_config
             .set(network.config()?)
             .map_err(|_| AppError::other("Updater network config already initialized"))?;
+        self.use_system_proxy
+            .set(settings.setting_handle(USE_SYSTEM_PROXY_SETTING_ID)?)
+            .map_err(|_| AppError::other("Updater proxy setting already initialized"))?;
         self.app
             .set(tauri_host.app.clone())
             .map_err(|_| AppError::other("Updater app handle already initialized"))?;
@@ -636,5 +662,22 @@ impl Shard for UpdaterShard {
         }
 
         Ok(())
+    }
+}
+
+fn should_disable_updater_proxy(use_system_proxy: bool) -> bool {
+    !use_system_proxy
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn updater_proxy_policy_disables_proxy_when_network_proxy_is_off() {
+        assert!(super::should_disable_updater_proxy(false));
+    }
+
+    #[test]
+    fn updater_proxy_policy_keeps_proxy_available_when_network_proxy_is_on() {
+        assert!(!super::should_disable_updater_proxy(true));
     }
 }

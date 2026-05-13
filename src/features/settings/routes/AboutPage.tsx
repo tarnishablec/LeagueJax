@@ -25,7 +25,7 @@ export function AboutPage() {
       <section className={s.overviewCard}>
         <div className={s.overview}>
           <div className={s.logoPanel}>
-            <JaxLogo size={135} />
+            <JaxLogo size={135} variant="dark" />
           </div>
 
           <div className={s.markdownShell}>
