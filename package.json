@@ -1,7 +1,7 @@
 {
   "name": "league-jax",
   "private": true,
-  "version": "0.1.71",
+  "version": "0.1.72",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,6 @@
     "release:notes:dry-run": "bun run ./scripts/dry-run-release-notes.ts",
     "bump:patch": "bun run ./scripts/bump-version.ts patch",
     "bump:minor": "bun run ./scripts/bump-version.ts minor",
-
     "bump:major": "bun run ./scripts/bump-version.ts major",
     "lint:biome": "bunx biome check .",
     "lint:biome:fix": "bunx biome check --write .",
