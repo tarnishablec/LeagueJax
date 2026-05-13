@@ -35,6 +35,10 @@ body {
   letter-spacing: 0;
 }
 
+body.is-lightbox-open {
+  overflow: hidden;
+}
+
 body::before {
   position: fixed;
   inset: 0;
@@ -69,6 +73,10 @@ a {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
 }
 
 .site-header {
@@ -396,6 +404,194 @@ a {
   line-height: 1.65;
 }
 
+.screenshots-section {
+  border-top: 1px solid rgba(242, 238, 229, 0.08);
+}
+
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.screenshot-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  outline: 1px solid rgba(242, 238, 229, 0.1);
+  background: rgba(12, 18, 27, 0.9);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.screenshot-copy {
+  display: grid;
+  gap: 8px;
+  padding: 18px 18px 16px;
+}
+
+.screenshot-copy p {
+  margin: 0;
+  color: var(--gold-strong);
+  font-size: 12px;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.screenshot-copy h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.12;
+}
+
+.screenshot-copy span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.screenshot-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+.screenshot-preview::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 58%, rgba(0, 0, 0, 0.48));
+  opacity: 0;
+  transition: opacity 160ms ease;
+  content: "";
+}
+
+.screenshot-preview:hover::after,
+.screenshot-preview:focus-visible::after {
+  opacity: 1;
+}
+
+.screenshot-preview:focus-visible {
+  outline: 2px solid var(--gold-strong);
+  outline-offset: -2px;
+}
+
+.screenshot-preview span {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 1;
+  border-radius: 7px;
+  padding: 8px 11px;
+  background: rgba(215, 177, 94, 0.92);
+  color: #15100a;
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.screenshot-preview:hover span,
+.screenshot-preview:focus-visible span {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.screenshot-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2179 / 1504;
+  border-top: 1px solid rgba(242, 238, 229, 0.08);
+  object-fit: cover;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.lightbox[hidden] {
+  display: none;
+}
+
+.lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(3, 6, 10, 0.82);
+  cursor: zoom-out;
+}
+
+.lightbox-dialog {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1500px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow: hidden;
+  border-radius: 8px;
+  outline: 1px solid rgba(242, 238, 229, 0.14);
+  background: rgba(12, 18, 27, 0.98);
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.58);
+}
+
+.lightbox-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(242, 238, 229, 0.08);
+}
+
+.lightbox-header h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.lightbox-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(242, 238, 229, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.lightbox-close:hover,
+.lightbox-close:focus-visible {
+  background: rgba(215, 177, 94, 0.18);
+  color: var(--gold-strong);
+  outline: none;
+}
+
+.lightbox-dialog img {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 120px);
+  object-fit: contain;
+  background: rgba(3, 6, 10, 0.55);
+}
+
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -460,7 +656,8 @@ a {
   }
 
   .section-heading,
-  .split {
+  .split,
+  .screenshot-grid {
     grid-template-columns: 1fr;
   }
 
@@ -540,6 +737,18 @@ a {
     display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .lightbox {
+    padding: 12px;
+  }
+
+  .lightbox-dialog {
+    max-height: calc(100vh - 24px);
+  }
+
+  .lightbox-dialog img {
+    max-height: calc(100vh - 88px);
   }
 }
 

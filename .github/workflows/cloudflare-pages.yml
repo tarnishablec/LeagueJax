@@ -1,0 +1,38 @@
+name: Deploy Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "site/**"
+      - ".github/workflows/cloudflare-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: >
+          bunx wrangler pages deploy site
+          --project-name=leaguejax
+          --branch="${GITHUB_REF_NAME}"
+          --commit-hash="${GITHUB_SHA}"
