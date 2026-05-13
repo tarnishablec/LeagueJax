@@ -1,6 +1,4 @@
-const currentVersion = "0.1.71";
-const currentTag = `v${currentVersion}`;
-const currentExeName = `LeagueJax_${currentVersion}_x64-setup.exe`;
+const defaultInstallerName = "LeagueJax_x64-setup.exe";
 
 const releaseSources = {
   github: {
@@ -8,13 +6,15 @@ const releaseSources = {
     releaseBase: "https://github.com/tarnishablec/LeagueJax/releases/download",
     latestBase:
       "https://github.com/tarnishablec/LeagueJax/releases/latest/download",
-    fallback: `https://github.com/tarnishablec/LeagueJax/releases/latest/download/${currentExeName}`,
+    fallback: `https://github.com/tarnishablec/LeagueJax/releases/latest/download/${defaultInstallerName}`,
   },
   gitee: {
     api: "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases/latest",
     releaseBase:
       "https://gitee.com/tarnishablec/league-jax-releases/releases/download",
-    fallback: `https://gitee.com/tarnishablec/league-jax-releases/releases/download/${currentTag}/${currentExeName}`,
+    latestBase:
+      "https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download",
+    fallback: `https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download/${defaultInstallerName}`,
   },
 };
 
@@ -22,6 +22,7 @@ const translations = {
   en: {
     navDownloads: "Downloads",
     navFeatures: "Features",
+    navScreenshots: "Screenshots",
     navOpenSource: "Open Source",
     heroTitle: "LeagueJax",
     heroCopy:
@@ -51,6 +52,26 @@ const translations = {
     featureReplayTitle: "Replays and tools",
     featureReplayCopy:
       "Centralize replay management and practical client-side companion actions as the project evolves.",
+    screenshotsTitle: "See the real LeagueJax interface",
+    screenshotsCopy:
+      "Actual desktop screens show how LeagueJax organizes live scouting, match history, replay files, and lightweight tools.",
+    screenshotOngoingLabel: "Game",
+    screenshotOngoingTitle: "Current game context",
+    screenshotOngoingCopy:
+      "Scan teammates and opponents with recent results, rank cues, side, and current mode.",
+    screenshotHistoryLabel: "History",
+    screenshotHistoryTitle: "Match history review",
+    screenshotHistoryCopy:
+      "Open detailed match cards with runes, builds, teams, ranks, and per-game stats.",
+    screenshotReplayLabel: "Replays",
+    screenshotReplayTitle: "Local replay manager",
+    screenshotReplayCopy:
+      "Find ROFL files, map them to client versions, and launch matching replay playback.",
+    screenshotClaimLabel: "Tools",
+    screenshotClaimTitle: "Claim automation",
+    screenshotClaimCopy:
+      "Review claimable missions, event hub items, and recent claim activity in one focused tool.",
+    screenshotPreviewAction: "Preview",
     openSourceTitle: "Partially open source by design",
     openSourceCopy:
       "LeagueJax keeps its public shell, interface, foundation, and public project materials available while leaving some core implementation outside the public repository to reduce low-effort repackaging.",
@@ -67,6 +88,7 @@ const translations = {
   zh: {
     navDownloads: "下载",
     navFeatures: "功能",
+    navScreenshots: "界面",
     navOpenSource: "开源策略",
     heroTitle: "LeagueJax",
     heroCopy:
@@ -95,6 +117,26 @@ const translations = {
       "在游戏过程中保留必要信息，保持低打扰、易阅读、可快速确认。",
     featureReplayTitle: "回放与工具",
     featureReplayCopy: "逐步集中回放管理、客户端辅助操作和其他实用工具。",
+    screenshotsTitle: "真实的 LeagueJax 界面",
+    screenshotsCopy:
+      "这些实际桌面界面展示 LeagueJax 如何整理当前对局、战绩、回放文件和轻量工具。",
+    screenshotOngoingLabel: "对局",
+    screenshotOngoingTitle: "当前对局信息",
+    screenshotOngoingCopy:
+      "快速浏览队友和对手的近期表现、段位线索、阵营和当前模式。",
+    screenshotHistoryLabel: "战绩",
+    screenshotHistoryTitle: "战绩详情复盘",
+    screenshotHistoryCopy:
+      "展开包含符文、出装、双方阵容、段位和单局数据的详细战绩卡片。",
+    screenshotReplayLabel: "回放",
+    screenshotReplayTitle: "本地回放管理",
+    screenshotReplayCopy:
+      "查找 ROFL 文件，匹配客户端版本，并启动对应的回放播放。",
+    screenshotClaimLabel: "工具",
+    screenshotClaimTitle: "领取自动化",
+    screenshotClaimCopy:
+      "在一个聚焦面板里查看可领取任务、活动中心物品和最近领取记录。",
+    screenshotPreviewAction: "预览",
     openSourceTitle: "部分开源的产品边界",
     openSourceCopy:
       "LeagueJax 会公开产品外壳、界面、基础能力和适合公开的项目内容；部分核心实现不放在公开仓库中，以降低低成本套壳滥用风险。",
@@ -111,6 +153,7 @@ const translations = {
   ja: {
     navDownloads: "ダウンロード",
     navFeatures: "機能",
+    navScreenshots: "画面",
     navOpenSource: "公開方針",
     heroTitle: "LeagueJax",
     heroCopy:
@@ -140,6 +183,26 @@ const translations = {
     featureReplayTitle: "リプレイとツール",
     featureReplayCopy:
       "リプレイ管理、クライアント補助操作、その他の実用ツールを段階的に集約します。",
+    screenshotsTitle: "実際の LeagueJax 画面",
+    screenshotsCopy:
+      "実際のデスクトップ画面で、現在の試合、戦績、リプレイファイル、軽量ツールの整理方法を示します。",
+    screenshotOngoingLabel: "ゲーム",
+    screenshotOngoingTitle: "現在の試合情報",
+    screenshotOngoingCopy:
+      "味方と相手の直近結果、ランクの手がかり、サイド、現在のモードをすばやく確認できます。",
+    screenshotHistoryLabel: "履歴",
+    screenshotHistoryTitle: "戦績レビュー",
+    screenshotHistoryCopy:
+      "ルーン、ビルド、チーム、ランク、試合ごとの統計を含む詳細な戦績カードを開けます。",
+    screenshotReplayLabel: "リプレイ",
+    screenshotReplayTitle: "ローカルリプレイ管理",
+    screenshotReplayCopy:
+      "ROFL ファイルを探し、クライアントバージョンに対応付けて、適切なリプレイ再生を起動できます。",
+    screenshotClaimLabel: "ツール",
+    screenshotClaimTitle: "報酬受け取りツール",
+    screenshotClaimCopy:
+      "受け取り可能なミッション、イベントハブ項目、最近の受け取り履歴を一つの画面で確認できます。",
+    screenshotPreviewAction: "プレビュー",
     openSourceTitle: "部分的なオープンソース方針",
     openSourceCopy:
       "LeagueJax は、製品の外側、画面、基盤、公開に適した内容を公開し、一部の中核実装は公開リポジトリに含めません。",
@@ -158,6 +221,8 @@ const translations = {
 const getSupportedLanguage = (language) =>
   language && Object.hasOwn(translations, language) ? language : null;
 
+let currentLanguage = "en";
+
 const findInstallerAsset = (release) => {
   const assets = Array.isArray(release?.assets) ? release.assets : [];
   return assets.find((asset) => {
@@ -169,13 +234,19 @@ const findInstallerAsset = (release) => {
 };
 
 const installerNameForTag = (tagName) => {
-  const version = String(tagName || currentTag).replace(/^v/u, "");
-  return `LeagueJax_${version}_x64-setup.exe`;
+  const version = String(tagName || "").replace(/^v/u, "");
+  return version ? `LeagueJax_${version}_x64-setup.exe` : defaultInstallerName;
 };
 
 const resolveDownloadUrl = (source, release) => {
-  const tagName = release?.tag_name || release?.tagName || currentTag;
+  const tagName = release?.tag_name || release?.tagName || "";
   const asset = findInstallerAsset(release);
+  const fileName = asset?.name || installerNameForTag(tagName);
+
+  if (source.latestBase) {
+    return `${source.latestBase}/${fileName}`;
+  }
+
   const directUrl =
     asset?.browser_download_url || asset?.download_url || asset?.url || null;
 
@@ -183,8 +254,7 @@ const resolveDownloadUrl = (source, release) => {
     return directUrl;
   }
 
-  const fileName = asset?.name || installerNameForTag(tagName);
-  return `${source.releaseBase}/${tagName}/${fileName}`;
+  return tagName ? `${source.releaseBase}/${tagName}/${fileName}` : source.fallback;
 };
 
 const hydrateDownloadLink = async (key, elementId) => {
@@ -195,7 +265,7 @@ const hydrateDownloadLink = async (key, elementId) => {
     return;
   }
 
-  link.href = link.dataset.fallbackHref || source.fallback;
+  link.href = link.getAttribute("data-fallback-href") || source.fallback;
 
   try {
     const response = await fetch(source.api, {
@@ -211,14 +281,16 @@ const hydrateDownloadLink = async (key, elementId) => {
     const release = await response.json();
     link.href = resolveDownloadUrl(source, release);
   } catch {
-    link.href = link.dataset.fallbackHref || source.fallback;
+    link.href = link.getAttribute("data-fallback-href") || source.fallback;
   }
 };
 
 const setLanguage = (language) => {
-  const dictionary = translations[language] || translations.en;
+  const resolvedLanguage = getSupportedLanguage(language) || "en";
+  const dictionary = translations[resolvedLanguage];
+  currentLanguage = resolvedLanguage;
   document.documentElement.lang =
-    language === "zh" ? "zh-CN" : language === "ja" ? "ja" : "en";
+    resolvedLanguage === "zh" ? "zh-CN" : resolvedLanguage === "ja" ? "ja" : "en";
 
   document.querySelectorAll("[data-i18n]").forEach((element) => {
     const key = element.getAttribute("data-i18n");
@@ -231,17 +303,78 @@ const setLanguage = (language) => {
   document.querySelectorAll("[data-language]").forEach((button) => {
     button.classList.toggle(
       "is-active",
-      button.getAttribute("data-language") === language,
+      button.getAttribute("data-language") === resolvedLanguage,
     );
   });
 
-  localStorage.setItem("leaguejax-language", language);
+  localStorage.setItem("leaguejax-language", resolvedLanguage);
+};
+
+const screenshotLightbox = document.getElementById("screenshotLightbox");
+const lightboxImage = document.getElementById("lightboxImage");
+const lightboxTitle = document.getElementById("lightboxTitle");
+let lastPreviewTrigger = null;
+
+const closeScreenshotPreview = () => {
+  if (!screenshotLightbox || screenshotLightbox.hidden) {
+    return;
+  }
+
+  screenshotLightbox.hidden = true;
+  document.body.classList.remove("is-lightbox-open");
+
+  if (lightboxImage) {
+    lightboxImage.removeAttribute("src");
+    lightboxImage.alt = "";
+  }
+
+  if (lastPreviewTrigger) {
+    lastPreviewTrigger.focus();
+    lastPreviewTrigger = null;
+  }
+};
+
+const openScreenshotPreview = (button) => {
+  if (!screenshotLightbox || !lightboxImage || !lightboxTitle) {
+    return;
+  }
+
+  const image = button.getAttribute("data-preview-image");
+  if (!image) {
+    return;
+  }
+
+  const titleKey = button.getAttribute("data-preview-title-key");
+  const dictionary = translations[currentLanguage] || translations.en;
+  lightboxTitle.textContent = titleKey ? dictionary[titleKey] || "" : "";
+  lightboxImage.src = image;
+  lightboxImage.alt = button.getAttribute("data-preview-alt") || "";
+  screenshotLightbox.hidden = false;
+  document.body.classList.add("is-lightbox-open");
+  lastPreviewTrigger = button;
+  screenshotLightbox.querySelector("[data-lightbox-close]")?.focus();
 };
 
 document.querySelectorAll("[data-language]").forEach((button) => {
   button.addEventListener("click", () => {
     setLanguage(button.getAttribute("data-language") || "en");
   });
+});
+
+document.querySelectorAll("[data-preview-image]").forEach((button) => {
+  button.addEventListener("click", () => {
+    openScreenshotPreview(button);
+  });
+});
+
+document.querySelectorAll("[data-lightbox-close]").forEach((button) => {
+  button.addEventListener("click", closeScreenshotPreview);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeScreenshotPreview();
+  }
 });
 
 const urlLanguage = getSupportedLanguage(

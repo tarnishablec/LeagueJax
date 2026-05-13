@@ -26,6 +26,7 @@
       <nav class="nav-links" aria-label="Primary navigation">
         <a href="#downloads" data-i18n="navDownloads">Downloads</a>
         <a href="#features" data-i18n="navFeatures">Features</a>
+        <a href="#screenshots" data-i18n="navScreenshots">Screenshots</a>
         <a href="#open-source" data-i18n="navOpenSource">Open Source</a>
       </nav>
       <div class="language-switcher" aria-label="Language switcher">
@@ -47,8 +48,8 @@
             <a
               class="button button-primary"
               id="githubDownload"
-              href="https://github.com/tarnishablec/LeagueJax/releases/latest/download/LeagueJax_0.1.71_x64-setup.exe"
-              data-fallback-href="https://github.com/tarnishablec/LeagueJax/releases/latest/download/LeagueJax_0.1.71_x64-setup.exe"
+              href="https://github.com/tarnishablec/LeagueJax/releases/latest/download/LeagueJax_x64-setup.exe"
+              data-fallback-href="https://github.com/tarnishablec/LeagueJax/releases/latest/download/LeagueJax_x64-setup.exe"
               data-i18n="githubDownload"
             >
               Download from GitHub
@@ -56,8 +57,8 @@
             <a
               class="button button-secondary"
               id="giteeDownload"
-              href="https://gitee.com/tarnishablec/league-jax-releases/releases/download/v0.1.71/LeagueJax_0.1.71_x64-setup.exe"
-              data-fallback-href="https://gitee.com/tarnishablec/league-jax-releases/releases/download/v0.1.71/LeagueJax_0.1.71_x64-setup.exe"
+              href="https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download/LeagueJax_x64-setup.exe"
+              data-fallback-href="https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download/LeagueJax_x64-setup.exe"
               data-i18n="giteeDownload"
             >
               Download from Gitee
@@ -141,6 +142,132 @@
         </div>
       </section>
 
+      <section class="section screenshots-section" id="screenshots">
+        <div class="section-heading">
+          <h2 data-i18n="screenshotsTitle">
+            See the real LeagueJax interface
+          </h2>
+          <p data-i18n="screenshotsCopy">
+            Actual desktop screens show how LeagueJax organizes live scouting,
+            match history, replay files, and lightweight tools.
+          </p>
+        </div>
+        <div class="screenshot-grid">
+          <article class="screenshot-card">
+            <div class="screenshot-copy">
+              <p data-i18n="screenshotOngoingLabel">Game</p>
+              <h3 data-i18n="screenshotOngoingTitle">Current game context</h3>
+              <span data-i18n="screenshotOngoingCopy">
+                Scan teammates and opponents with recent results, rank cues,
+                side, and current mode.
+              </span>
+            </div>
+            <button
+              class="screenshot-preview"
+              type="button"
+              data-preview-image="assets/screenshots/jax_ongoing.png"
+              data-preview-alt="LeagueJax current game screen"
+              data-preview-title-key="screenshotOngoingTitle"
+              aria-label="Preview current game screenshot"
+            >
+              <img
+                src="assets/screenshots/jax_ongoing.png"
+                alt="LeagueJax current game screen"
+                width="2179"
+                height="1504"
+                loading="lazy"
+                decoding="async"
+              />
+              <span data-i18n="screenshotPreviewAction">Preview</span>
+            </button>
+          </article>
+          <article class="screenshot-card">
+            <div class="screenshot-copy">
+              <p data-i18n="screenshotHistoryLabel">History</p>
+              <h3 data-i18n="screenshotHistoryTitle">Match history review</h3>
+              <span data-i18n="screenshotHistoryCopy">
+                Open detailed match cards with runes, builds, teams, ranks, and
+                per-game stats.
+              </span>
+            </div>
+            <button
+              class="screenshot-preview"
+              type="button"
+              data-preview-image="assets/screenshots/jax_history.png"
+              data-preview-alt="LeagueJax match history screen"
+              data-preview-title-key="screenshotHistoryTitle"
+              aria-label="Preview match history screenshot"
+            >
+              <img
+                src="assets/screenshots/jax_history.png"
+                alt="LeagueJax match history screen"
+                width="2179"
+                height="1504"
+                loading="lazy"
+                decoding="async"
+              />
+              <span data-i18n="screenshotPreviewAction">Preview</span>
+            </button>
+          </article>
+          <article class="screenshot-card">
+            <div class="screenshot-copy">
+              <p data-i18n="screenshotReplayLabel">Replays</p>
+              <h3 data-i18n="screenshotReplayTitle">Local replay manager</h3>
+              <span data-i18n="screenshotReplayCopy">
+                Find ROFL files, map them to client versions, and launch
+                matching replay playback.
+              </span>
+            </div>
+            <button
+              class="screenshot-preview"
+              type="button"
+              data-preview-image="assets/screenshots/jax_replay.png"
+              data-preview-alt="LeagueJax replay manager screen"
+              data-preview-title-key="screenshotReplayTitle"
+              aria-label="Preview replay manager screenshot"
+            >
+              <img
+                src="assets/screenshots/jax_replay.png"
+                alt="LeagueJax replay manager screen"
+                width="2179"
+                height="1504"
+                loading="lazy"
+                decoding="async"
+              />
+              <span data-i18n="screenshotPreviewAction">Preview</span>
+            </button>
+          </article>
+          <article class="screenshot-card">
+            <div class="screenshot-copy">
+              <p data-i18n="screenshotClaimLabel">Tools</p>
+              <h3 data-i18n="screenshotClaimTitle">Claim automation</h3>
+              <span data-i18n="screenshotClaimCopy">
+                Review claimable missions, event hub items, and recent claim
+                activity in one focused tool.
+              </span>
+            </div>
+            <button
+              class="screenshot-preview"
+              type="button"
+              data-preview-image="assets/screenshots/jax_claim.png"
+              data-preview-alt="LeagueJax claim tool screen"
+              data-preview-title-key="screenshotClaimTitle"
+              aria-label="Preview claim tool screenshot"
+            >
+              <img
+                src="assets/screenshots/jax_claim.png"
+                alt="LeagueJax claim tool screen"
+                width="2179"
+                height="1504"
+                loading="lazy"
+                decoding="async"
+              />
+              <span data-i18n="screenshotPreviewAction">Preview</span>
+            </button>
+          </article>
+        </div>
+      </section>
+
       <section class="section split" id="open-source">
         <div>
           <h2 data-i18n="openSourceTitle">Partially open source by design</h2>
@@ -181,6 +308,41 @@
         Source on GitHub
       </a>
     </footer>
+
+    <div class="lightbox" id="screenshotLightbox" hidden>
+      <button
+        class="lightbox-backdrop"
+        type="button"
+        data-lightbox-close
+        aria-label="Close preview"
+      ></button>
+      <section
+        class="lightbox-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lightboxTitle"
+      >
+        <div class="lightbox-header">
+          <h2 id="lightboxTitle"></h2>
+          <button
+            class="lightbox-close"
+            type="button"
+            data-lightbox-close
+            aria-label="Close preview"
+          >
+            ×
+          </button>
+        </div>
+        <img
+          id="lightboxImage"
+          src=""
+          alt=""
+          width="2179"
+          height="1504"
+          decoding="async"
+        />
+      </section>
+    </div>
 
     <script src="main.js"></script>
   </body>
