@@ -33,6 +33,8 @@ export const logoButton = style({
 });
 
 export const logoIcon = style({
+  display: "block",
+  objectFit: "contain",
   transition: "all 200ms",
   cursor: "pointer",
   selectors: {
