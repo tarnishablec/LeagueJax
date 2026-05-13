@@ -6,7 +6,7 @@
 [![Gitee Releases](https://img.shields.io/badge/Gitee-Releases-c71d23)](https://gitee.com/tarnishablec/league-jax-releases/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-[公式サイト](https://tarnishablec.github.io/LeagueJax/)
+[公式サイト](https://leaguejax.pages.dev/)
 
 LeagueJax は、League of Legends プレイヤー向けのデスクトップコンパニオンツールです。クライアントの状態、試合情報、戦績、プレイヤー検索、軽量ウィンドウ、よく使う補助操作を、より見やすく扱いやすいデスクトップ体験としてまとめます。
 
