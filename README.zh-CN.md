@@ -6,6 +6,8 @@
 [![Gitee Releases](https://img.shields.io/badge/Gitee-Releases-c71d23)](https://gitee.com/tarnishablec/league-jax-releases/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
+[官方网站](https://tarnishablec.github.io/LeagueJax/)
+
 LeagueJax 是一个面向《英雄联盟》玩家的桌面伴侣工具。它把客户端状态、对局信息、战绩记录、玩家查询、小窗提醒和常用辅助操作整理到一个更清晰、更顺手的桌面体验里。
 
 它不是游戏增强器，也不是竞技优势工具。LeagueJax 更关注玩家在日常游戏前后会反复遇到的事情：查人、看战绩、理解当前对局、管理回放、减少重复操作，以及在不打断游戏节奏的情况下保留必要信息。

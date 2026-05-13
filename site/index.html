@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="LeagueJax is a desktop companion for League of Legends players, built for match context, player lookup, replays, and lightweight update-aware tooling."
+    />
+    <meta property="og:title" content="LeagueJax" />
+    <meta
+      property="og:description"
+      content="A desktop companion for League of Legends match context, history, and player tools."
+    />
+    <meta property="og:type" content="website" />
+    <title>LeagueJax</title>
+    <link rel="icon" href="assets/leaguejax-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="LeagueJax home">
+        <img src="assets/leaguejax-icon.png" alt="" width="32" height="32" />
+        <span>LeagueJax</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#downloads" data-i18n="navDownloads">Downloads</a>
+        <a href="#features" data-i18n="navFeatures">Features</a>
+        <a href="#open-source" data-i18n="navOpenSource">Open Source</a>
+      </nav>
+      <div class="language-switcher" aria-label="Language switcher">
+        <button class="is-active" type="button" data-language="en">EN</button>
+        <button type="button" data-language="zh">中文</button>
+        <button type="button" data-language="ja">日本語</button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-content">
+          <h1 data-i18n="heroTitle">LeagueJax</h1>
+          <p data-i18n="heroCopy">
+            A desktop companion for League of Legends players, built around match
+            context, player lookup, replays, and lightweight update-aware tools.
+          </p>
+          <div class="hero-actions" id="downloads">
+            <a
+              class="button button-primary"
+              id="githubDownload"
+              href="https://github.com/tarnishablec/LeagueJax/releases/latest/download/LeagueJax_0.1.71_x64-setup.exe"
+              data-fallback-href="https://github.com/tarnishablec/LeagueJax/releases/latest/download/LeagueJax_0.1.71_x64-setup.exe"
+              data-i18n="githubDownload"
+            >
+              Download from GitHub
+            </a>
+            <a
+              class="button button-secondary"
+              id="giteeDownload"
+              href="https://gitee.com/tarnishablec/league-jax-releases/releases/download/v0.1.71/LeagueJax_0.1.71_x64-setup.exe"
+              data-fallback-href="https://gitee.com/tarnishablec/league-jax-releases/releases/download/v0.1.71/LeagueJax_0.1.71_x64-setup.exe"
+              data-i18n="giteeDownload"
+            >
+              Download from Gitee
+            </a>
+          </div>
+          <p class="download-note" id="downloadNote" data-i18n="downloadNote">
+            Windows x64 installer. Direct links resolve to the latest release
+            when release metadata is available.
+          </p>
+        </div>
+
+        <div class="status-board" aria-label="LeagueJax product preview">
+          <div class="status-bar">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="preview-grid">
+            <section class="preview-panel preview-panel-main">
+              <p data-i18n="previewPhase">Live session</p>
+              <h2 data-i18n="previewTitle">Champion select context</h2>
+              <div class="lane-list" aria-hidden="true">
+                <span>TOP</span>
+                <span>JGL</span>
+                <span>MID</span>
+                <span>BOT</span>
+                <span>SUP</span>
+              </div>
+            </section>
+            <section class="preview-panel">
+              <p data-i18n="previewHistory">Recent history</p>
+              <strong>62%</strong>
+              <span data-i18n="previewHistoryCaption">last 20 matches</span>
+            </section>
+            <section class="preview-panel">
+              <p data-i18n="previewUpdater">Update source</p>
+              <strong>GitHub / Gitee</strong>
+              <span data-i18n="previewUpdaterCaption">direct installer links</span>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="section band" id="features">
+        <div class="section-heading">
+          <h2 data-i18n="featuresTitle">Built for the moments around a match</h2>
+          <p data-i18n="featuresCopy">
+            LeagueJax focuses on the repeated desktop tasks before, during, and
+            after a League of Legends session.
+          </p>
+        </div>
+        <div class="feature-list">
+          <article>
+            <h3 data-i18n="featureMatchTitle">Match context</h3>
+            <p data-i18n="featureMatchCopy">
+              Keep the current phase, team context, and session state easy to
+              scan without repeatedly switching windows.
+            </p>
+          </article>
+          <article>
+            <h3 data-i18n="featureHistoryTitle">History and lookup</h3>
+            <p data-i18n="featureHistoryCopy">
+              Review recent matches and inspect player information for review
+              and organization, not automated decision-making.
+            </p>
+          </article>
+          <article>
+            <h3 data-i18n="featureOverlayTitle">Compact overlay</h3>
+            <p data-i18n="featureOverlayCopy">
+              Keep useful information visible in a lighter form designed to be
+              readable and low-interruption.
+            </p>
+          </article>
+          <article>
+            <h3 data-i18n="featureReplayTitle">Replays and tools</h3>
+            <p data-i18n="featureReplayCopy">
+              Centralize replay management and practical client-side companion
+              actions as the project evolves.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section split" id="open-source">
+        <div>
+          <h2 data-i18n="openSourceTitle">Partially open source by design</h2>
+          <p data-i18n="openSourceCopy">
+            LeagueJax keeps its public shell, interface, foundation, and public
+            project materials available while leaving some core implementation
+            outside the public repository to reduce low-effort repackaging.
+          </p>
+        </div>
+        <div class="source-card">
+          <p data-i18n="licenseLabel">License</p>
+          <strong>GPL-3.0</strong>
+          <span data-i18n="licenseCopy">
+            Public source files and assets are governed by the repository
+            license. Non-public components are not included in the public
+            repository.
+          </span>
+        </div>
+      </section>
+
+      <section class="section notes">
+        <h2 data-i18n="originTitle">Why it exists</h2>
+        <p data-i18n="originCopy">
+          LeagueJax is connected to League Akari's partial open-source direction.
+          It is an independent project for learning and practicing Tauri desktop
+          development while building a tool shaped around my own workflow.
+        </p>
+        <p class="disclaimer" data-i18n="disclaimer">
+          LeagueJax is unofficial and is not affiliated with, sponsored by, or
+          endorsed by Riot Games, Tencent Games, or League of Legends.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>LeagueJax</span>
+      <a href="https://github.com/tarnishablec/LeagueJax" data-i18n="sourceLink">
+        Source on GitHub
+      </a>
+    </footer>
+
+    <script src="main.js"></script>
+  </body>
+</html>
