@@ -34,16 +34,19 @@ export const bar = style({
 });
 
 export const avatarSlot = style({
+  position: "relative",
   width: 56,
   height: 56,
   borderRadius: 8,
-  overflow: "hidden",
+  overflow: "visible",
   background: theme.color.blurry,
 });
 
 export const iconFallback = style({
   width: "100%",
   height: "100%",
+  borderRadius: 8,
+  overflow: "hidden",
   background: theme.color.blurry,
 });
 
@@ -51,7 +54,27 @@ export const profileIcon = style({
   display: "block",
   width: "100%",
   height: "100%",
+  borderRadius: 8,
   objectFit: "cover",
+});
+
+export const levelBadge = style({
+  position: "absolute",
+  right: 0,
+  bottom: 0,
+  transform: "translate(24%, 24%)",
+  minWidth: 16,
+  height: 16,
+  padding: "0 4px",
+  borderRadius: 4,
+  display: "inline-grid",
+  placeItems: "center",
+  fontSize: "0.62rem",
+  fontWeight: 700,
+  lineHeight: 1,
+  color: "oklch(0.98 0 0 / 0.96)",
+  background: theme.color.deep,
+  border: `1px solid ${theme.color.blurry}`,
 });
 
 export const identity = style({

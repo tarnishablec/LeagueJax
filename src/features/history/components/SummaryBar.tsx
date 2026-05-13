@@ -133,6 +133,7 @@ export function SummaryBar({
     summoner.gameName || summoner.name || summoner.puuid.slice(0, 8);
   const tagLine = summoner.tagLine.trim();
   const summonerId = tagLine ? `${gameName}#${tagLine}` : gameName;
+  const showSummonerLevel = summoner.summonerLevel > 0;
 
   const hiddenHistoryText = t("history.summary.hiddenHistory", {
     defaultValue: "Hidden match history",
@@ -153,6 +154,9 @@ export function SummaryBar({
             loadingClassName={s.iconFallback}
           />
         </div>
+        {showSummonerLevel ? (
+          <span className={s.levelBadge}>{summoner.summonerLevel}</span>
+        ) : null}
       </div>
       <div className={s.identity}>
         <div className={s.nameRow}>
