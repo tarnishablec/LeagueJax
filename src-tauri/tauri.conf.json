@@ -45,7 +45,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZBQTQ3RTQ3NjE3NUQ2NDgKUldSSTFuVmhSMzZrYWlFd0UrV1lIUXllMnBDa2VPUFBYRFhCRWpNdWtLa1lDSkNIT2NIYUE5cHkK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY0NTQ3Rjk1MjUyMTEzMTEKUldRUkV5RWxsWDlVOUxuRStqQ2RYNjhtMm9tbGhKUUgzKy9DK3VSTmhEazk4Qk1Za1NOQzZUL0IK",
       "endpoints": [
         "https://github.com/tarnishablec/LeagueJax/releases/latest/download/latest.json"
       ]
