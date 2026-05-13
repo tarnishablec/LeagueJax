@@ -18,13 +18,16 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          token: ${{ secrets.PRIVATE_SUBMODULE_TOKEN }}
 
       - name: Read version from tauri.conf.json
         id: version
@@ -84,7 +87,7 @@ jobs:
       - name: Generate release changelog
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           PREVIOUS_REF: ${{ inputs.previous_ref }}
         run: |
           if [ -n "$PREVIOUS_REF" ]; then
@@ -126,13 +129,11 @@ jobs:
 
       - name: Generate GitHub latest.json
         run: |
-          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://github.com/tarnishablec/league-jax-releases/releases/download" --notes-file artifacts/CHANGELOG.md
+          bun run generate_updater_manifest --artifact-dir artifacts --version "${{ needs.build.outputs.version }}" --tag "${{ needs.build.outputs.tag }}" --release-base-url "https://github.com/tarnishablec/LeagueJax/releases/download" --notes-file artifacts/CHANGELOG.md
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          repository: tarnishablec/league-jax-releases
-          token: ${{ secrets.RELEASES_TOKEN }}
           tag_name: ${{ needs.build.outputs.tag }}
           name: League Jax ${{ needs.build.outputs.tag }}
           draft: false

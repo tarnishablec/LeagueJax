@@ -13,7 +13,7 @@ export const updaterI18n: Resource = {
       update: {
         source: {
           label: "Update Source",
-          hint: "Choose where update metadata and installers are resolved from.",
+          hint: "Choose where update metadata and installers are resolved from. GitHub uses this repository; Gitee uses the existing release mirror.",
           options: {
             auto: "Auto",
             gitee: "Gitee",
@@ -69,7 +69,7 @@ export const updaterI18n: Resource = {
       update: {
         source: {
           label: "更新源",
-          hint: "选择更新元数据和安装包优先从哪里解析。",
+          hint: "选择更新元数据和安装包的解析来源。GitHub 使用当前仓库，Gitee 使用现有发布镜像。",
           options: {
             auto: "自动",
             gitee: "Gitee",
@@ -77,7 +77,7 @@ export const updaterI18n: Resource = {
           },
         },
         autoCheckOnStartup: {
-          label: "启动时自动检测更新",
+          label: "启动时自动检查更新",
           hint: "只会自动检查更新，不会自动下载或安装。",
         },
         action: {
@@ -85,7 +85,7 @@ export const updaterI18n: Resource = {
           hint: "按钮会先检查更新，检测到新版本后再切换为安装。",
           check: "检查更新",
           install: "立即更新",
-          upToDate: "已最新",
+          upToDate: "已是最新",
         },
         status: {
           idle: "尚未检查",
@@ -125,7 +125,7 @@ export const updaterI18n: Resource = {
       update: {
         source: {
           label: "更新ソース",
-          hint: "更新メタデータとインストーラーをどこから解決するかを選択します。",
+          hint: "更新メタデータとインストーラーの取得元を選択します。GitHub は現在のリポジトリ、Gitee は既存のリリースミラーを使用します。",
           options: {
             auto: "自動",
             gitee: "Gitee",
@@ -134,11 +134,11 @@ export const updaterI18n: Resource = {
         },
         autoCheckOnStartup: {
           label: "起動時に更新を確認",
-          hint: "起動時に自動で更新確認のみ行います。自動インストールはしません。",
+          hint: "起動時に更新確認のみ行います。自動ダウンロードや自動インストールは行いません。",
         },
         action: {
-          label: "更新アクション",
-          hint: "ボタンは最初に更新確認を行い、新しいバージョンが見つかるとインストールに切り替わります。",
+          label: "更新操作",
+          hint: "ボタンは最初に更新を確認し、新しいバージョンが見つかるとインストールに切り替わります。",
           check: "更新を確認",
           install: "更新をインストール",
           upToDate: "最新です",
@@ -161,7 +161,7 @@ export const updaterI18n: Resource = {
           none: "なし",
         },
         toast: {
-          title: "新しいバージョン {{latestVersion}} が利用可能です",
+          title: "新しいバージョン {{latestVersion}} があります",
           description:
             "現在のバージョン: {{currentVersion}}\n最新バージョン: {{latestVersion}}",
           action: "更新設定を開く",
