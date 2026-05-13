@@ -1,0 +1,3 @@
+[submodule "src-tauri/src/shards/lcu"]
+	path = src-tauri/src/shards/lcu
+	url = https://github.com/tarnishablec/LeagueJax_lcu.git
