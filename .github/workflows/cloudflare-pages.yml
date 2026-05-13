@@ -6,6 +6,8 @@ on:
       - master
     paths:
       - "site/**"
+      - "scripts/prepare-site-deploy.ts"
+      - "package.json"
       - ".github/workflows/cloudflare-pages.yml"
   workflow_dispatch:
 
@@ -31,12 +33,15 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: Prepare site
+        run: bun run site:prepare-deploy
+
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >
-          bunx wrangler pages deploy site
+          bunx wrangler pages deploy tmp/cloudflare-pages-site
           --project-name=leaguejax
           --branch="${GITHUB_REF_NAME}"
           --commit-hash="${GITHUB_SHA}"

@@ -8,14 +8,6 @@ const releaseSources = {
       "https://github.com/tarnishablec/LeagueJax/releases/latest/download",
     fallback: `https://github.com/tarnishablec/LeagueJax/releases/latest/download/${defaultInstallerName}`,
   },
-  gitee: {
-    api: "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases/latest",
-    releaseBase:
-      "https://gitee.com/tarnishablec/league-jax-releases/releases/download",
-    latestBase:
-      "https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download",
-    fallback: `https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download/${defaultInstallerName}`,
-  },
 };
 
 const translations = {
@@ -254,7 +246,9 @@ const resolveDownloadUrl = (source, release) => {
     return directUrl;
   }
 
-  return tagName ? `${source.releaseBase}/${tagName}/${fileName}` : source.fallback;
+  return tagName
+    ? `${source.releaseBase}/${tagName}/${fileName}`
+    : source.fallback;
 };
 
 const hydrateDownloadLink = async (key, elementId) => {
@@ -290,7 +284,11 @@ const setLanguage = (language) => {
   const dictionary = translations[resolvedLanguage];
   currentLanguage = resolvedLanguage;
   document.documentElement.lang =
-    resolvedLanguage === "zh" ? "zh-CN" : resolvedLanguage === "ja" ? "ja" : "en";
+    resolvedLanguage === "zh"
+      ? "zh-CN"
+      : resolvedLanguage === "ja"
+        ? "ja"
+        : "en";
 
   document.querySelectorAll("[data-i18n]").forEach((element) => {
     const key = element.getAttribute("data-i18n");
@@ -391,4 +389,3 @@ const browserLanguage = navigator.language.startsWith("zh")
 
 setLanguage(urlLanguage || storedLanguage || browserLanguage);
 void hydrateDownloadLink("github", "githubDownload");
-void hydrateDownloadLink("gitee", "giteeDownload");

@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "site": "vite --host 127.0.0.1 --port 4173 site",
+    "site:prepare-deploy": "bun run ./scripts/prepare-site-deploy.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
