@@ -1,66 +1,67 @@
 # LeagueJax
 
-[中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
+[English](README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-[![Release](https://img.shields.io/github/v/release/tarnishablec/LeagueJax?label=release)](https://github.com/tarnishablec/LeagueJax/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/tarnishablec/LeagueJax?label=github%20release)](https://github.com/tarnishablec/LeagueJax/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-LeagueJax 是一个面向《英雄联盟》玩家的桌面伴侣工具。它把客户端状态、对局信息、战绩记录、玩家查询、小窗提醒和常用辅助操作整理到一个更清晰、更顺手的桌面体验里。
+LeagueJax is a desktop companion for League of Legends players. It brings client state, match context, player lookup, match history, lightweight overlays, and practical companion actions into a cleaner desktop experience.
 
-它不是游戏增强器，也不是竞技优势工具。LeagueJax 更关注玩家在日常游戏前后会反复遇到的事情：查人、看战绩、理解当前对局、管理回放、减少重复操作，以及在不打断游戏节奏的情况下保留必要信息。
+It is not a game enhancer or a competitive advantage tool. LeagueJax focuses on the repeated tasks around normal play: checking players, reviewing matches, understanding the current session, managing replays, reducing repetitive actions, and keeping useful information visible without interrupting the flow of the game.
 
-## 下载与状态
+## Download And Status
 
-正式构建会发布在当前仓库的 Releases 页面：
+Official builds are published through both GitHub and Gitee release channels:
 
-[下载 LeagueJax](https://github.com/tarnishablec/LeagueJax/releases)
+- [GitHub Releases](https://github.com/tarnishablec/LeagueJax/releases)
+- [Gitee Releases](https://gitee.com/tarnishablec/league-jax-releases/releases)
 
-项目仍处于早期迭代阶段，功能、界面、发布节奏和自动更新策略都可能继续调整。建议优先使用最新版本，并在更新前留意对应版本说明。
+The project is still in early iteration. Features, interface details, release cadence, and update behavior may continue to change. Use the latest release when possible and review the release notes before updating.
 
-## 为什么会有这个项目
+## Why This Project Exists
 
-LeagueJax 的诞生和 [League Akari](https://github.com/Hanxven/LeagueAkari) 有直接关系。Akari 已经转向部分开源策略，这让我重新思考一个桌面《英雄联盟》工具应该如何组织产品体验、公开边界和发布方式。LeagueJax 因此成为一个学习和实践 Tauri 桌面应用开发的项目，同时也尝试做出一套更贴近自己使用习惯的玩家工具。
+LeagueJax is directly connected to [League Akari](https://github.com/Hanxven/LeagueAkari). Since Akari has also moved to a partially open-source strategy, it made sense to rethink how a desktop League of Legends tool should define its product experience, public boundary, and release model. LeagueJax was created as a project for learning and practicing Tauri desktop application development, while also exploring a player tool that better matches my own workflow.
 
-这个项目不是 Akari 的复制，也不试图替代 Akari。它是一个独立项目，产品设计上会参考 Akari 的桌面工具体验，但功能取舍、节奏和边界都由 LeagueJax 自己决定。
+LeagueJax is not a copy of Akari and does not aim to replace it. It is an independent project. Its product design may reference Akari's desktop-tool experience, but its feature choices, pace, and boundaries are decided by LeagueJax itself.
 
-## 主要能力
+## Main Capabilities
 
-### 对局信息
+### Match Context
 
-LeagueJax 会围绕当前游戏流程整理关键状态，让玩家能更快理解自己所处的阶段、队伍信息和相关上下文。它适合在等待、选人、进入对局前后使用，减少频繁切换窗口和手动查找信息的成本。
+LeagueJax organizes key state around the current game flow, helping players understand the current phase, team information, and related context more quickly. It is designed for moments around queueing, champion select, and entering or leaving a match, reducing window switching and manual lookup.
 
-### 战绩与玩家查询
+### Match History And Player Lookup
 
-通过战绩和玩家信息视图，LeagueJax 帮助玩家更快回顾近期表现、查看历史对局，并在需要时查询相关玩家资料。它面向的是复盘和信息整理，而不是替玩家做判断。
+LeagueJax helps players review recent performance, inspect match history, and look up relevant player profiles when needed. The goal is review and information organization, not automated decision-making.
 
-### 小窗体验
+### Compact Overlay
 
-LeagueJax 提供更轻量的小窗形态，用于在游戏过程中保留必要信息。小窗的目标是少打扰、易扫读、可快速确认状态。
+LeagueJax provides a lightweight overlay form for keeping useful information available during play. The overlay is designed to be low-interruption, easy to scan, and quick to confirm.
 
-### 回放与工具
+### Replays And Tools
 
-LeagueJax 会逐步补齐回放管理、客户端辅助操作和其他实用工具，让一些原本分散在客户端不同位置的操作变得更集中。
+LeagueJax will gradually improve replay management, client-side companion actions, and other practical tools so that operations scattered across the client can become more centralized.
 
-### 通知与设置
+### Notifications And Settings
 
-项目会保留可配置的通知和设置入口，让功能行为尽量明确、可控，避免隐藏式操作。
+The project keeps notifications and settings configurable, so behavior remains explicit, controllable, and easy to review.
 
-## 开源策略
+## Open-Source Strategy
 
-LeagueJax 采用部分开源策略。公开仓库会保留产品外壳、界面、基础能力和适合公开的项目内容；部分核心实现不会放在公开仓库中。
+LeagueJax uses a partially open-source strategy. The public repository keeps the product shell, interface, foundation, and public project materials available, while some core implementation remains outside the public repository.
 
-这样做的原因很简单：这类工具很容易被无良商家直接套壳、改名、重新打包，再拿去误导用户。LeagueJax 希望在分享项目思路和学习成果的同时，尽量降低被低成本套壳滥用的风险。
+The reason is straightforward: tools in this category are easy for bad actors to rebrand, repackage, and sell or distribute in misleading ways. LeagueJax aims to share project ideas and learning outcomes while reducing the risk of low-effort repackaging.
 
-## 许可协议
+## License
 
-本项目整体采用 GPL-3.0 许可协议。公开仓库中的源文件和资源以仓库内的 [LICENSE](LICENSE) 文件为准。
+The project as a whole uses the GPL-3.0 license. Source files and assets in the public repository are governed by the [LICENSE](LICENSE) file in this repository.
 
-部分未公开组件不在本公开仓库中提供。使用、分发或二次开发公开部分时，请遵守 GPL-3.0 的相关要求，并保留原始项目来源说明。
+Some non-public components are not provided in this public repository. When using, distributing, or modifying the public portions, follow the GPL-3.0 requirements and preserve attribution to the original project.
 
-## 非官方声明
+## Unofficial Notice
 
-LeagueJax 是一个非官方项目，与 Riot Games、腾讯游戏或 League of Legends 官方没有从属、赞助、认可或合作关系。
+LeagueJax is an unofficial project. It is not affiliated with, sponsored by, endorsed by, or partnered with Riot Games, Tencent Games, or the official League of Legends product.
 
-League of Legends 及相关素材、名称、图标和游戏内容归其各自权利方所有。LeagueJax 仅作为玩家桌面伴侣工具使用，不代表官方产品。
+League of Legends and related materials, names, icons, and game content belong to their respective rights holders. LeagueJax is only a desktop companion tool for players and does not represent an official product.
 
-使用本项目时，请自行确认其行为符合你所在地区、服务器和游戏客户端的相关规则。
+When using this project, confirm that your usage complies with the rules of your region, server, and game client.
