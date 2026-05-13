@@ -6,6 +6,8 @@
 [![Gitee Releases](https://img.shields.io/badge/Gitee-Releases-c71d23)](https://gitee.com/tarnishablec/league-jax-releases/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
+[Website](https://tarnishablec.github.io/LeagueJax/)
+
 LeagueJax is a desktop companion for League of Legends players. It brings client state, match context, player lookup, match history, lightweight overlays, and practical companion actions into a cleaner desktop experience.
 
 It is not a game enhancer or a competitive advantage tool. LeagueJax focuses on the repeated tasks around normal play: checking players, reviewing matches, understanding the current session, managing replays, reducing repetitive actions, and keeping useful information visible without interrupting the flow of the game.
