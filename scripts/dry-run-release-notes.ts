@@ -21,7 +21,7 @@ interface GitCliffContext {
 const repoRoot = resolve(import.meta.dir, "..");
 const tauriConfigPath = resolve(repoRoot, "src-tauri", "tauri.conf.json");
 const tauriConfigRepoPath = "src-tauri/tauri.conf.json";
-const defaultReleaseRepo = "tarnishablec/league-jax-releases";
+const defaultReleaseRepo = "tarnishablec/LeagueJax";
 
 const readReleaseTag = async (override?: string): Promise<string> => {
   if (override) {
@@ -60,15 +60,9 @@ const readPublishedTags = async (releaseRepo: string): Promise<string[]> => {
   }
 
   const payload = (await response.json()) as Array<{ name?: unknown }>;
-  const tags = payload.flatMap((tag) =>
+  return payload.flatMap((tag) =>
     typeof tag.name === "string" && tag.name ? [tag.name] : [],
   );
-
-  if (tags.length === 0) {
-    throw new Error(`No published tags found in ${releaseRepo}`);
-  }
-
-  return tags;
 };
 
 const parseReleaseTag = (tag: string): [number, number, number] => {
@@ -140,6 +134,11 @@ const runGit = async (args: string[]): Promise<string> => {
   return stdout.trim();
 };
 
+const readFirstCommit = async (): Promise<string> => {
+  const output = await runGit(["rev-list", "--max-parents=0", "HEAD"]);
+  return output.split(/\r?\n/).find(Boolean) ?? "HEAD";
+};
+
 const readVersionAtCommit = async (
   commit: string,
 ): Promise<string | undefined> => {
@@ -192,6 +191,14 @@ const resolveDefaultGitCliffContext = async (
   tag: string,
 ): Promise<GitCliffContext> => {
   const tags = await readPublishedTags(args.releaseRepo);
+
+  if (tags.length === 0) {
+    return {
+      from: await readFirstCommit(),
+      tag,
+      to: (await resolveTargetReleaseEnd(tag)) ?? "HEAD",
+    };
+  }
 
   if (tags.includes(tag)) {
     return {

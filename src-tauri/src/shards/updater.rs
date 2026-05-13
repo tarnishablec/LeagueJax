@@ -26,7 +26,7 @@ use crate::shards::tauri_host::TauriHost;
 const UPDATE_SOURCE_SETTING_ID: &str = "system.update.source";
 const AUTO_CHECK_SETTING_ID: &str = "system.update.autoCheckOnStartup";
 const GITHUB_RELEASE_API: &str =
-    "https://api.github.com/repos/tarnishablec/league-jax-releases/releases/latest";
+    "https://api.github.com/repos/tarnishablec/LeagueJax/releases/latest";
 const GITEE_RELEASE_API: &str =
     "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases/latest";
 // Note:
@@ -34,7 +34,7 @@ const GITEE_RELEASE_API: &str =
 // stays fully configured. The settings-driven updater flow does not use that default
 // endpoint directly. Instead, this shard resolves the active source at runtime and
 // overrides the endpoint through `UpdaterBuilder::endpoints(...)`.
-const GITHUB_RELEASES_BASE: &str = "https://github.com/tarnishablec/league-jax-releases";
+const GITHUB_RELEASES_BASE: &str = "https://github.com/tarnishablec/LeagueJax";
 const GITEE_RELEASES_BASE: &str = "https://gitee.com/tarnishablec/league-jax-releases";
 const USER_AGENT: &str = "league-jax-updater";
 

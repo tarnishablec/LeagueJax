@@ -47,7 +47,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZBQTQ3RTQ3NjE3NUQ2NDgKUldSSTFuVmhSMzZrYWlFd0UrV1lIUXllMnBDa2VPUFBYRFhCRWpNdWtLa1lDSkNIT2NIYUE5cHkK",
       "endpoints": [
-        "https://github.com/tarnishablec/league-jax-releases/releases/latest/download/latest.json"
+        "https://github.com/tarnishablec/LeagueJax/releases/latest/download/latest.json"
       ]
     }
   }
