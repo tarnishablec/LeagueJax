@@ -155,6 +155,9 @@ const translations = {
   },
 };
 
+const getSupportedLanguage = (language) =>
+  language && Object.hasOwn(translations, language) ? language : null;
+
 const findInstallerAsset = (release) => {
   const assets = Array.isArray(release?.assets) ? release.assets : [];
   return assets.find((asset) => {
@@ -241,13 +244,18 @@ document.querySelectorAll("[data-language]").forEach((button) => {
   });
 });
 
-const storedLanguage = localStorage.getItem("leaguejax-language");
+const urlLanguage = getSupportedLanguage(
+  new URLSearchParams(window.location.search).get("lang"),
+);
+const storedLanguage = getSupportedLanguage(
+  localStorage.getItem("leaguejax-language"),
+);
 const browserLanguage = navigator.language.startsWith("zh")
   ? "zh"
   : navigator.language.startsWith("ja")
     ? "ja"
     : "en";
 
-setLanguage(storedLanguage || browserLanguage);
+setLanguage(urlLanguage || storedLanguage || browserLanguage);
 void hydrateDownloadLink("github", "githubDownload");
 void hydrateDownloadLink("gitee", "giteeDownload");
