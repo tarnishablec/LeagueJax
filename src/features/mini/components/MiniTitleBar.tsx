@@ -5,7 +5,7 @@ import { ArrowUpToLine, Pin } from "lucide-solid";
 import { AppTooltip } from "@/components/AppTooltip";
 import { trafficButton } from "@/components/WindowControlButton.css.ts";
 import { CloseIcon, MinimizeIcon } from "@/components/WindowControlIcons";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import type { SettingId } from "@/features/settings/types";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { useSolidTranslation } from "@/i18n/solid";

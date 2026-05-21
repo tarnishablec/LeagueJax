@@ -3,7 +3,7 @@ import { Swords } from "lucide-solid";
 import type { Accessor, JSX } from "solid-js";
 import { createMemo, createSignal, onCleanup, Show } from "solid-js";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import type { SettingId } from "@/features/settings/types";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { useSolidTranslation } from "@/i18n/solid";
@@ -19,7 +19,7 @@ import {
   getPlayerCardTagEnabledSettingItems,
   normalizePlayerCardTagColor,
 } from "../components/player-card-tags.ts";
-import { useSolidOngoingGameStore } from "../store.solid";
+import { useSolidOngoingGameStore } from "../store";
 import { resolveOngoingTeamGroups } from "./ongoing-game.player-utils.ts";
 
 const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots" as SettingId;

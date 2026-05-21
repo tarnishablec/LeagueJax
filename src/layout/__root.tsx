@@ -25,8 +25,8 @@ import {
   getSolidToolbarSlots,
 } from "@/features/solid-registry";
 import { useSolidWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
-import { useSolidLcuEvents } from "@/hooks/use-lcu-events.solid";
-import { useSolidTheme } from "@/hooks/use-theme.solid";
+import { useSolidLcuEvents } from "@/hooks/use-lcu-events";
+import { useSolidTheme } from "@/hooks/use-theme";
 import { useSolidTranslation } from "@/i18n/solid";
 import type { SolidNavItem } from "@/runtime/solid-web-contract";
 import * as s from "./__root.css.ts";

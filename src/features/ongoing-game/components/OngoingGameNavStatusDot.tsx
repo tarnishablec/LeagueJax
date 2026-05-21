@@ -2,7 +2,7 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import type { OngoingGamePhase } from "@/bindings/ongoing_game";
-import { useSolidOngoingGameStore } from "../store.solid";
+import { useSolidOngoingGameStore } from "../store";
 import * as s from "./OngoingGameNavStatusDot.css";
 
 function isVisibleOngoingPhase(phase: OngoingGamePhase): boolean {

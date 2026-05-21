@@ -5,11 +5,11 @@ import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { useSolidMatchPerformanceStrategy } from "@/features/history/hooks/use-match-performance-strategy";
 import { useSolidRankedSummary } from "@/features/history/hooks/use-ranked-summary";
 import { useSolidTranslation } from "@/i18n/solid";
-import { useSolidLcuStore } from "@/stores/lcu.solid";
+import { useSolidLcuStore } from "@/stores/lcu";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
-import { useSolidOngoingGameStore } from "../store.solid";
+import { useSolidOngoingGameStore } from "../store";
 import type { PlayerSquadAssignment } from "./player-card-squads.ts";
 import {
   collectMatchPlayerCardTags,

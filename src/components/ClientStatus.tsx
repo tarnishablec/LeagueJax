@@ -17,8 +17,8 @@ import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { ProfileIcon } from "@/components/ProfileIcon";
 import { SummonerID } from "@/components/SummonerID";
 import { useSolidTranslation } from "@/i18n/solid";
-import { selectIsFocused, useSolidLcuStore } from "../stores/lcu.solid";
-import { tabStore } from "../stores/tabs.solid";
+import { selectIsFocused, useSolidLcuStore } from "../stores/lcu";
+import { tabStore } from "../stores/tabs";
 import * as s from "./ClientStatus.css.ts";
 
 type ClientDisplayState = Exclude<LcuInstanceInfo["state"], "idle">;

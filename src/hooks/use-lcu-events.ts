@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { onCleanup, onMount } from "solid-js";
 import type { LcuInstanceInfo } from "@/bindings/lcu.ts";
 import { createLogger } from "@/infra/logger";
-import { useSolidLcuStore } from "@/stores/lcu.solid";
+import { useSolidLcuStore } from "@/stores/lcu";
 
 const logger = createLogger("solid-lcu-events");
 

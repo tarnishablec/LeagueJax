@@ -2,7 +2,7 @@
 import { Navigate, useParams } from "@solidjs/router";
 import type { JSX } from "solid-js";
 import { lazy, Show } from "solid-js";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import { useSolidTranslation } from "@/i18n/solid";
 import { SettingsClientArgsView } from "../components/SettingsClientArgsView";
 import { useSolidSettingsPages } from "../components/SettingsHub";

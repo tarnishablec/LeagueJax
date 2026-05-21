@@ -38,11 +38,11 @@ import { LcuImage } from "@/components/LcuImage";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SummonerID } from "@/components/SummonerID";
 import { SettingsToggle } from "@/components/settings-ui";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import { useSolidTranslation } from "@/i18n/solid";
 import { toErrorMessage } from "@/infra/errors";
 import { createSolidQuery } from "@/infra/solid-query";
-import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu";
 import {
   CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT,
   CLAIM_TOOL_NOTIFICATION_SETTING_ID,

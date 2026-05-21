@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "@solidjs/router";
-import type { HistoryTabIdentity } from "@/stores/tabs.solid";
-import { useSolidTabStore } from "@/stores/tabs.solid";
+import type { HistoryTabIdentity } from "@/stores/tabs";
+import { useSolidTabStore } from "@/stores/tabs";
 
 const HISTORY_ROUTE_PATH = "/main/history";
 

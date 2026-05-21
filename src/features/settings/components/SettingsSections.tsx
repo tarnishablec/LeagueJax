@@ -3,7 +3,7 @@ import { keyArray } from "@solid-primitives/keyed";
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import { SettingsSectionCard } from "@/components/settings-ui";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import type {
   RegisteredSetting,
   SettingsSectionKey,

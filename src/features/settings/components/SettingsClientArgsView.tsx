@@ -6,7 +6,7 @@ import type { LeagueClientCmdArgs } from "@/bindings/lcu.ts";
 import { DataTable } from "@/components/DataTable";
 import * as dt from "@/components/DataTable/DataTable.css.ts";
 import { useSolidTranslation } from "@/i18n/solid";
-import { useSolidLcuStore } from "@/stores/lcu.solid";
+import { useSolidLcuStore } from "@/stores/lcu";
 import * as s from "./SettingsClientArgsView.css.ts";
 
 interface CmdArgRow {

@@ -6,7 +6,7 @@ import { SolidMiniShard } from "./mini/manifest";
 import { SolidNotificationsShard } from "./notifications/manifest";
 import { SolidOngoingGameShard } from "./ongoing-game/manifest";
 import { SolidReplayShard } from "./replay/manifest";
-import { SolidSettingsShard } from "./settings/solid-settings-shard.solid";
+import { SolidSettingsShard } from "./settings/solid-settings-shard";
 import { SolidShellShard } from "./shell/manifest";
 import { initializeSolidWebShards } from "./solid-registry";
 import { StaticCacheShard } from "./static-cache/manifest";

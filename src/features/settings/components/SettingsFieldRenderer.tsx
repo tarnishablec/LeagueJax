@@ -10,7 +10,7 @@ import {
   SettingsSelect,
   SettingsToggle,
 } from "@/components/settings-ui/index";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import type {
   RegisteredSetting,
   SettingId,

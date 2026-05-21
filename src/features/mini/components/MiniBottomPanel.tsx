@@ -13,7 +13,7 @@ import {
 import { SettingsFieldRow } from "@/components/settings-ui/SettingsFieldRow";
 import { SettingsInput } from "@/components/settings-ui/SettingsInput";
 import { SettingsToggle } from "@/components/settings-ui/SettingsToggle";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import type { SettingId } from "@/features/settings/types";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { useSolidTranslation } from "@/i18n/solid";

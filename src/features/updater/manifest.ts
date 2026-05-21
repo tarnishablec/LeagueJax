@@ -1,4 +1,4 @@
-import { SolidSettingsShard } from "@/features/settings/solid-settings-shard.solid";
+import { SolidSettingsShard } from "@/features/settings/solid-settings-shard";
 import { SHARD_IDS } from "@/features/shard-ids";
 import type { Jax } from "@/jax";
 import type { SolidWebShard } from "@/runtime/solid-web-contract";
