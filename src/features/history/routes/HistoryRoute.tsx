@@ -10,8 +10,8 @@ import {
 import { ProfileIcon } from "@/components/ProfileIcon";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { useSolidTranslation } from "@/i18n/solid";
-import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
-import { useSolidTabStore } from "@/stores/tabs.solid";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu";
+import { useSolidTabStore } from "@/stores/tabs";
 import { ConnectionGuard } from "../components/ConnectionGuard";
 import { MatchList } from "../components/MatchList";
 import { SummaryBar } from "../components/SummaryBar";

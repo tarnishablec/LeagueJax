@@ -5,7 +5,7 @@ import { getSolidJaxRuntime } from "@/features/solid-registry";
 import { StaticCacheShard } from "@/features/static-cache/manifest";
 import { useSolidTranslation } from "@/i18n/solid";
 import { createSolidQuery } from "@/infra/solid-query";
-import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu";
 import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
 type CdragonPerk = {

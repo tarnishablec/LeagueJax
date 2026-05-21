@@ -11,10 +11,10 @@ import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/types/match-mode";
 import { useSolidLcuMapQuery } from "@/hooks/use-lcu-maps";
 import { useSolidTranslation } from "@/i18n/solid";
-import { useSolidLcuStore } from "@/stores/lcu.solid";
+import { useSolidLcuStore } from "@/stores/lcu";
 import { preferredLcuMapAsset } from "@/utils/lcu-map-assets";
 import { resolveOwnOngoingTeamSide } from "../routes/ongoing-game.player-utils.ts";
-import { useSolidOngoingGameStore } from "../store.solid";
+import { useSolidOngoingGameStore } from "../store";
 import * as s from "./OngoingGameTitlebar.css";
 
 const CURRENT_MODE_VALUE = "__current_mode__";

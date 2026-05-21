@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Accessor } from "solid-js";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { createSolidQuery } from "@/infra/solid-query";
-import type { HistoryTabIdentity } from "@/stores/tabs.solid";
+import type { HistoryTabIdentity } from "@/stores/tabs";
 
 type SearchSummonerKey = readonly ["search_summoner", string, string];
 type SummonerByPuuidKey = readonly [

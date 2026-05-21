@@ -3,7 +3,7 @@ import { Menu } from "@ark-ui/solid/menu";
 import type { JSX } from "solid-js";
 import { createMemo, createSignal, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import type {
   RegisteredSetting,
   SettingId,

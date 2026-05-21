@@ -17,7 +17,7 @@ import type {
 } from "@/features/settings/types";
 import type { Jax } from "@/jax";
 import type { SolidWebShard } from "@/runtime/solid-web-contract";
-import { SolidSettingsShard } from "../settings/solid-settings-shard.solid";
+import { SolidSettingsShard } from "../settings/solid-settings-shard";
 import { SHARD_IDS } from "../shard-ids";
 import { OngoingGameNavStatusDot } from "./components/OngoingGameNavStatusDot";
 import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
@@ -29,7 +29,7 @@ import {
   isPlayerCardTagColor,
 } from "./components/player-card-tags.ts";
 import { ongoingGameI18n } from "./i18n";
-import { ongoingGameStore } from "./store.solid";
+import { ongoingGameStore } from "./store";
 
 const OngoingGameRoute = lazy(() => import("./routes/OngoingGameRoute"));
 

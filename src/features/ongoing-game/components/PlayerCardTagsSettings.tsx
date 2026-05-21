@@ -4,12 +4,9 @@ import { keyArray } from "@solid-primitives/keyed";
 import { Check } from "lucide-solid";
 import type { JSX } from "solid-js";
 import { createMemo, Show } from "solid-js";
-import {
-  SettingsColorPicker,
-  SettingsHint,
-} from "@/components/settings-ui";
+import { SettingsColorPicker, SettingsHint } from "@/components/settings-ui";
 import { SettingsFieldRenderer } from "@/features/settings/components/SettingsFieldRenderer";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import type { SettingsSectionRendererProps } from "@/features/settings/types";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { useSolidTranslation } from "@/i18n/solid";

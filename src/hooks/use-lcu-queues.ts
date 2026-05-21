@@ -3,7 +3,7 @@ import { createMemo } from "solid-js";
 import type { LcuQueue } from "@/bindings/queues";
 import { useSolidTranslation } from "@/i18n/solid";
 import { createSolidQuery } from "@/infra/solid-query";
-import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu";
 import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
 type LcuQueuesKey = readonly ["lcu_get_queues", number, string];

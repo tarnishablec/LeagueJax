@@ -1,4 +1,4 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 This file provides guidance to Ai agents (Codex/claude code etc.) when working with code in this repository.
 
@@ -116,8 +116,8 @@ This is a **Tauri v2** desktop app with a **SolidJS + TypeScript** frontend and 
 | File                                  | Purpose                                                     |
 |---------------------------------------|-------------------------------------------------------------|
 | `src/App.tsx`                         | Root SolidJS component                                      |
-| `src/main.solid.tsx`                  | SolidJS main-window entry point                             |
-| `src/mini-main.solid.tsx`             | SolidJS mini-window entry point                             |
+| `src/main.tsx`                  | SolidJS main-window entry point                             |
+| `src/mini-main.tsx`             | SolidJS mini-window entry point                             |
 | `src-tauri/src/lib.rs`                | All Tauri commands (Rust backend logic)                     |
 | `src-tauri/src/main.rs`               | Rust entry point, calls `lib::run()`                        |
 | `src-tauri/tauri.conf.json`           | App config: window size, bundle targets, dev/build commands |

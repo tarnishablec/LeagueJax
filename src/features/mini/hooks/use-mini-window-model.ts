@@ -9,7 +9,7 @@ import type {
 } from "@/bindings/lcu_events";
 import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
 import type { LcuQueue } from "@/bindings/queues";
-import { useSolidOngoingGameStore } from "@/features/ongoing-game/store.solid";
+import { useSolidOngoingGameStore } from "@/features/ongoing-game/store";
 import { useSolidLcuMapQuery } from "@/hooks/use-lcu-maps";
 import { useSolidLcuQueues } from "@/hooks/use-lcu-queues";
 import {

@@ -8,7 +8,7 @@ import { Portal } from "solid-js/web";
 import { ProfileIcon } from "@/components/ProfileIcon";
 import { useSolidSummonerInfo } from "@/features/history/hooks/use-summoner";
 import { useSolidTranslation } from "@/i18n/solid";
-import { type HistoryTabIdentity, useSolidTabStore } from "@/stores/tabs.solid";
+import { type HistoryTabIdentity, useSolidTabStore } from "@/stores/tabs";
 import * as s from "./HistoryTabBar.css.ts";
 
 function TabIcon(props: { profileIconId: number }): JSX.Element {

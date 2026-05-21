@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js";
 import { createMemo } from "solid-js";
-import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu";
 
 const CDRAGON_GAME_DATA_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";

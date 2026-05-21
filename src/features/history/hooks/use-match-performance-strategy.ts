@@ -1,5 +1,5 @@
 import { createSignal, onCleanup } from "solid-js";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import { HISTORY_MVP_ACE_STRATEGY_SETTING } from "../settings-ids";
 import {
   type MatchPerformanceStrategy,

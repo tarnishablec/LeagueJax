@@ -6,7 +6,7 @@ import type { LcuChatFriend } from "@/bindings/lcu_chat";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
 import { useSolidOpenHistoryTab } from "@/features/history/hooks/use-open-history-tab";
-import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu";
 import sgpServersConfigJson from "../../../../resources/league-servers.json";
 import { HistorySearchDialog } from "./HistorySearchDialog";
 import * as s from "./HistoryToolbar.css";

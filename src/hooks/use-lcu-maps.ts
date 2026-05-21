@@ -3,7 +3,7 @@ import { createMemo } from "solid-js";
 import type { LcuMap } from "@/bindings/maps";
 import { useSolidTranslation } from "@/i18n/solid";
 import { createSolidQuery } from "@/infra/solid-query";
-import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu";
 import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
 type LcuMapsKey = readonly ["lcu_get_maps", number, string];

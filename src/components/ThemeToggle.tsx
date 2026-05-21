@@ -3,7 +3,7 @@ import { type LucideIcon, Moon, Sparkle, Sun } from "lucide-solid";
 import type { JSX } from "solid-js";
 import { createMemo, For } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import {
   SYSTEM_THEME_SETTING_ID,
   type Theme,

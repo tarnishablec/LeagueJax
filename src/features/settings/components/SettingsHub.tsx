@@ -12,7 +12,7 @@ import {
 } from "solid-js";
 import { Motion } from "solid-motionone";
 import { ScrollArea } from "@/components/scroll-area/ScrollArea";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import * as s from "./SettingsHub.css.ts";
 import {
   buildSettingsPages,

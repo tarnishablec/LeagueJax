@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 import type { JSX } from "solid-js";
 import { createMemo, For } from "solid-js";
-import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidSettings } from "@/features/settings/solid-context";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { type Language, SYSTEM_LANGUAGE_SETTING_ID } from "../locale";
 import * as s from "./LanguageToggle.css.ts";

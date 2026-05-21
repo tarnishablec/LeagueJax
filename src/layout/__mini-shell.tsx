@@ -4,8 +4,8 @@ import type { JSX } from "solid-js";
 import { onCleanup, onMount } from "solid-js";
 import { MiniTitleBar } from "@/features/mini/components/MiniTitleBar";
 import { useSolidWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
-import { useSolidLcuEvents } from "@/hooks/use-lcu-events.solid";
-import { useSolidTheme } from "@/hooks/use-theme.solid";
+import { useSolidLcuEvents } from "@/hooks/use-lcu-events";
+import { useSolidTheme } from "@/hooks/use-theme";
 import * as mini from "./__mini.css.ts";
 
 const MINI_HOVER_SUSPENDED_ATTRIBUTE = "data-mini-hover-suspended";

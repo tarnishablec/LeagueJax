@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js";
 import { createSignal, onCleanup } from "solid-js";
-import { useSolidSettings } from "./solid-context.solid";
+import { useSolidSettings } from "./solid-context";
 import type { SettingId } from "./types";
 
 export function useSolidSettingValue<T>(

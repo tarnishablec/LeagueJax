@@ -102,7 +102,7 @@ Entry: `D:/Desktop/Web/LeagueJax/src-tauri/src/lib.rs`
 
 ### 3) Frontend bootstrap
 
-Entry: `D:/Desktop/Web/LeagueJax/src/main.solid.tsx`
+Entry: `D:/Desktop/Web/LeagueJax/src/main.tsx`
 
 1. Render the SolidJS app through `solid-js/web`.
 2. Start main-window web shards through `initializeSolidMainWebShards()`.
@@ -110,7 +110,7 @@ Entry: `D:/Desktop/Web/LeagueJax/src/main.solid.tsx`
 4. Render `<App />` inside `SolidSettingsProvider`.
 5. Render a bootstrap error screen if initialization fails.
 
-The i18n setup is owned by the web `I18nShard`, not by `main.solid.tsx`
+The i18n setup is owned by the web `I18nShard`, not by `main.tsx`
 directly.
 
 ## Runtime Composition
