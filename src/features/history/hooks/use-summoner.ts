@@ -1,42 +1,32 @@
 import { invoke } from "@tauri-apps/api/core";
-import useSWR from "swr";
+import type { Accessor } from "solid-js";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
-import type { HistoryTabIdentity } from "@/stores/tabs.ts";
+import { createSolidQuery } from "@/infra/solid-query";
+import type { HistoryTabIdentity } from "@/stores/tabs.solid";
 
-export function useSearchSummoner(
-  gameName: string,
-  tagLine: string,
-  enabled: boolean,
+type SearchSummonerKey = readonly ["search_summoner", string, string];
+type SummonerByPuuidKey = readonly [
+  "get_summoner_by_puuid",
+  string,
+  string | null,
+];
+
+export function useSolidSearchSummoner(
+  gameName: Accessor<string>,
+  tagLine: Accessor<string>,
+  enabled: Accessor<boolean>,
 ) {
-  return useSWR(
-    enabled && gameName.length > 0 && tagLine.length > 0
-      ? ["summoner", gameName, tagLine]
-      : null,
-    () => invoke<SummonerInfo>("search_summoner", { gameName, tagLine }),
-    {},
-  );
-}
-
-export function useSummonerInfo(
-  puuid: string | undefined,
-  sgpServerId?: string | null,
-  fallbackIdentity?: HistoryTabIdentity,
-) {
-  const normalizedSgpServerId = sgpServerId?.trim() || null;
-  const fallbackData =
-    puuid && fallbackIdentity
-      ? createFallbackSummonerInfo(puuid, fallbackIdentity)
-      : undefined;
-
-  return useSWR(
-    puuid ? ["get_summoner_by_puuid", puuid, normalizedSgpServerId] : null,
-    ([cmd, resolvedPuuid, resolvedSgpServerId]) =>
-      invoke<SummonerInfo>(cmd, {
-        puuid: resolvedPuuid,
-        ...(resolvedSgpServerId ? { sgpServerId: resolvedSgpServerId } : {}),
-      }),
-    {
-      fallbackData,
+  return createSolidQuery<SummonerInfo>(
+    () =>
+      enabled() && gameName().length > 0 && tagLine().length > 0
+        ? (["search_summoner", gameName(), tagLine()] as const)
+        : null,
+    (key) => {
+      const [, resolvedGameName, resolvedTagLine] = key as SearchSummonerKey;
+      return invoke<SummonerInfo>("search_summoner", {
+        gameName: resolvedGameName,
+        tagLine: resolvedTagLine,
+      });
     },
   );
 }
@@ -69,4 +59,44 @@ function createFallbackSummonerInfo(
     nameChangeFlag: false,
     unnamed: false,
   };
+}
+
+export function useSolidSummonerInfo(
+  puuid: Accessor<string | undefined>,
+  sgpServerId: Accessor<string | null | undefined>,
+  fallbackIdentity?: Accessor<HistoryTabIdentity | undefined>,
+) {
+  const fallbackData = () => {
+    const resolvedPuuid = puuid();
+    const identity = fallbackIdentity?.();
+    return resolvedPuuid && identity
+      ? createFallbackSummonerInfo(resolvedPuuid, identity)
+      : undefined;
+  };
+
+  return createSolidQuery<SummonerInfo>(
+    () => {
+      const resolvedPuuid = puuid();
+      if (!resolvedPuuid) {
+        return null;
+      }
+
+      return [
+        "get_summoner_by_puuid",
+        resolvedPuuid,
+        sgpServerId()?.trim() || null,
+      ] as const;
+    },
+    (key) => {
+      const [, resolvedPuuid, resolvedSgpServerId] = key as SummonerByPuuidKey;
+      return invoke<SummonerInfo>("get_summoner_by_puuid", {
+        puuid: resolvedPuuid,
+        ...(resolvedSgpServerId ? { sgpServerId: resolvedSgpServerId } : {}),
+      });
+    },
+    {
+      initialValue: fallbackData(),
+      keepPreviousData: true,
+    },
+  );
 }

@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import type { RawMatchSummaryGame } from "@/bindings/matches";
 import type {
   OngoingGameMatchHistoriesUpdated,
@@ -168,7 +168,7 @@ const initialState: OngoingGameUiState = {
   matchHistoriesByPuuid: {},
 };
 
-type OngoingGameStore = OngoingGameUiState & {
+export type OngoingGameStore = OngoingGameUiState & {
   reset: () => void;
   setModeTag: (tag: MatchModeTag | null) => void;
   applyUpdated: (payload: OngoingGameUpdated) => void;
@@ -197,7 +197,7 @@ function commonFields(payload: OngoingGameUpdated) {
   } as const;
 }
 
-export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
+export const ongoingGameStore = createStore<OngoingGameStore>()((set) => ({
   ...initialState,
 
   reset: () => set(initialState),
@@ -286,11 +286,15 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
       }
 
       const { puuid, games } = payload.state;
-      const nextHistories = { ...state.matchHistoriesByPuuid };
+      let nextHistories = state.matchHistoriesByPuuid;
       if (games) {
-        nextHistories[puuid] = games;
-      } else {
-        delete nextHistories[puuid];
+        nextHistories = {
+          ...state.matchHistoriesByPuuid,
+          [puuid]: stableGames(
+            state.matchHistoriesByPuuid[puuid],
+            games as RawMatchSummaryGame[],
+          ),
+        };
       }
 
       return {
@@ -335,7 +339,7 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
   batchMatchHistoriesUpdated: (batch) => {
     set((state) => {
       const nextStates = { ...state.historyStatesByPuuid };
-      const nextHistories = { ...state.matchHistoriesByPuuid };
+      let nextHistories = state.matchHistoriesByPuuid;
       for (const payload of batch) {
         if (payload.phase === "Idle") {
           return {
@@ -347,9 +351,13 @@ export const useOngoingGameStore = create<OngoingGameStore>((set) => ({
         const { puuid, games } = payload.state;
         nextStates[puuid] = payload.state;
         if (games) {
-          nextHistories[puuid] = games;
-        } else {
-          delete nextHistories[puuid];
+          nextHistories = {
+            ...nextHistories,
+            [puuid]: stableGames(
+              nextHistories[puuid],
+              games as RawMatchSummaryGame[],
+            ),
+          };
         }
       }
       return {

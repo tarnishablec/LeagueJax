@@ -1,13 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
-import i18n from "i18next";
-import { createElement } from "react";
-import { LanguageToggle } from "@/features/i18n/components/LanguageToggle";
-import { initializeI18n } from "@/i18n";
+import {
+  disposeSolidI18n,
+  getSolidI18n,
+  initializeSolidI18n,
+} from "@/i18n/solid";
+import type { LocaleResource } from "@/i18n/types";
 import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
+import type {
+  SolidToolbarSlot,
+  SolidWebShard,
+} from "@/runtime/solid-web-contract";
 import type { SettingsShardApi } from "../settings/types";
 import { SHARD_IDS } from "../shard-ids";
+import { LanguageToggle } from "./components/LanguageToggle";
 import { i18nShardI18n } from "./i18n";
 import {
   createLanguageSettingDefinition,
@@ -18,14 +24,14 @@ import {
 } from "./locale";
 import { collectI18nResources } from "./resources";
 
-const logger = createLogger("i18n-shard");
+const logger = createLogger("i18n-runtime-shard");
 
-export class I18nShard implements WebShard {
+export class I18nRuntimeShard implements SolidWebShard {
   private unsubscribe: (() => void) | null = null;
   private defaultLanguage: Language = DEFAULT_LANGUAGE;
 
   public label() {
-    return "I18nShard";
+    return "I18nRuntimeShard";
   }
 
   public id() {
@@ -46,12 +52,10 @@ export class I18nShard implements WebShard {
     );
 
     const language = this.getLanguage(settings);
+    const resources = collectI18nResources(jax.listShards() as SolidWebShard[]);
 
     logger.info({ language }, "Initializing i18n resources");
-    await initializeI18n(
-      collectI18nResources(jax.listShards() as WebShard[]),
-      language,
-    );
+    await this.initializeRuntimeI18n(resources, language);
 
     this.unsubscribe = settings.subscribe(SYSTEM_LANGUAGE_SETTING_ID, () => {
       const nextLanguage = this.getLanguage(settings);
@@ -60,37 +64,42 @@ export class I18nShard implements WebShard {
     });
   }
 
-  public toolbarSlots() {
-    return [
-      {
-        id: "i18n-language-toggle",
-        node: createElement(LanguageToggle),
-        order: 99,
-      },
-    ];
-  }
-
   public i18nResources() {
     return i18nShardI18n;
   }
 
-  public async teardown(): Promise<void> {
+  public toolbarSlots(): SolidToolbarSlot[] {
+    return [
+      {
+        id: "i18n-language-toggle",
+        node: LanguageToggle(),
+        order: 99,
+        routes: ["*"],
+      },
+    ];
+  }
+
+  public teardown(): void {
     if (this.unsubscribe) {
       this.unsubscribe();
       this.unsubscribe = null;
     }
+    disposeSolidI18n();
+  }
+
+  protected initializeRuntimeI18n(
+    resources: LocaleResource,
+    language: Language,
+  ): Promise<void> | void {
+    initializeSolidI18n(resources, language);
+  }
+
+  protected changeRuntimeLanguage(language: Language): Promise<void> | void {
+    getSolidI18n().setLanguage(language);
   }
 
   private async changeLanguage(language: Language): Promise<void> {
-    if (i18n.language === language) {
-      return;
-    }
-
-    try {
-      await i18n.changeLanguage(language);
-    } catch (error) {
-      logger.error({ error, language }, "Failed to change i18n language");
-    }
+    await this.changeRuntimeLanguage(language);
   }
 
   private getLanguage(settings: SettingsShardApi): Language {

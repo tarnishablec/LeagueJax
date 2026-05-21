@@ -1,5 +1,8 @@
+/** @jsxImportSource solid-js */
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import * as s from "./IconTitleSubtitleState.css";
 
 type IconTitleSubtitleStateProps = {
@@ -10,25 +13,25 @@ type IconTitleSubtitleStateProps = {
   titleWeight?: number;
 };
 
-export function IconTitleSubtitleState({
-  className,
-  icon: Icon,
-  subtitle,
-  title,
-  titleWeight = 400,
-}: IconTitleSubtitleStateProps) {
+export function IconTitleSubtitleState(
+  props: IconTitleSubtitleStateProps,
+): JSX.Element {
+  const Icon = props.icon;
+
   return (
-    <div className={[s.root, className].filter(Boolean).join(" ")}>
-      <Icon className={s.icon} aria-hidden={true} />
+    <div class={[s.root, props.className].filter(Boolean).join(" ")}>
+      <Icon class={s.icon} aria-hidden={true} />
       <div
-        className={s.title}
+        class={s.title}
         style={assignInlineVars({
-          [s.titleWeightVar]: String(titleWeight),
+          [s.titleWeightVar]: String(props.titleWeight ?? 400),
         })}
       >
-        {title}
+        {props.title}
       </div>
-      {subtitle ? <div className={s.subtitle}>{subtitle}</div> : null}
+      <Show when={props.subtitle}>
+        {(subtitle) => <div class={s.subtitle}>{subtitle()}</div>}
+      </Show>
     </div>
   );
 }

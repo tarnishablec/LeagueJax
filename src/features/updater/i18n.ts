@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const updaterI18n: Resource = {
+export const updaterI18n: LocaleResource = {
   en: {
     settings: {
       sections: {

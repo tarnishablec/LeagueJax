@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Image } from "@tauri-apps/api/image";
-import { Menu, PredefinedMenuItem } from "@tauri-apps/api/menu";
+import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { resolveResource } from "@tauri-apps/api/path";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -16,9 +16,11 @@ const QUIT_APP_ID = "quit-application";
 
 const logger = createLogger("tray");
 
+type ClosableMenuResource = Menu | MenuItem | PredefinedMenuItem;
+
 export class TrayController {
   private tray: TrayIcon | null = null;
-  private menu: Menu | null = null;
+  private menuResources: ClosableMenuResource[] = [];
   private initialized = false;
   private readonly handleLanguageChanged = (language: string) => {
     void this.refreshMenu(language);
@@ -43,14 +45,12 @@ export class TrayController {
   public async dispose(): Promise<void> {
     i18n.off("languageChanged", this.handleLanguageChanged);
 
-    const menu = this.menu;
-    this.menu = null;
+    const resources = this.menuResources;
+    this.menuResources = [];
     this.tray = null;
     this.initialized = false;
 
-    if (menu) {
-      await menu.close();
-    }
+    await closeMenuResources(resources);
   }
 
   private async createTray(): Promise<TrayIcon> {
@@ -80,40 +80,68 @@ export class TrayController {
       return;
     }
 
-    const separator = await PredefinedMenuItem.new({ item: "Separator" });
-    const nextMenu = await Menu.new({
-      items: [
-        {
-          id: TOGGLE_MINI_WINDOW_ID,
-          text: i18n.t("tray.toggleMiniWindow", {
-            lng: language,
-            defaultValue: "Mini Window",
-          }),
-          action: () => {
-            void invoke("toggle_mini_window");
-          },
+    const nextResources: ClosableMenuResource[] = [];
+
+    try {
+      const toggleMiniWindowItem = await MenuItem.new({
+        id: TOGGLE_MINI_WINDOW_ID,
+        text: i18n.t("tray.toggleMiniWindow", {
+          lng: language,
+          defaultValue: "Mini Window",
+        }),
+        action: () => {
+          void invoke("toggle_mini_window");
         },
-        separator,
-        {
-          id: QUIT_APP_ID,
-          text: i18n.t("tray.quit", {
-            lng: language,
-            defaultValue: "Quit",
-          }),
-          action: () => {
-            void exit();
-          },
+      });
+      nextResources.push(toggleMiniWindowItem);
+
+      const separator = await PredefinedMenuItem.new({ item: "Separator" });
+      nextResources.push(separator);
+
+      const quitItem = await MenuItem.new({
+        id: QUIT_APP_ID,
+        text: i18n.t("tray.quit", {
+          lng: language,
+          defaultValue: "Quit",
+        }),
+        action: () => {
+          void exit();
         },
-      ],
-    });
+      });
+      nextResources.push(quitItem);
 
-    const previousMenu = this.menu;
-    this.menu = nextMenu;
+      const nextMenu = await Menu.new();
+      nextResources.push(nextMenu);
 
-    await this.tray.setMenu(nextMenu);
+      await nextMenu.append([toggleMiniWindowItem, separator, quitItem]);
 
-    if (previousMenu) {
-      await previousMenu.close();
+      const previousResources = this.menuResources;
+      this.menuResources = nextResources;
+
+      await this.tray.setMenu(nextMenu);
+      await closeMenuResources(previousResources);
+    } catch (error) {
+      await closeMenuResources(nextResources);
+      throw error;
+    }
+  }
+}
+
+// Menu refresh creates native resources on the Rust side; cleanup is best-effort
+// because a failed close should not prevent shard teardown or a later refresh.
+async function closeMenuResources(
+  resources: ClosableMenuResource[],
+): Promise<void> {
+  const results = await Promise.allSettled(
+    [...resources].reverse().map((resource) => resource.close()),
+  );
+
+  for (const result of results) {
+    if (result.status === "rejected") {
+      logger.warn(
+        { error: result.reason },
+        "Failed to close tray menu resource",
+      );
     }
   }
 }

@@ -1,16 +1,16 @@
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { trayI18n } from "./i18n";
 import { TrayController } from "./tray";
 
 const ENABLE_FRONTEND_TRAY = true;
 
-export class TrayShard implements WebShard {
+export class SolidTrayShard implements SolidWebShard {
   private readonly controller = new TrayController();
 
   public label() {
-    return "TrayShard";
+    return "SolidTrayShard";
   }
 
   public id() {

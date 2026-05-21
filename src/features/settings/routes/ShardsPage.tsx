@@ -1,23 +1,25 @@
-import { Carousel } from "@ark-ui/react/carousel";
+/** @jsxImportSource solid-js */
+import { Carousel } from "@ark-ui/solid/carousel";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import type { ShardInfoDto, ShardsSnapshotDto } from "@/bindings/shards";
-import { ScrollArea } from "@/components/scroll-area";
-import { getJaxRuntime } from "@/features/registry";
+import { ScrollArea } from "@/components/scroll-area/ScrollArea";
+import { getSolidJaxRuntime } from "@/features/solid-registry";
+import { useSolidTranslation } from "@/i18n/solid";
 import { ShardsDag } from "../components/ShardsDag";
 import { ShardsTable } from "../components/ShardsTable";
-import * as s from "./ShardsPage.css";
+import * as s from "./ShardsPage.css.ts";
 
 type Side = "frontend" | "backend";
 
 function buildFrontendShards(): ShardInfoDto[] {
-  const jax = getJaxRuntime();
+  const jax = getSolidJaxRuntime();
   const shards = jax.listShards();
   const report = jax.getStartupReport();
 
-  const failedIds = new Set(report?.failed.map((f) => f.id) ?? []);
+  const failedIds = new Set(report?.failed.map((failed) => failed.id) ?? []);
   const skippedIds = new Set(report?.skipped ?? []);
 
   return shards.map((shard) => {
@@ -44,13 +46,25 @@ function buildFrontendShards(): ShardInfoDto[] {
   });
 }
 
-export function ShardsPage() {
-  const { t } = useTranslation();
-  const [side, setSide] = useState<Side>("frontend");
+export function ShardsPage(): JSX.Element {
+  const { t } = useSolidTranslation();
+  const [side, setSide] = createSignal<Side>("frontend");
   const [backendSnapshot, setBackendSnapshot] =
-    useState<ShardsSnapshotDto | null>(null);
+    createSignal<ShardsSnapshotDto | null>(null);
+  const frontendShards = createMemo(() => buildFrontendShards());
+  const backendShards = createMemo(() => backendSnapshot()?.shards ?? []);
+  const activeShards = createMemo(() =>
+    side() === "frontend" ? frontendShards() : backendShards(),
+  );
+  const labelMap = createMemo(() => {
+    const map = new Map<string, string>();
+    for (const shard of activeShards()) {
+      map.set(shard.id, shard.label);
+    }
+    return map;
+  });
 
-  useEffect(() => {
+  onMount(() => {
     invoke<ShardsSnapshotDto>("get_shards_status")
       .then(setBackendSnapshot)
       .catch(() => {});
@@ -59,43 +73,33 @@ export function ShardsPage() {
     const unlistenPromise = listen<ShardsSnapshotDto>(
       "shards_status_changed",
       (event) => {
-        if (!cancelled) setBackendSnapshot(event.payload);
+        if (!cancelled) {
+          setBackendSnapshot(event.payload);
+        }
       },
     );
 
-    return () => {
+    onCleanup(() => {
       cancelled = true;
-      unlistenPromise.then((fn) => fn());
-    };
-  }, []);
-
-  const frontendShards = useMemo(() => buildFrontendShards(), []);
-  const backendShards = backendSnapshot?.shards ?? [];
-  const activeShards = side === "frontend" ? frontendShards : backendShards;
-
-  const labelMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const shard of activeShards) {
-      map.set(shard.id, shard.label);
-    }
-    return map;
-  }, [activeShards]);
+      unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
+    });
+  });
 
   return (
-    <div className={s.shardsPage}>
-      <Carousel.Root slideCount={2} defaultPage={0} className={s.carouselRoot}>
-        <div className={s.toolbar}>
-          <div className={s.segmentGroup}>
+    <div class={s.shardsPage}>
+      <Carousel.Root slideCount={2} defaultPage={0} class={s.carouselRoot}>
+        <div class={s.toolbar}>
+          <div class={s.segmentGroup}>
             <button
               type="button"
-              className={side === "frontend" ? s.segmentActive : s.segment}
+              class={side() === "frontend" ? s.segmentActive : s.segment}
               onClick={() => setSide("frontend")}
             >
               {t("settings.shards.frontendTab")}
             </button>
             <button
               type="button"
-              className={side === "backend" ? s.segmentActive : s.segment}
+              class={side() === "backend" ? s.segmentActive : s.segment}
               onClick={() => setSide("backend")}
             >
               {t("settings.shards.backendTab")}
@@ -106,18 +110,18 @@ export function ShardsPage() {
 
           <Carousel.Context>
             {(api) => (
-              <div className={s.segmentGroup}>
+              <div class={s.segmentGroup}>
                 <button
                   type="button"
-                  className={api.page === 0 ? s.segmentActive : s.segment}
-                  onClick={() => api.scrollToIndex(0)}
+                  class={api().page === 0 ? s.segmentActive : s.segment}
+                  onClick={() => api().scrollToIndex(0)}
                 >
                   {t("settings.shards.viewTable")}
                 </button>
                 <button
                   type="button"
-                  className={api.page === 1 ? s.segmentActive : s.segment}
-                  onClick={() => api.scrollToIndex(1)}
+                  class={api().page === 1 ? s.segmentActive : s.segment}
+                  onClick={() => api().scrollToIndex(1)}
                 >
                   {t("settings.shards.viewGraph")}
                 </button>
@@ -126,22 +130,24 @@ export function ShardsPage() {
           </Carousel.Context>
         </div>
 
-        <Carousel.ItemGroup className={s.carouselItemGroup}>
-          <Carousel.Item index={0} className={s.carouselItem}>
+        <Carousel.ItemGroup class={s.carouselItemGroup}>
+          <Carousel.Item index={0} class={s.carouselItem}>
             <ScrollArea
               className={s.tablePane}
               contentClassName={s.tablePaneContent}
               direction="both"
               mode="overlay"
             >
-              <ShardsTable shards={activeShards} labelMap={labelMap} />
+              <ShardsTable shards={activeShards()} labelMap={labelMap()} />
             </ScrollArea>
           </Carousel.Item>
-          <Carousel.Item index={1} className={s.carouselItem}>
-            <ShardsDag shards={activeShards} />
+          <Carousel.Item index={1} class={s.carouselItem}>
+            <ShardsDag shards={activeShards()} />
           </Carousel.Item>
         </Carousel.ItemGroup>
       </Carousel.Root>
     </div>
   );
 }
+
+export default ShardsPage;

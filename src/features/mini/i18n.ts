@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const miniI18n: Resource = {
+export const miniI18n: LocaleResource = {
   en: {
     mini: {
       phase: {

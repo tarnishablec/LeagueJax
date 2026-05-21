@@ -1,72 +1,77 @@
-import { Loader } from "lucide-react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Loader } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import { SettingsSelect } from "@/components/settings-ui";
-import type { useHistorySearch } from "@/features/history/hooks/useHistorySearch";
+import type { useSolidHistorySearch } from "@/features/history/hooks/useHistorySearch";
+import { useSolidTranslation } from "@/i18n/solid";
 import * as s from "./HistoryToolbar.css";
 
 type SearchFormProps = {
-  server: ReturnType<typeof useHistorySearch>["server"];
-  search: ReturnType<typeof useHistorySearch>["search"];
+  server: ReturnType<typeof useSolidHistorySearch>["server"];
+  search: ReturnType<typeof useSolidHistorySearch>["search"];
 };
 
-export function SearchForm({ server, search }: SearchFormProps) {
-  const { t } = useTranslation();
+export function SearchForm(props: SearchFormProps): JSX.Element {
+  const { t } = useSolidTranslation();
 
   return (
     <form
-      className={server.show ? s.searchRow : s.searchRowNoServer}
+      class={props.server.show() ? s.searchRow : s.searchRowNoServer}
       onSubmit={(event) => {
         event.preventDefault();
-        void search.handleSearch();
+        void props.search.handleSearch();
       }}
     >
-      {server.show ? (
+      <Show when={props.server.show()}>
         <SettingsSelect
-          collection={server.collection}
-          groups={server.groups}
-          value={[server.selectedId]}
+          collection={props.server.collection()}
+          groups={props.server.groups()}
+          value={[props.server.selectedId()]}
           onValueChange={(details) => {
             const next = details.value[0];
-            if (next != null) server.setSelectedId(next);
+            if (next != null) {
+              props.server.setSelectedId(next);
+            }
           }}
-          disabled={server.disabled}
+          disabled={props.server.disabled()}
           placeholder={t("history.searchDialog.focused")}
           disablePortal
         />
-      ) : null}
+      </Show>
       <input
         type="text"
-        className={s.searchInput}
+        class={s.searchInput}
         placeholder={t("history.searchDialog.placeholder")}
-        value={search.query}
-        disabled={search.isSearching}
-        onChange={(event) => search.setQuery(event.target.value)}
+        value={props.search.query()}
+        disabled={props.search.isSearching()}
+        onInput={(event) => props.search.setQuery(event.currentTarget.value)}
       />
       <button
         type="submit"
-        aria-busy={search.isSearching}
-        className={s.searchButton}
-        data-loading={search.isSearching ? "true" : undefined}
+        aria-busy={props.search.isSearching()}
+        class={s.searchButton}
+        data-loading={props.search.isSearching() ? "true" : undefined}
         disabled={
-          search.isSearching ||
-          server.isBootstrapping ||
-          search.query.trim().length === 0
+          props.search.isSearching() ||
+          props.server.isBootstrapping() ||
+          props.search.query().trim().length === 0
         }
       >
         <span
-          className={`${s.searchButtonLabel} ${
-            search.isSearching ? s.searchButtonLabelHidden : ""
+          class={`${s.searchButtonLabel} ${
+            props.search.isSearching() ? s.searchButtonLabelHidden : ""
           }`}
         >
           {t("history.searchDialog.submit")}
         </span>
         <span
-          className={`${s.searchButtonLoader} ${
-            search.isSearching ? s.searchButtonLoaderVisible : ""
+          class={`${s.searchButtonLoader} ${
+            props.search.isSearching() ? s.searchButtonLoaderVisible : ""
           }`}
           aria-hidden="true"
         >
-          <Loader size={14} className={s.searchButtonIconSpin} />
+          <Loader size={14} class={s.searchButtonIconSpin} />
         </span>
       </button>
     </form>

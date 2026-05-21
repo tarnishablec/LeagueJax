@@ -1,9 +1,14 @@
-import type { Resource } from "i18next";
 import { entries, mergeDeep } from "remeda";
-import type { WebShard } from "@/runtime/web-contract";
+import type { LocaleResource } from "@/i18n/types";
 
-export function collectI18nResources(shards: readonly WebShard[]): Resource {
-  const merged: Resource = {};
+type I18nResourceProvider = {
+  i18nResources?(): LocaleResource;
+};
+
+export function collectI18nResources(
+  shards: readonly I18nResourceProvider[],
+): LocaleResource {
+  const merged: LocaleResource = {};
 
   for (const shard of shards) {
     const resources = shard.i18nResources?.();
@@ -12,6 +17,10 @@ export function collectI18nResources(shards: readonly WebShard[]): Resource {
     }
 
     for (const [locale, bundle] of entries(resources)) {
+      if (!bundle) {
+        continue;
+      }
+
       const localeTarget = merged[locale] ?? {};
       merged[locale] = mergeDeep(localeTarget, bundle);
     }

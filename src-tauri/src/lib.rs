@@ -254,6 +254,7 @@ pub fn run() {
             claim_tool_claim_all,
             claim_tool_claim_selected,
             lcu_update_focus,
+            lcu_get_instances,
             get_current_summoner,
             get_current_sgp_server_id,
             get_sgp_servers_config,

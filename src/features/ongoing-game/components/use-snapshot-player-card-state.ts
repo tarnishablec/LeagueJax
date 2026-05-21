@@ -1,14 +1,15 @@
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import type { Accessor } from "solid-js";
+import { createMemo } from "solid-js";
 import type { RankEntry } from "@/bindings/rank.ts";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
-import { useMatchPerformanceStrategy } from "@/features/history/hooks/use-match-performance-strategy.ts";
-import { useRankedSummary } from "@/features/history/hooks/use-ranked-summary.ts";
-import { useLcuStore } from "@/stores/lcu";
+import { useSolidMatchPerformanceStrategy } from "@/features/history/hooks/use-match-performance-strategy";
+import { useSolidRankedSummary } from "@/features/history/hooks/use-ranked-summary";
+import { useSolidTranslation } from "@/i18n/solid";
+import { useSolidLcuStore } from "@/stores/lcu.solid";
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import { isBotSlot } from "../routes/ongoing-game.player-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
-import { useOngoingGameStore } from "../store";
+import { useSolidOngoingGameStore } from "../store.solid";
 import type { PlayerSquadAssignment } from "./player-card-squads.ts";
 import {
   collectMatchPlayerCardTags,
@@ -79,185 +80,194 @@ function resolveSummonerIdentity(summoner: SummonerInfo | undefined) {
   };
 }
 
-export function useSnapshotPlayerCardState(
-  slot: PlayerSlot,
-  matchHistoryCount: number,
-  enabledPlayerCardTagIds: readonly string[],
-  playerCardTagColors: Readonly<Record<string, string>>,
-  squadAssignment: PlayerSquadAssignment | undefined,
-) {
-  const { t } = useTranslation();
-  const phase = useOngoingGameStore((state) => state.phase);
-  const performanceStrategy = useMatchPerformanceStrategy();
-
-  const isBot = isBotSlot(slot);
-  const normalizedPuuid = !isBot ? slot.puuid.trim() : "";
-  const puuid = normalizedPuuid.length > 0 ? normalizedPuuid : undefined;
-  const rankedQuery = useRankedSummary(puuid);
-  const summoner = useOngoingGameStore((state) =>
-    puuid ? state.summonersByPuuid[puuid] : undefined,
+export function useSolidSnapshotPlayerCardState(params: {
+  slot: Accessor<PlayerSlot>;
+  matchHistoryCount: Accessor<number>;
+  enabledPlayerCardTagIds: Accessor<readonly string[]>;
+  playerCardTagColors: Accessor<Readonly<Record<string, string>>>;
+  squadAssignment: Accessor<PlayerSquadAssignment | undefined>;
+}) {
+  const { t } = useSolidTranslation();
+  const ongoingState = useSolidOngoingGameStore();
+  const lcuState = useSolidLcuStore();
+  const performanceStrategy = useSolidMatchPerformanceStrategy();
+  const isBot = createMemo(() => isBotSlot(params.slot()));
+  const normalizedPuuid = createMemo(() =>
+    !isBot() ? params.slot().puuid.trim() : "",
   );
-  const historyBucket = useOngoingGameStore((state) =>
-    puuid ? state.matchHistoriesByPuuid[puuid] : undefined,
+  const puuid = createMemo(() =>
+    normalizedPuuid().length > 0 ? normalizedPuuid() : undefined,
   );
-  const historyState = useOngoingGameStore((state) =>
-    puuid ? state.historyStatesByPuuid[puuid] : undefined,
-  );
-  const hasHistoryBucket = useOngoingGameStore((state) =>
-    puuid ? Object.hasOwn(state.matchHistoriesByPuuid, puuid) : false,
-  );
-  const ownPuuid = useLcuStore(
-    (state) =>
-      state.instances
-        .find((instance) => instance.isFocused && instance.state === "ready")
+  const rankedQuery = useSolidRankedSummary(puuid);
+  const summoner = createMemo(() => {
+    const id = puuid();
+    return id ? ongoingState().summonersByPuuid[id] : undefined;
+  });
+  const historyBucket = createMemo(() => {
+    const id = puuid();
+    return id ? ongoingState().matchHistoriesByPuuid[id] : undefined;
+  });
+  const historyState = createMemo(() => {
+    const id = puuid();
+    return id ? ongoingState().historyStatesByPuuid[id] : undefined;
+  });
+  const hasHistoryBucket = createMemo(() => {
+    const id = puuid();
+    return id ? Object.hasOwn(ongoingState().matchHistoriesByPuuid, id) : false;
+  });
+  const ownPuuid = createMemo(
+    () =>
+      lcuState()
+        .instances.find(
+          (instance) => instance.isFocused && instance.state === "ready",
+        )
         ?.summoner?.puuid.trim() || undefined,
   );
-  const ownHistoryBucket = useOngoingGameStore((state) =>
-    ownPuuid ? state.matchHistoriesByPuuid[ownPuuid] : undefined,
+  const ownHistoryBucket = createMemo(() => {
+    const id = ownPuuid();
+    return id ? ongoingState().matchHistoriesByPuuid[id] : undefined;
+  });
+  const isHistoryLoading = createMemo(() =>
+    Boolean(
+      !isBot() &&
+        puuid() &&
+        historyState()?.status === "loading" &&
+        !hasHistoryBucket() &&
+        ongoingState().phase !== "Idle",
+    ),
   );
-
-  const isHistoryLoading = Boolean(
-    !isBot &&
-      puuid &&
-      historyState?.status === "loading" &&
-      !hasHistoryBucket &&
-      phase !== "Idle",
+  const hasHistoryLoadFailed = createMemo(() =>
+    Boolean(
+      !isBot() &&
+        puuid() &&
+        historyState()?.status === "failed" &&
+        !hasHistoryBucket() &&
+        ongoingState().phase !== "Idle",
+    ),
   );
-
-  const hasHistoryLoadFailed = Boolean(
-    !isBot &&
-      puuid &&
-      historyState?.status === "failed" &&
-      !hasHistoryBucket &&
-      phase !== "Idle",
+  const hasHiddenCareer = createMemo(
+    () => hasHistoryLoadFailed() || summoner()?.privacy === "PRIVATE",
   );
-  const hasHiddenCareer =
-    hasHistoryLoadFailed || summoner?.privacy === "PRIVATE";
-
-  const recentGames = useMemo<EnrichedMatch[]>(() => {
-    if (!puuid || !historyBucket || historyBucket.length === 0) {
+  const recentGames = createMemo<EnrichedMatch[]>(() => {
+    const id = puuid();
+    const bucket = historyBucket();
+    if (!id || !bucket || bucket.length === 0) {
       return [];
     }
 
     const filteredGames: EnrichedMatch[] = [];
-    for (const game of historyBucket) {
+    for (const game of bucket) {
       const me = game.json.participants.find(
-        (participant) => participant.puuid === puuid,
+        (participant) => participant.puuid === id,
       );
       if (!me) {
         continue;
       }
 
       filteredGames.push({ ...game, me });
-      if (filteredGames.length >= matchHistoryCount) {
+      if (filteredGames.length >= params.matchHistoryCount()) {
         break;
       }
     }
 
     return filteredGames;
-  }, [historyBucket, puuid, matchHistoryCount]);
-
-  const soloRankEntry = rankedQuery.data?.queueMap.RANKED_SOLO_5x5 ?? null;
-  const flexRankEntry = rankedQuery.data?.queueMap.RANKED_FLEX_SR ?? null;
-  const identity = useMemo(() => resolveSummonerIdentity(summoner), [summoner]);
-  const lpLabel = t("ongoingGame.rank.lpShort", { defaultValue: "LP" });
-  const rankItems = useMemo<PlayerCardRankDisplayItem[]>(
-    () => [
-      {
-        id: "solo",
-        entry: soloRankEntry,
-        lpLabel,
-        queueLabel: t("ongoingGame.rank.soloShort", {
-          defaultValue: "Solo",
-        }),
-      },
-      {
-        id: "flex",
-        entry: flexRankEntry,
-        lpLabel,
-        queueLabel: t("ongoingGame.rank.flexShort", {
-          defaultValue: "Flex",
-        }),
-      },
-    ],
-    [flexRankEntry, lpLabel, soloRankEntry, t],
+  });
+  const soloRankEntry = createMemo(
+    () => rankedQuery.data()?.queueMap.RANKED_SOLO_5x5 ?? null,
   );
-
-  const averageKdaText = useMemo(
-    () => formatAverageKdaText(recentGames),
-    [recentGames],
+  const flexRankEntry = createMemo(
+    () => rankedQuery.data()?.queueMap.RANKED_FLEX_SR ?? null,
   );
-  const winRateStat = useMemo(() => {
-    const stat = computeWinRateStat(recentGames, averageKdaText);
+  const identity = createMemo(() => resolveSummonerIdentity(summoner()));
+  const lpLabel = () => t("ongoingGame.rank.lpShort", { defaultValue: "LP" });
+  const rankItems = createMemo<PlayerCardRankDisplayItem[]>(() => [
+    {
+      id: "solo",
+      entry: soloRankEntry(),
+      lpLabel: lpLabel(),
+      queueLabel: t("ongoingGame.rank.soloShort", {
+        defaultValue: "Solo",
+      }),
+    },
+    {
+      id: "flex",
+      entry: flexRankEntry(),
+      lpLabel: lpLabel(),
+      queueLabel: t("ongoingGame.rank.flexShort", {
+        defaultValue: "Flex",
+      }),
+    },
+  ]);
+  const averageKdaText = createMemo(() => formatAverageKdaText(recentGames()));
+  const winRateStat = createMemo(() => {
+    const stat = computeWinRateStat(recentGames(), averageKdaText());
     return {
       ...stat,
-      text: `${t("ongoingGame.winRate", { defaultValue: "Win rate" })} ${stat.text}`,
+      text: `${t("ongoingGame.winRate", {
+        defaultValue: "Win rate",
+      })} ${stat.text}`,
     };
-  }, [averageKdaText, recentGames, t]);
-  const isSelf = Boolean(puuid && ownPuuid && puuid === ownPuuid);
-  const wasEncountered = Boolean(
-    puuid && !isSelf && hasEncounteredPlayer(ownHistoryBucket, puuid),
+  });
+  const isSelf = createMemo(() =>
+    Boolean(puuid() && ownPuuid() && puuid() === ownPuuid()),
   );
-  const squadTag = useMemo(
+  const wasEncountered = createMemo(() =>
+    Boolean(
+      puuid() &&
+        !isSelf() &&
+        hasEncounteredPlayer(ownHistoryBucket(), puuid() ?? ""),
+    ),
+  );
+  const squadTag = createMemo(
     () =>
       collectSquadPlayerCardTags({
-        assignment: squadAssignment,
+        assignment: params.squadAssignment(),
         t,
       })[0],
-    [squadAssignment, t],
   );
-  const playerTags = useMemo(
-    () =>
-      sortPlayerCardTags([
-        ...collectMatchPlayerCardTags(
-          recentGames,
-          enabledPlayerCardTagIds,
-          playerCardTagColors,
-          slot,
-          performanceStrategy,
-          t,
-        ),
-        ...collectSpecialPlayerCardTags({
-          colors: playerCardTagColors,
-          enabledIds: enabledPlayerCardTagIds,
-          hasHiddenCareer,
-          isSelf,
-          recentGames,
-          slot,
-          t,
-          wasEncountered,
-        }),
-      ]),
-    [
-      enabledPlayerCardTagIds,
-      hasHiddenCareer,
-      isSelf,
-      playerCardTagColors,
-      performanceStrategy,
-      recentGames,
-      slot,
-      t,
-      wasEncountered,
-    ],
+  const playerTags = createMemo(() =>
+    sortPlayerCardTags([
+      ...collectMatchPlayerCardTags(
+        recentGames(),
+        params.enabledPlayerCardTagIds(),
+        params.playerCardTagColors(),
+        params.slot(),
+        performanceStrategy(),
+        t,
+      ),
+      ...collectSpecialPlayerCardTags({
+        colors: params.playerCardTagColors(),
+        enabledIds: params.enabledPlayerCardTagIds(),
+        hasHiddenCareer: hasHiddenCareer(),
+        isSelf: isSelf(),
+        recentGames: recentGames(),
+        slot: params.slot(),
+        t,
+        wasEncountered: wasEncountered(),
+      }),
+    ]),
   );
 
   return {
-    championId: slot.championId > 0 ? slot.championId : null,
+    championId: () =>
+      params.slot().championId > 0 ? params.slot().championId : null,
     hasHistoryLoadFailed,
-    historyLoadFailedText: t("ongoingGame.historyLoadFailed", {
-      defaultValue: "Failed to load history",
-    }),
+    historyLoadFailedText: () =>
+      t("ongoingGame.historyLoadFailed", {
+        defaultValue: "Failed to load history",
+      }),
     isBot,
     isHistoryLoading,
-    level: summoner?.summonerLevel || 0,
-    noHistoryText: t("ongoingGame.noHistory", {
-      defaultValue: "No match history",
-    }),
-    historyPuuid: summoner?.puuid.trim() || undefined,
+    level: () => summoner()?.summonerLevel || 0,
+    noHistoryText: () =>
+      t("ongoingGame.noHistory", {
+        defaultValue: "No match history",
+      }),
+    historyPuuid: () => summoner()?.puuid.trim() || undefined,
     identity,
     rankItems,
     recentGames,
-    showRank: !isBot && Boolean(puuid),
+    showRank: () => !isBot() && Boolean(puuid()),
     squadTag,
     playerTags,
     winRateStat,

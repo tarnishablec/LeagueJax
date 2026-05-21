@@ -1,18 +1,11 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { ChevronLeft, ChevronRight } from "lucide-solid";
+import type { JSX } from "solid-js";
 import { RefreshButton } from "@/components/RefreshButton";
+import { useSolidTranslation } from "@/i18n/solid";
 import * as s from "./MatchList.css";
 
-export function MatchListPager({
-  page,
-  canGoPrev,
-  canGoNext,
-  canRefresh,
-  refreshing,
-  onPrev,
-  onNext,
-  onRefresh,
-}: {
+export function MatchListPager(props: {
   page: number;
   canGoPrev: boolean;
   canGoNext: boolean;
@@ -21,38 +14,38 @@ export function MatchListPager({
   onPrev: () => void;
   onNext: () => void;
   onRefresh: () => void;
-}) {
-  const { t } = useTranslation();
+}): JSX.Element {
+  const { t } = useSolidTranslation();
 
   return (
-    <div className={s.pageControls}>
+    <div class={s.pageControls}>
       <button
         type="button"
-        className={s.pageButton}
+        class={s.pageButton}
         aria-label="Previous page"
-        disabled={!canGoPrev}
-        onClick={onPrev}
+        disabled={!props.canGoPrev}
+        onClick={props.onPrev}
       >
         <ChevronLeft size={14} />
       </button>
-      <div className={s.pageIndicator}>
+      <div class={s.pageIndicator}>
         {t("history.pageNumber", {
-          page,
+          page: props.page,
         })}
       </div>
       <button
         type="button"
-        className={s.pageButton}
+        class={s.pageButton}
         aria-label="Next page"
-        disabled={!canGoNext}
-        onClick={onNext}
+        disabled={!props.canGoNext}
+        onClick={props.onNext}
       >
         <ChevronRight size={14} />
       </button>
       <RefreshButton
-        loading={refreshing}
-        disabled={!canRefresh}
-        onClick={onRefresh}
+        loading={props.refreshing}
+        disabled={!props.canRefresh}
+        onClick={props.onRefresh}
         ariaLabel={t("history.refreshAria", {
           defaultValue: "Refresh match history",
         })}

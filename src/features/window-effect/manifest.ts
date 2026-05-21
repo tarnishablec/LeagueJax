@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { SettingsShardApi } from "@/features/settings/types";
 import { SHARD_IDS } from "@/features/shard-ids";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import {
   isWindowEffectBaseColor,
   WINDOW_EFFECT_BASE_COLOR_DEFAULT,
@@ -18,7 +18,7 @@ const windowEffectBaseColorSchema = z
   })
   .transform((value) => value.toUpperCase());
 
-export class WindowEffectShard implements WebShard {
+export class WindowEffectShard implements SolidWebShard {
   public label() {
     return "WindowEffectShard";
   }

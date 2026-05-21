@@ -1,18 +1,11 @@
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import type { MatchOutcome } from "../../hooks/use-match-card-view-model";
 import * as s from "./MatchCard.css";
 import { formatDuration } from "./match-card-display";
 
-export function MatchCardHeader({
-  gameResult,
-  outcomeLabel,
-  placementLabel,
-  queueName,
-  mapName,
-  gameDuration,
-  startedAt,
-  durationLabel,
-  startedAtLabel,
-}: {
+export function MatchCardHeader(props: {
   gameResult: MatchOutcome;
   outcomeLabel: string;
   placementLabel?: string | null;
@@ -22,23 +15,28 @@ export function MatchCardHeader({
   startedAt: string;
   durationLabel: string;
   startedAtLabel: string;
-}) {
+}): JSX.Element {
   return (
-    <div className={s.headerRow}>
-      {placementLabel ? (
-        <span className={s.placementPill}>{placementLabel}</span>
-      ) : (
-        <span className={s.resultPill({ outcome: gameResult })}>
-          {outcomeLabel}
-        </span>
-      )}
-      <span className={s.metaPill}>{queueName}</span>
-      <span className={s.metaPill}>{mapName}</span>
-      <span className={s.metaPill}>
-        {durationLabel} {formatDuration(gameDuration)}
+    <div class={s.headerRow}>
+      <Show
+        when={props.placementLabel}
+        fallback={
+          <span class={s.resultPill({ outcome: props.gameResult })}>
+            {props.outcomeLabel}
+          </span>
+        }
+      >
+        {(placementLabel) => (
+          <span class={s.placementPill}>{placementLabel()}</span>
+        )}
+      </Show>
+      <span class={s.metaPill}>{props.queueName}</span>
+      <span class={s.metaPill}>{props.mapName}</span>
+      <span class={s.metaPill}>
+        {props.durationLabel} {formatDuration(props.gameDuration)}
       </span>
-      <span className={s.metaPill}>
-        {startedAtLabel} {startedAt}
+      <span class={s.metaPill}>
+        {props.startedAtLabel} {props.startedAt}
       </span>
     </div>
   );

@@ -1,6 +1,8 @@
-import { Check, Loader } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import * as s from "./SettingsActionButton.css";
+/** @jsxImportSource solid-js */
+import { Check, Loader } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
+import * as s from "./SettingsActionButton.css.ts";
 import {
   type SettingsControlLayoutProps,
   settingsControlClassName,
@@ -21,63 +23,51 @@ interface SettingsActionButtonProps extends SettingsControlLayoutProps {
   tone?: "accent" | "neutral" | "quiet";
 }
 
-export function SettingsActionButton({
-  ariaLabel,
-  className,
-  disabled = false,
-  fit,
-  height,
-  label,
-  loading = false,
-  minLoadingMs = 0,
-  successFeedback = false,
-  size,
-  width,
-  onClick,
-  onError,
-  tone = "accent",
-}: SettingsActionButtonProps) {
-  const [pending, setPending] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [displayLabel, setDisplayLabel] = useState(label);
-  const [labelVisible, setLabelVisible] = useState(true);
-  const successTimerRef = useRef<number | null>(null);
-  const busy = pending || loading;
+export function SettingsActionButton(
+  props: SettingsActionButtonProps,
+): JSX.Element {
+  const [pending, setPending] = createSignal(false);
+  const [showSuccess, setShowSuccess] = createSignal(false);
+  const [displayLabel, setDisplayLabel] = createSignal(props.label);
+  const [labelVisible, setLabelVisible] = createSignal(true);
+  let successTimer: number | null = null;
+  let swapTimer: number | null = null;
+  const busy = () => pending() || (props.loading ?? false);
 
-  useEffect(() => {
-    return () => {
-      if (successTimerRef.current != null) {
-        window.clearTimeout(successTimerRef.current);
-      }
-    };
-  }, []);
+  onCleanup(() => {
+    if (successTimer !== null) {
+      window.clearTimeout(successTimer);
+    }
+    if (swapTimer !== null) {
+      window.clearTimeout(swapTimer);
+    }
+  });
 
-  useEffect(() => {
-    if (label === displayLabel) {
+  createEffect(() => {
+    if (props.label === displayLabel()) {
       setLabelVisible(true);
       return;
     }
 
     setLabelVisible(false);
-
-    const swapTimer = setTimeout(() => {
-      setDisplayLabel(label);
+    if (swapTimer !== null) {
+      window.clearTimeout(swapTimer);
+    }
+    swapTimer = window.setTimeout(() => {
+      setDisplayLabel(props.label);
       setLabelVisible(true);
+      swapTimer = null;
     }, s.labelFadeDurationMs);
-
-    return () => {
-      clearTimeout(swapTimer);
-    };
-  }, [displayLabel, label]);
+  });
 
   const handleClick = async () => {
-    if (busy || disabled) {
+    if (busy() || (props.disabled ?? false)) {
       return;
     }
 
-    if (successTimerRef.current != null) {
-      window.clearTimeout(successTimerRef.current);
-      successTimerRef.current = null;
+    if (successTimer !== null) {
+      window.clearTimeout(successTimer);
+      successTimer = null;
     }
     setShowSuccess(false);
 
@@ -86,13 +76,13 @@ export function SettingsActionButton({
     let completedSuccessfully = false;
 
     try {
-      await onClick();
+      await props.onClick();
       completedSuccessfully = true;
     } catch (error) {
-      onError?.(error);
+      props.onError?.(error);
     } finally {
       const elapsedMs = performance.now() - startedAt;
-      const remainingMs = Math.max(0, minLoadingMs - elapsedMs);
+      const remainingMs = Math.max(0, (props.minLoadingMs ?? 0) - elapsedMs);
       if (remainingMs > 0) {
         await new Promise((resolve) => {
           setTimeout(resolve, remainingMs);
@@ -100,11 +90,11 @@ export function SettingsActionButton({
       }
       setPending(false);
 
-      if (completedSuccessfully && successFeedback) {
+      if (completedSuccessfully && (props.successFeedback ?? false)) {
         setShowSuccess(true);
-        successTimerRef.current = window.setTimeout(() => {
+        successTimer = window.setTimeout(() => {
           setShowSuccess(false);
-          successTimerRef.current = null;
+          successTimer = null;
         }, defaultSuccessFeedbackDurationMs);
       }
     }
@@ -113,25 +103,36 @@ export function SettingsActionButton({
   return (
     <button
       type="button"
-      aria-label={ariaLabel}
-      className={`${settingsControlClassName({ className, fit, size })} ${s.tone[tone]}`}
-      style={settingsControlStyle({ fit, height, size, width })}
-      disabled={busy || disabled}
+      aria-label={props.ariaLabel}
+      class={`${settingsControlClassName({
+        className: props.className,
+        fit: props.fit,
+        size: props.size,
+      })} ${s.tone[props.tone ?? "accent"]}`}
+      style={
+        settingsControlStyle({
+          fit: props.fit,
+          height: props.height,
+          size: props.size,
+          width: props.width,
+        }) as unknown as JSX.CSSProperties
+      }
+      disabled={busy() || (props.disabled ?? false)}
       onClick={() => {
         void handleClick();
       }}
     >
-      <span className={`${s.label} ${labelVisible ? "" : s.labelHidden}`}>
-        {displayLabel}
+      <span class={`${s.label} ${labelVisible() ? "" : s.labelHidden}`}>
+        {displayLabel()}
       </span>
-      <span className={s.loaderSlot} aria-hidden="true">
+      <span class={s.loaderSlot} aria-hidden="true">
         <Loader
           size={14}
-          className={`${s.feedbackIconBase} ${busy ? s.feedbackIconVisible : ""} ${busy ? s.iconSpin : ""}`}
+          class={`${s.feedbackIconBase} ${busy() ? s.feedbackIconVisible : ""} ${busy() ? s.iconSpin : ""}`}
         />
         <Check
           size={14}
-          className={`${s.feedbackIconBase} ${showSuccess ? s.feedbackIconVisible : ""}`}
+          class={`${s.feedbackIconBase} ${showSuccess() ? s.feedbackIconVisible : ""}`}
         />
       </span>
     </button>

@@ -1,7 +1,10 @@
-import { HoverCard } from "@ark-ui/react/hover-card";
-import { Portal } from "@ark-ui/react/portal";
+/** @jsxImportSource solid-js */
+import { HoverCard } from "@ark-ui/solid/hover-card";
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
-import { useOpenHistoryTab } from "../../hooks/use-open-history-tab";
+import { useSolidOpenHistoryTab } from "../../hooks/use-open-history-tab";
 import * as s from "./MatchCard.css";
 
 const BOT_PUUID = "00000000-0000-0000-0000-000000000000";
@@ -31,56 +34,67 @@ function classNames(...values: Array<string | undefined>): string {
   return values.filter(Boolean).join(" ");
 }
 
-export function MatchCardPlayerNameButton({
-  participant,
-  sgpServerId,
-  className,
-  botClassName,
-  children,
-}: {
+export function MatchCardPlayerNameButton(props: {
   participant: RawMatchSummaryParticipant;
   sgpServerId: string | null;
   className?: string;
   botClassName?: string;
   children?: string;
-}) {
-  const openHistoryTab = useOpenHistoryTab();
-  const { gameName, tagLine } = resolvePlayerName(participant);
-  const displayName = children ?? gameName;
-  const fullName = tagLine ? `${gameName}#${tagLine}` : gameName;
-
-  if (isBot(participant)) {
-    return (
-      <span
-        className={classNames(botClassName ?? s.playerNameLabel, className)}
-      >
-        {displayName}
-      </span>
-    );
-  }
+}): JSX.Element {
+  const openHistoryTab = useSolidOpenHistoryTab();
+  const playerName = () => resolvePlayerName(props.participant);
+  const displayName = () => props.children ?? playerName().gameName;
+  const fullName = () =>
+    playerName().tagLine
+      ? `${playerName().gameName}#${playerName().tagLine}`
+      : playerName().gameName;
 
   return (
-    <HoverCard.Root openDelay={100} closeDelay={60}>
-      <HoverCard.Trigger
-        type="button"
-        aria-label="Open player history tab"
-        className={classNames(s.playerNameButton, className)}
-        onClick={() => {
-          openHistoryTab(participant.puuid ?? "", sgpServerId, {
-            gameName,
-            tagLine,
-          });
-        }}
-      >
-        {displayName}
-      </HoverCard.Trigger>
-      <Portal>
-        <HoverCard.Positioner className={s.playerHoverPositioner}>
-          <HoverCard.Content className={s.playerHoverContent}>
-            {fullName}
-          </HoverCard.Content>
-        </HoverCard.Positioner>
-      </Portal>
-    </HoverCard.Root>
+    <Show
+      when={!isBot(props.participant)}
+      fallback={
+        <span
+          class={classNames(
+            props.botClassName ?? s.playerNameLabel,
+            props.className,
+          )}
+        >
+          {displayName()}
+        </span>
+      }
+    >
+      <HoverCard.Root openDelay={100} closeDelay={60}>
+        <HoverCard.Trigger
+          asChild={(getTriggerProps) => (
+            <button
+              {...getTriggerProps({
+                type: "button",
+                "aria-label": "Open player history tab",
+                class: classNames(s.playerNameButton, props.className),
+                onClick: () => {
+                  openHistoryTab(
+                    props.participant.puuid ?? "",
+                    props.sgpServerId,
+                    {
+                      gameName: playerName().gameName,
+                      tagLine: playerName().tagLine,
+                    },
+                  );
+                },
+              })}
+            >
+              {displayName()}
+            </button>
+          )}
+        />
+        <Portal>
+          <HoverCard.Positioner class={s.playerHoverPositioner}>
+            <HoverCard.Content class={s.playerHoverContent}>
+              {fullName()}
+            </HoverCard.Content>
+          </HoverCard.Positioner>
+        </Portal>
+      </HoverCard.Root>
+    </Show>
   );
 }

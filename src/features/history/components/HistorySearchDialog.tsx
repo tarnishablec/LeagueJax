@@ -1,12 +1,14 @@
-import { Dialog } from "@ark-ui/react/dialog";
-import { Portal } from "@ark-ui/react/portal";
-import { Search, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Dialog } from "@ark-ui/solid/dialog";
+import { Search, X } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { Portal } from "solid-js/web";
 import type { LcuChatFriend } from "@/bindings/lcu_chat";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner";
-import { useHistorySearch } from "@/features/history/hooks/useHistorySearch";
-import { useLcuFriends } from "@/features/history/hooks/useLcuFriends";
+import { useSolidHistorySearch } from "@/features/history/hooks/useHistorySearch";
+import { useSolidLcuFriends } from "@/features/history/hooks/useLcuFriends";
+import { useSolidTranslation } from "@/i18n/solid";
 import { FriendShortcutList } from "./FriendShortcutList";
 import * as s from "./HistoryToolbar.css";
 import { SearchForm } from "./SearchForm";
@@ -21,107 +23,96 @@ type HistorySearchDialogProps = {
   onOpenFriend: (friend: LcuChatFriend, sgpServerId: string | null) => void;
 };
 
-export function HistorySearchDialog({
-  open,
-  onOpenChange,
-  config,
-  disabled,
-  onOpenResult,
-  onOpenFriend,
-}: HistorySearchDialogProps) {
-  const { t } = useTranslation();
-  const { server, search, errorMessage } = useHistorySearch({
-    open,
-    config,
-    enabled: !disabled,
+export function HistorySearchDialog(
+  props: HistorySearchDialogProps,
+): JSX.Element {
+  const { t } = useSolidTranslation();
+  const { server, search, errorMessage } = useSolidHistorySearch({
+    open: () => props.open,
+    config: () => props.config,
+    enabled: () => !props.disabled,
   });
-  const friends = useLcuFriends({
-    enabled: open && !disabled,
+  const friends = useSolidLcuFriends({
+    enabled: () => props.open && !props.disabled,
   });
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen && disabled) {
-      onOpenChange(false);
+    if (nextOpen && props.disabled) {
+      props.onOpenChange(false);
       return;
     }
 
-    onOpenChange(nextOpen);
+    props.onOpenChange(nextOpen);
   };
 
   const handleOpenFriend = (friend: LcuChatFriend) => {
-    onOpenFriend(friend, server.effectiveServerCode);
+    props.onOpenFriend(friend, server.effectiveServerCode());
   };
 
   return (
     <Dialog.Root
-      open={open}
+      open={props.open}
       lazyMount
       unmountOnExit
       onOpenChange={(details) => handleOpenChange(details.open)}
       closeOnEscape
     >
-      <Dialog.Trigger asChild>
-        <button
-          type="button"
-          className={s.triggerButton}
-          aria-label={t("history.searchDialog.open")}
-          disabled={disabled}
-        >
-          <Search size={15} aria-hidden="true" />
-        </button>
-      </Dialog.Trigger>
+      <Dialog.Trigger
+        asChild={(getTriggerProps) => (
+          <button
+            {...getTriggerProps({
+              type: "button",
+              class: s.triggerButton,
+              "aria-label": t("history.searchDialog.open"),
+              disabled: props.disabled,
+            })}
+          >
+            <Search size={15} aria-hidden="true" />
+          </button>
+        )}
+      />
 
       <Portal>
-        <Dialog.Backdrop className={s.dialogBackdrop} />
-        <Dialog.Positioner className={s.dialogPositioner}>
-          <Dialog.Content className={s.dialogContent}>
-            <div className={s.headerRow}>
-              <div className={s.headerText}>
-                <Dialog.Title className={s.title}>
+        <Dialog.Backdrop class={s.dialogBackdrop} />
+        <Dialog.Positioner class={s.dialogPositioner}>
+          <Dialog.Content class={s.dialogContent}>
+            <div class={s.headerRow}>
+              <div class={s.headerText}>
+                <Dialog.Title class={s.title}>
                   {t("history.searchDialog.title")}
                 </Dialog.Title>
-                {/*<Dialog.Description className={s.subtitle}>*/}
-                {/*  {t("history.searchDialog.subtitle")}*/}
-                {/*</Dialog.Description>*/}
               </div>
-              <Dialog.CloseTrigger asChild>
-                <button
-                  type="button"
-                  className={s.closeButton}
-                  aria-label={t("common.cancel")}
-                >
-                  <X size={14} aria-hidden="true" />
-                </button>
-              </Dialog.CloseTrigger>
+              <Dialog.CloseTrigger
+                asChild={(getCloseProps) => (
+                  <button
+                    {...getCloseProps({
+                      type: "button",
+                      class: s.closeButton,
+                      "aria-label": t("common.cancel"),
+                    })}
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                )}
+              />
             </div>
 
             <SearchForm server={server} search={search} />
 
-            {/*<div className={s.metaRow}>*/}
-            {/*  {server.isBootstrapping ? (*/}
-            {/*    <span className={s.metaText}>*/}
-            {/*      {t("history.searchDialog.loadingServers")}*/}
-            {/*    </span>*/}
-            {/*  ) : null}*/}
-            {/*  {errorMessage ? (*/}
-            {/*    <span className={s.errorText}>{errorMessage}</span>*/}
-            {/*  ) : null}*/}
-            {/*</div>*/}
-
-            <div className={s.contentGrid}>
-              <div className={s.resultPanel}>
+            <div class={s.contentGrid}>
+              <div class={s.resultPanel}>
                 <SearchResultList
-                  results={search.results}
-                  searched={search.searched}
-                  isSearching={search.isSearching}
-                  hasError={!!errorMessage}
-                  onOpenResult={onOpenResult}
+                  results={search.results()}
+                  searched={search.searched()}
+                  isSearching={search.isSearching()}
+                  hasError={!!errorMessage()}
+                  onOpenResult={props.onOpenResult}
                 />
               </div>
               <FriendShortcutList
-                friends={friends.friends}
-                isLoading={friends.isLoading}
-                errorMessage={friends.errorMessage}
+                friends={friends.friends()}
+                isLoading={friends.isLoading()}
+                errorMessage={friends.errorMessage()}
                 onRefresh={friends.refresh}
                 onOpenFriend={handleOpenFriend}
               />

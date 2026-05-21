@@ -157,7 +157,7 @@ export const section = style({
   height: "100%",
   overflow: "hidden",
   borderRadius: 8,
-  background: `color-mix(in oklch, ${theme.color.background} 82%, ${theme.color.surface})`,
+  background: theme.color.surface,
   outline: `1px solid ${theme.color.border}`,
   outlineOffset: -1,
   selectors: {
@@ -200,7 +200,7 @@ export const sectionCount = style({
   fontSize: "0.75rem",
   display: "inline-grid",
   gridAutoFlow: "column",
-  gap: 10
+  gap: 10,
 });
 
 export const itemList = style({

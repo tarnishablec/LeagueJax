@@ -1,13 +1,8 @@
-import { useState } from "react";
+/** @jsxImportSource solid-js */
 
-export const SCOREBOARD_ICON_TYPES = [
-  "record",
-  "kda",
-  "gold",
-  "cs",
-  "damage",
-] as const;
-export type ScoreboardIconType = (typeof SCOREBOARD_ICON_TYPES)[number];
+import type { JSX } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import type { ScoreboardIconType } from "./ScoreboardIcon.types";
 
 const CDRAGON_POSTGAME_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-postgame/global/default";
@@ -24,28 +19,24 @@ function resolveScoreboardIconSrc(type: ScoreboardIconType): string {
   return CDRAGON_SCOREBOARD_ICON_BY_TYPE[type];
 }
 
-export function ScoreboardIcon({
-  type,
-  className,
-  fallbackClassName,
-}: {
+export function ScoreboardIcon(props: {
   type: ScoreboardIconType;
   className: string;
   fallbackClassName: string;
-}) {
-  const src = resolveScoreboardIconSrc(type);
-  const [errored, setErrored] = useState(false);
-
-  if (errored) {
-    return <span className={fallbackClassName} aria-hidden="true" />;
-  }
+}): JSX.Element {
+  const [errored, setErrored] = createSignal(false);
 
   return (
-    <img
-      src={src}
-      alt=""
-      className={className}
-      onError={() => setErrored(true)}
-    />
+    <Show
+      when={!errored()}
+      fallback={<span class={props.fallbackClassName} aria-hidden="true" />}
+    >
+      <img
+        src={resolveScoreboardIconSrc(props.type)}
+        alt=""
+        class={props.className}
+        onError={() => setErrored(true)}
+      />
+    </Show>
   );
 }

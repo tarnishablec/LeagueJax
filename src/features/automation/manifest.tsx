@@ -1,18 +1,15 @@
-import { Bot } from "lucide-react";
-import { lazy, Suspense } from "react";
-import type { WebShard } from "@/runtime/web-contract";
+/** @jsxImportSource solid-js */
+import { Bot } from "lucide-solid";
+import { lazy } from "solid-js";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { automationI18n } from "./i18n";
 
-const AutomationRoute = lazy(() =>
-  import("./routes/AutomationRoute").then((module) => ({
-    default: module.AutomationRoute,
-  })),
-);
+const AutomationRoute = lazy(() => import("./routes/AutomationRoute"));
 
-export class AutomationShard implements WebShard {
+export class SolidAutomationShard implements SolidWebShard {
   public label() {
-    return "AutomationShard";
+    return "SolidAutomationShard";
   }
 
   public id() {
@@ -23,11 +20,7 @@ export class AutomationShard implements WebShard {
     return [
       {
         path: "automation",
-        element: (
-          <Suspense fallback={null}>
-            <AutomationRoute />
-          </Suspense>
-        ),
+        component: AutomationRoute,
         order: 85,
       },
     ];

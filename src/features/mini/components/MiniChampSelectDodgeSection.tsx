@@ -1,44 +1,36 @@
-import { LogOut } from "lucide-react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { LogOut } from "lucide-solid";
+import { Show } from "solid-js";
+import { useSolidTranslation } from "@/i18n/solid";
 import * as s from "./MiniChampSelectDodgeSection.css";
 
-export function MiniChampSelectDodgeSection({
-  error,
-  pending,
-  onDodge,
-}: {
+export function MiniChampSelectDodgeSection(props: {
   error?: string | null;
   pending: boolean;
   onDodge: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useSolidTranslation();
 
   return (
-    <section className={s.root}>
-      <div className={s.title}>
-        {t("mini.champSelect.dodge.title", {
-          defaultValue: "退出英雄选择",
-        })}
-      </div>
+    <section class={s.root}>
+      <div class={s.title}>{t("mini.champSelect.dodge.title")}</div>
       <button
         type="button"
         aria-label="Dodge champion select"
-        className={s.button}
-        disabled={pending}
-        onClick={onDodge}
+        class={s.button}
+        disabled={props.pending}
+        onClick={props.onDodge}
       >
         <LogOut size={14} aria-hidden="true" />
         <span>
-          {pending
-            ? t("mini.champSelect.dodge.pending", {
-                defaultValue: "秒退中",
-              })
-            : t("mini.champSelect.dodge.action", {
-                defaultValue: "立即秒退",
-              })}
+          {props.pending
+            ? t("mini.champSelect.dodge.pending")
+            : t("mini.champSelect.dodge.action")}
         </span>
       </button>
-      {error ? <div className={s.error}>{error}</div> : null}
+      <Show when={props.error}>
+        {(error) => <div class={s.error}>{error()}</div>}
+      </Show>
     </section>
   );
 }

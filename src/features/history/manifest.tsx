@@ -1,48 +1,50 @@
-import { BarChart3 } from "lucide-react";
-import { lazy, Suspense } from "react";
+/** @jsxImportSource solid-js */
+import { ChartColumn } from "lucide-solid";
+import { lazy } from "solid-js";
 import { z } from "zod";
-import { HistoryTabBar } from "@/features/history/components/HistoryTabBar.tsx";
-import { SettingsShard } from "@/features/settings/manifest";
-import { StaticCacheShard } from "@/features/static-cache/manifest";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
-import { useLcuStore } from "@/stores/lcu";
-import { useTabStore } from "@/stores/tabs";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
+import { lcuStore } from "@/stores/lcu.solid";
+import { tabStore } from "@/stores/tabs.solid";
+import { SolidSettingsShard } from "../settings/solid-settings-shard.solid";
 import { SHARD_IDS } from "../shard-ids";
+import { StaticCacheShard } from "../static-cache/manifest";
+import { HistoryTabBar } from "./components/HistoryTabBar";
 import { HistoryToolbar } from "./components/HistoryToolbar";
 import {
   createHistoryFocusSyncController,
   type HistoryFocusSyncController,
 } from "./hooks/use-focus-sync";
 import { historyI18n } from "./i18n";
+import {
+  HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
+  HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
+  HISTORY_MVP_ACE_STRATEGY_SETTING,
+  HISTORY_SHOW_AUGMENT_DETAILS_SETTING,
+} from "./settings-ids";
 import { DEFAULT_MATCH_PERFORMANCE_STRATEGY } from "./utils/match-performance-badge";
 import {
   deriveSgpServerIdFromClientArgs,
   deriveSgpServerIdFromRegion,
 } from "./utils/server-display";
 
-const HistoryRoute = lazy(() =>
-  import("./routes/HistoryRoute").then((module) => ({
-    default: module.HistoryRoute,
-  })),
-);
-export const HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING =
-  "history.behavior.autoRefreshOnTabSwitch";
+const HistoryRoute = lazy(() => import("./routes/HistoryRoute"));
 
-export const HISTORY_AUTO_OPEN_OWN_TAB_SETTING =
-  "history.behavior.autoOpenOwnTab";
-export const HISTORY_SHOW_AUGMENT_DETAILS_SETTING =
-  "history.display.showAugmentDetails";
-export const HISTORY_MVP_ACE_STRATEGY_SETTING =
-  "history.display.mvpAceStrategy";
+export {
+  HISTORY_AUTO_OPEN_OWN_TAB_SETTING,
+  HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
+  HISTORY_MVP_ACE_STRATEGY_SETTING,
+  HISTORY_SHOW_AUGMENT_DETAILS_SETTING,
+};
+
 const HISTORY_BEHAVIOR_SECTION = "history.behavior" as const;
 const HISTORY_DISPLAY_SECTION = "history.display" as const;
 
-export class HistoryShard implements WebShard {
+export class SolidHistoryShard implements SolidWebShard {
   private focusSyncController: HistoryFocusSyncController | null = null;
 
   public label() {
-    return "HistoryShard";
+    return "SolidHistoryShard";
   }
 
   public id() {
@@ -54,10 +56,10 @@ export class HistoryShard implements WebShard {
   }
 
   public setup(jax: Jax): void {
-    void useTabStore.getState();
-    void useLcuStore.getState();
+    void tabStore.getState();
+    void lcuStore.getState();
 
-    const settingsShard = jax.getShard(SettingsShard);
+    const settingsShard = jax.getShard(SolidSettingsShard);
     void jax.getShard(StaticCacheShard);
     settingsShard.registerPage({ id: "history", order: 20 });
     settingsShard.registerSection({ key: HISTORY_BEHAVIOR_SECTION, order: 10 });
@@ -120,17 +122,17 @@ export class HistoryShard implements WebShard {
     });
 
     this.focusSyncController = createHistoryFocusSyncController({
-      closeAllTabs: () => useTabStore.getState().closeAllTabs(),
+      closeAllTabs: () => tabStore.getState().closeAllTabs(),
       getAutoOpenOwnTab: () =>
         settingsShard.get<boolean>(HISTORY_AUTO_OPEN_OWN_TAB_SETTING) ?? false,
       getConnected: () =>
-        useLcuStore
+        lcuStore
           .getState()
           .instances.find(
             (instance) => instance.isFocused && instance.state === "ready",
           ),
       getFocusedServerId: () => {
-        const connected = useLcuStore
+        const connected = lcuStore
           .getState()
           .instances.find(
             (instance) => instance.isFocused && instance.state === "ready",
@@ -140,12 +142,12 @@ export class HistoryShard implements WebShard {
           deriveSgpServerIdFromRegion(connected?.region)
         );
       },
-      hasExistingTabs: () => useTabStore.getState().tabs.length > 0,
+      hasExistingTabs: () => tabStore.getState().tabs.length > 0,
       openTab: (puuid, sgpServerId) =>
-        useTabStore.getState().openTab(puuid, sgpServerId),
+        tabStore.getState().openTab(puuid, sgpServerId),
       subscribeAutoOpenOwnTab: (listener) =>
         settingsShard.subscribe(HISTORY_AUTO_OPEN_OWN_TAB_SETTING, listener),
-      subscribeFocusedClient: (listener) => useLcuStore.subscribe(listener),
+      subscribeFocusedClient: (listener) => lcuStore.subscribe(listener),
     });
     this.focusSyncController.start();
   }
@@ -159,11 +161,7 @@ export class HistoryShard implements WebShard {
     return [
       {
         path: "history",
-        element: (
-          <Suspense fallback={null}>
-            <HistoryRoute />
-          </Suspense>
-        ),
+        component: HistoryRoute,
         order: 10,
       },
     ];
@@ -174,7 +172,7 @@ export class HistoryShard implements WebShard {
       {
         to: "/main/history",
         labelKey: "nav.history",
-        icon: BarChart3,
+        icon: ChartColumn,
         section: "main" as const,
         order: 10,
       },

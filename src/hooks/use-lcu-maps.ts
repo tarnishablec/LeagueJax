@@ -1,56 +1,64 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import useSWR from "swr";
+import { createMemo } from "solid-js";
 import type { LcuMap } from "@/bindings/maps";
-import { selectIsFocused, useLcuStore } from "@/stores/lcu.ts";
+import { useSolidTranslation } from "@/i18n/solid";
+import { createSolidQuery } from "@/infra/solid-query";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
 import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
-export function useLcuMaps() {
-  const connected = useLcuStore(selectIsFocused);
-  const { i18n } = useTranslation();
-  const language = i18n.resolvedLanguage ?? i18n.language;
-  const locale = useMemo(() => normalizeCdragonLocale(language), [language]);
+type LcuMapsKey = readonly ["lcu_get_maps", number, string];
 
-  return useSWR(
-    connected ? (["lcu_get_maps", connected.pid, locale] as const) : null,
-    ([cmd, , cdragonLocale]) =>
-      invoke<LcuMap[]>(cmd, {
+export function useSolidLcuMaps() {
+  const connected = useSolidLcuStore(selectIsFocused);
+  const { language } = useSolidTranslation();
+  const locale = createMemo(() => normalizeCdragonLocale(language()));
+
+  return createSolidQuery<LcuMap[]>(
+    () => {
+      const focused = connected();
+      return focused
+        ? (["lcu_get_maps", focused.pid, locale()] as const)
+        : null;
+    },
+    (key) => {
+      const [cmd, , cdragonLocale] = key as LcuMapsKey;
+      return invoke<LcuMap[]>(cmd, {
         forceRefresh: false,
         locale: cdragonLocale,
-      }),
-    {
-      dedupingInterval: Number.POSITIVE_INFINITY,
+      });
     },
   );
 }
 
-export function useLcuMapQuery(
-  mapId: number,
-  gameMutators: string[],
-  gameMode: string,
+export function useSolidLcuMapQuery(
+  mapId: () => number,
+  gameMutators: () => string[],
+  gameMode: () => string,
 ) {
-  const { data: maps } = useLcuMaps();
+  const { data: maps } = useSolidLcuMaps();
 
-  const data = useMemo(() => {
-    if (!maps) {
+  const data = createMemo(() => {
+    const currentMaps = maps();
+    if (!currentMaps) {
       return undefined;
     }
 
-    const exactModeMatch = maps.find(
-      (map) => map.id === mapId && map.gameMode === gameMode,
+    const currentMapId = mapId();
+    const currentGameMode = gameMode();
+    const exactModeMatch = currentMaps.find(
+      (map) => map.id === currentMapId && map.gameMode === currentGameMode,
     );
     if (exactModeMatch) {
       return exactModeMatch;
     }
 
-    const normalizedMutators = gameMutators
+    const normalizedMutators = gameMutators()
       .map((mutator) => mutator.trim().toUpperCase())
       .filter((mutator) => mutator.length > 0);
     if (normalizedMutators.length > 0) {
-      const mutatorMatch = maps.find(
+      const mutatorMatch = currentMaps.find(
         (map) =>
-          map.id === mapId &&
+          map.id === currentMapId &&
           normalizedMutators.includes(map.gameMutator.trim().toUpperCase()),
       );
       if (mutatorMatch) {
@@ -58,8 +66,8 @@ export function useLcuMapQuery(
       }
     }
 
-    return maps.find((map) => map.id === mapId);
-  }, [maps, mapId, gameMode, gameMutators]);
+    return currentMaps.find((map) => map.id === currentMapId);
+  });
 
   return { data };
 }

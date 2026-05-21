@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next";
 import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
@@ -11,6 +10,12 @@ import {
 import { resolveRecentGameResult } from "../routes/ongoing-game.history-utils.ts";
 import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import type { PlayerSquadAssignment } from "./player-card-squads.ts";
+
+type TranslateParam = string | number | boolean;
+type TranslateFn = (
+  key: string,
+  options?: Record<string, TranslateParam>,
+) => string;
 
 const FLASH_SPELL_ID = 4;
 const MIN_STREAK_COUNT = 3;
@@ -626,7 +631,7 @@ export function getPlayerCardTagColor(
 }
 
 export function getPlayerCardTagSettingItems(
-  t: TFunction,
+  t: TranslateFn,
 ): PlayerCardTagSettingItem[] {
   return SINGLE_COLOR_TAG_DEFINITIONS.map((tag) => {
     const colorSettings = getPlayerCardTagColorSettingItems().filter(
@@ -655,7 +660,7 @@ export function collectMatchPlayerCardTags(
   colors: Readonly<Record<string, string>>,
   slot: PlayerSlot,
   performanceStrategy: MatchPerformanceStrategy,
-  t: TFunction,
+  t: TranslateFn,
 ): ResolvedPlayerCardTag[] {
   const enabled = new Set(enabledIds);
 
@@ -677,7 +682,7 @@ export function collectMatchPlayerCardTags(
 
 export function collectSquadPlayerCardTags(params: {
   assignment: PlayerSquadAssignment | undefined;
-  t: TFunction;
+  t: TranslateFn;
 }): ResolvedPlayerCardTag[] {
   const { assignment, t } = params;
   if (!assignment) {
@@ -705,7 +710,7 @@ export function collectSpecialPlayerCardTags(params: {
   isSelf: boolean;
   recentGames: PlayerCardMatch[];
   slot: PlayerSlot;
-  t: TFunction;
+  t: TranslateFn;
   wasEncountered: boolean;
 }): ResolvedPlayerCardTag[] {
   const {

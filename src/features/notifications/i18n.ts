@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const notificationsI18n: Resource = {
+export const notificationsI18n: LocaleResource = {
   en: {
     notifications: {
       center: {

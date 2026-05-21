@@ -11,7 +11,7 @@ import { SHARD_IDS } from "@/features/shard-ids";
 import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
 import { waitBackendShards } from "@/runtime/backend-shards";
-import type { WebShard } from "@/runtime/web-contract";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { settingsI18n } from "./i18n";
 import { SettingsStore } from "./store";
 import { registerGeneralSettings } from "./store/general";
@@ -31,7 +31,7 @@ import type {
 
 const BACKEND_SETTINGS_WAIT_TIMEOUT_MS = 10_000;
 
-export class MiniSettingsShard implements WebShard, SettingsShardApi {
+export class MiniSettingsShard implements SolidWebShard, SettingsShardApi {
   private readonly sourceId = `mini-${crypto.randomUUID()}`;
   private changedUnlisten: UnlistenFn | null = null;
   private definitionsChangedUnlisten: UnlistenFn | null = null;

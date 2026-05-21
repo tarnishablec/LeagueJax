@@ -1,5 +1,7 @@
-import type { CSSProperties } from "react";
-import { useCallback, useState } from "react";
+/** @jsxImportSource solid-js */
+
+import type { JSX } from "solid-js";
+import { createSignal, onCleanup, Show } from "solid-js";
 import {
   framedImage,
   imageFrame,
@@ -22,75 +24,77 @@ const sharedObserver = new IntersectionObserver((entries) => {
   }
 });
 
-export function LazyImage({
-  src,
-  alt,
-  className,
-  fallbackClassName,
-  loadingClassName,
-  onError,
-  style,
-}: {
+export function LazyImage(props: {
   src: string;
   alt: string;
   className: string;
   fallbackClassName?: string;
   loadingClassName?: string;
   onError?: () => void;
-  style?: CSSProperties;
+  style?: JSX.CSSProperties;
 }) {
-  const [visible, setVisible] = useState(false);
-  const [errored, setErrored] = useState(false);
+  const [visible, setVisible] = createSignal(false);
+  const [errored, setErrored] = createSignal(false);
+  let placeholder: HTMLSpanElement | undefined;
 
-  const ref = useCallback((node: HTMLSpanElement | null) => {
-    if (!node) return;
+  const observe = (node: HTMLSpanElement) => {
+    placeholder = node;
     listeners.set(node, () => setVisible(true));
     sharedObserver.observe(node);
-    return () => {
-      listeners.delete(node);
-      sharedObserver.unobserve(node);
-    };
-  }, []);
+  };
 
-  if (errored && !onError && fallbackClassName) {
-    return (
-      <span className={fallbackClassName} style={style} aria-hidden="true" />
-    );
-  }
-
-  if (!visible) {
-    return (
-      <span
-        ref={ref}
-        className={`${className} ${imageFrame} ${loadingClassName ?? transparentPlaceholder}`}
-        style={style}
-        aria-hidden="true"
-      />
-    );
-  }
+  onCleanup(() => {
+    if (!placeholder) {
+      return;
+    }
+    listeners.delete(placeholder);
+    sharedObserver.unobserve(placeholder);
+  });
 
   return (
-    <span
-      className={`${className} ${imageFrame} ${loadingClassName ?? transparentPlaceholder}`}
-      style={style}
+    <Show
+      when={!(errored() && !props.onError && props.fallbackClassName)}
+      fallback={
+        <span
+          class={props.fallbackClassName}
+          style={props.style}
+          aria-hidden="true"
+        />
+      }
     >
-      <img
-        key={src}
-        src={src}
-        alt={alt}
-        className={`${framedImage} ${lazyFadeIn}`}
-        decoding="async"
-        onLoad={(e) => {
-          e.currentTarget.dataset.loaded = "";
-        }}
-        onError={() => {
-          if (onError) {
-            onError();
-          } else {
-            setErrored(true);
-          }
-        }}
-      />
-    </span>
+      <Show
+        when={visible()}
+        fallback={
+          <span
+            ref={observe}
+            class={`${props.className} ${imageFrame} ${props.loadingClassName ?? transparentPlaceholder}`}
+            style={props.style}
+            aria-hidden="true"
+          />
+        }
+      >
+        <span
+          class={`${props.className} ${imageFrame} ${props.loadingClassName ?? transparentPlaceholder}`}
+          style={props.style}
+        >
+          <img
+            src={props.src}
+            alt={props.alt}
+            class={`${framedImage} ${lazyFadeIn}`}
+            decoding="async"
+            onLoad={(event) => {
+              event.currentTarget.dataset.loaded = "";
+            }}
+            onError={() => {
+              if (props.onError) {
+                props.onError();
+              } else {
+                setErrored(true);
+              }
+            }}
+          />
+        </span>
+      </Show>
+    </Show>
   );
 }

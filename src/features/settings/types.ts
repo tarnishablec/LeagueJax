@@ -1,4 +1,4 @@
-import type React from "react";
+import type { JSX } from "solid-js";
 import type { ZodType } from "zod";
 import type { SettingScopeDto } from "@/bindings/settings";
 
@@ -47,7 +47,7 @@ export interface SettingsSectionRendererProps {
 
 export type SettingsSectionRenderer = (
   props: SettingsSectionRendererProps,
-) => React.ReactElement;
+) => JSX.Element;
 
 /**
  * Frontend-enriched setting definition.

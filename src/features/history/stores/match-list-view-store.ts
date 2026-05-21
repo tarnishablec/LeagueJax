@@ -1,12 +1,11 @@
-import { create } from "zustand";
-import type { MatchModeTag } from "../types/match-mode";
+import { createSolidStoreHook } from "@/stores/solid-zustand";
+import {
+  type MatchListViewStore,
+  matchListViewStore,
+} from "./match-list-view-store-core";
 
-type MatchListViewStore = {
-  modeTag: MatchModeTag;
-  setModeTag: (modeTag: MatchModeTag) => void;
-};
+export type { MatchListViewStore };
+export { matchListViewStore };
 
-export const useMatchListViewStore = create<MatchListViewStore>((set) => ({
-  modeTag: "all",
-  setModeTag: (modeTag) => set({ modeTag }),
-}));
+export const useSolidMatchListViewStore =
+  createSolidStoreHook(matchListViewStore);

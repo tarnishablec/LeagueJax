@@ -1,12 +1,13 @@
-import { useMemo } from "react";
-import { useCdragonGameDataCatalog } from "./use-cdragon-game-data-catalog.ts";
+import { createMemo } from "solid-js";
+import { useSolidCdragonGameDataCatalog } from "./use-cdragon-game-data-catalog";
 
-export function useCdragonCherryAugments() {
-  const { augmentsById } = useCdragonGameDataCatalog();
-  const augments = useMemo(() => Object.values(augmentsById), [augmentsById]);
+export function useSolidCdragonCherryAugments() {
+  const catalog = useSolidCdragonGameDataCatalog();
+  const augments = createMemo(() => Object.values(catalog().augmentsById));
+  const byId = createMemo(() => catalog().augmentsById);
 
   return {
     augments,
-    byId: augmentsById,
+    byId,
   };
 }

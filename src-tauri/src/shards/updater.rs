@@ -17,10 +17,10 @@ use ts_rs::TS;
 
 use crate::error::AppError;
 use crate::shards::network::{NetworkConfig, NetworkShard};
-use crate::shards::settings::{SettingHandle, SettingsShard};
 use crate::shards::settings::types::{
     SettingControlDto, SettingDefinitionDto, SettingOptionDto, SettingScopeDto,
 };
+use crate::shards::settings::{SettingHandle, SettingsShard};
 use crate::shards::tauri_host::TauriHost;
 
 const UPDATE_SOURCE_SETTING_ID: &str = "system.update.source";

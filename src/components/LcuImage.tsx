@@ -1,6 +1,7 @@
+/** @jsxImportSource solid-js */
 import { convertFileSrc } from "@tauri-apps/api/core";
-import type { CSSProperties } from "react";
-import { useMemo } from "react";
+import type { JSX } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { LazyImage } from "@/components/LazyImage";
 
 type LcuImageProps = {
@@ -10,7 +11,7 @@ type LcuImageProps = {
   fallbackClassName?: string;
   loadingClassName?: string;
   onError?: () => void;
-  style?: CSSProperties;
+  style?: JSX.CSSProperties;
 };
 
 function resolveLcuImageUrl(src?: string | null): string | null {
@@ -23,7 +24,6 @@ function resolveLcuImageUrl(src?: string | null): string | null {
     return null;
   }
 
-  // Already a fully qualified URL (http/https/data/blob/lcu/...).
   if (/^(https?|data|blob):\/\//i.test(trimmed)) {
     return trimmed;
   }
@@ -64,35 +64,33 @@ function canUseTauriConvertFileSrc(): boolean {
   return typeof candidate?.convertFileSrc === "function";
 }
 
-export function LcuImage({
-  src,
-  alt,
-  className,
-  fallbackClassName,
-  loadingClassName,
-  onError,
-  style,
-}: LcuImageProps) {
-  const resolvedUrl = useMemo(() => resolveLcuImageUrl(src), [src]);
-
-  if (!resolvedUrl) {
-    if (!fallbackClassName) {
-      return null;
-    }
-    return (
-      <span className={fallbackClassName} style={style} aria-hidden="true" />
-    );
-  }
+export function LcuImage(props: LcuImageProps) {
+  const resolvedUrl = createMemo(() => resolveLcuImageUrl(props.src));
 
   return (
-    <LazyImage
-      src={resolvedUrl}
-      alt={alt}
-      className={className}
-      fallbackClassName={fallbackClassName}
-      loadingClassName={loadingClassName}
-      onError={onError}
-      style={style}
-    />
+    <Show
+      when={resolvedUrl()}
+      fallback={
+        props.fallbackClassName ? (
+          <span
+            class={props.fallbackClassName}
+            style={props.style}
+            aria-hidden="true"
+          />
+        ) : null
+      }
+    >
+      {(url) => (
+        <LazyImage
+          src={url()}
+          alt={props.alt}
+          className={props.className}
+          fallbackClassName={props.fallbackClassName}
+          loadingClassName={props.loadingClassName}
+          onError={props.onError}
+          style={props.style}
+        />
+      )}
+    </Show>
   );
 }

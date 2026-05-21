@@ -1,4 +1,4 @@
-import { appToaster } from "@/components/toastStore";
+import { solidAppToaster } from "@/components/toastStore";
 
 const SETTINGS_SYSTEM_HASH = "/main/settings/system";
 
@@ -10,14 +10,10 @@ interface UpdateSettingsToastOptions {
   title: string;
 }
 
-// export function navigateToUpdateSettings(): void {
-//   window.location.hash = SETTINGS_SYSTEM_HASH;
-// }
-
-export function showUpdateSettingsToast(
+export function showSolidUpdateSettingsToast(
   options: UpdateSettingsToastOptions,
 ): void {
-  appToaster.warning({
+  solidAppToaster.warning({
     id: options.id,
     title: options.title,
     closable: options.closable,

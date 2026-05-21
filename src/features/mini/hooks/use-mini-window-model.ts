@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useMemo } from "react";
+import type { Accessor } from "solid-js";
+import { createMemo, onMount } from "solid-js";
 import type {
   BenchChampion,
   ChampSelectSessionData,
@@ -8,9 +9,9 @@ import type {
 } from "@/bindings/lcu_events";
 import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
 import type { LcuQueue } from "@/bindings/queues";
-import { useOngoingGameStore } from "@/features/ongoing-game/store";
-import { useLcuMapQuery } from "@/hooks/use-lcu-maps";
-import { useLcuQueues } from "@/hooks/use-lcu-queues";
+import { useSolidOngoingGameStore } from "@/features/ongoing-game/store.solid";
+import { useSolidLcuMapQuery } from "@/hooks/use-lcu-maps";
+import { useSolidLcuQueues } from "@/hooks/use-lcu-queues";
 import {
   type LcuMapAssetSource,
   preferredLcuMapAsset,
@@ -143,67 +144,61 @@ function isSpectatingFromState(
   return Boolean(gameClient?.observerServerIp && !gameClient.serverIp);
 }
 
-export function useMiniWindowModel(): MiniWindowModel {
-  const { data: queues } = useLcuQueues();
+export function useSolidMiniWindowModel(): Accessor<MiniWindowModel> {
+  const { data: queues } = useSolidLcuQueues();
 
-  const phase = useOngoingGameStore((state) => state.phase);
-  const effectiveQueueId = useOngoingGameStore(
+  const phase = useSolidOngoingGameStore((state) => state.phase);
+  const effectiveQueueId = useSolidOngoingGameStore(
     (state) => state.effectiveQueueId,
   );
-  const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
-  const matchmakingSearch = useOngoingGameStore(
+  const gameflowSession = useSolidOngoingGameStore(
+    (state) => state.gameflowSession,
+  );
+  const matchmakingSearch = useSolidOngoingGameStore(
     (state) => state.matchmakingSearch,
   );
-  const readyCheck = useOngoingGameStore((state) => state.readyCheck);
-  const champSelectSession = useOngoingGameStore(
+  const readyCheck = useSolidOngoingGameStore((state) => state.readyCheck);
+  const champSelectSession = useSolidOngoingGameStore(
     (state) => state.champSelectSession,
   );
 
-  useEffect(() => {
+  onMount(() => {
     void invoke<OngoingGameUpdated>("ongoing_game_get_snapshot")
       .then((snapshot) => {
-        useOngoingGameStore.getState().applyUpdated(snapshot);
+        useSolidOngoingGameStore.getState().applyUpdated(snapshot);
       })
       .catch(() => {});
-  }, []);
+  });
 
-  const gameflowMap = gameflowSession?.map ?? null;
-  const queueAssetMutator = gameflowSession?.gameData.queue.assetMutator ?? "";
-  const gameflowMapMutators = useMemo(
-    () => [gameflowMap?.gameMutator ?? "", queueAssetMutator],
-    [gameflowMap?.gameMutator, queueAssetMutator],
-  );
-  const { data: knownMap } = useLcuMapQuery(
-    gameflowMap?.id ?? 0,
+  const gameflowMap = createMemo(() => gameflowSession()?.map ?? null);
+  const gameflowMapMutators = createMemo(() => [
+    gameflowMap()?.gameMutator ?? "",
+    gameflowSession()?.gameData.queue.assetMutator ?? "",
+  ]);
+  const { data: knownMap } = useSolidLcuMapQuery(
+    () => gameflowMap()?.id ?? 0,
     gameflowMapMutators,
-    gameflowMap?.gameMode ?? "",
+    () => gameflowMap()?.gameMode ?? "",
   );
 
-  return useMemo(() => {
+  return createMemo(() => {
     const queueId = queueIdFromState(
-      effectiveQueueId,
-      champSelectSession,
-      matchmakingSearch,
-      gameflowSession,
+      effectiveQueueId(),
+      champSelectSession(),
+      matchmakingSearch(),
+      gameflowSession(),
     );
 
     return {
-      phase,
-      queueName: queueNameForId(queues, queueId),
-      queueIconSrc: resolveMiniQueueIconSrc(knownMap, gameflowMap),
-      isSpectating: isSpectatingFromState(champSelectSession, gameflowSession),
-      readyCheck,
-      champSelect: champSelectModelFromSession(champSelectSession),
+      phase: phase(),
+      queueName: queueNameForId(queues(), queueId),
+      queueIconSrc: resolveMiniQueueIconSrc(knownMap(), gameflowMap()),
+      isSpectating: isSpectatingFromState(
+        champSelectSession(),
+        gameflowSession(),
+      ),
+      readyCheck: readyCheck(),
+      champSelect: champSelectModelFromSession(champSelectSession()),
     };
-  }, [
-    champSelectSession,
-    effectiveQueueId,
-    gameflowSession,
-    gameflowMap,
-    knownMap,
-    matchmakingSearch,
-    phase,
-    queues,
-    readyCheck,
-  ]);
+  });
 }

@@ -1,37 +1,33 @@
-import type { ReactNode } from "react";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import * as s from "./SettingsFieldRow.css";
-import { SettingsHint, type SettingsHintTone } from "./SettingsHint";
 
 interface SettingsFieldRowProps {
   controlAlign?: "stretch" | "start" | "end";
   label: string;
   hint?: string;
-  hintTone?: SettingsHintTone;
   settingId?: string;
   scopeTag?: string;
-  children?: ReactNode;
+  children?: JSX.Element;
 }
 
-export function SettingsFieldRow({
-  controlAlign = "stretch",
-  label,
-  hint,
-  hintTone = "info",
-  settingId,
-  scopeTag,
-  children,
-}: SettingsFieldRowProps) {
+export function SettingsFieldRow(props: SettingsFieldRowProps) {
   return (
-    <div className={s.row} data-setting-id={settingId}>
-      <span className={s.label}>
-        <span className={s.labelText}>
-          <span>{label}</span>
-          {hint ? <SettingsHint hint={hint} tone={hintTone} /> : null}
+    <div class={s.row} data-setting-id={props.settingId}>
+      <span class={s.label}>
+        <span class={s.labelText}>
+          <span>{props.label}</span>
+          <Show when={props.hint}>
+            {(hint) => <span title={hint()} aria-hidden="true" />}
+          </Show>
         </span>
-        <span className={s.scopeBadge}>{scopeTag ?? ""}</span>
+        <span class={s.scopeBadge}>{props.scopeTag ?? ""}</span>
       </span>
 
-      <div className={s.control({ align: controlAlign })}>{children}</div>
+      <div class={s.control({ align: props.controlAlign ?? "stretch" })}>
+        {props.children}
+      </div>
     </div>
   );
 }

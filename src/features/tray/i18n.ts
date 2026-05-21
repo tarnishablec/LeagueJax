@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const trayI18n: Resource = {
+export const trayI18n: LocaleResource = {
   en: {
     tray: {
       toggleMiniWindow: "Mini Window",

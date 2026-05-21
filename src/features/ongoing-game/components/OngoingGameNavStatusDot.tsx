@@ -1,17 +1,20 @@
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import type { OngoingGamePhase } from "@/bindings/ongoing_game";
-import { useOngoingGameStore } from "../store";
+import { useSolidOngoingGameStore } from "../store.solid";
 import * as s from "./OngoingGameNavStatusDot.css";
 
 function isVisibleOngoingPhase(phase: OngoingGamePhase): boolean {
   return phase === "ChampSelect" || phase === "InGame";
 }
 
-export function OngoingGameNavStatusDot() {
-  const phase = useOngoingGameStore((state) => state.phase);
+export function OngoingGameNavStatusDot(): JSX.Element {
+  const phase = useSolidOngoingGameStore((state) => state.phase);
 
-  if (!isVisibleOngoingPhase(phase)) {
-    return null;
-  }
-
-  return <span className={s.root} aria-hidden="true" />;
+  return (
+    <Show when={isVisibleOngoingPhase(phase())}>
+      <span class={s.root} aria-hidden="true" />
+    </Show>
+  );
 }

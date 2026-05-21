@@ -1,10 +1,14 @@
-import { Swords } from "lucide-react";
-import { useMemo, useSyncExternalStore } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Swords } from "lucide-solid";
+import type { Accessor, JSX } from "solid-js";
+import { createMemo, createSignal, onCleanup, Show } from "solid-js";
 import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
-import { useSettings } from "@/features/settings/context";
-import { FiveVsFiveOngoingLayout } from "../components/layouts/FiveVsFiveOngoingLayout.tsx";
-import { MultiTeamOngoingLayout } from "../components/layouts/MultiTeamOngoingLayout.tsx";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import type { SettingId } from "@/features/settings/types";
+import { useSolidSettingValue } from "@/features/settings/use-setting-value";
+import { useSolidTranslation } from "@/i18n/solid";
+import { FiveVsFiveOngoingLayout } from "../components/layouts/FiveVsFiveOngoingLayout";
+import { MultiTeamOngoingLayout } from "../components/layouts/MultiTeamOngoingLayout";
 import {
   DEFAULT_MIN_SHARED_SQUAD_GAMES,
   type PlayerSquadAssignments,
@@ -15,16 +19,16 @@ import {
   getPlayerCardTagEnabledSettingItems,
   normalizePlayerCardTagColor,
 } from "../components/player-card-tags.ts";
-import { useOngoingGameStore } from "../store";
+import { useSolidOngoingGameStore } from "../store.solid";
 import { resolveOngoingTeamGroups } from "./ongoing-game.player-utils.ts";
 
-const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots" as const;
+const ONGOING_SHOW_BOTS_SETTING = "ongoing.interaction.showBots" as SettingId;
 const ONGOING_MATCH_HISTORY_COUNT_SETTING =
-  "ongoing.interaction.matchHistoryCount" as const;
+  "ongoing.interaction.matchHistoryCount" as SettingId;
 const ONGOING_SQUAD_DETECTION_ENABLED_SETTING =
-  "ongoing.playerCardTags.squadDetection.enabled" as const;
+  "ongoing.playerCardTags.squadDetection.enabled" as SettingId;
 const ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING =
-  "ongoing.playerCardTags.squadDetectionMinGames" as const;
+  "ongoing.playerCardTags.squadDetectionMinGames" as SettingId;
 const PLAYER_CARD_TAG_COLOR_SETTINGS = getPlayerCardTagColorSettingItems();
 const PLAYER_CARD_TAG_ENABLED_SETTINGS = getPlayerCardTagEnabledSettingItems();
 const EMPTY_SQUAD_ASSIGNMENTS: PlayerSquadAssignments = {
@@ -32,205 +36,137 @@ const EMPTY_SQUAD_ASSIGNMENTS: PlayerSquadAssignments = {
   squads: [],
 };
 
-function createEnabledPlayerCardTagIdsSnapshot(
-  settings: ReturnType<typeof useSettings>,
-) {
-  let previousValues: boolean[] | null = null;
-  let previousSnapshot: readonly string[] | null = null;
-
-  return () => {
-    const values = PLAYER_CARD_TAG_ENABLED_SETTINGS.map(
-      (item) => settings.get<boolean>(item.id) ?? item.defaultEnabled,
-    );
-
-    if (
-      previousValues &&
-      previousSnapshot &&
-      values.every((value, index) => value === previousValues?.[index])
-    ) {
-      return previousSnapshot;
-    }
-
-    previousValues = values;
-    previousSnapshot = PLAYER_CARD_TAG_ENABLED_SETTINGS.filter(
-      (_item, index) => values[index],
-    ).map((item) => item.tagId);
-    return previousSnapshot;
+function useSettingsSnapshot<T>(
+  ids: readonly SettingId[],
+  read: () => T,
+): Accessor<T> {
+  const settings = useSolidSettings();
+  const [snapshot, setSnapshot] = createSignal(read(), { equals: false });
+  const refresh = () => {
+    setSnapshot(() => read());
   };
+  const unsubscribes = ids.map((id) => settings.subscribe(id, refresh));
+
+  onCleanup(() => {
+    for (const unsubscribe of unsubscribes) {
+      unsubscribe();
+    }
+  });
+
+  return snapshot;
 }
 
-function createPlayerCardTagColorsSnapshot(
-  settings: ReturnType<typeof useSettings>,
-) {
-  let previousValues: string[] | null = null;
-  let previousSnapshot: Readonly<Record<string, string>> | null = null;
-
-  return () => {
-    const values = PLAYER_CARD_TAG_COLOR_SETTINGS.map((item) =>
-      normalizePlayerCardTagColor(settings.get(item.id), item.defaultColor),
-    );
-
-    if (
-      previousValues &&
-      previousSnapshot &&
-      values.every((value, index) => value === previousValues?.[index])
-    ) {
-      return previousSnapshot;
-    }
-
-    previousValues = values;
-    previousSnapshot = Object.fromEntries(
-      PLAYER_CARD_TAG_COLOR_SETTINGS.map((item, index) => [
-        item.tagId,
-        values[index] ?? item.defaultColor,
-      ]),
-    );
-    return previousSnapshot;
-  };
+function useEnabledPlayerCardTagIds(): Accessor<readonly string[]> {
+  const settings = useSolidSettings();
+  return useSettingsSnapshot(
+    PLAYER_CARD_TAG_ENABLED_SETTINGS.map((item) => item.id),
+    () =>
+      PLAYER_CARD_TAG_ENABLED_SETTINGS.filter(
+        (item) => settings.get<boolean>(item.id) ?? item.defaultEnabled,
+      ).map((item) => item.tagId),
+  );
 }
 
-export function OngoingGameRoute() {
-  const { t } = useTranslation();
-  const settings = useSettings();
-  const showBots = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(ONGOING_SHOW_BOTS_SETTING, onStoreChange),
-    () => settings.get<boolean>(ONGOING_SHOW_BOTS_SETTING) ?? true,
-    () => settings.get<boolean>(ONGOING_SHOW_BOTS_SETTING) ?? true,
-  );
-  const matchHistoryCount = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(ONGOING_MATCH_HISTORY_COUNT_SETTING, onStoreChange),
-    () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
-    () => settings.get<number>(ONGOING_MATCH_HISTORY_COUNT_SETTING) ?? 50,
-  );
-  const isSquadDetectionEnabled = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(
-        ONGOING_SQUAD_DETECTION_ENABLED_SETTING,
-        onStoreChange,
+function usePlayerCardTagColors(): Accessor<Readonly<Record<string, string>>> {
+  const settings = useSolidSettings();
+  return useSettingsSnapshot(
+    PLAYER_CARD_TAG_COLOR_SETTINGS.map((item) => item.id),
+    () =>
+      Object.fromEntries(
+        PLAYER_CARD_TAG_COLOR_SETTINGS.map((item) => [
+          item.tagId,
+          normalizePlayerCardTagColor(settings.get(item.id), item.defaultColor),
+        ]),
       ),
-    () =>
-      settings.get<boolean>(ONGOING_SQUAD_DETECTION_ENABLED_SETTING) ?? true,
-    () =>
-      settings.get<boolean>(ONGOING_SQUAD_DETECTION_ENABLED_SETTING) ?? true,
   );
-  const squadDetectionMinGames = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(
-        ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING,
-        onStoreChange,
-      ),
-    () =>
-      settings.get<number>(ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING) ??
-      DEFAULT_MIN_SHARED_SQUAD_GAMES,
-    () =>
-      settings.get<number>(ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING) ??
-      DEFAULT_MIN_SHARED_SQUAD_GAMES,
-  );
-  const getEnabledPlayerCardTagIdsSnapshot = useMemo(
-    () => createEnabledPlayerCardTagIdsSnapshot(settings),
-    [settings],
-  );
-  const enabledPlayerCardTagIds = useSyncExternalStore(
-    (onStoreChange) => {
-      const unsubscribes = PLAYER_CARD_TAG_ENABLED_SETTINGS.map((item) =>
-        settings.subscribe(item.id, onStoreChange),
-      );
+}
 
-      return () => {
-        for (const unsubscribe of unsubscribes) {
-          unsubscribe();
-        }
-      };
-    },
-    getEnabledPlayerCardTagIdsSnapshot,
-    getEnabledPlayerCardTagIdsSnapshot,
+export function OngoingGameRoute(): JSX.Element {
+  const { t } = useSolidTranslation();
+  const showBots = useSolidSettingValue<boolean>(
+    ONGOING_SHOW_BOTS_SETTING,
+    true,
   );
-  const getPlayerCardTagColorsSnapshot = useMemo(
-    () => createPlayerCardTagColorsSnapshot(settings),
-    [settings],
+  const matchHistoryCount = useSolidSettingValue<number>(
+    ONGOING_MATCH_HISTORY_COUNT_SETTING,
+    50,
   );
-  const playerCardTagColors = useSyncExternalStore(
-    (onStoreChange) => {
-      const unsubscribes = PLAYER_CARD_TAG_COLOR_SETTINGS.map((item) =>
-        settings.subscribe(item.id, onStoreChange),
-      );
-
-      return () => {
-        for (const unsubscribe of unsubscribes) {
-          unsubscribe();
-        }
-      };
-    },
-    getPlayerCardTagColorsSnapshot,
-    getPlayerCardTagColorsSnapshot,
+  const isSquadDetectionEnabled = useSolidSettingValue<boolean>(
+    ONGOING_SQUAD_DETECTION_ENABLED_SETTING,
+    true,
   );
-  const teamMembers = useOngoingGameStore((state) => state.teamMembers);
-  const phase = useOngoingGameStore((state) => state.phase);
-  const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
-  const champSelectSession = useOngoingGameStore(
+  const squadDetectionMinGames = useSolidSettingValue<number>(
+    ONGOING_SQUAD_DETECTION_MIN_GAMES_SETTING,
+    DEFAULT_MIN_SHARED_SQUAD_GAMES,
+  );
+  const enabledPlayerCardTagIds = useEnabledPlayerCardTagIds();
+  const playerCardTagColors = usePlayerCardTagColors();
+  const teamMembers = useSolidOngoingGameStore((state) => state.teamMembers);
+  const phase = useSolidOngoingGameStore((state) => state.phase);
+  const gameflowSession = useSolidOngoingGameStore(
+    (state) => state.gameflowSession,
+  );
+  const champSelectSession = useSolidOngoingGameStore(
     (state) => state.champSelectSession,
   );
-  const effectiveQueueId = useOngoingGameStore(
+  const effectiveQueueId = useSolidOngoingGameStore(
     (state) => state.effectiveQueueId,
   );
-  const matchHistoriesByPuuid = useOngoingGameStore(
+  const matchHistoriesByPuuid = useSolidOngoingGameStore(
     (state) => state.matchHistoriesByPuuid,
   );
-  const teamGroups = useMemo(
-    () =>
-      resolveOngoingTeamGroups({
-        phase,
-        teamMembers,
-        gameflowSession,
-        champSelectSession,
-        effectiveQueueId,
-      }),
-    [champSelectSession, effectiveQueueId, gameflowSession, teamMembers, phase],
+  const teamGroups = createMemo(() =>
+    resolveOngoingTeamGroups({
+      phase: phase(),
+      teamMembers: teamMembers(),
+      gameflowSession: gameflowSession(),
+      champSelectSession: champSelectSession(),
+      effectiveQueueId: effectiveQueueId(),
+    }),
   );
-  const squadAssignments = useMemo(() => {
-    if (!isSquadDetectionEnabled) {
+  const squadAssignments = createMemo(() => {
+    if (!isSquadDetectionEnabled()) {
       return EMPTY_SQUAD_ASSIGNMENTS;
     }
 
     return resolvePlayerSquadAssignments({
-      historiesByPuuid: matchHistoriesByPuuid,
-      matchHistoryCount,
-      minSharedGames: squadDetectionMinGames,
-      teamGroups,
+      historiesByPuuid: matchHistoriesByPuuid(),
+      matchHistoryCount: matchHistoryCount() ?? 50,
+      minSharedGames:
+        squadDetectionMinGames() ?? DEFAULT_MIN_SHARED_SQUAD_GAMES,
+      teamGroups: teamGroups(),
     });
-  }, [
-    isSquadDetectionEnabled,
-    matchHistoriesByPuuid,
-    matchHistoryCount,
-    squadDetectionMinGames,
-    teamGroups,
-  ]);
+  });
+  const layoutProps = () => ({
+    enabledPlayerCardTagIds: enabledPlayerCardTagIds(),
+    matchHistoryCount: matchHistoryCount() ?? 50,
+    playerCardTagColors: playerCardTagColors(),
+    showBots: showBots() ?? true,
+    squadAssignments: squadAssignments(),
+    teamGroups: teamGroups(),
+  });
+  const isVisible = () => phase() === "ChampSelect" || phase() === "InGame";
 
-  if (phase !== "ChampSelect" && phase !== "InGame") {
-    return (
-      <IconTitleSubtitleState
-        icon={Swords}
-        title={t("ongoingGame.idleEmpty", {
-          defaultValue: "No ongoing game",
-        })}
-      />
-    );
-  }
-
-  const layoutProps = {
-    enabledPlayerCardTagIds,
-    matchHistoryCount,
-    playerCardTagColors,
-    showBots,
-    squadAssignments,
-    teamGroups,
-  };
-
-  if (teamGroups.length > 2) {
-    return <MultiTeamOngoingLayout {...layoutProps} />;
-  }
-
-  return <FiveVsFiveOngoingLayout {...layoutProps} />;
+  return (
+    <Show
+      when={isVisible()}
+      fallback={
+        <IconTitleSubtitleState
+          icon={Swords}
+          title={t("ongoingGame.idleEmpty", {
+            defaultValue: "No ongoing game",
+          })}
+        />
+      }
+    >
+      <Show
+        when={teamGroups().length > 2}
+        fallback={<FiveVsFiveOngoingLayout {...layoutProps()} />}
+      >
+        <MultiTeamOngoingLayout {...layoutProps()} />
+      </Show>
+    </Show>
+  );
 }
+
+export default OngoingGameRoute;

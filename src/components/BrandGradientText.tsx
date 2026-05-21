@@ -1,20 +1,20 @@
-import type { ReactNode } from "react";
-import * as s from "./BrandGradientText.css";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import * as s from "./BrandGradientText.css.ts";
 
 type BrandGradientTextProps = {
-  children?: ReactNode;
+  children?: JSX.Element;
+  class?: string;
   className?: string;
   variant?: keyof typeof s.variant;
 };
 
-export function BrandGradientText({
-  children,
-  className,
-  variant = "inline",
-}: BrandGradientTextProps) {
-  const resolvedClassName = [s.root, s.variant[variant], className]
-    .filter(Boolean)
-    .join(" ");
+export function BrandGradientText(props: BrandGradientTextProps): JSX.Element {
+  const variant = () => props.variant ?? "inline";
+  const resolvedClassName = () =>
+    [s.root, s.variant[variant()], props.class, props.className]
+      .filter(Boolean)
+      .join(" ");
 
-  return <span className={resolvedClassName}>{children}</span>;
+  return <span class={resolvedClassName()}>{props.children}</span>;
 }

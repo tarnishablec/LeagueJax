@@ -1,62 +1,59 @@
-import { useEffect, useMemo, useState } from "react";
+import type { Accessor, Setter } from "solid-js";
+import { createEffect, createMemo, createSignal } from "solid-js";
 import type { SgpServersConfig } from "@/bindings/sgp";
-import { useLeagueClientRegion } from "./useLeagueClientRegion";
-import { useServerBootstrap } from "./useServerBootstrap";
-
-type UseHistorySearchServerContextParams = {
-  open: boolean;
-  config: SgpServersConfig;
-  enabled: boolean;
-};
+import type { LeagueClientRegion } from "../utils/league-client-region";
+import { useSolidLeagueClientRegion } from "./useLeagueClientRegion";
+import { useSolidServerBootstrap } from "./useServerBootstrap";
 
 type UseHistorySearchServerContextResult = {
-  selectedServerId: string;
-  setSelectedServerId: (serverId: string) => void;
-  isBootstrapping: boolean;
-  bootstrapError: string | null;
-  showServerSelect: boolean;
-  serverSelectDisabled: boolean;
-  region: ReturnType<typeof useLeagueClientRegion>;
+  selectedServerId: Accessor<string>;
+  setSelectedServerId: Setter<string>;
+  isBootstrapping: Accessor<boolean>;
+  bootstrapError: Accessor<string | null>;
+  showServerSelect: Accessor<boolean>;
+  serverSelectDisabled: Accessor<boolean>;
+  region: Accessor<LeagueClientRegion>;
 };
 
-export function useHistorySearchServerContext({
-  open,
-  config,
-  enabled,
-}: UseHistorySearchServerContextParams): UseHistorySearchServerContextResult {
-  const bootstrap = useServerBootstrap({ enabled: open && enabled });
-  const [selectedServerId, setSelectedServerId] = useState("");
+export function useSolidHistorySearchServerContext(params: {
+  open: Accessor<boolean>;
+  config: Accessor<SgpServersConfig>;
+  enabled: Accessor<boolean>;
+}): UseHistorySearchServerContextResult {
+  const bootstrap = useSolidServerBootstrap({
+    enabled: () => params.open() && params.enabled(),
+  });
+  const [selectedServerId, setSelectedServerId] = createSignal("");
 
-  const region = useLeagueClientRegion({
+  const region = useSolidLeagueClientRegion({
     focusedServerId: bootstrap.focusedServerId,
     selectedServerId,
-    config,
+    config: params.config,
   });
 
-  const showServerSelect = useMemo(
-    () => region.availableServerCodes.length >= 1,
-    [region.availableServerCodes.length],
+  const showServerSelect = createMemo(
+    () => region().availableServerCodes.length >= 1,
+  );
+  const serverSelectDisabled = createMemo(
+    () => region().availableServerCodes.length <= 1,
   );
 
-  const serverSelectDisabled = useMemo(
-    () => region.availableServerCodes.length <= 1,
-    [region.availableServerCodes.length],
-  );
-
-  useEffect(() => {
-    if (!region.focusedServerCode) {
+  createEffect(() => {
+    const focusedServerCode = region().focusedServerCode;
+    const availableServerCodes = region().availableServerCodes;
+    if (!focusedServerCode) {
       setSelectedServerId("");
       return;
     }
 
     setSelectedServerId((current) => {
       const currentUpper = current.toUpperCase();
-      if (region.availableServerCodes.includes(currentUpper)) {
+      if (availableServerCodes.includes(currentUpper)) {
         return currentUpper;
       }
-      return region.focusedServerCode ?? "";
+      return focusedServerCode;
     });
-  }, [region.focusedServerCode, region.availableServerCodes]);
+  });
 
   return {
     selectedServerId,

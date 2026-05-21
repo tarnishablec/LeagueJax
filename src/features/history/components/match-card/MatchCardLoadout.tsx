@@ -1,7 +1,10 @@
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches.ts";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
-import type { RoleQuestSlot } from "../../hooks/use-role-quest-slot.ts";
+import { useSolidTranslation } from "@/i18n/solid";
+import type { RoleQuestSlot } from "../../hooks/use-role-quest-slot";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { MatchCardAugments } from "./MatchCardAugments";
@@ -9,17 +12,7 @@ import { MatchCardItems } from "./MatchCardItems";
 import { MatchCardRunes } from "./MatchCardRunes";
 import { MatchCardSpells } from "./MatchCardSpells";
 
-export function MatchCardLoadout({
-  position,
-  me,
-  hasAugments,
-  augments,
-  primaryRuneId,
-  subStyleId,
-  gameId,
-  items,
-  questSlot,
-}: {
+export function MatchCardLoadout(props: {
   position: string | null;
   me: RawMatchSummaryParticipant;
   hasAugments: boolean;
@@ -44,50 +37,63 @@ export function MatchCardLoadout({
     number | null,
   ];
   questSlot: RoleQuestSlot | null;
-}) {
-  const { t } = useTranslation();
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const itemQuestSlot = () =>
+    props.questSlot?.kind === "item" ? props.questSlot : null;
+
   return (
-    <div className={s.loadoutRow}>
-      {position ? (
-        <div className={s.positionSlot}>
-          <LeaguePositionIcon position={position} width={23} height={23} />
-        </div>
-      ) : null}
+    <div class={s.loadoutRow}>
+      <Show when={props.position}>
+        {(position) => (
+          <div class={s.positionSlot}>
+            <LeaguePositionIcon position={position()} width={23} height={23} />
+          </div>
+        )}
+      </Show>
       <MatchCardSpells
-        spell1Id={me.spell1Id ?? 0}
-        spell2Id={me.spell2Id ?? 0}
+        spell1Id={props.me.spell1Id ?? 0}
+        spell2Id={props.me.spell2Id ?? 0}
       />
-      {hasAugments ? (
-        <MatchCardAugments augmentIds={augments} />
-      ) : (
-        <MatchCardRunes
-          perkPrimaryRuneId={primaryRuneId}
-          perkSubStyleId={subStyleId}
-        />
-      )}
-      <MatchCardItems gameId={gameId} items={items} />
-      {questSlot !== null ? (
-        <div className={s.loadoutGroup}>
-          {questSlot.kind === "quest" ? (
-            <MatchCardAssetIcon
-              src={questSlot.iconUrl}
-              alt=""
-              className={s.itemIcon}
-              fallbackClassName={s.itemIconFallback}
-            />
-          ) : (
-            <MatchCardAssetIcon
-              src={questSlot.iconUrl}
-              alt={t("history.match.itemAlt", {
-                id: questSlot.itemId,
-                defaultValue: `Item ${questSlot.itemId}`,
-              })}
-              className={s.itemIcon}
-              fallbackClassName={s.itemIconFallback}
-            />
-          )}
-        </div>
-      ) : null}
+      <Show
+        when={props.hasAugments}
+        fallback={
+          <MatchCardRunes
+            perkPrimaryRuneId={props.primaryRuneId}
+            perkSubStyleId={props.subStyleId}
+          />
+        }
+      >
+        <MatchCardAugments augmentIds={props.augments} />
+      </Show>
+      <MatchCardItems gameId={props.gameId} items={props.items} />
+      <Show when={props.questSlot}>
+        {(questSlot) => (
+          <div class={s.loadoutGroup}>
+            <Show
+              when={questSlot().kind === "quest"}
+              fallback={
+                <MatchCardAssetIcon
+                  src={itemQuestSlot()?.iconUrl}
+                  alt={t("history.match.itemAlt", {
+                    id: itemQuestSlot()?.itemId ?? 0,
+                    defaultValue: `Item ${itemQuestSlot()?.itemId ?? 0}`,
+                  })}
+                  className={s.itemIcon}
+                  fallbackClassName={s.itemIconFallback}
+                />
+              }
+            >
+              <MatchCardAssetIcon
+                src={questSlot().iconUrl}
+                alt=""
+                className={s.itemIcon}
+                fallbackClassName={s.itemIconFallback}
+              />
+            </Show>
+          </div>
+        )}
+      </Show>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import useSWR from "swr";
-import { getJaxRuntime } from "@/features/registry";
+import type { Accessor } from "solid-js";
+import { createMemo } from "solid-js";
+import { getSolidJaxRuntime } from "@/features/solid-registry";
 import { StaticCacheShard } from "@/features/static-cache/manifest";
-import { selectIsFocused, useLcuStore } from "@/stores/lcu";
+import { useSolidTranslation } from "@/i18n/solid";
+import { createSolidQuery } from "@/infra/solid-query";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
 import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
 type CdragonPerk = {
@@ -123,11 +124,6 @@ export type CdragonGameDataCatalog = {
 };
 
 type CdragonAugmentGameMode = "CHERRY" | "KIWI";
-
-interface CdragonGameDataCatalogOptions {
-  gameVersion?: string | null;
-  augmentIds?: readonly number[];
-}
 
 const CDRAGON_GAME_DATA_ROOT =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global";
@@ -261,7 +257,7 @@ async function fetchCachedFrontendStaticJson<T>({
   }
 
   try {
-    return await getJaxRuntime().getShard(StaticCacheShard).getJson<T>({
+    return await getSolidJaxRuntime().getShard(StaticCacheShard).getJson<T>({
       namespace,
       fileName,
       urls,
@@ -1105,97 +1101,98 @@ export function normalizeCdragonGameAssetPath(
   return `${CDRAGON_GAME_DATA_ASSET_BASE}/${encoded}`;
 }
 
-export function useCdragonGameDataCatalog(
-  gameMode?: string | null,
-  includeAugmentDetails = false,
-  options: CdragonGameDataCatalogOptions = {},
-): CdragonGameDataCatalog {
-  const { i18n } = useTranslation();
-  const focused = useLcuStore(selectIsFocused);
-  const language = i18n.resolvedLanguage ?? i18n.language;
-  const locale = useMemo(() => normalizeCdragonLocale(language), [language]);
-  const version = useMemo(
-    () => normalizeCdragonVersion(options.gameVersion),
-    [options.gameVersion],
+export function useSolidCdragonGameDataCatalog(
+  gameMode?: Accessor<string | null | undefined>,
+  includeAugmentDetails: Accessor<boolean> = () => false,
+  options: {
+    gameVersion?: Accessor<string | null | undefined>;
+    augmentIds?: Accessor<readonly number[] | undefined>;
+  } = {},
+): Accessor<CdragonGameDataCatalog> {
+  const { language } = useSolidTranslation();
+  const focused = useSolidLcuStore(selectIsFocused);
+  const locale = createMemo(() => normalizeCdragonLocale(language()));
+  const version = createMemo(() =>
+    normalizeCdragonVersion(options.gameVersion?.()),
   );
-  const augmentIds = useMemo(
+  const augmentIds = createMemo(() =>
+    [...new Set(options.augmentIds?.() ?? [])]
+      .filter((id) => Number.isFinite(id) && id > 0)
+      .sort((left, right) => left - right),
+  );
+  const augmentGameMode = createMemo(() =>
+    normalizeAugmentGameMode(gameMode?.() ?? null),
+  );
+  const focusedPid = createMemo(() => focused()?.pid ?? null);
+  const perksById = createSolidQuery<
+    Record<number, CdragonGameDataCatalogPerk>
+  >(
+    () => ["history:cdragon-perks", locale()] as const,
+    (key) => {
+      const [, cdragonLocale] = key as readonly [string, string];
+      return fetchCdragonPerksById(cdragonLocale);
+    },
+    {
+      initialValue: EMPTY_PERKS_BY_ID,
+      keepPreviousData: true,
+    },
+  );
+  const perkStylesById = createSolidQuery<
+    Record<number, CdragonGameDataCatalogPerkStyle>
+  >(
+    () => ["history:cdragon-perk-styles", locale()] as const,
+    (key) => {
+      const [, cdragonLocale] = key as readonly [string, string];
+      return fetchCdragonPerkStylesById(cdragonLocale);
+    },
+    {
+      initialValue: EMPTY_PERK_STYLES_BY_ID,
+      keepPreviousData: true,
+    },
+  );
+  const baseAugmentsById = createSolidQuery<
+    Record<number, CdragonGameDataCatalogAugment>
+  >(
+    () => ["history:cdragon-base-augments", locale(), focusedPid()] as const,
+    (key) => {
+      const [, cdragonLocale, pid] = key as readonly [
+        string,
+        string,
+        number | null,
+      ];
+      return fetchBaseAugmentsById(cdragonLocale, pid !== null);
+    },
+    {
+      initialValue: EMPTY_AUGMENTS_BY_ID,
+      keepPreviousData: true,
+    },
+  );
+  const modeSpecificAugmentsById = createSolidQuery<
+    Record<number, CdragonGameDataCatalogAugment>
+  >(
     () =>
-      [...new Set(options.augmentIds ?? [])]
-        .filter((id) => Number.isFinite(id) && id > 0)
-        .sort((left, right) => left - right),
-    [options.augmentIds],
-  );
-  const augmentGameMode = useMemo(
-    () => normalizeAugmentGameMode(gameMode),
-    [gameMode],
-  );
-  const focusedPid = focused?.pid ?? null;
-  const perksKey = useMemo(
-    () => ["history:cdragon-perks", locale] as const,
-    [locale],
-  );
-  const perkStylesKey = useMemo(
-    () => ["history:cdragon-perk-styles", locale] as const,
-    [locale],
-  );
-  const baseAugmentsKey = useMemo(
-    () => ["history:cdragon-base-augments", locale, focusedPid] as const,
-    [locale, focusedPid],
-  );
-  const modeAugmentsKey = useMemo(
-    () =>
-      includeAugmentDetails && focusedPid !== null && augmentGameMode !== null
+      includeAugmentDetails() &&
+      focusedPid() !== null &&
+      augmentGameMode() !== null
         ? ([
             "history:cdragon-mode-augments",
-            augmentGameMode,
-            locale,
-            version,
-            augmentIds.join(","),
-            focusedPid,
+            augmentGameMode(),
+            locale(),
+            version(),
+            augmentIds().join(","),
+            focusedPid(),
           ] as const)
         : null,
-    [
-      focusedPid,
-      augmentGameMode,
-      locale,
-      version,
-      augmentIds,
-      includeAugmentDetails,
-    ],
-  );
-
-  const { data: perksById = EMPTY_PERKS_BY_ID } = useSWR(
-    perksKey,
-    ([, cdragonLocale]) => fetchCdragonPerksById(cdragonLocale),
-    {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-      fallbackData: EMPTY_PERKS_BY_ID,
-      keepPreviousData: true,
-    },
-  );
-  const { data: perkStylesById = EMPTY_PERK_STYLES_BY_ID } = useSWR(
-    perkStylesKey,
-    ([, cdragonLocale]) => fetchCdragonPerkStylesById(cdragonLocale),
-    {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-      fallbackData: EMPTY_PERK_STYLES_BY_ID,
-      keepPreviousData: true,
-    },
-  );
-  const { data: baseAugmentsById = EMPTY_AUGMENTS_BY_ID } = useSWR(
-    baseAugmentsKey,
-    ([, cdragonLocale, pid]) =>
-      fetchBaseAugmentsById(cdragonLocale, pid !== null),
-    {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-      fallbackData: EMPTY_AUGMENTS_BY_ID,
-      keepPreviousData: true,
-    },
-  );
-  const { data: modeSpecificAugmentsById = EMPTY_AUGMENTS_BY_ID } = useSWR(
-    modeAugmentsKey,
-    ([, selectedGameMode, cdragonLocale, cdragonVersion, augmentIdList]) =>
-      selectedGameMode === "CHERRY"
+    (key) => {
+      const [, selectedGameMode, cdragonLocale, cdragonVersion, augmentIdList] =
+        key as readonly [
+          string,
+          CdragonAugmentGameMode,
+          string,
+          string,
+          string,
+        ];
+      return selectedGameMode === "CHERRY"
         ? fetchArenaAugmentsById(true, cdragonLocale)
         : fetchModeSpecificAugmentsById(
             true,
@@ -1205,23 +1202,20 @@ export function useCdragonGameDataCatalog(
               .split(",")
               .map((id) => Number(id))
               .filter((id) => Number.isFinite(id) && id > 0),
-          ),
+          );
+    },
     {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-      fallbackData: EMPTY_AUGMENTS_BY_ID,
+      initialValue: EMPTY_AUGMENTS_BY_ID,
       keepPreviousData: true,
     },
   );
 
-  return useMemo(
-    () => ({
-      perksById,
-      perkStylesById,
-      augmentsById: mergeAugmentsById(
-        baseAugmentsById,
-        modeSpecificAugmentsById,
-      ),
-    }),
-    [perksById, perkStylesById, baseAugmentsById, modeSpecificAugmentsById],
-  );
+  return createMemo(() => ({
+    perksById: perksById.data() ?? EMPTY_PERKS_BY_ID,
+    perkStylesById: perkStylesById.data() ?? EMPTY_PERK_STYLES_BY_ID,
+    augmentsById: mergeAugmentsById(
+      baseAugmentsById.data() ?? EMPTY_AUGMENTS_BY_ID,
+      modeSpecificAugmentsById.data() ?? EMPTY_AUGMENTS_BY_ID,
+    ),
+  }));
 }

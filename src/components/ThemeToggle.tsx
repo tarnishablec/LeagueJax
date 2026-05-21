@@ -1,12 +1,15 @@
-import type { LucideIcon } from "lucide-react";
-import { Moon, Sparkle, Sun } from "lucide-react";
-import { useSyncExternalStore } from "react";
-import { useSettings } from "@/features/settings/context";
+/** @jsxImportSource solid-js */
+import { type LucideIcon, Moon, Sparkle, Sun } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { createMemo, For } from "solid-js";
+import { Dynamic } from "solid-js/web";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
 import {
   SYSTEM_THEME_SETTING_ID,
   type Theme,
 } from "@/features/settings/store/general";
-import * as s from "./ThemeToggle.css";
+import { useSolidSettingValue } from "@/features/settings/use-setting-value";
+import * as s from "./ThemeToggle.css.ts";
 
 const THEME_OPTIONS: { value: Theme; label: string; Icon: LucideIcon }[] = [
   { value: "light", label: "Light", Icon: Sun },
@@ -14,54 +17,45 @@ const THEME_OPTIONS: { value: Theme; label: string; Icon: LucideIcon }[] = [
   { value: "dark", label: "Dark", Icon: Moon },
 ];
 
-function useThemeValue(): Theme {
-  const settings = useSettings();
-  const value = useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(SYSTEM_THEME_SETTING_ID, onStoreChange),
-    () => settings.get<Theme>(SYSTEM_THEME_SETTING_ID),
-    () => settings.get<Theme>(SYSTEM_THEME_SETTING_ID),
+export function ThemeToggle(): JSX.Element {
+  const settings = useSolidSettings();
+  const theme = useSolidSettingValue<Theme>(SYSTEM_THEME_SETTING_ID, "system");
+  const current = createMemo(
+    () =>
+      THEME_OPTIONS.find((option) => option.value === theme()) ??
+      THEME_OPTIONS[1],
   );
 
-  return value ?? "system";
-}
-
-export function ThemeToggle() {
-  const settings = useSettings();
-  const theme = useThemeValue();
-  const current =
-    THEME_OPTIONS.find((option) => option.value === theme) ?? THEME_OPTIONS[1];
-  const CurrentIcon = current.Icon;
-
   return (
-    <div className={s.wrapper}>
+    <div class={s.wrapper}>
       <button
         type="button"
-        aria-label={`Theme: ${current.label}`}
-        className={s.trigger}
+        aria-label={`Theme: ${current().label}`}
+        class={s.trigger}
       >
-        <CurrentIcon size={14} aria-hidden="true" />
+        <Dynamic component={current().Icon} size={14} aria-hidden="true" />
       </button>
 
-      <div className={s.dropdownOuter}>
-        <div className={s.dropdownInner}>
-          {THEME_OPTIONS.map(({ value, label, Icon }) => (
-            <button
-              key={value}
-              type="button"
-              aria-label={label}
-              aria-pressed={theme === value}
-              className={s.dropdownItem({
-                active: theme === value,
-              })}
-              onClick={() => {
-                settings.set(SYSTEM_THEME_SETTING_ID, value);
-              }}
-            >
-              <Icon size={14} aria-hidden="true" />
-              <span>{label}</span>
-            </button>
-          ))}
+      <div class={s.dropdownOuter}>
+        <div class={s.dropdownInner}>
+          <For each={THEME_OPTIONS}>
+            {({ value, label, Icon }) => (
+              <button
+                type="button"
+                aria-label={label}
+                aria-pressed={theme() === value}
+                class={s.dropdownItem({
+                  active: theme() === value,
+                })}
+                onClick={() => {
+                  settings.set(SYSTEM_THEME_SETTING_ID, value);
+                }}
+              >
+                <Icon size={14} aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            )}
+          </For>
         </div>
       </div>
     </div>

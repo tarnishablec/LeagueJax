@@ -1,7 +1,7 @@
-import { useMemo } from "react";
-import useSWR from "swr";
-import { getJaxRuntime } from "@/features/registry";
+import { createMemo } from "solid-js";
+import { getSolidJaxRuntime } from "@/features/solid-registry";
 import { StaticCacheShard } from "@/features/static-cache/manifest";
+import { createSolidQuery } from "@/infra/solid-query";
 
 type CdragonChampionSummaryEntry = {
   id?: number | string;
@@ -88,7 +88,7 @@ function mapChampionSummary(
 }
 
 async function fetchCdragonChampionCatalog(): Promise<CdragonChampionCatalog> {
-  const entries = await getJaxRuntime()
+  const entries = await getSolidJaxRuntime()
     .getShard(StaticCacheShard)
     .getJson<CdragonChampionSummaryEntry[]>({
       namespace: CDRAGON_CHAMPION_SUMMARY_NAMESPACE,
@@ -99,16 +99,15 @@ async function fetchCdragonChampionCatalog(): Promise<CdragonChampionCatalog> {
   return mapChampionSummary(entries);
 }
 
-export function useCdragonChampionCatalog(): CdragonChampionCatalog {
-  const { data = EMPTY_CHAMPION_CATALOG } = useSWR(
-    "cdragon:champion-summary",
-    fetchCdragonChampionCatalog,
+export function useSolidCdragonChampionCatalog() {
+  const query = createSolidQuery<CdragonChampionCatalog>(
+    () => "cdragon:champion-summary",
+    () => fetchCdragonChampionCatalog(),
     {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-      fallbackData: EMPTY_CHAMPION_CATALOG,
+      initialValue: EMPTY_CHAMPION_CATALOG,
       keepPreviousData: true,
     },
   );
 
-  return useMemo(() => data, [data]);
+  return createMemo(() => query.data() ?? EMPTY_CHAMPION_CATALOG);
 }

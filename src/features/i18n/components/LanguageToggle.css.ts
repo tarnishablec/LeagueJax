@@ -18,7 +18,7 @@ export const trigger = style({
   color: `oklch(from ${theme.color.foreground} l c h / 0.6)`,
   fontSize: "0.75rem",
   fontWeight: 600,
-  letterSpacing: "0.02em",
+  letterSpacing: 0,
   transition: "color 100ms, background-color 100ms",
   selectors: {
     "&:hover": {

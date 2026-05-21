@@ -1,24 +1,20 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import { Wrench } from "lucide-react";
-import { lazy, Suspense } from "react";
-import { NotificationsShard } from "@/features/notifications/manifest";
+import { Wrench } from "lucide-solid";
+import { lazy } from "solid-js";
+import { SolidNotificationsShard } from "@/features/notifications/manifest";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { setupClaimToolNotifications } from "./claim-tool-notifications";
 import { toolsI18n } from "./i18n";
 
-const ToolsRoute = lazy(() =>
-  import("./routes/ToolsRoute").then((module) => ({
-    default: module.ToolsRoute,
-  })),
-);
+const ToolsRoute = lazy(() => import("./routes/ToolsRoute"));
 
-export class ToolsShard implements WebShard {
+export class SolidToolsShard implements SolidWebShard {
   private claimToolNotificationsUnlisten: UnlistenFn | null = null;
 
   public label() {
-    return "ToolsShard";
+    return "SolidToolsShard";
   }
 
   public id() {
@@ -30,7 +26,7 @@ export class ToolsShard implements WebShard {
   }
 
   public async setup(jax: Jax): Promise<void> {
-    const notifications = jax.getShard(NotificationsShard);
+    const notifications = jax.getShard(SolidNotificationsShard);
     this.claimToolNotificationsUnlisten =
       await setupClaimToolNotifications(notifications);
   }
@@ -46,11 +42,7 @@ export class ToolsShard implements WebShard {
     return [
       {
         path: "tools",
-        element: (
-          <Suspense fallback={null}>
-            <ToolsRoute />
-          </Suspense>
-        ),
+        component: ToolsRoute,
         order: 86,
       },
     ];

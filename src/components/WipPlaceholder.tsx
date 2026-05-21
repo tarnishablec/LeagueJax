@@ -1,9 +1,11 @@
-import { Construction } from "lucide-react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Construction } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { useSolidTranslation } from "@/i18n/solid";
 import { IconTitleSubtitleState } from "./IconTitleSubtitleState";
 
-export function WipPlaceholder() {
-  const { t } = useTranslation();
+export function WipPlaceholder(): JSX.Element {
+  const { t } = useSolidTranslation();
 
   return (
     <IconTitleSubtitleState

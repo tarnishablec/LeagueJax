@@ -1,67 +1,69 @@
-import type { CSSProperties } from "react";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
 import { theme } from "@/styles/theme.css.ts";
+import {
+  summonerIdGameNameColorVar,
+  summonerIdTagLineColorVar,
+} from "./SummonerID.vars";
 
-export const summonerIdGameNameColorVar = "--summoner-id-game-name-color";
-export const summonerIdTagLineColorVar = "--summoner-id-tag-line-color";
+export { summonerIdGameNameColorVar, summonerIdTagLineColorVar };
 
 export type SummonerIDStyle = {
-  gameName?: CSSProperties;
-  tagLine?: CSSProperties;
+  gameName?: JSX.CSSProperties;
+  tagLine?: JSX.CSSProperties;
 };
 
 type SummonerIdentity = Pick<SummonerInfo, "gameName" | "tagLine">;
 
-export const SummonerID = ({
-  summoner,
-  styles,
-}: {
+export function SummonerID(props: {
   summoner: SummonerIdentity;
   styles?: SummonerIDStyle;
-}) => {
-  const tagLine = summoner.tagLine.trim();
+}): JSX.Element {
+  const tagLine = () => props.summoner.tagLine.trim();
 
   return (
     <span
       style={{
         display: "grid",
-        gridTemplateColumns: "max-content auto",
-        alignItems: "center",
-        justifyContent: "start",
-        textBoxTrim: "trim-both",
-        gap: 2,
+        "grid-template-columns": "max-content auto",
+        "align-items": "center",
+        "justify-content": "start",
+        "text-box-trim": "trim-both",
+        gap: "2px",
       }}
     >
       <span
         style={{
-          lineHeight: 1,
-          fontWeight: 600,
+          "line-height": 1,
+          "font-weight": 600,
           color: `var(${summonerIdGameNameColorVar}, ${theme.color.foreground})`,
           overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          textBoxTrim: "trim-both",
-          ...styles?.gameName,
+          "text-overflow": "ellipsis",
+          "white-space": "nowrap",
+          "text-box-trim": "trim-both",
+          ...props.styles?.gameName,
         }}
       >
-        {summoner.gameName}
+        {props.summoner.gameName}
       </span>
-      {tagLine.length > 0 ? (
+      <Show when={tagLine().length > 0}>
         <span
           style={{
-            lineHeight: 1,
+            "line-height": 1,
             overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            fontWeight: 400,
+            "text-overflow": "ellipsis",
+            "white-space": "nowrap",
+            "font-weight": 400,
             color: `var(${summonerIdTagLineColorVar}, ${theme.color.mutedForeground})`,
-            textBoxTrim: "trim-both",
-            ...styles?.tagLine,
+            "text-box-trim": "trim-both",
+            ...props.styles?.tagLine,
           }}
         >
-          #{tagLine}
+          #{tagLine()}
         </span>
-      ) : null}
+      </Show>
     </span>
   );
-};
+}

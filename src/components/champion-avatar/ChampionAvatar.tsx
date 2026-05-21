@@ -1,5 +1,7 @@
+/** @jsxImportSource solid-js */
+import { createMemo, Show } from "solid-js";
 import { LazyImage } from "@/components/LazyImage";
-import { useChampionIcon } from "@/hooks/use-champion-icon";
+import { useSolidChampionIcon } from "@/hooks/use-champion-icon";
 import * as s from "./ChampionAvatar.css";
 
 function joinClassNames(
@@ -13,15 +15,7 @@ function joinClassNames(
   return `${baseClassName} ${extraClassName}`;
 }
 
-export function ChampionAvatar({
-  championId,
-  imageClassName,
-  fallbackClassName,
-  wrapperClassName,
-  level,
-  levelClassName,
-  alt = "",
-}: {
+export function ChampionAvatar(props: {
   championId: number | null | undefined;
   imageClassName: string;
   fallbackClassName: string;
@@ -30,31 +24,35 @@ export function ChampionAvatar({
   levelClassName?: string;
   alt?: string;
 }) {
-  const iconUrl = useChampionIcon(championId);
-  const showLevel = typeof level === "number" && level > 0;
-  const mergedWrapperClassName = joinClassNames(s.wrapper, wrapperClassName);
-  const mergedLevelClassName = joinClassNames(s.levelBadge, levelClassName);
-
-  if (!iconUrl) {
-    return (
-      <span className={mergedWrapperClassName}>
-        <span className={fallbackClassName} aria-hidden="true" />
-        {showLevel ? (
-          <span className={mergedLevelClassName}>{level}</span>
-        ) : null}
-      </span>
-    );
-  }
+  const iconUrl = useSolidChampionIcon(() => props.championId);
+  const showLevel = createMemo(
+    () => typeof props.level === "number" && props.level > 0,
+  );
+  const mergedWrapperClassName = createMemo(() =>
+    joinClassNames(s.wrapper, props.wrapperClassName),
+  );
+  const mergedLevelClassName = createMemo(() =>
+    joinClassNames(s.levelBadge, props.levelClassName),
+  );
 
   return (
-    <span className={mergedWrapperClassName}>
-      <LazyImage
-        src={iconUrl}
-        alt={alt}
-        className={`${imageClassName}`}
-        fallbackClassName={fallbackClassName}
-      />
-      {showLevel ? <span className={mergedLevelClassName}>{level}</span> : null}
+    <span class={mergedWrapperClassName()}>
+      <Show
+        when={iconUrl()}
+        fallback={<span class={props.fallbackClassName} aria-hidden="true" />}
+      >
+        {(src) => (
+          <LazyImage
+            src={src()}
+            alt={props.alt ?? ""}
+            className={props.imageClassName}
+            fallbackClassName={props.fallbackClassName}
+          />
+        )}
+      </Show>
+      <Show when={showLevel()}>
+        <span class={mergedLevelClassName()}>{props.level}</span>
+      </Show>
     </span>
   );
 }

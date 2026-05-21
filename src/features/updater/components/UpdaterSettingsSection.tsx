@@ -1,158 +1,106 @@
+/** @jsxImportSource solid-js */
+
+import { Key } from "@solid-primitives/keyed";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import type { UpdaterStateDto } from "@/bindings/updater";
 import {
   SettingsActionButton,
   SettingsFieldRow,
-  SettingsValueText,
 } from "@/components/settings-ui";
-import { SettingsFieldRenderer } from "@/features/settings/components/SettingsFieldRenderer";
 import type { SettingsSectionRendererProps } from "@/features/settings/types";
+import { useSolidTranslation } from "@/i18n/solid";
 import { createLogger } from "@/infra/logger";
+import { SettingsFieldRenderer } from "../../settings/components/SettingsFieldRenderer";
 import * as s from "./UpdaterSettingsSection.css";
 
-const logger = createLogger("updater-settings-section");
+const logger = createLogger("solid-updater-settings");
 
-const initialState: UpdaterStateDto = {
-  kind: "idle",
-  currentVersion: "",
-  latestVersion: null,
-  notes: null,
-  source: null,
-  message: null,
-};
+function actionLabel(
+  kind: UpdaterStateDto["kind"] | undefined,
+  t: (key: string) => string,
+) {
+  if (kind === "updateAvailable") {
+    return t("settings.update.action.install");
+  }
+  return t("settings.update.action.check");
+}
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This component is inherently complex due to the various states and UI conditions it needs to handle. Refactoring it into smaller components would not necessarily improve readability or maintainability.
-export function UpdaterSettingsSection({
-  fields,
-}: SettingsSectionRendererProps) {
-  const { t } = useTranslation();
-  const [state, setState] = useState<UpdaterStateDto>(initialState);
-  const [showTransientUpToDate, setShowTransientUpToDate] = useState(false);
-  const [shouldAnimateUpToDate, setShouldAnimateUpToDate] = useState(false);
-  const latestVersionHint =
-    state.kind === "error"
-      ? (state.message ?? undefined)
-      : state.kind === "updateAvailable" || state.kind === "installing"
-        ? (state.notes ?? undefined)
-        : undefined;
-  const latestVersionHintTone =
-    state.kind === "error"
-      ? "error"
-      : state.kind === "updateAvailable" || state.kind === "installing"
-        ? "warning"
-        : "info";
-  const showUpToDateState = state.kind === "upToDate" && showTransientUpToDate;
+export function UpdaterSettingsSection(
+  props: SettingsSectionRendererProps,
+): JSX.Element {
+  const { t } = useSolidTranslation();
+  const [state, setState] = createSignal<UpdaterStateDto | null>(null);
+  const busy = createMemo(() => {
+    const kind = state()?.kind;
+    return kind === "checking" || kind === "installing";
+  });
 
-  const actionLabel =
-    state.kind === "updateAvailable" || state.kind === "installing"
-      ? (state.latestVersion ?? t("settings.update.action.install"))
-      : showUpToDateState
-        ? t("settings.update.action.upToDate")
-        : t("settings.update.action.check");
+  onMount(() => {
+    let disposed = false;
+    let unlisten: Promise<UnlistenFn> | null = null;
 
-  const actionTone =
-    state.kind === "updateAvailable" || state.kind === "installing"
-      ? "accent"
-      : "neutral";
-
-  const actionLoading =
-    state.kind === "checking" || state.kind === "installing";
-
-  const actionDisabled = actionLoading;
-
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: UnlistenFn | null = null;
-
-    const setup = async () => {
+    const hydrate = async () => {
       try {
-        const snapshot = await invoke<UpdaterStateDto>("get_updater_state");
-        if (!cancelled) {
-          setState(snapshot);
+        const next = await invoke<UpdaterStateDto>("get_updater_state");
+        if (!disposed) {
+          setState(next);
         }
-
-        unlisten = await listen<UpdaterStateDto>(
-          "updater_state_changed",
-          (event) => {
-            setState(event.payload);
-          },
-        );
       } catch (error) {
-        logger.error({ error }, "Failed to initialize updater settings state");
+        logger.error({ error }, "Failed to load updater state");
       }
     };
 
-    void setup();
+    void hydrate();
+    unlisten = listen<UpdaterStateDto>("updater_state_changed", (event) => {
+      setState(event.payload);
+    });
 
-    return () => {
-      cancelled = true;
-      if (unlisten) {
-        void unlisten();
-      }
-    };
-  }, []);
+    onCleanup(() => {
+      disposed = true;
+      unlisten?.then((dispose) => dispose()).catch(() => {});
+    });
+  });
 
-  useEffect(() => {
-    if (state.kind !== "upToDate") {
-      setShowTransientUpToDate(false);
-      return;
+  const runAction = async () => {
+    try {
+      const next = await invoke<UpdaterStateDto>("run_updater_action");
+      setState(next);
+    } catch (error) {
+      logger.error({ error }, "Updater action failed");
     }
-
-    if (!shouldAnimateUpToDate) {
-      setShowTransientUpToDate(false);
-      return;
-    }
-
-    setShowTransientUpToDate(true);
-
-    const resetTimer = setTimeout(() => {
-      setShowTransientUpToDate(false);
-      setShouldAnimateUpToDate(false);
-    }, 1500);
-
-    return () => {
-      clearTimeout(resetTimer);
-    };
-  }, [shouldAnimateUpToDate, state.kind]);
+  };
 
   return (
-    <div className={s.root}>
-      {fields.map((field) => (
-        <SettingsFieldRenderer key={field.id} field={field} />
-      ))}
+    <div class={s.root}>
+      <Key each={props.fields} by="id">
+        {(field) => <SettingsFieldRenderer field={field()} />}
+      </Key>
 
-      <SettingsFieldRow
-        label={t("settings.update.summary.currentVersion")}
-        scopeTag="rs"
-      >
-        <SettingsValueText value={state.currentVersion || "-"} />
-      </SettingsFieldRow>
-
-      <SettingsFieldRow
-        label={t("settings.update.summary.latestVersion")}
-        hint={latestVersionHint}
-        hintTone={latestVersionHintTone}
-        scopeTag="rs"
-      >
-        <SettingsActionButton
-          ariaLabel="Run updater action"
-          disabled={actionDisabled}
-          label={actionLabel}
-          loading={actionLoading}
-          tone={actionTone}
-          onClick={async () => {
-            setShouldAnimateUpToDate(true);
-            const next = await invoke<UpdaterStateDto>("run_updater_action");
-            setState(next);
-          }}
-          onError={(error) => {
-            logger.error({ error }, "Updater action failed");
-          }}
-        />
-      </SettingsFieldRow>
+      <div class={s.summaryGrid}>
+        <SettingsFieldRow
+          label={t("settings.update.summary.currentVersion")}
+          controlAlign="stretch"
+        >
+          <span class={s.valueText}>{state()?.currentVersion || "-"}</span>
+        </SettingsFieldRow>
+        <SettingsFieldRow
+          label={t("settings.update.action.label")}
+          hint={t("settings.update.action.hint")}
+          controlAlign="stretch"
+        >
+          <SettingsActionButton
+            ariaLabel="Run updater action"
+            label={actionLabel(state()?.kind, t)}
+            loading={busy()}
+            disabled={busy()}
+            onClick={runAction}
+          />
+        </SettingsFieldRow>
+      </div>
     </div>
   );
 }

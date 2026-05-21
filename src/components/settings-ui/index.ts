@@ -6,9 +6,8 @@ export type {
   SettingsControlSize,
 } from "./SettingsControl";
 export { SettingsFieldRow } from "./SettingsFieldRow";
-export { SettingsHint, type SettingsHintTone } from "./SettingsHint";
+export { SettingsHint } from "./SettingsHint";
 export { SettingsInput } from "./SettingsInput";
 export { SettingsSectionCard } from "./SettingsSectionCard";
 export { createListCollection, SettingsSelect } from "./SettingsSelect";
-export { SettingsToggle } from "./SettingsToggle.tsx";
-export { SettingsValueText } from "./SettingsValueText";
+export { SettingsToggle } from "./SettingsToggle";

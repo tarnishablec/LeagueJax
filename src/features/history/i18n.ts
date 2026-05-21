@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const historyI18n: Resource = {
+export const historyI18n: LocaleResource = {
   en: {
     nav: {
       history: "History",

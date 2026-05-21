@@ -1,3 +1,6 @@
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+
 const logoUrls = {
   transparent: new URL("../assets/fish_2_transparent_512.png", import.meta.url)
     .href,
@@ -6,24 +9,24 @@ const logoUrls = {
 
 type JaxLogoVariant = keyof typeof logoUrls;
 
-export function JaxLogo({
-  size = 32,
-  className,
-  variant = "transparent",
-}: {
+interface JaxLogoProps {
+  class?: string;
   size?: number;
-  className?: string;
   variant?: JaxLogoVariant;
-}) {
+}
+
+export function JaxLogo(props: JaxLogoProps): JSX.Element {
+  const size = () => props.size ?? 32;
+
   return (
     <img
-      src={logoUrls[variant]}
-      width={size}
-      height={size}
+      src={logoUrls[props.variant ?? "transparent"]}
+      width={size()}
+      height={size()}
       alt=""
       aria-hidden="true"
       draggable={false}
-      className={className}
+      class={props.class}
     />
   );
 }

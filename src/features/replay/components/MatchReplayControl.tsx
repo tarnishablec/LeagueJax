@@ -1,16 +1,17 @@
-import { Portal } from "@ark-ui/react/portal";
-import { Tooltip } from "@ark-ui/react/tooltip";
-import { AlertTriangle, Download, Loader, Play, RefreshCw } from "lucide-react";
-import type { ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Download, Loader, Play, RefreshCw, TriangleAlert } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { createMemo } from "solid-js";
 import type {
   LcuReplayDownloadState,
   ReplayMatchContext,
 } from "@/bindings/replay";
-import { useMatchReplay } from "../hooks/use-match-replay";
-import * as s from "./MatchReplayControl.css";
+import { AppTooltip } from "@/components/AppTooltip";
+import { useSolidTranslation } from "@/i18n/solid";
+import { useSolidMatchReplay } from "../hooks/use-match-replay";
+import * as s from "./MatchReplayControl.css.ts";
 
-type MatchReplay = ReturnType<typeof useMatchReplay>;
+type MatchReplay = ReturnType<typeof useSolidMatchReplay>;
 type ReplayIconKind =
   | "error"
   | "busy"
@@ -24,14 +25,15 @@ function progressLabel(progress: number | null): string {
 }
 
 function replayLabel(
-  t: ReturnType<typeof useTranslation>["t"],
+  t: ReturnType<typeof useSolidTranslation>["t"],
   replay: MatchReplay,
   state: LcuReplayDownloadState | null,
   progress: string,
 ): string {
-  if (replay.error !== null) return t("replay.matchReplay.failed");
-  if (replay.isLoading || state === "checking")
+  if (replay.error() !== null) return t("replay.matchReplay.failed");
+  if (replay.isLoading() || state === "checking") {
     return t("replay.matchReplay.checking");
+  }
 
   switch (state) {
     case "watch":
@@ -53,8 +55,8 @@ function canDownloadReplay(
     state !== "watch" &&
     state !== "downloading" &&
     state !== "incompatible" &&
-    !replay.isLoading &&
-    !replay.isActing
+    !replay.isLoading() &&
+    !replay.isActing()
   );
 }
 
@@ -64,7 +66,7 @@ function replayIconKind(
   busy: boolean,
   canWatch: boolean,
 ): ReplayIconKind {
-  if (replay.error) return "error";
+  if (replay.error()) return "error";
   if (busy) return "busy";
   if (canWatch) return "watch";
   if (state === "incompatible") return "incompatible";
@@ -72,13 +74,13 @@ function replayIconKind(
   return "download";
 }
 
-function replayIcon(kind: ReplayIconKind): ReactNode {
+function replayIcon(kind: ReplayIconKind): JSX.Element {
   switch (kind) {
     case "error":
     case "incompatible":
-      return <AlertTriangle size={15} aria-hidden="true" />;
+      return <TriangleAlert size={15} aria-hidden="true" />;
     case "busy":
-      return <Loader size={15} aria-hidden="true" className={s.spin} />;
+      return <Loader size={15} aria-hidden="true" class={s.spin} />;
     case "watch":
       return <Play size={15} aria-hidden="true" />;
     case "checking":
@@ -98,50 +100,54 @@ function replayTooltip(
   return label;
 }
 
-export function MatchReplayControl({
-  context,
-}: {
+export function MatchReplayControl(props: {
   context: ReplayMatchContext;
-}) {
-  const { t } = useTranslation();
-  const replay = useMatchReplay(context);
-  const state = replay.downloadState;
-  const busy = replay.isLoading || replay.isActing || state === "downloading";
-  const progress = progressLabel(replay.progress);
-  const label = replayLabel(t, replay, state, progress);
-  const canWatch = state === "watch" && !replay.isActing;
-  const canDownload = canDownloadReplay(replay, state);
-  const disabled = !canWatch && !canDownload;
-  const onClick = canWatch ? replay.watch : replay.download;
-  const icon = replayIcon(replayIconKind(replay, state, busy, canWatch));
-  const tooltip = replayTooltip(replay.error, label, progress);
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const replay = useSolidMatchReplay(() => props.context);
+  const state = createMemo(() => replay.downloadState());
+  const busy = createMemo(
+    () => replay.isLoading() || replay.isActing() || state() === "downloading",
+  );
+  const progress = createMemo(() => progressLabel(replay.progress()));
+  const label = createMemo(() => replayLabel(t, replay, state(), progress()));
+  const canWatch = createMemo(() => state() === "watch" && !replay.isActing());
+  const canDownload = createMemo(() => canDownloadReplay(replay, state()));
+  const disabled = createMemo(() => !canWatch() && !canDownload());
+  const icon = createMemo(() =>
+    replayIcon(replayIconKind(replay, state(), busy(), canWatch())),
+  );
+  const tooltip = createMemo(() =>
+    replayTooltip(replay.error(), label(), progress()),
+  );
+
+  const handleClick = () => {
+    const action = canWatch() ? replay.watch : replay.download;
+    void action();
+  };
 
   return (
-    <span className={s.root}>
-      <Tooltip.Root openDelay={180} closeDelay={0}>
-        <Tooltip.Trigger asChild>
+    <span class={s.root}>
+      <AppTooltip content={tooltip()} openDelay={180} closeDelay={0}>
+        {(triggerProps) => (
           <button
-            type="button"
-            className={s.button({
-              tone:
-                replay.error || state === "incompatible" ? "danger" : "default",
+            {...triggerProps({
+              type: "button",
+              class: s.button({
+                tone:
+                  replay.error() || state() === "incompatible"
+                    ? "danger"
+                    : "default",
+              }),
+              "aria-label": "Replay action",
+              disabled: disabled(),
+              onClick: handleClick,
             })}
-            aria-label="Replay action"
-            disabled={disabled}
-            onClick={() => void onClick()}
           >
-            {icon}
+            {icon()}
           </button>
-        </Tooltip.Trigger>
-        <Portal>
-          <Tooltip.Positioner className={s.tooltipPositioner}>
-            <Tooltip.Content className={s.tooltipContent}>
-              {tooltip}
-            </Tooltip.Content>
-          </Tooltip.Positioner>
-        </Portal>
-      </Tooltip.Root>
-      {/*<span className={s.statusText}>{label}</span>*/}
+        )}
+      </AppTooltip>
     </span>
   );
 }

@@ -1,3 +1,5 @@
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
 import {
   type SettingsControlLayoutProps,
   settingsControlClassName,
@@ -12,32 +14,33 @@ interface SettingsSwitchProps extends SettingsControlLayoutProps {
   onCheckedChange: (checked: boolean) => void;
 }
 
-export function SettingsToggle({
-  ariaLabel,
-  className,
-  checked,
-  disabled = false,
-  fit,
-  height,
-  size,
-  width,
-  onCheckedChange,
-}: SettingsSwitchProps) {
+export function SettingsToggle(props: SettingsSwitchProps): JSX.Element {
   return (
     <button
       type="button"
       role="switch"
-      aria-label={ariaLabel}
-      aria-checked={checked}
-      data-disabled={disabled ? "" : undefined}
-      disabled={disabled}
-      className={`${settingsControlClassName({ className, fit, size })} ${s.button({ checked })}`}
-      style={settingsControlStyle({ fit, height, size, width })}
-      onClick={() => onCheckedChange(!checked)}
+      aria-label={props.ariaLabel}
+      aria-checked={props.checked}
+      data-disabled={props.disabled ? "" : undefined}
+      disabled={props.disabled ?? false}
+      class={`${settingsControlClassName({
+        className: props.className,
+        fit: props.fit,
+        size: props.size,
+      })} ${s.button({ checked: props.checked })}`}
+      style={
+        settingsControlStyle({
+          fit: props.fit,
+          height: props.height,
+          size: props.size,
+          width: props.width,
+        }) as unknown as JSX.CSSProperties
+      }
+      onClick={() => props.onCheckedChange(!props.checked)}
     >
-      <span className={s.text}>{checked ? "On" : "Off"}</span>
-      <span className={s.track({ checked })}>
-        <span className={s.thumb} />
+      <span class={s.text}>{props.checked ? "On" : "Off"}</span>
+      <span class={s.track({ checked: props.checked })}>
+        <span class={s.thumb} />
       </span>
     </button>
   );

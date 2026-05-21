@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import type { Accessor } from "solid-js";
+import { createMemo } from "solid-js";
 import type { LanePosition } from "@/bindings/lane.ts";
 import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
+import { useSolidCdragonStaticData } from "@/hooks/use-cdragon-static-data";
 
 export type RoleQuestSlot =
   | { kind: "quest"; iconUrl: string }
@@ -14,6 +15,8 @@ export type RoleQuestResult = {
   inferredPosition: LanePosition | null;
   slot: RoleQuestSlot | null;
 };
+
+type MaybeAccessor<T> = T | Accessor<T>;
 
 const ROLE_QUEST_ITEM_MAP: Record<
   number,
@@ -85,15 +88,19 @@ function buildJungleBuffIconUrl(itemId: number): string {
   return buildItemIconUrl(`${itemId}_buff.png`);
 }
 
-export function useRoleQuestSlot({
+function readMaybeAccessor<T>(value: MaybeAccessor<T>): T {
+  return typeof value === "function" ? (value as Accessor<T>)() : value;
+}
+
+export function useSolidRoleQuestSlot({
   participant,
   match,
   resolvedJungleEggItemId,
 }: {
   participant: RawMatchSummaryParticipant;
   match: RawMatchSummaryGame;
-  resolvedJungleEggItemId?: number | null;
-}): RoleQuestResult {
+  resolvedJungleEggItemId?: MaybeAccessor<number | null | undefined>;
+}): Accessor<RoleQuestResult> {
   const roleBoundItem = participant.roleBoundItem;
   const { mapId, gameMode } = match.json;
   const supportsPosition =
@@ -103,14 +110,18 @@ export function useRoleQuestSlot({
     participant.missions?.[ROLE_QUEST_COMPLETE_KEY] === 1 ||
     roleBoundItem === COMPLETED_JUNGLE_QUEST_ITEM_ID;
 
-  const itemQueryParams = useMemo(
-    () => [{ type: "item" as const, itemId: roleBoundItem }],
-    [roleBoundItem],
+  const itemQueryParams = createMemo(() => [
+    { type: "item" as const, itemId: roleBoundItem },
+  ]);
+  const itemAssets = useSolidCdragonStaticData(itemQueryParams());
+  const iconSrc = createMemo(() => itemAssets()[0]?.src ?? null);
+  const resolvedJungleEggItemIdValue = createMemo(() =>
+    resolvedJungleEggItemId === undefined
+      ? undefined
+      : readMaybeAccessor(resolvedJungleEggItemId),
   );
-  const [itemAsset] = useCdragonStaticData(itemQueryParams);
-  const iconSrc = itemAsset?.src ?? null;
 
-  return useMemo<RoleQuestResult>(() => {
+  return createMemo<RoleQuestResult>(() => {
     if (!roleBoundItem) {
       return { inferredPosition: null, slot: null };
     }
@@ -118,11 +129,12 @@ export function useRoleQuestSlot({
     const mapping = ROLE_QUEST_ITEM_MAP[roleBoundItem];
 
     if (mapping) {
+      const resolvedItemId = resolvedJungleEggItemIdValue();
       const iconUrl =
         mapping.lane === "jungle" &&
         completed &&
-        isJungleEggItemId(resolvedJungleEggItemId)
-          ? buildJungleBuffIconUrl(resolvedJungleEggItemId)
+        isJungleEggItemId(resolvedItemId)
+          ? buildJungleBuffIconUrl(resolvedItemId)
           : buildQuestIconUrl(mapping.iconBase, completed);
 
       return {
@@ -142,15 +154,9 @@ export function useRoleQuestSlot({
         ? {
             kind: "item",
             itemId: roleBoundItem,
-            iconUrl: iconSrc,
+            iconUrl: iconSrc(),
           }
         : null,
     };
-  }, [
-    supportsPosition,
-    roleBoundItem,
-    completed,
-    resolvedJungleEggItemId,
-    iconSrc,
-  ]);
+  });
 }

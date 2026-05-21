@@ -1,25 +1,26 @@
-import { useTranslation } from "react-i18next";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { useSolidCdragonStaticData } from "@/hooks/use-cdragon-static-data";
+import { useSolidTranslation } from "@/i18n/solid";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 
-export function MatchCardRunes({
-  perkPrimaryRuneId,
-  perkSubStyleId,
-}: {
+export function MatchCardRunes(props: {
   perkPrimaryRuneId: number;
   perkSubStyleId: number;
-}) {
-  const { t } = useTranslation();
-  const [primaryRune, subStyle] = useCdragonStaticData([
-    { type: "rune", runeId: perkPrimaryRuneId },
-    { type: "rune-style", styleId: perkSubStyleId },
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const runes = useSolidCdragonStaticData([
+    { type: "rune", runeId: props.perkPrimaryRuneId },
+    { type: "rune-style", styleId: props.perkSubStyleId },
   ]);
+  const primaryRune = () => runes()[0];
+  const subStyle = () => runes()[1];
 
   return (
-    <div className={s.loadoutGroup}>
+    <div class={s.loadoutGroup}>
       <MatchCardAssetIcon
-        src={primaryRune.src}
+        src={primaryRune()?.src}
         alt={t("history.match.primaryRune", {
           defaultValue: "Primary rune",
         })}
@@ -27,7 +28,7 @@ export function MatchCardRunes({
         fallbackClassName={s.assetIconFallback}
       />
       <MatchCardAssetIcon
-        src={subStyle.src}
+        src={subStyle()?.src}
         alt={t("history.match.secondaryRuneStyle", {
           defaultValue: "Secondary rune style",
         })}

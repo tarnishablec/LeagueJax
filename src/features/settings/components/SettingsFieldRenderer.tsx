@@ -1,5 +1,6 @@
-import { useMemo, useSyncExternalStore } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { createMemo } from "solid-js";
 import {
   createListCollection,
   SettingsActionButton,
@@ -8,13 +9,15 @@ import {
   SettingsInput,
   SettingsSelect,
   SettingsToggle,
-} from "@/components/settings-ui";
-import { useSettings } from "@/features/settings/context";
+} from "@/components/settings-ui/index";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
 import type {
   RegisteredSetting,
   SettingId,
   SettingScope,
 } from "@/features/settings/types";
+import { useSolidSettingValue } from "@/features/settings/use-setting-value";
+import { useSolidTranslation } from "@/i18n/solid";
 import { createLogger } from "@/infra/logger";
 
 type RegisteredSelectSetting = Extract<
@@ -34,7 +37,7 @@ type RegisteredActionSetting = Extract<
   { control: { kind: "action" } }
 >;
 
-const logger = createLogger("settings-field-renderer");
+const logger = createLogger("solid-settings-field-renderer");
 const loggingActionToneIds = new Set<SettingId>([
   "system.logging.openDir",
   "system.logging.cleanLogs",
@@ -45,15 +48,6 @@ const actionMinLoadingMsById: Partial<Record<SettingId, number>> = {
 const successFeedbackActionIds = new Set<SettingId>([
   "system.logging.cleanLogs",
 ]);
-
-const useSettingValue = (id: SettingId): unknown => {
-  const settings = useSettings();
-  return useSyncExternalStore(
-    (onStoreChange) => settings.subscribe(id, onStoreChange),
-    () => settings.get(id),
-    () => settings.get(id),
-  );
-};
 
 const toScopeTag = (scope?: SettingScope): string => {
   switch (scope) {
@@ -66,216 +60,211 @@ const toScopeTag = (scope?: SettingScope): string => {
   }
 };
 
-const SelectField = ({ field }: { field: RegisteredSelectSetting }) => {
-  const settings = useSettings();
-  const { t } = useTranslation();
-  const value = useSettingValue(field.id);
-  const collection = useMemo(
-    () =>
-      createListCollection({
-        items: field.options.map((option) => ({
-          value: option.value,
-          label: option.displayLabel ?? t(option.labelKey),
-        })),
-      }),
-    [field.options, t],
+function SelectField(props: { field: RegisteredSelectSetting }): JSX.Element {
+  const settings = useSolidSettings();
+  const { t } = useSolidTranslation();
+  const value = useSolidSettingValue(props.field.id);
+  const collection = createMemo(() =>
+    createListCollection({
+      items: props.field.options.map((option) => ({
+        value: option.value,
+        label: option.displayLabel ?? t(option.labelKey),
+      })),
+    }),
   );
 
   return (
     <SettingsSelect
-      collection={collection}
-      value={[String(value ?? "")]}
+      collection={collection()}
+      value={[String(value() ?? "")]}
       onValueChange={(details) => {
         const next = details.value[0];
-        if (next != null) settings.set(field.id, next);
+        if (next != null) {
+          settings.set(props.field.id, next);
+        }
       }}
     />
   );
-};
+}
 
-const ToggleField = ({
-  ariaLabel,
-  field,
-}: {
+function ToggleField(props: {
   ariaLabel: string;
   field: RegisteredSetting;
-}) => {
-  const settings = useSettings();
-  const value = useSettingValue(field.id);
+}): JSX.Element {
+  const settings = useSolidSettings();
+  const value = useSolidSettingValue(props.field.id);
 
   return (
     <SettingsToggle
-      ariaLabel={ariaLabel}
-      checked={Boolean(value)}
+      ariaLabel={props.ariaLabel}
+      checked={Boolean(value())}
       onCheckedChange={(checked) => {
-        settings.set(field.id, checked);
+        settings.set(props.field.id, checked);
       }}
     />
   );
-};
+}
 
-const InputField = ({
-  ariaLabel,
-  field,
-}: {
+function InputField(props: {
   ariaLabel: string;
   field: RegisteredInputSetting;
-}) => {
-  const settings = useSettings();
-  const { t } = useTranslation();
-  const value = useSettingValue(field.id);
-  const inputType = field.control.kind === "number" ? "number" : "text";
+}): JSX.Element {
+  const settings = useSolidSettings();
+  const { t } = useSolidTranslation();
+  const value = useSolidSettingValue(props.field.id);
+  const inputType = props.field.control.kind === "number" ? "number" : "text";
   const numberControl =
-    field.control.kind === "number" ? field.control : undefined;
-  const placeholder = field.control.placeholderKey
-    ? t(field.control.placeholderKey)
-    : undefined;
+    props.field.control.kind === "number" ? props.field.control : undefined;
+  const placeholder = () =>
+    props.field.control.placeholderKey
+      ? t(props.field.control.placeholderKey)
+      : undefined;
 
   return (
     <SettingsInput
-      ariaLabel={ariaLabel}
+      ariaLabel={props.ariaLabel}
       type={inputType}
-      value={String(value ?? "")}
+      value={String(value() ?? "")}
       min={numberControl?.min ?? undefined}
       max={numberControl?.max ?? undefined}
       step={numberControl?.step ?? undefined}
-      placeholder={placeholder}
+      placeholder={placeholder()}
       onValueChange={(next) => {
-        if (field.control.kind === "number") {
+        if (props.field.control.kind === "number") {
           if (next.trim() === "") {
             return;
           }
 
           const parsed = Number(next);
           if (!Number.isNaN(parsed)) {
-            settings.set(field.id, parsed);
+            settings.set(props.field.id, parsed);
           }
           return;
         }
 
-        settings.set(field.id, next);
+        settings.set(props.field.id, next);
       }}
     />
   );
-};
+}
 
-const ColorField = ({
-  ariaLabel,
-  field,
-}: {
+function ColorField(props: {
   ariaLabel: string;
   field: RegisteredColorSetting;
-}) => {
-  const settings = useSettings();
-  const value = useSettingValue(field.id);
+}): JSX.Element {
+  const settings = useSolidSettings();
+  const value = useSolidSettingValue(props.field.id);
 
   return (
     <SettingsColorPicker
-      ariaLabel={ariaLabel}
-      livePreview={field.control.livePreview}
-      value={String(value ?? "")}
-      presets={field.control.presets}
+      ariaLabel={props.ariaLabel}
+      livePreview={props.field.control.livePreview}
+      value={String(value() ?? "")}
+      presets={props.field.control.presets}
       onValueChange={(next) => {
-        settings.set(field.id, next);
+        settings.set(props.field.id, next);
       }}
     />
   );
-};
+}
 
-const ActionField = ({ field }: { field: RegisteredActionSetting }) => {
-  const { t } = useTranslation();
-  const label = t(field.labelKey);
-  const tone = loggingActionToneIds.has(field.id) ? "quiet" : "accent";
-  const minLoadingMs = actionMinLoadingMsById[field.id] ?? 0;
-  const successFeedback = successFeedbackActionIds.has(field.id);
+function ActionField(props: { field: RegisteredActionSetting }): JSX.Element {
+  const { t } = useSolidTranslation();
+  const label = () => t(props.field.labelKey);
+  const tone = () =>
+    loggingActionToneIds.has(props.field.id) ? "quiet" : "accent";
+  const minLoadingMs = () => actionMinLoadingMsById[props.field.id] ?? 0;
+  const successFeedback = () => successFeedbackActionIds.has(props.field.id);
 
   return (
     <SettingsActionButton
-      ariaLabel={`Action ${field.id}`}
-      label={label}
-      minLoadingMs={minLoadingMs}
-      successFeedback={successFeedback}
-      tone={tone}
-      onClick={field.onAction}
+      ariaLabel={`Action ${props.field.id}`}
+      label={label()}
+      minLoadingMs={minLoadingMs()}
+      successFeedback={successFeedback()}
+      tone={tone()}
+      onClick={props.field.onAction}
       onError={(error) => {
-        logger.error({ error, id: field.id }, "Setting action failed");
+        logger.error({ error, id: props.field.id }, "Setting action failed");
       }}
     />
   );
-};
+}
 
-export function SettingsFieldRenderer({ field }: { field: RegisteredSetting }) {
-  const { t } = useTranslation();
-  const label = t(field.labelKey);
-  const hint = field.hintKey ? t(field.hintKey) : undefined;
-  const ariaLabel = `Setting ${field.id}`;
-  const scopeTag = toScopeTag(field.scope);
+export function SettingsFieldRenderer(props: {
+  field: RegisteredSetting;
+}): JSX.Element | null {
+  const { t } = useSolidTranslation();
+  const label = () => t(props.field.labelKey);
+  const hint = () => (props.field.hintKey ? t(props.field.hintKey) : undefined);
+  const ariaLabel = () => `Setting ${props.field.id}`;
+  const scopeTag = () => toScopeTag(props.field.scope);
 
-  if (!field.visible) {
+  if (!props.field.visible) {
     return null;
   }
 
-  switch (field.control.kind) {
+  switch (props.field.control.kind) {
     case "select":
       return (
         <SettingsFieldRow
-          label={label}
-          hint={hint}
-          settingId={field.id}
-          scopeTag={scopeTag}
+          label={label()}
+          hint={hint()}
+          settingId={props.field.id}
+          scopeTag={scopeTag()}
         >
-          <SelectField field={field as RegisteredSelectSetting} />
+          <SelectField field={props.field as RegisteredSelectSetting} />
         </SettingsFieldRow>
       );
     case "toggle":
       return (
         <SettingsFieldRow
-          label={label}
-          hint={hint}
-          settingId={field.id}
-          scopeTag={scopeTag}
+          label={label()}
+          hint={hint()}
+          settingId={props.field.id}
+          scopeTag={scopeTag()}
         >
-          <ToggleField ariaLabel={ariaLabel} field={field} />
+          <ToggleField ariaLabel={ariaLabel()} field={props.field} />
         </SettingsFieldRow>
       );
     case "text":
     case "number":
       return (
         <SettingsFieldRow
-          label={label}
-          hint={hint}
-          settingId={field.id}
-          scopeTag={scopeTag}
+          label={label()}
+          hint={hint()}
+          settingId={props.field.id}
+          scopeTag={scopeTag()}
         >
           <InputField
-            ariaLabel={ariaLabel}
-            field={field as RegisteredInputSetting}
+            ariaLabel={ariaLabel()}
+            field={props.field as RegisteredInputSetting}
           />
         </SettingsFieldRow>
       );
     case "color":
       return (
         <SettingsFieldRow
-          label={label}
-          hint={hint}
-          settingId={field.id}
-          scopeTag={scopeTag}
+          label={label()}
+          hint={hint()}
+          settingId={props.field.id}
+          scopeTag={scopeTag()}
         >
           <ColorField
-            ariaLabel={ariaLabel}
-            field={field as RegisteredColorSetting}
+            ariaLabel={ariaLabel()}
+            field={props.field as RegisteredColorSetting}
           />
         </SettingsFieldRow>
       );
     case "action":
       return (
         <SettingsFieldRow
-          label={label}
-          hint={hint}
-          settingId={field.id}
-          scopeTag={scopeTag}
+          label={label()}
+          hint={hint()}
+          settingId={props.field.id}
+          scopeTag={scopeTag()}
         >
-          <ActionField field={field as RegisteredActionSetting} />
+          <ActionField field={props.field as RegisteredActionSetting} />
         </SettingsFieldRow>
       );
     default:

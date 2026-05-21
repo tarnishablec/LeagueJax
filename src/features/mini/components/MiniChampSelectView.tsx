@@ -1,155 +1,137 @@
+/** @jsxImportSource solid-js */
+import { keyArray } from "@solid-primitives/keyed";
 import { invoke } from "@tauri-apps/api/core";
-import { CheckCircle2 } from "lucide-react";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { CircleCheck } from "lucide-solid";
+import { createMemo, createSignal, Show } from "solid-js";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
-import { useChampSelectPickableChampionIds } from "../hooks/use-champ-select-pickable-champion-ids";
+import { useSolidTranslation } from "@/i18n/solid";
+import { useSolidChampSelectPickableChampionIds } from "../hooks/use-champ-select-pickable-champion-ids";
 import type { MiniWindowModel } from "../hooks/use-mini-window-model";
 import { MiniBottomPanel } from "./MiniBottomPanel";
 import * as s from "./MiniChampSelectView.css";
 
 type ChampSelectModel = NonNullable<MiniWindowModel["champSelect"]>;
 
-function ChampionIcon({
-  championId,
-  selected = false,
-}: {
+function ChampionIcon(props: {
   championId: number | null;
   selected?: boolean;
 }) {
   return (
     <ChampionAvatar
-      championId={championId}
-      imageClassName={selected ? s.selectedChampionImage : s.benchChampionImage}
-      fallbackClassName={
-        selected ? s.selectedChampionFallback : s.benchChampionFallback
+      championId={props.championId}
+      imageClassName={
+        props.selected ? s.selectedChampionImage : s.benchChampionImage
       }
-      alt={championId ? `Champion ${championId}` : ""}
+      fallbackClassName={
+        props.selected ? s.selectedChampionFallback : s.benchChampionFallback
+      }
+      alt={props.championId ? `Champion ${props.championId}` : ""}
     />
   );
 }
 
-function SelectedChampion({
-  championId,
-  label,
-}: {
-  championId: number | null;
-  label: string;
-}) {
+function SelectedChampion(props: { championId: number | null; label: string }) {
   return (
-    <div className={s.selectedColumn}>
-      <ChampionIcon championId={championId} selected />
-      <div className={s.selectedLabel}>
-        <span>{label}</span>
+    <div class={s.selectedColumn}>
+      <ChampionIcon championId={props.championId} selected />
+      <div class={s.selectedLabel}>
+        <span>{props.label}</span>
       </div>
     </div>
   );
 }
 
-function BenchChampionPool({
-  champSelect,
-  pickableChampionIds,
-  pendingChampionId,
-  onSwap,
-}: {
+function BenchChampionPool(props: {
   champSelect: ChampSelectModel;
   pickableChampionIds: number[] | null;
   pendingChampionId: number | null;
   onSwap: (championId: number) => void;
 }) {
-  return (
-    <div className={s.benchGrid}>
-      {champSelect.benchChampions.map((champion) => {
-        const isCurrent =
-          champion.championId === champSelect.selectedChampionId;
-        const isPending = champion.championId === pendingChampionId;
-        const isPickable =
-          pickableChampionIds === null ||
-          pickableChampionIds.includes(champion.championId);
-        const isUnavailable = !isCurrent && !isPickable;
+  const benchButtons = keyArray(
+    () => props.champSelect.benchChampions,
+    (champion) => String(champion.championId),
+    (champion) => {
+      const isCurrent = createMemo(
+        () => champion().championId === props.champSelect.selectedChampionId,
+      );
+      const isPending = createMemo(
+        () => champion().championId === props.pendingChampionId,
+      );
+      const isPickable = createMemo(
+        () =>
+          props.pickableChampionIds === null ||
+          props.pickableChampionIds.includes(champion().championId),
+      );
+      const isUnavailable = createMemo(() => !isCurrent() && !isPickable());
 
-        return (
-          <button
-            key={champion.championId}
-            type="button"
-            aria-label={`Select champion ${champion.championId}`}
-            className={s.benchChampionButton}
-            data-current={isCurrent ? "true" : undefined}
-            data-pending={isPending ? "true" : undefined}
-            data-unpickable={isUnavailable ? "true" : undefined}
-            disabled={isPending || isCurrent || !isPickable}
-            onClick={() => onSwap(champion.championId)}
-          >
-            <ChampionIcon championId={champion.championId} />
-          </button>
-        );
-      })}
-    </div>
+      return (
+        <button
+          type="button"
+          aria-label={`Select champion ${champion().championId}`}
+          class={s.benchChampionButton}
+          data-current={isCurrent() ? "true" : undefined}
+          data-pending={isPending() ? "true" : undefined}
+          data-unpickable={isUnavailable() ? "true" : undefined}
+          disabled={isPending() || isCurrent() || !isPickable()}
+          onClick={() => props.onSwap(champion().championId)}
+        >
+          <ChampionIcon championId={champion().championId} />
+        </button>
+      );
+    },
   );
+
+  return <div class={s.benchGrid}>{benchButtons()}</div>;
 }
 
-function ChampSelectStatus({
-  champSelect,
-  queueName,
-}: {
+function ChampSelectStatus(props: {
   champSelect: ChampSelectModel;
   queueName: string | null;
 }) {
-  const { t } = useTranslation();
-  const title = champSelect.selectedChampionId
-    ? t("mini.champSelect.status.completed", {
-        defaultValue: "英雄选择（已完成）",
-      })
-    : t("mini.champSelect.status.pending", {
-        defaultValue: "英雄选择",
-      });
-  const meta =
-    queueName ??
-    t("mini.queue.unknown", {
-      queueId: champSelect.queueId,
-      defaultValue: "当前队列",
-    });
+  const { t } = useSolidTranslation();
+  const title = createMemo(() =>
+    props.champSelect.selectedChampionId
+      ? t("mini.champSelect.status.completed")
+      : t("mini.champSelect.status.pending"),
+  );
+  const meta = createMemo(
+    () =>
+      props.queueName ??
+      t("mini.queue.unknown", { queueId: props.champSelect.queueId ?? "" }),
+  );
 
   return (
-    <section className={s.statusPanel}>
-      <div className={s.phaseDot} aria-hidden="true" />
-      <div className={s.statusText}>
-        <div className={s.statusTitle}>{title}</div>
-        <div className={s.statusMeta}>{meta}</div>
+    <section class={s.statusPanel}>
+      <div class={s.phaseDot} aria-hidden="true" />
+      <div class={s.statusText}>
+        <div class={s.statusTitle}>{title()}</div>
+        <div class={s.statusMeta}>{meta()}</div>
       </div>
     </section>
   );
 }
 
-export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
-  const { t } = useTranslation();
-  const champSelect = model.champSelect;
-  const { data: pickableChampionIds } = useChampSelectPickableChampionIds(
-    champSelect?.session.gameId || null,
-    champSelect?.session.counter ?? null,
+export function MiniChampSelectView(props: { model: MiniWindowModel }) {
+  const { t } = useSolidTranslation();
+  const champSelect = createMemo(() => props.model.champSelect);
+  const { data: pickableChampionIds } = useSolidChampSelectPickableChampionIds(
+    () => champSelect()?.session.gameId ?? null,
+    () => champSelect()?.session.counter ?? null,
   );
-  const [pendingChampionId, setPendingChampionId] = useState<number | null>(
+  const [pendingChampionId, setPendingChampionId] = createSignal<number | null>(
     null,
   );
-  const [dodgePending, setDodgePending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [dodgePending, setDodgePending] = createSignal(false);
+  const [error, setError] = createSignal<string | null>(null);
 
-  if (!champSelect) {
-    return null;
-  }
-
-  const resolvedPickableChampionIds = pickableChampionIds ?? null;
-
-  const selectedLabel = champSelect.selectedChampionId
-    ? t("mini.champSelect.selected", {
-        defaultValue: "已选择",
-      })
-    : t("mini.champSelect.notSelected", {
-        defaultValue: "未选择",
-      });
+  const selectedLabel = createMemo(() =>
+    champSelect()?.selectedChampionId
+      ? t("mini.champSelect.selected")
+      : t("mini.champSelect.notSelected"),
+  );
 
   const handleSwap = async (championId: number) => {
-    if (pendingChampionId !== null) {
+    if (pendingChampionId() !== null) {
       return;
     }
 
@@ -159,28 +141,29 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
       await invoke("lcu_champ_select_swap_bench_champion", { championId });
       await invoke("ongoing_game_refresh");
     } catch {
-      setError(
-        t("mini.champSelect.swapFailed", {
-          defaultValue: "切换英雄失败",
-        }),
-      );
+      setError(t("mini.champSelect.swapFailed"));
     } finally {
       setPendingChampionId(null);
     }
   };
 
   const handleDodge = async () => {
+    const currentChampSelect = champSelect();
+    if (!currentChampSelect) {
+      return;
+    }
+
     const startedAt = performance.now();
     const context = {
-      gameId: champSelect.session.gameId,
-      phase: model.phase,
-      queueId: champSelect.queueId,
-      selectedChampionId: champSelect.selectedChampionId,
-      pending: dodgePending,
+      gameId: currentChampSelect.session.gameId,
+      phase: props.model.phase,
+      queueId: currentChampSelect.queueId,
+      selectedChampionId: currentChampSelect.selectedChampionId,
+      pending: dodgePending(),
     };
     console.info("[mini-champ-select] dodge click", context);
 
-    if (dodgePending) {
+    if (dodgePending()) {
       console.info("[mini-champ-select] dodge ignored because pending", {
         ...context,
         elapsedMs: Math.round(performance.now() - startedAt),
@@ -212,60 +195,66 @@ export function MiniChampSelectView({ model }: { model: MiniWindowModel }) {
         ...context,
         elapsedMs: Math.round(performance.now() - startedAt),
       });
-    } catch (error) {
+    } catch (caughtError) {
       console.error("[mini-champ-select] dodge failed", {
         ...context,
         elapsedMs: Math.round(performance.now() - startedAt),
-        error,
+        error: caughtError,
       });
-      setError(
-        t("mini.champSelect.dodge.failed", {
-          defaultValue: "退出英雄选择失败",
-        }),
-      );
+      setError(t("mini.champSelect.dodge.failed"));
     } finally {
       setDodgePending(false);
     }
   };
 
   return (
-    <section className={s.root}>
-      {champSelect.mode === "bench" ? (
-        <section className={s.benchPanel}>
-          <SelectedChampion
-            championId={champSelect.selectedChampionId}
-            label={selectedLabel}
+    <Show when={champSelect()}>
+      {(currentChampSelect) => (
+        <section class={s.root}>
+          <Show
+            when={currentChampSelect().mode === "bench"}
+            fallback={
+              <section class={s.defaultPanel}>
+                <ChampionIcon
+                  championId={currentChampSelect().selectedChampionId}
+                  selected
+                />
+                <div class={s.selectedLabel}>
+                  <CircleCheck size={14} aria-hidden="true" />
+                  <span>{selectedLabel()}</span>
+                </div>
+              </section>
+            }
+          >
+            <section class={s.benchPanel}>
+              <SelectedChampion
+                championId={currentChampSelect().selectedChampionId}
+                label={selectedLabel()}
+              />
+              <BenchChampionPool
+                champSelect={currentChampSelect()}
+                pickableChampionIds={pickableChampionIds() ?? null}
+                pendingChampionId={pendingChampionId()}
+                onSwap={handleSwap}
+              />
+            </section>
+          </Show>
+
+          <ChampSelectStatus
+            champSelect={currentChampSelect()}
+            queueName={props.model.queueName}
           />
-          <BenchChampionPool
-            champSelect={champSelect}
-            pickableChampionIds={resolvedPickableChampionIds}
-            pendingChampionId={pendingChampionId}
-            onSwap={handleSwap}
+          <div class={s.spacer} />
+          <MiniBottomPanel
+            model={props.model}
+            champSelectDodge={{
+              pending: dodgePending(),
+              error: error(),
+              onDodge: handleDodge,
+            }}
           />
-        </section>
-      ) : (
-        <section className={s.defaultPanel}>
-          <ChampionIcon championId={champSelect.selectedChampionId} selected />
-          <div className={s.selectedLabel}>
-            <CheckCircle2 size={14} aria-hidden="true" />
-            <span>{selectedLabel}</span>
-          </div>
         </section>
       )}
-
-      <ChampSelectStatus
-        champSelect={champSelect}
-        queueName={model.queueName}
-      />
-      <div className={s.spacer} />
-      <MiniBottomPanel
-        model={model}
-        champSelectDodge={{
-          pending: dodgePending,
-          error,
-          onDodge: handleDodge,
-        }}
-      />
-    </section>
+    </Show>
   );
 }

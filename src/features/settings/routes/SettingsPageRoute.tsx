@@ -1,45 +1,58 @@
-import { useTranslation } from "react-i18next";
-import { Navigate, useOutletContext, useParams } from "react-router";
-import { useSettings } from "@/features/settings/context";
+/** @jsxImportSource solid-js */
+import { Navigate, useParams } from "@solidjs/router";
+import type { JSX } from "solid-js";
+import { lazy, Show } from "solid-js";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidTranslation } from "@/i18n/solid";
 import { SettingsClientArgsView } from "../components/SettingsClientArgsView";
-import type { SettingsOutletContext } from "../components/SettingsHub";
-import * as s from "../components/SettingsHub.css";
+import { useSolidSettingsPages } from "../components/SettingsHub";
+import * as s from "../components/SettingsHub.css.ts";
 import { resolveActivePage } from "../components/SettingsHub.utils";
 import { SettingsRegistryList } from "../components/SettingsRegistryList";
 import { SettingsSections } from "../components/SettingsSections";
-import { AboutPage } from "./AboutPage";
-import { ShardsPage } from "./ShardsPage";
 
-export function SettingsPageRoute() {
-  const settings = useSettings();
-  const { t } = useTranslation();
-  const { pages } = useOutletContext<SettingsOutletContext>();
-  const { pageId } = useParams();
+const ShardsPage = lazy(() => import("./ShardsPage"));
+const AboutPage = lazy(() => import("./AboutPage"));
 
-  if (pageId === "client-args") {
-    return <SettingsClientArgsView />;
-  }
+export function SettingsPageRoute(): JSX.Element {
+  const settings = useSolidSettings();
+  const { t } = useSolidTranslation();
+  const pages = useSolidSettingsPages();
+  const params = useParams();
+  const pageId = () => params.pageId;
+  const activePage = () => resolveActivePage(pages(), pageId());
 
-  if (pageId === "registry") {
-    return <SettingsRegistryList definitions={settings.listDefinitions()} />;
-  }
-
-  if (pageId === "shards") {
-    return <ShardsPage />;
-  }
-
-  if (pageId === "about") {
-    return <AboutPage />;
-  }
-
-  const activePage = resolveActivePage(pages, pageId);
-  if (pages.length === 0) {
-    return <h1 className={s.title}>{t("settings.title")}</h1>;
-  }
-
-  if (!activePage) {
-    return <Navigate to={`/main/settings/${pages[0].id}`} replace />;
-  }
-
-  return <SettingsSections page={activePage} />;
+  return (
+    <Show
+      when={pageId() !== "client-args"}
+      fallback={<SettingsClientArgsView />}
+    >
+      <Show
+        when={pageId() !== "registry"}
+        fallback={
+          <SettingsRegistryList definitions={settings.listDefinitions()} />
+        }
+      >
+        <Show when={pageId() !== "shards"} fallback={<ShardsPage />}>
+          <Show when={pageId() !== "about"} fallback={<AboutPage />}>
+            <Show
+              when={pages().length > 0}
+              fallback={<h1 class={s.title}>{t("settings.title")}</h1>}
+            >
+              <Show
+                when={activePage()}
+                fallback={
+                  <Navigate href={`/main/settings/${pages()[0]?.id}`} />
+                }
+              >
+                {(page) => <SettingsSections page={page()} />}
+              </Show>
+            </Show>
+          </Show>
+        </Show>
+      </Show>
+    </Show>
+  );
 }
+
+export default SettingsPageRoute;

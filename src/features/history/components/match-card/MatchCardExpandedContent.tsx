@@ -1,6 +1,7 @@
-import { ToggleGroup } from "@ark-ui/react/toggle-group";
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { ToggleGroup } from "@ark-ui/solid/toggle-group";
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import type {
   RawMatchDetailsGame,
   RawMatchSummaryGame,
@@ -9,6 +10,7 @@ import {
   MatchReplayControl,
   replayMatchContextFromSummary,
 } from "@/features/replay/public";
+import { useSolidTranslation } from "@/i18n/solid";
 import { MatchBuildTab } from "./MatchBuildTab";
 import * as s from "./MatchCardExpandedContent.css";
 import { MatchDetailsTab } from "./MatchDetailsTab";
@@ -17,42 +19,36 @@ import {
   MatchSelectedParticipantHeader,
 } from "./MatchParticipantPicker";
 import { MatchRunesTab } from "./MatchRunesTab";
-import { useMatchParticipantSelection } from "./match-participant-selection";
+import { useSolidMatchParticipantSelection } from "./match-participant-selection";
 
 const DETAILS_TAB_ID = "details";
 const RUNES_TAB_ID = "runes";
 const BUILD_TAB_ID = "build";
 
-export function MatchCardExpandedContent({
-  summary,
-  detail,
-  detailLoading,
-  sgpServerId,
-}: {
+export function MatchCardExpandedContent(props: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   detailLoading: boolean;
   sgpServerId: string | null;
-}) {
-  const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<string[]>([DETAILS_TAB_ID]);
-  const replayContext = useMemo(
-    () => replayMatchContextFromSummary(summary, sgpServerId),
-    [summary, sgpServerId],
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const [activeTab, setActiveTab] = createSignal<string[]>([DETAILS_TAB_ID]);
+  const replayContext = createMemo(() =>
+    replayMatchContextFromSummary(props.summary, props.sgpServerId),
   );
-  const participants = summary.json.participants;
+  const participants = () => props.summary.json.participants;
   const { selectedEntry, selectedKey, setSelectedKey } =
-    useMatchParticipantSelection(participants);
-  const runesActive = activeTab.includes(RUNES_TAB_ID);
-  const buildActive = activeTab.includes(BUILD_TAB_ID);
-  const participantTabActive = runesActive || buildActive;
+    useSolidMatchParticipantSelection(participants);
+  const runesActive = () => activeTab().includes(RUNES_TAB_ID);
+  const buildActive = () => activeTab().includes(BUILD_TAB_ID);
+  const participantTabActive = () => runesActive() || buildActive();
 
   return (
-    <div className={s.expandedRoot}>
-      <div className={s.header}>
+    <div class={s.expandedRoot}>
+      <div class={s.header}>
         <ToggleGroup.Root
-          className={s.tabList}
-          value={activeTab}
+          class={s.tabList}
+          value={activeTab()}
           deselectable={false}
           onValueChange={({ value }) => {
             if (value.length > 0) {
@@ -61,80 +57,85 @@ export function MatchCardExpandedContent({
           }}
           aria-label="Match detail tabs"
         >
-          <ToggleGroup.Item value={DETAILS_TAB_ID} className={s.tabTrigger}>
+          <ToggleGroup.Item value={DETAILS_TAB_ID} class={s.tabTrigger}>
             {t("history.matchDetails.tabs.details", {
               defaultValue: "Details",
             })}
           </ToggleGroup.Item>
-          <ToggleGroup.Item value={RUNES_TAB_ID} className={s.tabTrigger}>
+          <ToggleGroup.Item value={RUNES_TAB_ID} class={s.tabTrigger}>
             {t("history.matchDetails.tabs.runes", {
               defaultValue: "Runes",
             })}
           </ToggleGroup.Item>
-          <ToggleGroup.Item value={BUILD_TAB_ID} className={s.tabTrigger}>
+          <ToggleGroup.Item value={BUILD_TAB_ID} class={s.tabTrigger}>
             {t("history.matchDetails.tabs.build", {
               defaultValue: "Build",
             })}
           </ToggleGroup.Item>
         </ToggleGroup.Root>
 
-        <MatchReplayControl context={replayContext} />
+        <MatchReplayControl context={replayContext()} />
       </div>
 
-      <div className={s.tabPanel}>
-        {activeTab.includes(DETAILS_TAB_ID) ? (
+      <div class={s.tabPanel}>
+        <Show when={activeTab().includes(DETAILS_TAB_ID)}>
           <MatchDetailsTab
-            summary={summary}
-            detail={detail}
-            sgpServerId={sgpServerId}
+            summary={props.summary}
+            detail={props.detail}
+            sgpServerId={props.sgpServerId}
           />
-        ) : null}
-        {participantTabActive ? (
-          selectedEntry ? (
-            <div className={s.participantTabRoot}>
-              <MatchParticipantPicker
-                summary={summary}
-                participants={participants}
-                selectedKey={selectedKey}
-                onSelectedKeyChange={setSelectedKey}
-                ariaLabel={
-                  runesActive
-                    ? "Match participant rune tabs"
-                    : "Match participant build tabs"
-                }
-                actionLabel={(displayName) =>
-                  runesActive
-                    ? `Show runes for ${displayName}`
-                    : `Show build for ${displayName}`
-                }
-              />
-              <div className={s.participantTabContent}>
-                <MatchSelectedParticipantHeader
-                  participant={selectedEntry.participant}
+        </Show>
+        <Show when={participantTabActive()}>
+          <Show
+            when={selectedEntry()}
+            fallback={
+              <span class={s.participantEmptyState}>
+                {t("history.matchDetails.noParticipantData", {
+                  defaultValue: "No participant data",
+                })}
+              </span>
+            }
+          >
+            {(entry) => (
+              <div class={s.participantTabRoot}>
+                <MatchParticipantPicker
+                  summary={props.summary}
+                  participants={participants()}
+                  selectedKey={selectedKey()}
+                  onSelectedKeyChange={setSelectedKey}
+                  ariaLabel={
+                    runesActive()
+                      ? "Match participant rune tabs"
+                      : "Match participant build tabs"
+                  }
+                  actionLabel={(displayName) =>
+                    runesActive()
+                      ? `Show runes for ${displayName}`
+                      : `Show build for ${displayName}`
+                  }
                 />
-                {runesActive ? (
-                  <MatchRunesTab
-                    summary={summary}
-                    participant={selectedEntry.participant}
+                <div class={s.participantTabContent}>
+                  <MatchSelectedParticipantHeader
+                    participant={entry().participant}
                   />
-                ) : null}
-                {buildActive ? (
-                  <MatchBuildTab
-                    detail={detail}
-                    detailLoading={detailLoading}
-                    participant={selectedEntry.participant}
-                  />
-                ) : null}
+                  <Show when={runesActive()}>
+                    <MatchRunesTab
+                      summary={props.summary}
+                      participant={entry().participant}
+                    />
+                  </Show>
+                  <Show when={buildActive()}>
+                    <MatchBuildTab
+                      detail={props.detail}
+                      detailLoading={props.detailLoading}
+                      participant={entry().participant}
+                    />
+                  </Show>
+                </div>
               </div>
-            </div>
-          ) : (
-            <span className={s.participantEmptyState}>
-              {t("history.matchDetails.noParticipantData", {
-                defaultValue: "No participant data",
-              })}
-            </span>
-          )
-        ) : null}
+            )}
+          </Show>
+        </Show>
       </div>
     </div>
   );

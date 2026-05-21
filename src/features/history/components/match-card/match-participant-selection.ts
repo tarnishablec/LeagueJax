@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { createMemo, createSignal } from "solid-js";
 import type { RawMatchSummaryParticipant } from "@/bindings/matches";
 import { matchParticipantKey } from "./match-participant-display";
 
@@ -25,24 +25,24 @@ export function resolveMatchParticipantSelection(
   );
 }
 
-export function useMatchParticipantSelection(
-  participants: readonly RawMatchSummaryParticipant[],
+export function useSolidMatchParticipantSelection(
+  participants: () => readonly RawMatchSummaryParticipant[],
 ): {
-  selectedEntry: MatchParticipantEntry | null;
-  selectedKey: string;
+  selectedEntry: () => MatchParticipantEntry | null;
+  selectedKey: () => string;
   setSelectedKey: (key: string) => void;
 } {
-  const entries = useMemo(
-    () => createMatchParticipantEntries(participants),
-    [participants],
+  const entries = createMemo(() =>
+    createMatchParticipantEntries(participants()),
   );
-  const initialKey = entries[0]?.key ?? "";
-  const [requestedKey, setRequestedKey] = useState(initialKey);
-  const selectedEntry = resolveMatchParticipantSelection(entries, requestedKey);
+  const [requestedKey, setRequestedKey] = createSignal(entries()[0]?.key ?? "");
+  const selectedEntry = createMemo(() =>
+    resolveMatchParticipantSelection(entries(), requestedKey()),
+  );
 
   return {
     selectedEntry,
-    selectedKey: selectedEntry?.key ?? "",
+    selectedKey: () => selectedEntry()?.key ?? "",
     setSelectedKey: setRequestedKey,
   };
 }

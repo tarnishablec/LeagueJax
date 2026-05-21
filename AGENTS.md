@@ -102,7 +102,7 @@ cargo test
 
 ## Architecture
 
-This is a **Tauri v2** desktop app with a **React + TypeScript** frontend and a **Rust** backend.
+This is a **Tauri v2** desktop app with a **SolidJS + TypeScript** frontend and a **Rust** backend.
 
 ### How the two halves connect
 
@@ -115,8 +115,9 @@ This is a **Tauri v2** desktop app with a **React + TypeScript** frontend and a 
 
 | File                                  | Purpose                                                     |
 |---------------------------------------|-------------------------------------------------------------|
-| `src/App.tsx`                         | Root React component                                        |
-| `src/main.tsx`                        | React entry point                                           |
+| `src/App.tsx`                         | Root SolidJS component                                      |
+| `src/main.solid.tsx`                  | SolidJS main-window entry point                             |
+| `src/mini-main.solid.tsx`             | SolidJS mini-window entry point                             |
 | `src-tauri/src/lib.rs`                | All Tauri commands (Rust backend logic)                     |
 | `src-tauri/src/main.rs`               | Rust entry point, calls `lib::run()`                        |
 | `src-tauri/tauri.conf.json`           | App config: window size, bundle targets, dev/build commands |
@@ -204,7 +205,7 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 - **Styling engine:** [Vanilla Extract](https://vanilla-extract.style/) — all styles live in co-located `.css.ts`
   files (for example `Component.css.ts` next to `Component.tsx`).
 - **UI primitives/components:** Frontend interactive primitives and common controls must use **Ark UI** (
-  `@ark-ui/react`) or project-level wrappers built on Ark UI (for example `src/components/settings-ui`). Do not
+  `@ark-ui/solid`) or project-level wrappers built on Ark UI (for example `src/components/settings-ui`). Do not
   introduce custom native/select/dropdown implementations when an Ark UI equivalent exists.
 - **Static asset fetching:** All icons and static game assets (champion icons, profile icons, spells, runes, items,
   etc.) must be fetched/resolved in the frontend. Do not add Rust commands for static asset retrieval, and do not use

@@ -4,7 +4,7 @@ import {
   readTextFile,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
-import type { WebShard } from "@/runtime/web-contract";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { SHARD_IDS } from "../shard-ids";
 
 export interface StaticCacheRequest {
@@ -14,7 +14,7 @@ export interface StaticCacheRequest {
   forceRefresh?: boolean;
 }
 
-export class StaticCacheShard implements WebShard {
+export class StaticCacheShard implements SolidWebShard {
   private readonly inFlight = new Map<string, Promise<string>>();
   private readonly parsedJson = new Map<string, unknown>();
 

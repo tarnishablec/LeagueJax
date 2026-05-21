@@ -1,24 +1,20 @@
-import { Menu } from "@ark-ui/react/menu";
-import { Portal } from "@ark-ui/react/portal";
-import { X } from "lucide-react";
-import {
-  type MouseEvent,
-  type RefObject,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Menu } from "@ark-ui/solid/menu";
+import { keyArray } from "@solid-primitives/keyed";
+import { X } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { Portal } from "solid-js/web";
 import { ProfileIcon } from "@/components/ProfileIcon";
-import { useSummonerInfo } from "@/features/history/hooks/use-summoner";
-import { type HistoryTabIdentity, useTabStore } from "@/stores/tabs.ts";
+import { useSolidSummonerInfo } from "@/features/history/hooks/use-summoner";
+import { useSolidTranslation } from "@/i18n/solid";
+import { type HistoryTabIdentity, useSolidTabStore } from "@/stores/tabs.solid";
 import * as s from "./HistoryTabBar.css.ts";
 
-function TabIcon({ profileIconId }: { profileIconId: number }) {
+function TabIcon(props: { profileIconId: number }): JSX.Element {
   return (
     <ProfileIcon
-      profileIconId={profileIconId}
+      profileIconId={props.profileIconId}
       alt="Profile icon"
       className={s.tabIcon}
       fallbackClassName={s.tabIconFallback}
@@ -52,11 +48,13 @@ function getHorizontalWheelDelta(event: WheelEvent): number {
   return event.deltaX;
 }
 
-function useWheelToHorizontalScroll(
-  viewportRef: RefObject<HTMLDivElement | null>,
-) {
-  useEffect(() => {
-    const viewport = viewportRef.current;
+function useTabBarOverflow(params: {
+  viewport: () => HTMLDivElement | undefined;
+  activeTabId: () => string | null;
+  tabRefs: TabRefsMap;
+}) {
+  createEffect(() => {
+    const viewport = params.viewport();
     if (!viewport) {
       return;
     }
@@ -81,42 +79,23 @@ function useWheelToHorizontalScroll(
     };
 
     viewport.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
+    onCleanup(() => {
       viewport.removeEventListener("wheel", onWheel);
-    };
-  }, [viewportRef]);
-}
+    });
+  });
 
-function useAutoScrollToActiveTab(
-  activeTabId: string | null,
-  tabRefs: RefObject<TabRefsMap>,
-) {
-  useEffect(() => {
+  createEffect(() => {
+    const activeTabId = params.activeTabId();
     if (!activeTabId) {
       return;
     }
 
-    const target = tabRefs.current[activeTabId];
-    target?.scrollIntoView({
+    params.tabRefs[activeTabId]?.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
       inline: "nearest",
     });
-  }, [activeTabId, tabRefs]);
-}
-
-function useTabBarOverflow(
-  activeTabId: string | null,
-  tabRefs: RefObject<TabRefsMap>,
-) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-
-  useWheelToHorizontalScroll(viewportRef);
-  useAutoScrollToActiveTab(activeTabId, tabRefs);
-
-  return {
-    viewportRef,
-  };
+  });
 }
 
 interface HistoryTabItemProps {
@@ -125,45 +104,44 @@ interface HistoryTabItemProps {
   puuid: string;
   sgpServerId: string | null;
   identity?: HistoryTabIdentity;
-  onAuxClick: (e: MouseEvent, id: string) => void;
+  onAuxClick: (event: MouseEvent, id: string) => void;
   registerRef: (id: string, node: HTMLLIElement | null) => void;
 }
 
-function HistoryTabItem({
-  active,
-  tabId,
-  puuid,
-  sgpServerId,
-  identity,
-  onAuxClick,
-  registerRef,
-}: HistoryTabItemProps) {
-  const setActiveTab = useTabStore((state) => state.setActiveTab);
-  const closeTab = useTabStore((state) => state.closeTab);
-  const { data: summoner } = useSummonerInfo(puuid, sgpServerId, identity);
+function HistoryTabItem(props: HistoryTabItemProps): JSX.Element {
+  const setActiveTab = useSolidTabStore((state) => state.setActiveTab);
+  const closeTab = useSolidTabStore((state) => state.closeTab);
+  const summonerQuery = useSolidSummonerInfo(
+    () => props.puuid,
+    () => props.sgpServerId,
+    () => props.identity,
+  );
+  const summoner = summonerQuery.data;
 
   return (
     <li
-      ref={(node) => registerRef(tabId, node)}
-      data-history-tab-id={tabId}
-      className={s.tab({ active })}
+      ref={(node) => props.registerRef(props.tabId, node)}
+      data-history-tab-id={props.tabId}
+      class={s.tab({ active: props.active })}
     >
       <button
         type="button"
-        className={s.tabMain}
-        onClick={() => setActiveTab(tabId)}
-        onAuxClick={(e) => onAuxClick(e, tabId)}
+        class={s.tabMain}
+        onClick={() => setActiveTab(props.tabId)}
+        onAuxClick={(event) => props.onAuxClick(event, props.tabId)}
       >
-        <TabIcon profileIconId={summoner?.profileIconId ?? 0} />
-        <span className={s.tabLabel}>{formatTabLabel(summoner, puuid)}</span>
+        <TabIcon profileIconId={summoner()?.profileIconId ?? 0} />
+        <span class={s.tabLabel}>
+          {formatTabLabel(summoner(), props.puuid)}
+        </span>
       </button>
       <button
         type="button"
-        className={s.closeButton}
+        class={s.closeButton}
         aria-label="Close tab"
-        onClick={(e) => {
-          e.stopPropagation();
-          closeTab(tabId);
+        onClick={(event) => {
+          event.stopPropagation();
+          closeTab(props.tabId);
         }}
       >
         <X size={12} />
@@ -172,7 +150,7 @@ function HistoryTabItem({
   );
 }
 
-function getContextTabId(event: MouseEvent<HTMLUListElement>): string | null {
+function getContextTabId(event: MouseEvent): string | null {
   const target = event.target;
   if (!(target instanceof Element)) {
     return null;
@@ -184,103 +162,120 @@ function getContextTabId(event: MouseEvent<HTMLUListElement>): string | null {
   );
 }
 
-export function HistoryTabBar() {
-  const { t } = useTranslation();
-  const tabs = useTabStore((state) => state.tabs);
-  const activeTabId = useTabStore((state) => state.activeTabId);
-  const closeTab = useTabStore((state) => state.closeTab);
-  const closeTabsToRight = useTabStore((state) => state.closeTabsToRight);
-  const closeOtherTabs = useTabStore((state) => state.closeOtherTabs);
-  const closeAllTabs = useTabStore((state) => state.closeAllTabs);
-  const tabRefs = useRef<TabRefsMap>({});
-  const [contextTabId, setContextTabId] = useState<string | null>(null);
+export function HistoryTabBar(): JSX.Element {
+  const { t } = useSolidTranslation();
+  const tabs = useSolidTabStore((state) => state.tabs);
+  const activeTabId = useSolidTabStore((state) => state.activeTabId);
+  const closeTab = useSolidTabStore((state) => state.closeTab);
+  const closeTabsToRight = useSolidTabStore((state) => state.closeTabsToRight);
+  const closeOtherTabs = useSolidTabStore((state) => state.closeOtherTabs);
+  const closeAllTabs = useSolidTabStore((state) => state.closeAllTabs);
+  const [contextTabId, setContextTabId] = createSignal<string | null>(null);
+  const tabRefs: TabRefsMap = {};
+  let viewportRef: HTMLDivElement | undefined;
 
-  const sortedTabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
-  const { viewportRef } = useTabBarOverflow(activeTabId, tabRefs);
+  const sortedTabIds = createMemo(() => tabs().map((tab) => tab.id));
 
-  useEffect(() => {
-    const keep = new Set(sortedTabIds);
-    for (const id of Object.keys(tabRefs.current)) {
+  useTabBarOverflow({
+    viewport: () => viewportRef,
+    activeTabId,
+    tabRefs,
+  });
+
+  createEffect(() => {
+    const keep = new Set(sortedTabIds());
+    for (const id of Object.keys(tabRefs)) {
       if (!keep.has(id)) {
-        delete tabRefs.current[id];
+        delete tabRefs[id];
       }
     }
-  }, [sortedTabIds]);
+  });
 
-  const handleAuxClick = (e: MouseEvent, id: string) => {
-    if (e.button === 1) {
-      e.preventDefault();
+  const handleAuxClick = (event: MouseEvent, id: string) => {
+    if (event.button === 1) {
+      event.preventDefault();
       closeTab(id);
     }
   };
 
-  const handleTrackContextMenu = (event: MouseEvent<HTMLUListElement>) => {
-    setContextTabId(getContextTabId(event));
-  };
-
   const handleCloseTabsToRight = () => {
-    if (contextTabId) {
-      closeTabsToRight(contextTabId);
+    const target = contextTabId();
+    if (target) {
+      closeTabsToRight(target);
     }
   };
 
   const handleCloseOtherTabs = () => {
-    if (contextTabId) {
-      closeOtherTabs(contextTabId);
+    const target = contextTabId();
+    if (target) {
+      closeOtherTabs(target);
     }
   };
+  const tabItems = keyArray(
+    tabs,
+    (tab) => tab.id,
+    (tab) => (
+      <HistoryTabItem
+        active={tab().id === activeTabId()}
+        tabId={tab().id}
+        puuid={tab().puuid}
+        sgpServerId={tab().sgpServerId}
+        identity={tab().identity}
+        onAuxClick={handleAuxClick}
+        registerRef={(id, node) => {
+          tabRefs[id] = node;
+        }}
+      />
+    ),
+  );
 
   return (
     <Menu.Root positioning={{ placement: "bottom-start", strategy: "fixed" }}>
-      <div className={s.container}>
+      <div class={s.container}>
         <div
           data-scrollbar="hidden"
           data-tauri-drag-region
-          className={s.viewport}
+          class={s.viewport}
           ref={viewportRef}
         >
-          <Menu.ContextTrigger asChild>
-            <ul className={s.track} onContextMenu={handleTrackContextMenu}>
-              {tabs.map((tab) => (
-                <HistoryTabItem
-                  key={tab.id}
-                  active={tab.id === activeTabId}
-                  tabId={tab.id}
-                  puuid={tab.puuid}
-                  sgpServerId={tab.sgpServerId}
-                  identity={tab.identity}
-                  onAuxClick={handleAuxClick}
-                  registerRef={(id, node) => {
-                    tabRefs.current[id] = node;
-                  }}
-                />
-              ))}
-            </ul>
-          </Menu.ContextTrigger>
+          <Menu.ContextTrigger
+            asChild={(getTriggerProps) => (
+              <ul
+                {...getTriggerProps({
+                  class: s.track,
+                  onContextMenu: (event) => {
+                    setContextTabId(getContextTabId(event));
+                  },
+                })}
+              >
+                {tabItems()}
+              </ul>
+            )}
+          />
         </div>
       </div>
       <Portal>
-        <Menu.Positioner className={s.contextMenuPositioner}>
-          <Menu.Content className={s.contextMenuContent}>
+        <Menu.Positioner class={s.contextMenuPositioner}>
+          <Menu.Content class={s.contextMenuContent}>
             <Menu.Item
-              className={s.contextMenuItem}
+              class={s.contextMenuItem}
               value="close-right"
               onSelect={handleCloseTabsToRight}
-              disabled={!contextTabId}
+              disabled={!contextTabId()}
             >
               {t("history.closeTabsToRight")}
             </Menu.Item>
             <Menu.Item
-              className={s.contextMenuItem}
+              class={s.contextMenuItem}
               value="close-others"
               onSelect={handleCloseOtherTabs}
-              disabled={!contextTabId}
+              disabled={!contextTabId()}
             >
               {t("history.closeOtherTabs")}
             </Menu.Item>
-            <Menu.Separator className={s.contextMenuSeparator} />
+            <Menu.Separator class={s.contextMenuSeparator} />
             <Menu.Item
-              className={s.contextMenuItem}
+              class={s.contextMenuItem}
               value="close-all"
               onSelect={() => closeAllTabs()}
             >
