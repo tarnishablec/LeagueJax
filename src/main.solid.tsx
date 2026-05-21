@@ -1,17 +1,17 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { SettingsProvider } from "@/features/settings/context";
+/** @jsxImportSource solid-js */
+import { render } from "solid-js/web";
+import { SolidSettingsProvider } from "@/features/settings/solid-context.solid";
 import type { SettingsReader } from "@/features/settings/types";
 import "./styles/theme.css";
 import "./styles/global.css";
-import { initializeMiniWebShards } from "./features/mini-registry";
-import { getJaxRuntime } from "./features/registry";
+import App from "./App";
+import { initializeSolidMainWebShards } from "./features/main-registry";
 import { SHARD_IDS } from "./features/shard-ids";
+import { getSolidJaxRuntime } from "./features/solid-registry";
 import { toErrorMessage } from "./infra/errors";
 import { createLogger } from "./infra/logger";
-import MiniApp from "./MiniApp";
 
-const logger = createLogger("mini-bootstrap");
+const logger = createLogger("solid-bootstrap");
 
 function resolveUiPlatform(): string {
   const userAgent = navigator.userAgent;
@@ -39,30 +39,33 @@ document.documentElement.dataset.platform = resolveUiPlatform();
 
 async function bootstrap(): Promise<void> {
   const rootElement = document.getElementById("root") as HTMLElement;
-  const root = ReactDOM.createRoot(rootElement);
 
   try {
-    logger.info("Starting mini app bootstrap");
-    await initializeMiniWebShards();
-    const settings = getJaxRuntime().getShardById(
+    logger.info("Starting solid app bootstrap");
+    await initializeSolidMainWebShards();
+    const settings = getSolidJaxRuntime().getShardById(
       SHARD_IDS.SETTINGS,
     ) as unknown as SettingsReader;
 
-    root.render(
-      <React.StrictMode>
-        <SettingsProvider value={settings}>
-          <MiniApp />
-        </SettingsProvider>
-      </React.StrictMode>,
+    render(
+      () => (
+        <SolidSettingsProvider value={settings}>
+          <App />
+        </SolidSettingsProvider>
+      ),
+      rootElement,
     );
-    logger.info("Mini app bootstrap completed");
+    logger.info("Solid app bootstrap completed");
   } catch (error) {
-    logger.error({ error }, "Mini app bootstrap failed");
+    logger.error({ error }, "Solid app bootstrap failed");
     const message = toErrorMessage(error);
-    root.render(
-      <pre style={{ padding: 16, whiteSpace: "pre-wrap" }}>
-        {`Mini app bootstrap failed:\n${message}`}
-      </pre>,
+    render(
+      () => (
+        <pre style={{ padding: "16px", "white-space": "pre-wrap" }}>
+          {`Solid app bootstrap failed:\n${message}`}
+        </pre>
+      ),
+      rootElement,
     );
   }
 }

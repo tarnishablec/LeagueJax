@@ -1,23 +1,21 @@
+/** @jsxImportSource solid-js */
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect } from "react";
-import { SWRConfig } from "swr";
+import { onMount } from "solid-js";
 import { MiniRoute } from "@/features/mini/routes/MiniRoute";
 import { MiniWindowShell } from "@/layout/__mini-shell";
 
 function useNotifyMiniReady() {
-  useEffect(() => {
+  onMount(() => {
     void invoke("mini_window_ready");
-  }, []);
+  });
 }
 
 export default function MiniApp() {
   useNotifyMiniReady();
 
   return (
-    <SWRConfig value={{ revalidateOnFocus: false }}>
-      <MiniWindowShell>
-        <MiniRoute />
-      </MiniWindowShell>
-    </SWRConfig>
+    <MiniWindowShell>
+      <MiniRoute />
+    </MiniWindowShell>
   );
 }

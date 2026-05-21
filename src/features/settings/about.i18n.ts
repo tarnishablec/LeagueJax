@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const settingsAboutI18n: Resource = {
+export const settingsAboutI18n: LocaleResource = {
   en: {
     settings: {
       pages: {
@@ -28,15 +28,18 @@ export const settingsAboutI18n: Resource = {
             lucide: "Application icon set",
             maokai:
               "Runtime state machine and behavior-tree framework used to model app workflows and state transitions.",
-            react: "User interface runtime",
-            reactRouter: "App routing",
+            solid: "User interface runtime",
+            solidFlow: "Shard dependency graph visualization",
+            solidMotionOne: "Motion and transition primitives",
+            solidPrimitives: "Solid i18n primitives",
+            solidRouter: "App routing",
+            solidZustand: "Solid bindings for vanilla Zustand stores",
             rust: "Native backend language for performance-sensitive desktop integration and system access.",
             serde:
               "Rust serialization framework used for typed data exchange across backend APIs and persisted payloads.",
             sled: "Embedded ordered key-value database used on the Rust side for local persistence.",
             snafu:
               "Rust error handling library used to build structured, context-rich application errors.",
-            swr: "Remote data fetching and cache",
             tauri: "Desktop shell and native bridge",
             thaterror:
               "Schema-first, type-safe error toolkit used to keep frontend error modeling and diagnostics consistent.",
@@ -83,12 +86,15 @@ export const settingsAboutI18n: Resource = {
             lucide: "应用图标集",
             maokai:
               "负责运行时状态机与行为树能力，用来承载应用内部的工作流和状态切换模型。",
-            react: "界面渲染运行时",
-            reactRouter: "应用路由",
+            solid: "界面渲染运行时",
+            solidFlow: "shard 依赖图可视化",
+            solidMotionOne: "动效与过渡基础能力",
+            solidPrimitives: "Solid i18n 基础能力",
+            solidRouter: "应用路由",
+            solidZustand: "vanilla Zustand store 的 Solid 绑定",
             sled: "负责 Rust 侧本地持久化能力，是一个嵌入式有序键值数据库。",
             snafu:
               "负责 Rust 侧结构化错误处理，用来构建带上下文信息的应用错误类型。",
-            swr: "远程数据获取与缓存",
             tauri: "桌面外壳与原生桥接",
             thaterror:
               "提供 schema-first 的类型安全错误工具，用来统一前端错误建模、诊断与扩展方式。",
@@ -130,12 +136,15 @@ export const settingsAboutI18n: Resource = {
             lucide: "アプリケーションのアイコンセット",
             maokai:
               "実行時の状態機械とビヘイビアツリーを担い、アプリ内部のワークフローと状態遷移を表現します。",
-            react: "UI レンダリングランタイム",
-            reactRouter: "アプリケーションルーティング",
+            solid: "UI レンダリングランタイム",
+            solidFlow: "shard 依存グラフの可視化",
+            solidMotionOne: "モーションとトランジションのプリミティブ",
+            solidPrimitives: "Solid i18n プリミティブ",
+            solidRouter: "アプリケーションルーティング",
+            solidZustand: "vanilla Zustand store 向けの Solid バインディング",
             sled: "Rust 側のローカル永続化を支える、組み込み型の順序付きキー値データベースです。",
             snafu:
               "Rust 側の構造化エラー処理を担い、コンテキスト付きアプリケーションエラーを構築します。",
-            swr: "リモートデータ取得とキャッシュ",
             tauri: "デスクトップシェルとネイティブブリッジ",
             thaterror:
               "schema-first な型安全エラーツールキットで、フロントエンドのエラーモデリングと診断を統一します。",

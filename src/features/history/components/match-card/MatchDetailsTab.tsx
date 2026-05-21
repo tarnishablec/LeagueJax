@@ -1,8 +1,10 @@
-import { Portal } from "@ark-ui/react/portal";
-import { Tooltip } from "@ark-ui/react/tooltip";
+/** @jsxImportSource solid-js */
+import { Tooltip } from "@ark-ui/solid/tooltip";
+import { keyArray } from "@solid-primitives/keyed";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import { createContext, type ReactNode, useContext, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import type { Accessor, JSX } from "solid-js";
+import { createContext, createMemo, Show, useContext } from "solid-js";
+import { Portal } from "solid-js/web";
 import type {
   RawMatchDetailsGame,
   RawMatchSummaryGame,
@@ -12,16 +14,15 @@ import type {
 } from "@/bindings/matches.ts";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
-import {
-  ScoreboardIcon,
-  type ScoreboardIconType,
-} from "@/components/ScoreboardIcon.tsx";
+import { ScoreboardIcon } from "@/components/ScoreboardIcon";
+import type { ScoreboardIconType } from "@/components/ScoreboardIcon.types";
+import { useSolidTranslation } from "@/i18n/solid";
 import { resolveJungleEggItemIdFromDetails } from "../../hooks/match-details-timeline.ts";
-import { normalizeHistoryPosition } from "../../hooks/use-match-card-view-model.ts";
 import {
   type RoleQuestSlot,
-  useRoleQuestSlot,
-} from "../../hooks/use-role-quest-slot.ts";
+  useSolidRoleQuestSlot,
+} from "../../hooks/use-role-quest-slot";
+import { normalizeHistoryPosition } from "../../utils/history-position";
 import {
   type MatchParticipantGroup,
   resolveMatchParticipantGroups,
@@ -41,6 +42,11 @@ import { MatchCardRunes } from "./MatchCardRunes";
 import { MatchCardSpells } from "./MatchCardSpells";
 import * as s from "./MatchDetailsTab.css";
 import { formatDamage } from "./match-card-display";
+import { matchParticipantKey } from "./match-participant-display";
+
+type TooltipTriggerProps = Parameters<
+  NonNullable<Parameters<typeof Tooltip.Trigger>[0]["asChild"]>
+>[0];
 
 type TeamTotals = {
   kills: number;
@@ -75,9 +81,8 @@ const AUGMENT_GAME_MODES = new Set(["CHERRY", "KIWI"]);
 const CDRAGON_LATEST_BASE = "https://raw.communitydragon.org/latest";
 const CDRAGON_GAME_CHARACTERS_BASE = `${CDRAGON_LATEST_BASE}/game/assets/characters`;
 const CDRAGON_POSTGAME_BASE = `${CDRAGON_LATEST_BASE}/plugins/rcp-fe-lol-postgame/global/default`;
-const MatchDetailsTabModelContext = createContext<MatchDetailsTabModel | null>(
-  null,
-);
+const MatchDetailsTabModelContext =
+  createContext<Accessor<MatchDetailsTabModel> | null>(null);
 
 const OBJECTIVES = [
   {
@@ -124,18 +129,6 @@ const ARAM_OBJECTIVE_KEYS = new Set<keyof RawMatchSummaryObjectives>([
 
 function safeNumber(value: number | null | undefined): number {
   return Math.max(0, value ?? 0);
-}
-
-function participantRowKey(
-  participant: RawMatchSummaryParticipant,
-  groupKey: string,
-  index: number,
-): string {
-  if (participant.participantId !== null) {
-    return `${groupKey}-pid-${participant.participantId}`;
-  }
-
-  return `${groupKey}-puuid-${participant.puuid ?? "unknown"}-champ-${participant.championId}-idx-${index}`;
 }
 
 function participantPosition(
@@ -269,32 +262,29 @@ function matchSupportsRoleQuest(summary: RawMatchSummaryGame): boolean {
 }
 
 function useMatchDetailsTabModel(
-  summary: RawMatchSummaryGame,
-): MatchDetailsTabModel {
-  return useMemo(
-    () => ({
-      showAugments: matchHasAugments(summary),
-      showPositionColumn: matchSupportsPosition(summary),
-      showQuestColumn: matchSupportsRoleQuest(summary),
-      visibleObjectives: resolveVisibleObjectives(summary),
-      maxDealtDamage: Math.max(
-        1,
-        ...summary.json.participants.map((participant) =>
-          safeNumber(participant.totalDamageDealtToChampions),
-        ),
+  summary: Accessor<RawMatchSummaryGame>,
+): Accessor<MatchDetailsTabModel> {
+  return createMemo(() => ({
+    showAugments: matchHasAugments(summary()),
+    showPositionColumn: matchSupportsPosition(summary()),
+    showQuestColumn: matchSupportsRoleQuest(summary()),
+    visibleObjectives: resolveVisibleObjectives(summary()),
+    maxDealtDamage: Math.max(
+      1,
+      ...summary().json.participants.map((participant) =>
+        safeNumber(participant.totalDamageDealtToChampions),
       ),
-      maxTakenDamage: Math.max(
-        1,
-        ...summary.json.participants.map((participant) =>
-          safeNumber(participant.totalDamageTaken),
-        ),
+    ),
+    maxTakenDamage: Math.max(
+      1,
+      ...summary().json.participants.map((participant) =>
+        safeNumber(participant.totalDamageTaken),
       ),
-    }),
-    [summary],
-  );
+    ),
+  }));
 }
 
-function useMatchDetailsTabModelContext(): MatchDetailsTabModel {
+function useMatchDetailsTabModelContext(): Accessor<MatchDetailsTabModel> {
   const model = useContext(MatchDetailsTabModelContext);
   if (!model) {
     throw new Error("MatchDetailsTabModelContext is unavailable");
@@ -458,20 +448,19 @@ function objectiveIconSources(
   }
 }
 
-function MatchDetailsTooltip({
-  content,
-  children,
-}: {
+function MatchDetailsTooltip(props: {
   content: string;
-  children: ReactNode;
-}) {
+  children: (triggerProps: TooltipTriggerProps) => JSX.Element;
+}): JSX.Element {
   return (
     <Tooltip.Root openDelay={180} closeDelay={0}>
-      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
+      <Tooltip.Trigger
+        asChild={(triggerProps) => props.children(triggerProps)}
+      />
       <Portal>
-        <Tooltip.Positioner className={s.tooltipPositioner}>
-          <Tooltip.Content className={s.tooltipContent}>
-            {content}
+        <Tooltip.Positioner class={s.tooltipPositioner}>
+          <Tooltip.Content class={s.tooltipContent}>
+            {props.content}
           </Tooltip.Content>
         </Tooltip.Positioner>
       </Portal>
@@ -479,500 +468,491 @@ function MatchDetailsTooltip({
   );
 }
 
-function DamageBreakdownMeter({
-  label,
-  breakdown,
-  maxDamage,
-}: {
+function DamageBreakdownMeter(props: {
   label: string;
   breakdown: DamageBreakdown;
   maxDamage: number;
-}) {
-  const splitTotal = Math.max(
-    0,
-    breakdown.physical + breakdown.magic + breakdown.trueDamage,
+}): JSX.Element {
+  const splitTotal = createMemo(() =>
+    Math.max(
+      0,
+      props.breakdown.physical +
+        props.breakdown.magic +
+        props.breakdown.trueDamage,
+    ),
   );
-  const trueDamage =
-    splitTotal === 0 && breakdown.total > 0
-      ? breakdown.total
-      : breakdown.trueDamage + Math.max(0, breakdown.total - splitTotal);
-  const normalizedSplitTotal = Math.max(
-    0,
-    breakdown.physical + breakdown.magic + trueDamage,
+  const trueDamage = createMemo(() =>
+    splitTotal() === 0 && props.breakdown.total > 0
+      ? props.breakdown.total
+      : props.breakdown.trueDamage +
+        Math.max(0, props.breakdown.total - splitTotal()),
+  );
+  const normalizedSplitTotal = createMemo(() =>
+    Math.max(
+      0,
+      props.breakdown.physical + props.breakdown.magic + trueDamage(),
+    ),
   );
 
   return (
-    <div className={s.damageCell}>
-      <span className={s.damageNumberRow}>
-        <span className={s.damageLabel}>{label}</span>
-        <span className={s.damageNumber}>{formatDamage(breakdown.total)}</span>
+    <div class={s.damageCell}>
+      <span class={s.damageNumberRow}>
+        <span class={s.damageLabel}>{props.label}</span>
+        <span class={s.damageNumber}>
+          {formatDamage(props.breakdown.total)}
+        </span>
       </span>
-      <div className={s.damageMeterTrack}>
+      <div class={s.damageMeterTrack}>
         <div
-          className={s.damageMeterFill}
+          class={s.damageMeterFill}
           style={assignInlineVars({
-            [s.meterFillWidthVar]: fillPercent(breakdown.total, maxDamage),
+            [s.meterFillWidthVar]: fillPercent(
+              props.breakdown.total,
+              props.maxDamage,
+            ),
             [s.physicalSegmentWidthVar]: segmentPercent(
-              breakdown.physical,
-              normalizedSplitTotal,
+              props.breakdown.physical,
+              normalizedSplitTotal(),
             ),
             [s.magicSegmentWidthVar]: segmentPercent(
-              breakdown.magic,
-              normalizedSplitTotal,
+              props.breakdown.magic,
+              normalizedSplitTotal(),
             ),
             [s.trueSegmentWidthVar]: segmentPercent(
-              trueDamage,
-              normalizedSplitTotal,
+              trueDamage(),
+              normalizedSplitTotal(),
             ),
           })}
         >
-          <span className={s.damageSegment.physical} />
-          <span className={s.damageSegment.magic} />
-          <span className={s.damageSegment.trueDamage} />
+          <span class={s.damageSegment.physical} />
+          <span class={s.damageSegment.magic} />
+          <span class={s.damageSegment.trueDamage} />
         </div>
       </div>
     </div>
   );
 }
 
-function ObjectiveStat({
-  objective,
-  team,
-  side,
-}: {
+function ObjectiveStat(props: {
   objective: ObjectiveConfig;
   team: RawMatchSummaryTeam | undefined;
   side: TeamSide;
-}) {
-  const { t } = useTranslation();
-  const count = objectiveKills(team, objective.key);
-  const label = t(objective.labelKey, {
-    defaultValue: objective.defaultLabel,
-  });
-  const icon = objectiveIconSources(objective.key, side);
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const count = createMemo(() =>
+    objectiveKills(props.team, props.objective.key),
+  );
+  const label = createMemo(() =>
+    t(props.objective.labelKey, {
+      defaultValue: props.objective.defaultLabel,
+    }),
+  );
+  const icon = createMemo(() =>
+    objectiveIconSources(props.objective.key, props.side),
+  );
 
   return (
-    <MatchDetailsTooltip content={label}>
-      <span className={s.objectiveStat}>
-        <MatchCardAssetIcon
-          src={icon.src}
-          fallbacks={icon.fallbacks}
-          alt={label}
-          className={s.objectiveIcon}
-          fallbackClassName={s.objectiveIconFallback}
-        />
-        <span>{count}</span>
-      </span>
+    <MatchDetailsTooltip content={label()}>
+      {(triggerProps) => (
+        <span
+          {...triggerProps({
+            class: s.objectiveStat,
+          })}
+        >
+          <MatchCardAssetIcon
+            src={icon().src}
+            fallbacks={icon().fallbacks}
+            alt={label()}
+            className={s.objectiveIcon}
+            fallbackClassName={s.objectiveIconFallback}
+          />
+          <span>{count()}</span>
+        </span>
+      )}
     </MatchDetailsTooltip>
   );
 }
 
-function TeamBans({ team }: { team: RawMatchSummaryTeam | undefined }) {
-  const { t } = useTranslation();
-  const bans = resolveMatchTeamBanSlots(team);
-  if (bans.length === 0) {
-    return <div></div>;
-  }
-
-  const label = t("history.matchDetails.bans.label", {
-    defaultValue: "Bans:",
-  });
-  const emptyBanLabel = t("history.matchDetails.bans.empty", {
-    defaultValue: "Empty ban",
-  });
-
-  return (
-    <div className={s.teamBans}>
-      <span className={s.teamBansLabel}>{label}</span>
-      <div className={s.teamBanList}>
-        {bans.map((ban) => (
-          <ChampionAvatar
-            key={ban.key}
-            championId={ban.championId}
-            imageClassName={s.teamBanIcon}
-            fallbackClassName={s.teamBanIconFallback}
-            alt={ban.championId === EMPTY_BAN_CHAMPION_ID ? emptyBanLabel : ""}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function QuestSlot({ slot }: { slot: RoleQuestSlot | null }) {
-  if (slot === null) {
-    return <span className={s.emptyQuestSlot} aria-hidden="true" />;
-  }
-
-  if (slot.kind === "quest") {
-    return (
-      <MatchCardAssetIcon
-        src={slot.iconUrl}
-        alt=""
-        className={matchCardStyles.itemIcon}
-        fallbackClassName={matchCardStyles.itemIconFallback}
+function TeamBans(props: {
+  team: RawMatchSummaryTeam | undefined;
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const bans = createMemo(() => resolveMatchTeamBanSlots(props.team));
+  const label = () =>
+    t("history.matchDetails.bans.label", {
+      defaultValue: "Bans:",
+    });
+  const emptyBanLabel = () =>
+    t("history.matchDetails.bans.empty", {
+      defaultValue: "Empty ban",
+    });
+  const banIcons = keyArray(
+    bans,
+    (ban) => ban.key,
+    (ban) => (
+      <ChampionAvatar
+        championId={ban().championId}
+        imageClassName={s.teamBanIcon}
+        fallbackClassName={s.teamBanIconFallback}
+        alt={ban().championId === EMPTY_BAN_CHAMPION_ID ? emptyBanLabel() : ""}
       />
-    );
-  }
+    ),
+  );
 
   return (
-    <MatchCardAssetIcon
-      src={slot.iconUrl}
-      alt={`Item ${slot.itemId}`}
-      className={matchCardStyles.itemIcon}
-      fallbackClassName={matchCardStyles.itemIconFallback}
-    />
+    <Show when={bans().length > 0} fallback={<div />}>
+      <div class={s.teamBans}>
+        <span class={s.teamBansLabel}>{label()}</span>
+        <div class={s.teamBanList}>{banIcons()}</div>
+      </div>
+    </Show>
   );
 }
 
-function ScoreCell({
-  type,
-  value,
-  muted = false,
-}: {
+function QuestSlot(props: { slot: RoleQuestSlot | null }): JSX.Element {
+  return (
+    <Show
+      when={props.slot}
+      fallback={<span class={s.emptyQuestSlot} aria-hidden="true" />}
+    >
+      {(slot) => {
+        const value = slot();
+        return value.kind === "quest" ? (
+          <MatchCardAssetIcon
+            src={value.iconUrl}
+            alt=""
+            className={matchCardStyles.itemIcon}
+            fallbackClassName={matchCardStyles.itemIconFallback}
+          />
+        ) : (
+          <MatchCardAssetIcon
+            src={value.iconUrl}
+            alt={`Item ${value.itemId}`}
+            className={matchCardStyles.itemIcon}
+            fallbackClassName={matchCardStyles.itemIconFallback}
+          />
+        );
+      }}
+    </Show>
+  );
+}
+
+function ScoreCell(props: {
   type: ScoreboardIconType;
   value: string;
   muted?: boolean;
-}) {
+}): JSX.Element {
   return (
-    <span className={s.scoreCell({ tone: muted ? "muted" : "default" })}>
+    <span class={s.scoreCell({ tone: props.muted ? "muted" : "default" })}>
       <ScoreboardIcon
-        type={type}
+        type={props.type}
         className={s.scoreCellIcon}
         fallbackClassName={s.scoreCellIconFallback}
       />
-      <span>{value}</span>
+      <span>{props.value}</span>
     </span>
   );
 }
 
-function ParticipantRow({
-  summary,
-  detail,
-  participant,
-  sgpServerId,
-}: {
+function ParticipantRow(props: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   participant: RawMatchSummaryParticipant;
   sgpServerId: string | null;
-}) {
-  const { t } = useTranslation();
-  const {
-    showAugments,
-    showPositionColumn,
-    showQuestColumn,
-    maxDealtDamage,
-    maxTakenDamage,
-  } = useMatchDetailsTabModelContext();
-  const resolvedJungleEggItemId = useMemo(
-    () => resolveJungleEggItemIdFromDetails(detail, participant.participantId),
-    [detail, participant.participantId],
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const model = useMatchDetailsTabModelContext();
+  const resolvedJungleEggItemId = createMemo(() =>
+    resolveJungleEggItemIdFromDetails(
+      props.detail,
+      props.participant.participantId,
+    ),
   );
-  const roleQuest = useRoleQuestSlot({
-    participant,
-    match: summary,
+  const roleQuest = useSolidRoleQuestSlot({
+    participant: props.participant,
+    match: props.summary,
     resolvedJungleEggItemId,
   });
-  const position = showPositionColumn
-    ? (roleQuest.inferredPosition ?? participantPosition(participant))
-    : null;
-  const itemIds = getParticipantItems(participant);
-  const augmentIds = getParticipantAugments(participant);
-  const { primaryRuneId, subStyleId } = getPerkIds(participant);
-  const championName = participant.championName ?? `#${participant.championId}`;
-  const record = `${safeNumber(participant.kills)}/${safeNumber(participant.deaths)}/${safeNumber(participant.assists)}`;
-  const perfectLabel = t("history.matchDetails.perfectKda", {
-    defaultValue: "Perfect",
-  });
-  const damageDealtLabel = t("history.matchDetails.columns.damageDealt", {
-    defaultValue: "Dealt",
-  });
-  const damageTakenLabel = t("history.matchDetails.columns.damageTaken", {
-    defaultValue: "Taken",
-  });
+  const position = createMemo(() =>
+    model().showPositionColumn
+      ? (roleQuest().inferredPosition ?? participantPosition(props.participant))
+      : null,
+  );
+  const itemIds = createMemo(() => getParticipantItems(props.participant));
+  const augmentIds = createMemo(() =>
+    getParticipantAugments(props.participant),
+  );
+  const perkIds = createMemo(() => getPerkIds(props.participant));
+  const championName = createMemo(
+    () => props.participant.championName ?? `#${props.participant.championId}`,
+  );
+  const record = createMemo(
+    () =>
+      `${safeNumber(props.participant.kills)}/${safeNumber(props.participant.deaths)}/${safeNumber(props.participant.assists)}`,
+  );
+  const perfectLabel = () =>
+    t("history.matchDetails.perfectKda", {
+      defaultValue: "Perfect",
+    });
+  const damageDealtLabel = () =>
+    t("history.matchDetails.columns.damageDealt", {
+      defaultValue: "Dealt",
+    });
+  const damageTakenLabel = () =>
+    t("history.matchDetails.columns.damageTaken", {
+      defaultValue: "Taken",
+    });
 
   return (
     <div
-      className={s.participantRow({
-        positionColumn: showPositionColumn ? "shown" : "hidden",
-        questColumn: showQuestColumn ? "shown" : "hidden",
+      class={s.participantRow({
+        positionColumn: model().showPositionColumn ? "shown" : "hidden",
+        questColumn: model().showQuestColumn ? "shown" : "hidden",
       })}
     >
-      {showPositionColumn ? (
-        <div className={s.positionCell}>
-          <LeaguePositionIcon position={position} width={18} height={18} />
+      <Show when={model().showPositionColumn}>
+        <div class={s.positionCell}>
+          <LeaguePositionIcon position={position()} width={18} height={18} />
         </div>
-      ) : null}
-      <div className={s.summonerCell}>
+      </Show>
+      <div class={s.summonerCell}>
         <ChampionAvatar
-          championId={participant.championId}
+          championId={props.participant.championId}
           imageClassName={s.championIcon}
           fallbackClassName={s.championIconFallback}
-          level={participant.champLevel}
+          level={props.participant.champLevel}
         />
-        <span className={s.summonerText}>
+        <span class={s.summonerText}>
           <MatchCardPlayerNameButton
-            participant={participant}
-            sgpServerId={sgpServerId}
+            participant={props.participant}
+            sgpServerId={props.sgpServerId}
             className={s.summonerName}
             botClassName={s.summonerBotName}
           />
-          <MatchDetailsTooltip content={championName}>
-            <span className={s.championName}>{championName}</span>
+          <MatchDetailsTooltip content={championName()}>
+            {(triggerProps) => (
+              <span
+                {...triggerProps({
+                  class: s.championName,
+                })}
+              >
+                {championName()}
+              </span>
+            )}
           </MatchDetailsTooltip>
         </span>
       </div>
-      <div className={s.loadoutCell}>
+      <div class={s.loadoutCell}>
         <MatchCardSpells
-          spell1Id={participant.spell1Id ?? 0}
-          spell2Id={participant.spell2Id ?? 0}
+          spell1Id={props.participant.spell1Id ?? 0}
+          spell2Id={props.participant.spell2Id ?? 0}
         />
       </div>
-      <div className={s.loadoutCell}>
-        {showAugments ? (
-          <MatchCardAugments augmentIds={augmentIds} />
-        ) : (
-          <MatchCardRunes
-            perkPrimaryRuneId={primaryRuneId}
-            perkSubStyleId={subStyleId}
-          />
-        )}
+      <div class={s.loadoutCell}>
+        <Show
+          when={model().showAugments}
+          fallback={
+            <MatchCardRunes
+              perkPrimaryRuneId={perkIds().primaryRuneId}
+              perkSubStyleId={perkIds().subStyleId}
+            />
+          }
+        >
+          <MatchCardAugments augmentIds={augmentIds()} />
+        </Show>
       </div>
-      <div className={s.loadoutCell}>
-        <MatchCardItems gameId={summary.json.gameId} items={itemIds} />
+      <div class={s.loadoutCell}>
+        <MatchCardItems gameId={props.summary.json.gameId} items={itemIds()} />
       </div>
-      {showQuestColumn ? (
-        <div className={s.centeredCell}>
-          <QuestSlot slot={roleQuest.slot} />
+      <Show when={model().showQuestColumn}>
+        <div class={s.centeredCell}>
+          <QuestSlot slot={roleQuest().slot} />
         </div>
-      ) : null}
+      </Show>
       <DamageBreakdownMeter
-        label={damageDealtLabel}
-        breakdown={damageDealtBreakdown(participant)}
-        maxDamage={maxDealtDamage}
+        label={damageDealtLabel()}
+        breakdown={damageDealtBreakdown(props.participant)}
+        maxDamage={model().maxDealtDamage}
       />
       <DamageBreakdownMeter
-        label={damageTakenLabel}
-        breakdown={damageTakenBreakdown(participant)}
-        maxDamage={maxTakenDamage}
+        label={damageTakenLabel()}
+        breakdown={damageTakenBreakdown(props.participant)}
+        maxDamage={model().maxTakenDamage}
       />
       <ScoreCell
         type="gold"
-        value={formatDamage(safeNumber(participant.goldEarned))}
+        value={formatDamage(safeNumber(props.participant.goldEarned))}
       />
-      <ScoreCell type="record" value={record} />
+      <ScoreCell type="record" value={record()} />
       <ScoreCell
         type="kda"
-        value={formatKda(participant, perfectLabel)}
+        value={formatKda(props.participant, perfectLabel())}
         muted
       />
-      <ScoreCell type="cs" value={formatDamage(participantCs(participant))} />
+      <ScoreCell
+        type="cs"
+        value={formatDamage(participantCs(props.participant))}
+      />
     </div>
   );
 }
 
-function TeamBlock({
-  summary,
-  detail,
-  group,
-  sgpServerId,
-}: {
+function TeamBlock(props: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   group: MatchParticipantGroup;
   sgpServerId: string | null;
-}) {
-  const { t } = useTranslation();
-  const { showPositionColumn, showQuestColumn, visibleObjectives } =
-    useMatchDetailsTabModelContext();
-  const { participants } = group;
-  if (participants.length === 0) {
-    return null;
-  }
-
-  const objectiveSide: TeamSide = group.tone === "red" ? "red" : "blue";
-  const team = resolveMatchTeamForGroup(summary.json.teams, group);
-  const totals = computeTeamTotals(participants);
-  const teamLabel =
-    group.tone === "blue"
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const model = useMatchDetailsTabModelContext();
+  const participants = createMemo(() => props.group.participants);
+  const objectiveSide = createMemo<TeamSide>(() =>
+    props.group.tone === "red" ? "red" : "blue",
+  );
+  const team = createMemo(() =>
+    resolveMatchTeamForGroup(props.summary.json.teams, props.group),
+  );
+  const totals = createMemo(() => computeTeamTotals(participants()));
+  const teamLabel = createMemo(() =>
+    props.group.tone === "blue"
       ? t("history.blueTeam")
-      : group.tone === "red"
+      : props.group.tone === "red"
         ? t("history.redTeam")
         : t("history.matchDetails.team", {
-            number: group.labelNumber,
-            defaultValue: `Team ${group.labelNumber}`,
-          });
-  const placementLabel =
-    group.placement !== null
+            number: props.group.labelNumber,
+            defaultValue: `Team ${props.group.labelNumber}`,
+          }),
+  );
+  const placementLabel = createMemo(() =>
+    props.group.placement !== null
       ? t("history.matchDetails.placement", {
-          placement: group.placement,
-          defaultValue: `#${group.placement}`,
+          placement: props.group.placement,
+          defaultValue: `#${props.group.placement}`,
         })
-      : null;
-  const teamName = group.nameKey
-    ? t(group.nameKey, {
-        defaultValue: teamLabel,
-      })
-    : null;
-  // const headerLabels = {
-  //   position: t("history.matchDetails.columns.position", {
-  //     defaultValue: "Position",
-  //   }),
-  //   summoner: t("history.matchDetails.columns.summoner", {
-  //     defaultValue: "Summoner",
-  //   }),
-  //   spells: t("history.matchDetails.columns.spells", {
-  //     defaultValue: "Spells",
-  //   }),
-  //   runes: t("history.matchDetails.columns.runes", {
-  //     defaultValue: "Runes",
-  //   }),
-  //   items: t("history.matchDetails.columns.items", {
-  //     defaultValue: "Items",
-  //   }),
-  //   quest: t("history.matchDetails.columns.quest", {
-  //     defaultValue: "Quest",
-  //   }),
-  //   dealt: t("history.matchDetails.columns.damageDealt", {
-  //     defaultValue: "Dealt",
-  //   }),
-  //   taken: t("history.matchDetails.columns.damageTaken", {
-  //     defaultValue: "Taken",
-  //   }),
-  //   gold: t("history.matchDetails.columns.gold", {
-  //     defaultValue: "Gold",
-  //   }),
-  //   record: t("history.matchDetails.columns.record", {
-  //     defaultValue: "K/D/A",
-  //   }),
-  //   kda: t("history.matchDetails.columns.kda", {
-  //     defaultValue: "KDA",
-  //   }),
-  //   cs: t("history.matchDetails.columns.cs", {
-  //     defaultValue: "CS",
-  //   }),
-  // };
+      : null,
+  );
+  const teamName = createMemo(() =>
+    props.group.nameKey
+      ? t(props.group.nameKey, {
+          defaultValue: teamLabel(),
+        })
+      : null,
+  );
+  const objectiveStats = keyArray(
+    () => model().visibleObjectives,
+    (objective) => objective.key,
+    (objective) => (
+      <ObjectiveStat
+        objective={objective()}
+        team={team()}
+        side={objectiveSide()}
+      />
+    ),
+  );
+  const participantRows = keyArray(
+    participants,
+    matchParticipantKey,
+    (participant) => (
+      <ParticipantRow
+        summary={props.summary}
+        detail={props.detail}
+        participant={participant()}
+        sgpServerId={props.sgpServerId}
+      />
+    ),
+  );
 
   return (
-    <section
-      className={s.teamBlock({ team: group.tone })}
-      style={assignInlineVars({
-        [s.teamAccentColorVar]: group.accentColor,
-      })}
-    >
-      <header className={s.teamHeader}>
-        <div className={s.teamTitleGroup}>
-          <span className={s.teamTitle({ team: group.tone })}>
-            {placementLabel ? (
-              <>
-                <span className={s.teamPlacement}>{placementLabel}</span>
-                {teamName ? (
-                  <span className={s.teamName}>{teamName}</span>
-                ) : null}
-              </>
-            ) : (
-              teamLabel
-            )}
-          </span>
-          <span className={s.teamHeaderMetric}>
-            <ScoreboardIcon
-              type="record"
-              className={s.scoreboardIcon}
-              fallbackClassName={s.scoreboardIconFallback}
-            />
-            {totals.kills}/{totals.deaths}/{totals.assists}
-          </span>
-          <span className={s.teamHeaderMetric}>
-            <ScoreboardIcon
-              type="gold"
-              className={s.scoreboardIcon}
-              fallbackClassName={s.scoreboardIconFallback}
-            />
-            {formatDamage(totals.gold)}
-          </span>
-        </div>
-        <TeamBans team={team} />
-        {group.showObjectives && visibleObjectives.length > 0 ? (
-          <div className={s.objectiveScroller}>
-            <div className={s.objectiveList}>
-              {visibleObjectives.map((objective) => (
-                <ObjectiveStat
-                  key={`${group.key}-${objective.key}`}
-                  objective={objective}
-                  team={team}
-                  side={objectiveSide}
-                />
-              ))}
-            </div>
+    <Show when={participants().length > 0}>
+      <section
+        class={s.teamBlock({ team: props.group.tone })}
+        style={assignInlineVars({
+          [s.teamAccentColorVar]: props.group.accentColor,
+        })}
+      >
+        <header class={s.teamHeader}>
+          <div class={s.teamTitleGroup}>
+            <span class={s.teamTitle({ team: props.group.tone })}>
+              <Show when={placementLabel()} fallback={teamLabel()}>
+                {(placement) => (
+                  <>
+                    <span class={s.teamPlacement}>{placement()}</span>
+                    <Show when={teamName()}>
+                      {(name) => <span class={s.teamName}>{name()}</span>}
+                    </Show>
+                  </>
+                )}
+              </Show>
+            </span>
+            <span class={s.teamHeaderMetric}>
+              <ScoreboardIcon
+                type="record"
+                className={s.scoreboardIcon}
+                fallbackClassName={s.scoreboardIconFallback}
+              />
+              {totals().kills}/{totals().deaths}/{totals().assists}
+            </span>
+            <span class={s.teamHeaderMetric}>
+              <ScoreboardIcon
+                type="gold"
+                className={s.scoreboardIcon}
+                fallbackClassName={s.scoreboardIconFallback}
+              />
+              {formatDamage(totals().gold)}
+            </span>
           </div>
-        ) : null}
-      </header>
+          <TeamBans team={team()} />
+          <Show
+            when={
+              props.group.showObjectives && model().visibleObjectives.length > 0
+            }
+          >
+            <div class={s.objectiveScroller}>
+              <div class={s.objectiveList}>{objectiveStats()}</div>
+            </div>
+          </Show>
+        </header>
 
-      <div className={s.tableScroller}>
-        <div
-          className={s.table({
-            positionColumn: showPositionColumn ? "shown" : "hidden",
-            questColumn: showQuestColumn ? "shown" : "hidden",
-          })}
-        >
-          {/*<div className={s.tableHeader}>*/}
-          {/*  <span>{headerLabels.position}</span>*/}
-          {/*  <span>{headerLabels.summoner}</span>*/}
-          {/*  <span>{headerLabels.spells}</span>*/}
-          {/*  <span>{headerLabels.runes}</span>*/}
-          {/*  <span>{headerLabels.items}</span>*/}
-          {/*  <span>{headerLabels.quest}</span>*/}
-          {/*  <span>{headerLabels.dealt}</span>*/}
-          {/*  <span>{headerLabels.taken}</span>*/}
-          {/*  <span>{headerLabels.gold}</span>*/}
-          {/*  <span>{headerLabels.record}</span>*/}
-          {/*  <span>{headerLabels.kda}</span>*/}
-          {/*  <span>{headerLabels.cs}</span>*/}
-          {/*</div>*/}
-          {participants.map((participant, index) => (
-            <ParticipantRow
-              key={participantRowKey(participant, group.key, index)}
-              summary={summary}
-              detail={detail}
-              participant={participant}
-              sgpServerId={sgpServerId}
-            />
-          ))}
+        <div class={s.tableScroller}>
+          <div
+            class={s.table({
+              positionColumn: model().showPositionColumn ? "shown" : "hidden",
+              questColumn: model().showQuestColumn ? "shown" : "hidden",
+            })}
+          >
+            {participantRows()}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </Show>
   );
 }
 
-export function MatchDetailsTab({
-  summary,
-  detail,
-  sgpServerId,
-}: {
+export function MatchDetailsTab(props: {
   summary: RawMatchSummaryGame;
   detail: RawMatchDetailsGame | undefined;
   sgpServerId?: string | null;
-}) {
-  const model = useMatchDetailsTabModel(summary);
-  const teamGroups = useMemo(
-    () => resolveMatchParticipantGroups(summary),
-    [summary],
+}): JSX.Element {
+  const model = useMatchDetailsTabModel(() => props.summary);
+  const teamGroups = createMemo(() =>
+    resolveMatchParticipantGroups(props.summary),
+  );
+  const teamBlocks = keyArray(
+    teamGroups,
+    (group) => group.key,
+    (group) => (
+      <TeamBlock
+        summary={props.summary}
+        detail={props.detail}
+        group={group()}
+        sgpServerId={props.sgpServerId ?? null}
+      />
+    ),
   );
 
   return (
     <MatchDetailsTabModelContext.Provider value={model}>
-      <div className={s.root}>
-        {teamGroups.map((group) => (
-          <TeamBlock
-            key={group.key}
-            summary={summary}
-            detail={detail}
-            group={group}
-            sgpServerId={sgpServerId ?? null}
-          />
-        ))}
-      </div>
+      <div class={s.root}>{teamBlocks()}</div>
     </MatchDetailsTabModelContext.Provider>
   );
 }

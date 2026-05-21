@@ -1,20 +1,16 @@
-import { Film } from "lucide-react";
-import { lazy, Suspense } from "react";
+import { Film } from "lucide-solid";
+import { lazy } from "solid-js";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { StaticCacheShard } from "../static-cache/manifest";
 import { replayI18n } from "./i18n";
 
-const ReplayRoute = lazy(() =>
-  import("./routes/ReplayRoute").then((module) => ({
-    default: module.ReplayRoute,
-  })),
-);
+const ReplayRoute = lazy(() => import("./routes/ReplayRoute"));
 
-export class ReplayShard implements WebShard {
+export class SolidReplayShard implements SolidWebShard {
   public label() {
-    return "ReplayShard";
+    return "SolidReplayShard";
   }
 
   public id() {
@@ -33,11 +29,7 @@ export class ReplayShard implements WebShard {
     return [
       {
         path: "replay",
-        element: (
-          <Suspense fallback={null}>
-            <ReplayRoute />
-          </Suspense>
-        ),
+        component: ReplayRoute,
         order: 30,
       },
     ];

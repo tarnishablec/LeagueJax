@@ -1,6 +1,6 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { ClaimToolClaimablesAvailableEventDto } from "@/bindings/claim_tool";
-import type { NotificationsShard } from "@/features/notifications/manifest";
+import type { NotificationDraft } from "@/features/notifications/types";
 import type { SettingId } from "@/features/settings/types";
 
 export const CLAIM_TOOL_NOTIFICATION_SETTING_ID =
@@ -8,9 +8,13 @@ export const CLAIM_TOOL_NOTIFICATION_SETTING_ID =
 export const CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT =
   "claim-tool-claimables-available";
 
+interface ClaimToolNotificationPublisher {
+  publish(draft: NotificationDraft): unknown;
+}
+
 // ClaimTool owns the event semantics; NotificationsShard only receives a generic notification draft.
 export async function setupClaimToolNotifications(
-  notifications: NotificationsShard,
+  notifications: ClaimToolNotificationPublisher,
 ): Promise<UnlistenFn> {
   return listen<ClaimToolClaimablesAvailableEventDto>(
     CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT,

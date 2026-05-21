@@ -1,13 +1,13 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import type { LcuInstanceInfo, LeagueClientCmdArgs } from "@/bindings/lcu.ts";
 
-interface LcuState {
+export interface LcuState {
   instances: LcuInstanceInfo[];
   cmdArgsByPid: Record<number, LeagueClientCmdArgs>;
   setInstances: (instances: LcuInstanceInfo[]) => void;
 }
 
-export const useLcuStore = create<LcuState>((set) => ({
+export const lcuStore = createStore<LcuState>()((set) => ({
   instances: [],
   cmdArgsByPid: {},
   setInstances: (instances) =>

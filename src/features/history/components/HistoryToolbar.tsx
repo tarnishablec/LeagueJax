@@ -1,27 +1,29 @@
+/** @jsxImportSource solid-js */
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import type { JSX } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import type { LcuChatFriend } from "@/bindings/lcu_chat";
 import type { SgpServersConfig } from "@/bindings/sgp";
 import type { SummonerSearchResult } from "@/bindings/summoner.ts";
-import { useOpenHistoryTab } from "@/features/history/hooks/use-open-history-tab";
-import { selectIsFocused, useLcuStore } from "@/stores/lcu";
+import { useSolidOpenHistoryTab } from "@/features/history/hooks/use-open-history-tab";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
 import sgpServersConfigJson from "../../../../resources/league-servers.json";
 import { HistorySearchDialog } from "./HistorySearchDialog";
 import * as s from "./HistoryToolbar.css";
 
 const SGP_SERVERS_CONFIG: SgpServersConfig = sgpServersConfigJson;
 
-export function HistoryToolbar() {
-  const openHistoryTab = useOpenHistoryTab();
-  const focusedClient = useLcuStore(selectIsFocused);
-  const [open, setOpen] = useState(false);
-  const canOpenSearch = focusedClient != null;
+export function HistoryToolbar(): JSX.Element {
+  const openHistoryTab = useSolidOpenHistoryTab();
+  const focusedClient = useSolidLcuStore(selectIsFocused);
+  const [open, setOpen] = createSignal(false);
+  const canOpenSearch = () => focusedClient() != null;
 
-  useEffect(() => {
-    if (!canOpenSearch) {
+  createEffect(() => {
+    if (!canOpenSearch()) {
       setOpen(false);
     }
-  }, [canOpenSearch]);
+  });
 
   const openResult = (result: SummonerSearchResult) => {
     openHistoryTab(result.puuid, result.sgpServerId, {
@@ -61,12 +63,12 @@ export function HistoryToolbar() {
   };
 
   return (
-    <div className={s.wrapper}>
+    <div class={s.wrapper}>
       <HistorySearchDialog
-        open={open}
+        open={open()}
         onOpenChange={setOpen}
         config={SGP_SERVERS_CONFIG}
-        disabled={!canOpenSearch}
+        disabled={!canOpenSearch()}
         onOpenResult={openResult}
         onOpenFriend={openFriend}
       />

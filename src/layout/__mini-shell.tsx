@@ -1,15 +1,17 @@
+/** @jsxImportSource solid-js */
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { type ReactNode, useEffect } from "react";
-import { MiniTitleBar } from "@/features/mini/components/MiniTitleBar.tsx";
-import { useWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
-import { useLcuEvents } from "@/hooks/use-lcu-events";
-import { useTheme } from "@/hooks/use-theme";
+import type { JSX } from "solid-js";
+import { onCleanup, onMount } from "solid-js";
+import { MiniTitleBar } from "@/features/mini/components/MiniTitleBar";
+import { useSolidWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
+import { useSolidLcuEvents } from "@/hooks/use-lcu-events.solid";
+import { useSolidTheme } from "@/hooks/use-theme.solid";
 import * as mini from "./__mini.css.ts";
 
 const MINI_HOVER_SUSPENDED_ATTRIBUTE = "data-mini-hover-suspended";
 
 function useMiniWindowHoverSuspension() {
-  useEffect(() => {
+  onMount(() => {
     const root = document.documentElement;
     const suspendHover = () =>
       root.setAttribute(MINI_HOVER_SUSPENDED_ATTRIBUTE, "true");
@@ -64,25 +66,25 @@ function useMiniWindowHoverSuspension() {
         unlistenFocusChange = unlisten;
       });
 
-    return () => {
+    onCleanup(() => {
       disposed = true;
       removePointerListeners();
       resumeHover();
       unlistenFocusChange?.();
-    };
-  }, []);
+    });
+  });
 }
 
-export function MiniWindowShell({ children }: { children: ReactNode }) {
-  useWindowEffectBackgroundFallback();
-  useLcuEvents();
-  useTheme();
+export function MiniWindowShell(props: { children: JSX.Element }) {
+  useSolidWindowEffectBackgroundFallback();
+  useSolidLcuEvents();
+  useSolidTheme();
   useMiniWindowHoverSuspension();
 
   return (
-    <div className={mini.shell}>
+    <div class={mini.shell}>
       <MiniTitleBar />
-      <main className={mini.content}>{children}</main>
+      <main class={mini.content}>{props.children}</main>
     </div>
   );
 }

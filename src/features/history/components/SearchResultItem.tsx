@@ -1,11 +1,13 @@
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
 import type { SummonerSearchResult } from "@/bindings/summoner";
 import { ProfileIcon } from "@/components/ProfileIcon";
 import * as s from "./HistoryToolbar.css";
 
-function ResultAvatar({ profileIconId }: { profileIconId: number }) {
+function ResultAvatar(props: { profileIconId: number }): JSX.Element {
   return (
     <ProfileIcon
-      profileIconId={profileIconId}
+      profileIconId={props.profileIconId}
       alt=""
       className={s.resultAvatar}
       fallbackClassName={s.resultAvatarFallback}
@@ -13,23 +15,20 @@ function ResultAvatar({ profileIconId }: { profileIconId: number }) {
   );
 }
 
-export function SearchResultItem({
-  result,
-  onClick,
-}: {
+export function SearchResultItem(props: {
   result: SummonerSearchResult;
   onClick: () => void;
-}) {
+}): JSX.Element {
   return (
-    <button type="button" className={s.resultButton} onClick={onClick}>
-      <ResultAvatar profileIconId={result.profileIconId} />
-      <span className={s.resultName}>
-        {result.gameName}
-        {result.tagLine.length > 0 ? `#${result.tagLine}` : ""}
+    <button type="button" class={s.resultButton} onClick={props.onClick}>
+      <ResultAvatar profileIconId={props.result.profileIconId} />
+      <span class={s.resultName}>
+        {props.result.gameName}
+        {props.result.tagLine.length > 0 ? `#${props.result.tagLine}` : ""}
       </span>
-      <span className={s.resultMeta}>
-        <span>{result.sgpServerId}</span>
-        <span>Lv.{result.summonerLevel}</span>
+      <span class={s.resultMeta}>
+        <span>{props.result.sgpServerId}</span>
+        <span>Lv.{props.result.summonerLevel}</span>
       </span>
     </button>
   );

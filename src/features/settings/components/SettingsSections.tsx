@@ -1,47 +1,72 @@
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { keyArray } from "@solid-primitives/keyed";
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import { SettingsSectionCard } from "@/components/settings-ui";
-import { useSettings } from "@/features/settings/context";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import type {
+  RegisteredSetting,
+  SettingsSectionKey,
+} from "@/features/settings/types";
+import { useSolidTranslation } from "@/i18n/solid";
 import { SettingsContextMenu } from "./SettingsContextMenu";
 import { SettingsFieldRenderer } from "./SettingsFieldRenderer";
-import * as s from "./SettingsHub.css";
+import * as s from "./SettingsHub.css.ts";
 import type { PageEntry } from "./settings-view-model";
 
 interface SettingsSectionsProps {
   page: PageEntry;
 }
 
-export function SettingsSections({ page }: SettingsSectionsProps) {
-  const settings = useSettings();
-  const { t } = useTranslation();
+type SolidSettingsSectionRenderer = (props: {
+  pageId: string;
+  sectionId: string;
+  fields: RegisteredSetting[];
+}) => JSX.Element;
+
+export function SettingsSections(props: SettingsSectionsProps): JSX.Element {
+  const settings = useSolidSettings();
+  const { t } = useSolidTranslation();
+  const sections = keyArray(
+    () => props.page.sections,
+    (section) => `${props.page.id}.${section.id}`,
+    (section) => {
+      const sectionKey = () =>
+        `${props.page.id}.${section().id}` as SettingsSectionKey;
+      const renderer = () =>
+        settings.getSectionRenderer(sectionKey()) as
+          | SolidSettingsSectionRenderer
+          | undefined;
+      const fields = keyArray(
+        () => section().fields,
+        (field) => field.id,
+        (field) => <SettingsFieldRenderer field={field()} />,
+      );
+
+      return (
+        <SettingsSectionCard
+          contextKey={sectionKey()}
+          title={t(`settings.sections.${props.page.id}.${section().id}.title`, {
+            defaultValue: section().id,
+          })}
+        >
+          <Show when={renderer()} fallback={fields()}>
+            {(sectionRenderer) =>
+              sectionRenderer()({
+                pageId: props.page.id,
+                sectionId: section().id,
+                fields: section().fields,
+              })
+            }
+          </Show>
+        </SettingsSectionCard>
+      );
+    },
+  );
 
   return (
-    <SettingsContextMenu page={page}>
-      <div className={s.sections}>
-        {page.sections.map((section) => {
-          const sectionKey = `${page.id}.${section.id}` as const;
-          const renderer = settings.getSectionRenderer(sectionKey);
-
-          return (
-            <SettingsSectionCard
-              key={sectionKey}
-              contextKey={sectionKey}
-              title={t(`settings.sections.${page.id}.${section.id}.title`, {
-                defaultValue: section.id,
-              })}
-            >
-              {renderer
-                ? renderer({
-                    pageId: page.id,
-                    sectionId: section.id,
-                    fields: section.fields,
-                  })
-                : section.fields.map((field) => (
-                    <SettingsFieldRenderer key={field.id} field={field} />
-                  ))}
-            </SettingsSectionCard>
-          );
-        })}
-      </div>
+    <SettingsContextMenu page={props.page}>
+      <div class={s.sections}>{sections()}</div>
     </SettingsContextMenu>
   );
 }

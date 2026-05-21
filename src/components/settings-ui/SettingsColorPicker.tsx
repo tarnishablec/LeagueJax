@@ -1,9 +1,12 @@
-import { ColorPicker, parseColor } from "@ark-ui/react/color-picker";
-import { Portal } from "@ark-ui/react/portal";
-import { Pipette } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import * as s from "./SettingsColorPicker.css";
+/** @jsxImportSource solid-js */
+import { ColorPicker, parseColor } from "@ark-ui/solid/color-picker";
+import { Key } from "@solid-primitives/keyed";
+import { Pipette } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { createEffect, createMemo, createSignal, Show } from "solid-js";
+import { Portal } from "solid-js/web";
+import { useSolidTranslation } from "@/i18n/solid";
+import * as s from "./SettingsColorPicker.css.ts";
 import {
   type SettingsControlLayoutProps,
   settingsControlClassName,
@@ -55,44 +58,32 @@ function toHexColor(
   return normalizeHexColor(value.toString(outputFormat));
 }
 
-export function SettingsColorPicker({
-  ariaLabel,
-  className,
-  fit,
-  height,
-  livePreview = false,
-  outputFormat = "hexa",
-  value,
-  presets = [],
-  presetsLabel,
-  respectAlpha = true,
-  size,
-  width,
-  triggerSettingId,
-  triggerTitle,
-  variant = "default",
-  onValueChange,
-}: SettingsColorPickerProps) {
-  const { t } = useTranslation();
-  const normalizedValue = normalizeHexColor(value);
-  const [open, setOpen] = useState(false);
-  const [colorValue, setColorValue] = useState(() =>
-    toColorValue(normalizedValue),
+export function SettingsColorPicker(
+  props: SettingsColorPickerProps,
+): JSX.Element {
+  const { t } = useSolidTranslation();
+  const outputFormat = () => props.outputFormat ?? "hexa";
+  const normalizedValue = createMemo(() => normalizeHexColor(props.value));
+  const [open, setOpen] = createSignal(false);
+  const [colorValue, setColorValue] = createSignal(
+    toColorValue(normalizedValue()),
   );
-  const normalizedPresets = presets.map((preset) => normalizeHexColor(preset));
+  const normalizedPresets = createMemo(() =>
+    (props.presets ?? []).map((preset) => normalizeHexColor(preset)),
+  );
 
-  useEffect(() => {
+  createEffect(() => {
     setColorValue((currentColor) => {
-      if (toHexColor(currentColor, outputFormat) === normalizedValue) {
+      if (toHexColor(currentColor, outputFormat()) === normalizedValue()) {
         return currentColor;
       }
 
-      return toColorValue(normalizedValue);
+      return toColorValue(normalizedValue());
     });
-  }, [normalizedValue, outputFormat]);
+  });
 
-  const commitColor = (nextColor = colorValue) => {
-    onValueChange(toHexColor(nextColor, outputFormat));
+  const commitColor = (nextColor = colorValue()) => {
+    props.onValueChange(toHexColor(nextColor, outputFormat()));
   };
 
   const commitPreset = (preset: string) => {
@@ -106,109 +97,121 @@ export function SettingsColorPicker({
     <ColorPicker.Root
       lazyMount
       unmountOnExit
-      className={settingsControlClassName({ className, fit, size })}
-      style={settingsControlStyle({ fit, height, size, width })}
+      class={settingsControlClassName({
+        className: props.className,
+        fit: props.fit,
+        size: props.size,
+      })}
+      style={
+        settingsControlStyle({
+          fit: props.fit,
+          height: props.height,
+          size: props.size,
+          width: props.width,
+        }) as unknown as JSX.CSSProperties
+      }
       format="hsba"
-      open={open}
+      open={open()}
       positioning={{ placement: "bottom-end", gutter: 6 }}
-      value={colorValue}
+      value={colorValue()}
       onOpenChange={(details) => {
         setOpen(details.open);
       }}
       onValueChange={(details) => {
         setColorValue(details.value);
-        if (livePreview) {
+        if (props.livePreview ?? false) {
           commitColor(details.value);
         }
       }}
       onValueChangeEnd={(details) => {
-        if (!livePreview) {
+        if (!(props.livePreview ?? false)) {
           commitColor(details.value);
         }
       }}
     >
-      <ColorPicker.Label className={s.label}>{ariaLabel}</ColorPicker.Label>
-      <ColorPicker.Control className={s.control}>
+      <ColorPicker.Label class={s.label}>{props.ariaLabel}</ColorPicker.Label>
+      <ColorPicker.Control class={s.control}>
         <ColorPicker.Trigger
-          aria-label={ariaLabel}
-          className={s.trigger({ variant })}
-          data-setting-id={triggerSettingId}
-          title={triggerTitle}
+          aria-label={props.ariaLabel}
+          class={s.trigger({ variant: props.variant ?? "default" })}
+          data-setting-id={props.triggerSettingId}
+          title={props.triggerTitle}
         >
           <ColorPicker.ValueSwatch
-            className={s.valueSwatch}
-            respectAlpha={respectAlpha}
+            class={s.valueSwatch}
+            respectAlpha={props.respectAlpha ?? true}
           />
         </ColorPicker.Trigger>
       </ColorPicker.Control>
       <Portal>
-        <ColorPicker.Positioner className={s.positioner}>
+        <ColorPicker.Positioner class={s.positioner}>
           <ColorPicker.Content
-            className={s.content}
+            class={s.content}
             onContextMenu={(event) => {
               event.stopPropagation();
             }}
           >
-            <ColorPicker.Area className={s.area}>
-              <ColorPicker.AreaBackground className={s.areaBackground} />
-              <ColorPicker.AreaThumb className={s.areaThumb} />
+            <ColorPicker.Area class={s.area}>
+              <ColorPicker.AreaBackground class={s.areaBackground} />
+              <ColorPicker.AreaThumb class={s.areaThumb} />
             </ColorPicker.Area>
-            <div className={s.slidersRow}>
+            <div class={s.slidersRow}>
               <ColorPicker.EyeDropperTrigger
-                aria-label={`${ariaLabel} eyedropper`}
-                className={s.eyeDropperTrigger}
+                aria-label={`${props.ariaLabel} eyedropper`}
+                class={s.eyeDropperTrigger}
               >
                 <Pipette size={16} aria-hidden="true" />
               </ColorPicker.EyeDropperTrigger>
-              <div className={s.sliderStack}>
-                <ColorPicker.ChannelSlider channel="hue" className={s.slider}>
-                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack} />
-                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb} />
+              <div class={s.sliderStack}>
+                <ColorPicker.ChannelSlider channel="hue" class={s.slider}>
+                  <ColorPicker.ChannelSliderTrack class={s.sliderTrack} />
+                  <ColorPicker.ChannelSliderThumb class={s.sliderThumb} />
                 </ColorPicker.ChannelSlider>
-                <ColorPicker.ChannelSlider channel="alpha" className={s.slider}>
-                  <ColorPicker.ChannelSliderTrack className={s.sliderTrack} />
-                  <ColorPicker.ChannelSliderThumb className={s.sliderThumb} />
+                <ColorPicker.ChannelSlider channel="alpha" class={s.slider}>
+                  <ColorPicker.ChannelSliderTrack class={s.sliderTrack} />
+                  <ColorPicker.ChannelSliderThumb class={s.sliderThumb} />
                 </ColorPicker.ChannelSlider>
               </div>
             </div>
-            <div className={s.inputsRow}>
+            <div class={s.inputsRow}>
               <ColorPicker.ChannelInput
-                aria-label={`${ariaLabel} hex`}
+                aria-label={`${props.ariaLabel} hex`}
                 channel="hex"
-                className={s.input}
+                class={s.input}
               />
               <ColorPicker.ChannelInput
-                aria-label={`${ariaLabel} alpha`}
+                aria-label={`${props.ariaLabel} alpha`}
                 channel="alpha"
-                className={s.input}
+                class={s.input}
               />
             </div>
-            {normalizedPresets.length > 0 ? (
-              <>
-                <div className={s.presetsLabel}>
-                  {presetsLabel ?? t("settings.colorPicker.presets")}
-                </div>
-                <ColorPicker.SwatchGroup className={s.swatchGroup}>
-                  {normalizedPresets.map((preset) => (
+            <Show when={normalizedPresets().length > 0}>
+              <div class={s.presetsLabel}>
+                {props.presetsLabel ?? t("settings.colorPicker.presets")}
+              </div>
+              <ColorPicker.SwatchGroup class={s.swatchGroup}>
+                <Key each={normalizedPresets()} by={(preset) => preset}>
+                  {(preset) => (
                     <ColorPicker.SwatchTrigger
-                      key={preset}
-                      aria-label={`Use preset color ${preset}`}
-                      className={s.swatchTrigger({ variant })}
-                      value={preset}
+                      aria-label={`Use preset color ${preset()}`}
+                      class={s.swatchTrigger({
+                        variant: props.variant ?? "default",
+                      })}
+                      value={preset()}
                       onClick={() => {
-                        commitPreset(preset);
+                        commitPreset(preset());
                       }}
                     >
                       <ColorPicker.Swatch
-                        className={s.swatch}
-                        value={preset}
-                        respectAlpha={respectAlpha}
+                        class={s.swatch}
+                        value={preset()}
+                        respectAlpha={props.respectAlpha ?? true}
                       />
                     </ColorPicker.SwatchTrigger>
-                  ))}
-                </ColorPicker.SwatchGroup>
-              </>
-            ) : null}
+                  )}
+                </Key>
+              </ColorPicker.SwatchGroup>
+            </Show>
           </ColorPicker.Content>
         </ColorPicker.Positioner>
       </Portal>

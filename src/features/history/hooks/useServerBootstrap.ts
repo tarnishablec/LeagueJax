@@ -1,39 +1,38 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
-
-type UseServerBootstrapParams = {
-  enabled: boolean;
-};
+import type { Accessor } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 
 type UseServerBootstrapResult = {
-  focusedServerId: string | null;
-  isBootstrapping: boolean;
-  bootstrapError: string | null;
+  focusedServerId: Accessor<string | null>;
+  isBootstrapping: Accessor<boolean>;
+  bootstrapError: Accessor<string | null>;
   reset: () => void;
   refresh: () => void;
 };
 
-export function useServerBootstrap({
-  enabled,
-}: UseServerBootstrapParams): UseServerBootstrapResult {
-  const [focusedServerId, setFocusedServerId] = useState<string | null>(null);
-  const [isBootstrapping, setIsBootstrapping] = useState(false);
-  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
+export function useSolidServerBootstrap(params: {
+  enabled: Accessor<boolean>;
+}): UseServerBootstrapResult {
+  const [focusedServerId, setFocusedServerId] = createSignal<string | null>(
+    null,
+  );
+  const [isBootstrapping, setIsBootstrapping] = createSignal(false);
+  const [bootstrapError, setBootstrapError] = createSignal<string | null>(null);
+  let requestId = 0;
 
-  const refresh = useCallback(() => {
-    const currentRequestId = ++requestIdRef.current;
+  const refresh = () => {
+    const currentRequestId = ++requestId;
     setIsBootstrapping(true);
     setBootstrapError(null);
     void invoke<string>("get_current_sgp_server_id")
       .then((serverId) => {
-        if (requestIdRef.current !== currentRequestId) {
+        if (requestId !== currentRequestId) {
           return;
         }
         setFocusedServerId(serverId.trim().toUpperCase());
       })
       .catch((error: unknown) => {
-        if (requestIdRef.current !== currentRequestId) {
+        if (requestId !== currentRequestId) {
           return;
         }
         const message = error instanceof Error ? error.message : String(error);
@@ -41,26 +40,33 @@ export function useServerBootstrap({
         setBootstrapError(message);
       })
       .finally(() => {
-        if (requestIdRef.current === currentRequestId) {
+        if (requestId === currentRequestId) {
           setIsBootstrapping(false);
         }
       });
-  }, []);
+  };
 
-  const reset = useCallback(() => {
-    requestIdRef.current += 1;
+  const reset = () => {
+    requestId += 1;
     setFocusedServerId(null);
     setIsBootstrapping(false);
     setBootstrapError(null);
-  }, []);
+  };
 
-  useEffect(() => {
-    if (!enabled) {
+  createEffect(() => {
+    if (!params.enabled()) {
+      reset();
       return;
     }
 
     refresh();
-  }, [enabled, refresh]);
+  });
 
-  return { focusedServerId, isBootstrapping, bootstrapError, reset, refresh };
+  return {
+    focusedServerId,
+    isBootstrapping,
+    bootstrapError,
+    reset,
+    refresh,
+  };
 }

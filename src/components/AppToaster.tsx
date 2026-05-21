@@ -1,29 +1,37 @@
-import { Toast, Toaster, type ToastOptions } from "@ark-ui/react/toast";
+/** @jsxImportSource solid-js */
+import { Toast, Toaster, type ToastOptions } from "@ark-ui/solid/toast";
 import {
-  AlertTriangle,
-  CheckCircle2,
+  CircleCheck,
+  CircleX,
   Info,
   LoaderCircle,
+  TriangleAlert,
   X,
-  XCircle,
-} from "lucide-react";
-import type { KeyboardEvent } from "react";
-import * as s from "./AppToaster.css";
-import { appToaster } from "./toastStore";
+} from "lucide-solid";
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
+import * as s from "./AppToaster.css.ts";
+import { solidAppToaster } from "./toastStore";
 
 type ToastTone = "error" | "info" | "loading" | "success" | "warning";
 
+const getToastMeta = (toast: ToastOptions): Record<string, unknown> => {
+  return toast.meta && typeof toast.meta === "object"
+    ? (toast.meta as Record<string, unknown>)
+    : {};
+};
+
 const getNavigateTarget = (toast: ToastOptions): string | null => {
-  const navigateTo = toast.meta?.navigateTo;
+  const navigateTo = getToastMeta(toast).navigateTo;
   return typeof navigateTo === "string" ? navigateTo : null;
 };
 
 const shouldHideIcon = (toast: ToastOptions): boolean => {
-  return toast.meta?.hideIcon === true;
+  return getToastMeta(toast).hideIcon === true;
 };
 
 const shouldShowClose = (toast: ToastOptions): boolean => {
-  return toast.closable !== false && toast.meta?.hideClose !== true;
+  return toast.closable !== false && getToastMeta(toast).hideClose !== true;
 };
 
 const getToastTone = (toast: ToastOptions): ToastTone => {
@@ -57,24 +65,22 @@ const getLayoutClass = (showIcon: boolean, showClose: boolean): string => {
   return s.rootLayout.contentOnly;
 };
 
-const TypeIcon = ({ tone }: { tone: ToastTone }) => {
-  const className = tone === "loading" ? s.loadingIcon : undefined;
+function TypeIcon(props: { tone: ToastTone }): JSX.Element {
+  const className = props.tone === "loading" ? s.loadingIcon : undefined;
 
-  switch (tone) {
+  switch (props.tone) {
     case "error":
-      return <XCircle size={16} aria-hidden="true" />;
+      return <CircleX size={16} aria-hidden="true" />;
     case "loading":
-      return (
-        <LoaderCircle size={16} aria-hidden="true" className={className} />
-      );
+      return <LoaderCircle size={16} aria-hidden="true" class={className} />;
     case "success":
-      return <CheckCircle2 size={16} aria-hidden="true" />;
+      return <CircleCheck size={16} aria-hidden="true" />;
     case "warning":
-      return <AlertTriangle size={16} aria-hidden="true" />;
+      return <TriangleAlert size={16} aria-hidden="true" />;
     case "info":
       return <Info size={16} aria-hidden="true" />;
   }
-};
+}
 
 const currentRouteRoot = (): "/main" | "/mini" => {
   return window.location.hash.startsWith("#/mini") ? "/mini" : "/main";
@@ -85,15 +91,15 @@ const isInCurrentRouteRoot = (path: string): boolean => {
   return path === root || path.startsWith(`${root}/`);
 };
 
-export function AppToaster() {
+export function AppToaster(): JSX.Element {
   return (
     <Toaster
-      toaster={appToaster}
-      className={s.group}
+      toaster={solidAppToaster}
+      class={s.group}
       aria-label="Notifications"
     >
-      {/** biome-ignore lint/complexity/noExcessiveCognitiveComplexity: render callback intentionally keeps toast layout, accessibility, and navigation logic colocated */}
-      {(toast: ToastOptions) => {
+      {(toastAccessor) => {
+        const toast = toastAccessor();
         const navigateTo = getNavigateTarget(toast);
         const tone = getToastTone(toast);
         const showIcon = !shouldHideIcon(toast);
@@ -109,7 +115,7 @@ export function AppToaster() {
           window.location.hash = navigateTo;
         };
 
-        const handleRootKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+        const handleRootKeyDown = (event: KeyboardEvent) => {
           if (!isClickable) {
             return;
           }
@@ -124,43 +130,45 @@ export function AppToaster() {
 
         return (
           <Toast.Root
-            className={`${s.root} ${getLayoutClass(showIcon, showClose)} ${
+            class={`${s.root} ${getLayoutClass(showIcon, showClose)} ${
               isClickable ? s.rootClickable : ""
             }`}
             onClick={isClickable ? navigate : undefined}
             onKeyDown={isClickable ? handleRootKeyDown : undefined}
             tabIndex={isClickable ? 0 : undefined}
           >
-            {showIcon ? (
-              <div className={`${s.iconSlot} ${s.iconTone[tone]}`}>
+            <Show when={showIcon}>
+              <div class={`${s.iconSlot} ${s.iconTone[tone]}`}>
                 <TypeIcon tone={tone} />
               </div>
-            ) : null}
+            </Show>
 
-            <div className={s.body}>
-              {toast.title ? (
-                <Toast.Title className={s.title}>{toast.title}</Toast.Title>
-              ) : null}
-              {toast.description ? (
-                <Toast.Description className={s.description}>
+            <div class={s.body}>
+              <Show when={toast.title}>
+                <Toast.Title class={s.title}>{toast.title}</Toast.Title>
+              </Show>
+              <Show when={toast.description}>
+                <Toast.Description class={s.description}>
                   {toast.description}
                 </Toast.Description>
-              ) : null}
-              {toast.action ? (
-                <Toast.ActionTrigger className={s.actionButton}>
-                  {toast.action.label}
-                </Toast.ActionTrigger>
-              ) : null}
+              </Show>
+              <Show when={toast.action}>
+                {(action) => (
+                  <Toast.ActionTrigger class={s.actionButton}>
+                    {action().label}
+                  </Toast.ActionTrigger>
+                )}
+              </Show>
             </div>
 
-            {showClose ? (
+            <Show when={showClose}>
               <Toast.CloseTrigger
                 aria-label="Dismiss notification"
-                className={s.closeButton}
+                class={s.closeButton}
               >
                 <X size={14} aria-hidden="true" />
               </Toast.CloseTrigger>
-            ) : null}
+            </Show>
           </Toast.Root>
         );
       }}

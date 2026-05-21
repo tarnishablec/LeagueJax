@@ -1,22 +1,15 @@
-import { lazy, Suspense } from "react";
+/** @jsxImportSource solid-js */
 import type {
-  RouteContribution,
-  ToolbarSlot,
-  WebShard,
-} from "@/runtime/web-contract";
+  SolidToolbarSlot,
+  SolidWebShard,
+} from "@/runtime/solid-web-contract";
 import { SHARD_IDS } from "../shard-ids";
 import { MiniWindowToggleButton } from "./components/MiniWindowToggleButton";
 import { miniI18n } from "./i18n";
 
-const MiniRoute = lazy(() =>
-  import("./routes/MiniRoute").then((module) => ({
-    default: module.MiniRoute,
-  })),
-);
-
-export class MiniShard implements WebShard {
+export class SolidMiniShard implements SolidWebShard {
   public label() {
-    return "MiniShard";
+    return "SolidMiniShard";
   }
 
   public id() {
@@ -27,32 +20,7 @@ export class MiniShard implements WebShard {
     return [];
   }
 
-  public routes(): RouteContribution[] {
-    return [
-      {
-        index: true,
-        layout: "mini",
-        element: (
-          <Suspense fallback={null}>
-            <MiniRoute />
-          </Suspense>
-        ),
-        order: 5,
-      },
-      {
-        path: "game",
-        layout: "mini",
-        element: (
-          <Suspense fallback={null}>
-            <MiniRoute />
-          </Suspense>
-        ),
-        order: 6,
-      },
-    ];
-  }
-
-  public toolbarSlots(): ToolbarSlot[] {
+  public toolbarSlots(): SolidToolbarSlot[] {
     return [
       {
         id: "mini-window-toggle",

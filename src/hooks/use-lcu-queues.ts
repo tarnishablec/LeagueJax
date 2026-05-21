@@ -1,45 +1,47 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import useSWR from "swr";
+import { createMemo } from "solid-js";
 import type { LcuQueue } from "@/bindings/queues";
-import { selectIsFocused, useLcuStore } from "@/stores/lcu.ts";
+import { useSolidTranslation } from "@/i18n/solid";
+import { createSolidQuery } from "@/infra/solid-query";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
 import { normalizeCdragonLocale } from "@/utils/cdragon-locale";
 
-export function useLcuQueues() {
-  const connected = useLcuStore(selectIsFocused);
-  const { i18n } = useTranslation();
-  const language = i18n.resolvedLanguage ?? i18n.language;
-  const locale = useMemo(() => normalizeCdragonLocale(language), [language]);
+type LcuQueuesKey = readonly ["lcu_get_queues", number, string];
 
-  return useSWR(
-    connected ? (["lcu_get_queues", connected.pid, locale] as const) : null,
-    ([cmd, , cdragonLocale]) =>
-      invoke<LcuQueue[]>(cmd, {
+export function useSolidLcuQueues() {
+  const connected = useSolidLcuStore(selectIsFocused);
+  const { language } = useSolidTranslation();
+  const locale = createMemo(() => normalizeCdragonLocale(language()));
+
+  return createSolidQuery<LcuQueue[]>(
+    () => {
+      const focused = connected();
+      return focused
+        ? (["lcu_get_queues", focused.pid, locale()] as const)
+        : null;
+    },
+    (key) => {
+      const [cmd, , cdragonLocale] = key as LcuQueuesKey;
+      return invoke<LcuQueue[]>(cmd, {
         forceRefresh: false,
         locale: cdragonLocale,
-      }),
-    {
-      dedupingInterval: Number.POSITIVE_INFINITY,
+      });
     },
   );
 }
 
-/** Pre-built id→shortName map; stable reference while the queue list is unchanged. */
-export function useLcuQueueMap(): Map<number, string> {
-  const { data: queues } = useLcuQueues();
-  return useMemo(() => {
+export function useSolidLcuQueueMap() {
+  const { data: queues } = useSolidLcuQueues();
+  return createMemo(() => {
     const map = new Map<number, string>();
-    if (queues) {
-      for (const q of queues) {
-        map.set(q.id, q.shortName);
-      }
+    for (const queue of queues() ?? []) {
+      map.set(queue.id, queue.shortName);
     }
     return map;
-  }, [queues]);
+  });
 }
 
-export function useLcuQueueName(queueId: number): string | undefined {
-  const map = useLcuQueueMap();
-  return map.get(queueId);
+export function useSolidLcuQueueName(queueId: number) {
+  const map = useSolidLcuQueueMap();
+  return createMemo(() => map().get(queueId));
 }

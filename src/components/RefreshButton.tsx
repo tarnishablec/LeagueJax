@@ -1,16 +1,10 @@
-import { Loader, RefreshCw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import * as s from "./RefreshButton.css";
+/** @jsxImportSource solid-js */
+import { Loader, RefreshCw } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
+import * as s from "./RefreshButton.css.ts";
 
-export function RefreshButton({
-  loading,
-  disabled,
-  onClick,
-  ariaLabel,
-  size = 14,
-  className,
-  minLoadingMs = 0,
-}: {
+export function RefreshButton(props: {
   loading?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -18,49 +12,66 @@ export function RefreshButton({
   size?: number;
   className?: string;
   minLoadingMs?: number;
-}) {
-  const [isLoadingVisible, setIsLoadingVisible] = useState(Boolean(loading));
-  const loadingStartedAtRef = useRef<number | null>(
-    loading ? Date.now() : null,
+}): JSX.Element {
+  const [isLoadingVisible, setIsLoadingVisible] = createSignal(
+    Boolean(props.loading),
   );
+  let loadingStartedAt: number | null = props.loading ? Date.now() : null;
+  let timeoutId: number | null = null;
 
-  useEffect(() => {
-    if (loading) {
-      loadingStartedAtRef.current = Date.now();
+  const clearTimer = () => {
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  createEffect(() => {
+    clearTimer();
+
+    if (props.loading) {
+      loadingStartedAt = Date.now();
       setIsLoadingVisible(true);
       return;
     }
 
-    const startedAt = loadingStartedAtRef.current;
-    const elapsed = startedAt ? Date.now() - startedAt : minLoadingMs;
+    const minLoadingMs = props.minLoadingMs ?? 0;
+    const elapsed = loadingStartedAt
+      ? Date.now() - loadingStartedAt
+      : minLoadingMs;
     const remainingMs = Math.max(0, minLoadingMs - elapsed);
 
     if (remainingMs <= 0) {
-      loadingStartedAtRef.current = null;
+      loadingStartedAt = null;
       setIsLoadingVisible(false);
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      loadingStartedAtRef.current = null;
+    timeoutId = window.setTimeout(() => {
+      loadingStartedAt = null;
       setIsLoadingVisible(false);
+      timeoutId = null;
     }, remainingMs);
+  });
 
-    return () => window.clearTimeout(timeoutId);
-  }, [loading, minLoadingMs]);
+  onCleanup(clearTimer);
+
+  const size = () => props.size ?? 14;
+  const className = () =>
+    props.className ? `${s.root} ${props.className}` : s.root;
 
   return (
     <button
       type="button"
-      className={className ? `${s.root} ${className}` : s.root}
-      aria-label={ariaLabel}
-      disabled={disabled || isLoadingVisible}
-      onClick={onClick}
+      class={className()}
+      aria-label={props.ariaLabel}
+      disabled={props.disabled || isLoadingVisible()}
+      onClick={props.onClick}
     >
-      {isLoadingVisible ? (
-        <Loader size={size} className={s.iconSpin} />
+      {isLoadingVisible() ? (
+        <Loader size={size()} class={s.iconSpin} />
       ) : (
-        <RefreshCw size={size} />
+        <RefreshCw size={size()} />
       )}
     </button>
   );

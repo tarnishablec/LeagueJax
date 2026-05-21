@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 use crate::error::AppError;
 
-#[derive(TS, Serialize, Deserialize, Debug, Clone)]
+#[derive(TS, Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[ts(export, export_to = "lcu.ts")]
 #[serde(rename_all = "camelCase")]
 pub struct TencentLeagueClientCmdArgs {
@@ -76,7 +76,7 @@ pub struct TencentLeagueClientCmdArgs {
     pub t_da_launcher: bool,
 }
 
-#[derive(TS, Serialize, Deserialize, Debug, Clone)]
+#[derive(TS, Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[ts(export, export_to = "lcu.ts")]
 #[serde(rename_all = "camelCase")]
 pub struct RiotLeagueClientCmdArgs {
@@ -131,7 +131,7 @@ pub struct RiotLeagueClientCmdArgs {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(TS, Serialize, Deserialize, Debug, Clone)]
+#[derive(TS, Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[ts(export, export_to = "lcu.ts")]
 #[serde(tag = "family", rename_all = "snake_case")]
 pub enum LeagueClientCmdArgs {

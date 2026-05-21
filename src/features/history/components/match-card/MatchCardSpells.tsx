@@ -1,45 +1,45 @@
-import { useTranslation } from "react-i18next";
-import { useCdragonStaticData } from "@/hooks/use-cdragon-static-data";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { useSolidCdragonStaticData } from "@/hooks/use-cdragon-static-data";
+import { useSolidTranslation } from "@/i18n/solid";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 
-export function MatchCardSpells({
-  spell1Id,
-  spell2Id,
-}: {
+export function MatchCardSpells(props: {
   spell1Id: number;
   spell2Id: number;
-}) {
-  const { t } = useTranslation();
-  const [spell1, spell2] = useCdragonStaticData([
-    { type: "spell", spellId: spell1Id },
-    { type: "spell", spellId: spell2Id },
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const spells = useSolidCdragonStaticData([
+    { type: "spell", spellId: props.spell1Id },
+    { type: "spell", spellId: props.spell2Id },
   ]);
-
-  const spell1Alt =
-    spell1.label ??
+  const spell1 = () => spells()[0];
+  const spell2 = () => spells()[1];
+  const spell1Alt = () =>
+    spell1()?.label ??
     t("history.match.unknownSpell", {
-      id: spell1Id,
-      defaultValue: `Spell ${spell1Id}`,
+      id: props.spell1Id,
+      defaultValue: `Spell ${props.spell1Id}`,
     });
-  const spell2Alt =
-    spell2.label ??
+  const spell2Alt = () =>
+    spell2()?.label ??
     t("history.match.unknownSpell", {
-      id: spell2Id,
-      defaultValue: `Spell ${spell2Id}`,
+      id: props.spell2Id,
+      defaultValue: `Spell ${props.spell2Id}`,
     });
 
   return (
-    <div className={s.loadoutGroup}>
+    <div class={s.loadoutGroup}>
       <MatchCardAssetIcon
-        src={spell1.src}
-        alt={spell1Alt}
+        src={spell1()?.src}
+        alt={spell1Alt()}
         className={s.assetIcon}
         fallbackClassName={s.assetIconFallback}
       />
       <MatchCardAssetIcon
-        src={spell2.src}
-        alt={spell2Alt}
+        src={spell2()?.src}
+        alt={spell2Alt()}
         className={s.assetIcon}
         fallbackClassName={s.assetIconFallback}
       />

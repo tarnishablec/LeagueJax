@@ -1,29 +1,33 @@
-import { Check, Copy } from "lucide-react";
-import { useRef, useState } from "react";
-import * as s from "./CopyButton.css";
+/** @jsxImportSource solid-js */
+import { Check, Copy } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
+import * as s from "./CopyButton.css.ts";
 
-export function CopyButton({
-  text,
-  className,
-  "aria-label": ariaLabel,
-}: {
+export function CopyButton(props: {
   text: string;
   className?: string;
   "aria-label"?: string;
-}) {
-  const [copied, setCopied] = useState(false);
-  const timerRef = useRef<number | null>(null);
+}): JSX.Element {
+  const [copied, setCopied] = createSignal(false);
+  let timer: number | null = null;
+
+  onCleanup(() => {
+    if (timer !== null) {
+      window.clearTimeout(timer);
+    }
+  });
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(props.text);
       setCopied(true);
-      if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
+      if (timer !== null) {
+        window.clearTimeout(timer);
       }
-      timerRef.current = window.setTimeout(() => {
+      timer = window.setTimeout(() => {
         setCopied(false);
-        timerRef.current = null;
+        timer = null;
       }, 1200);
     } catch {
       // no-op
@@ -33,17 +37,17 @@ export function CopyButton({
   return (
     <button
       type="button"
-      className={className ?? s.copyButton}
-      aria-label={ariaLabel ?? `Copy ${text}`}
+      class={props.className ?? s.copyButton}
+      aria-label={props["aria-label"] ?? `Copy ${props.text}`}
       onClick={() => {
         void handleCopy();
       }}
     >
-      <span className={s.iconStack}>
-        <span className={s.iconLayer} style={{ opacity: copied ? 0 : 1 }}>
+      <span class={s.iconStack}>
+        <span class={s.iconLayer} style={{ opacity: copied() ? 0 : 1 }}>
           <Copy size={12} aria-hidden="true" />
         </span>
-        <span className={s.iconLayer} style={{ opacity: copied ? 1 : 0 }}>
+        <span class={s.iconLayer} style={{ opacity: copied() ? 1 : 0 }}>
           <Check size={12} aria-hidden="true" />
         </span>
       </span>

@@ -1,16 +1,23 @@
+/** @jsxImportSource solid-js */
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { Gamepad2 } from "lucide-react";
-import { lazy, Suspense } from "react";
+import { Gamepad2 } from "lucide-solid";
+import { mergeDeep } from "remeda";
+import { lazy } from "solid-js";
 import { z } from "zod";
 import type {
   OngoingGameMatchHistoriesUpdated,
   OngoingGameSummonersUpdated,
   OngoingGameUpdated,
 } from "@/bindings/ongoing_game";
+import { historyI18n } from "@/features/history/i18n";
+import type {
+  SettingsSectionRenderer,
+  SettingsSectionRendererProps,
+} from "@/features/settings/types";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
-import { SettingsShard } from "../settings/manifest";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
+import { SolidSettingsShard } from "../settings/solid-settings-shard.solid";
 import { SHARD_IDS } from "../shard-ids";
 import { OngoingGameNavStatusDot } from "./components/OngoingGameNavStatusDot";
 import { OngoingGameTitlebar } from "./components/OngoingGameTitlebar";
@@ -22,13 +29,9 @@ import {
   isPlayerCardTagColor,
 } from "./components/player-card-tags.ts";
 import { ongoingGameI18n } from "./i18n";
-import { useOngoingGameStore } from "./store";
+import { ongoingGameStore } from "./store.solid";
 
-const OngoingGameRoute = lazy(() =>
-  import("./routes/OngoingGameRoute").then((module) => ({
-    default: module.OngoingGameRoute,
-  })),
-);
+const OngoingGameRoute = lazy(() => import("./routes/OngoingGameRoute"));
 
 const ONGOING_AUTO_SWITCH_TO_GAME_SETTING =
   "ongoing.interaction.autoSwitchToGame";
@@ -91,21 +94,21 @@ function createRafBatcher<T>(flush: (batch: T[]) => void) {
   };
 }
 
-export class OngoingGameShard implements WebShard {
+export class SolidOngoingGameShard implements SolidWebShard {
   private ongoingUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingSummonersUpdatedUnlisten: UnlistenFn | null = null;
   private ongoingMatchHistoriesUpdatedUnlisten: UnlistenFn | null = null;
   private pendingUpdated: OngoingGameUpdated | null = null;
   private updateRafId: number | null = null;
   private summonerBatcher = createRafBatcher<OngoingGameSummonersUpdated>(
-    (batch) => useOngoingGameStore.getState().batchSummonersUpdated(batch),
+    (batch) => ongoingGameStore.getState().batchSummonersUpdated(batch),
   );
   private historyBatcher = createRafBatcher<OngoingGameMatchHistoriesUpdated>(
-    (batch) => useOngoingGameStore.getState().batchMatchHistoriesUpdated(batch),
+    (batch) => ongoingGameStore.getState().batchMatchHistoriesUpdated(batch),
   );
 
   public label() {
-    return "OngoingGameShard";
+    return "SolidOngoingGameShard";
   }
 
   public id() {
@@ -117,7 +120,7 @@ export class OngoingGameShard implements WebShard {
   }
 
   public async setup(jax: Jax): Promise<void> {
-    const settings = jax.getShard(SettingsShard);
+    const settings = jax.getShard(SolidSettingsShard);
     settings.registerPage({ id: "ongoing", order: 30 });
     settings.registerSection({ key: ONGOING_MATCHMAKING_SECTION, order: 10 });
     settings.registerSection({ key: ONGOING_INTERACTION_SECTION, order: 20 });
@@ -193,7 +196,9 @@ export class OngoingGameShard implements WebShard {
     settings.registerSection({
       key: ONGOING_PLAYER_CARD_TAGS_SECTION,
       order: 30,
-      renderer: (props) => <PlayerCardTagsSettings {...props} />,
+      renderer: ((props: SettingsSectionRendererProps) => (
+        <PlayerCardTagsSettings {...props} />
+      )) as unknown as SettingsSectionRenderer,
     });
 
     this.ongoingUpdatedUnlisten = await listen<OngoingGameUpdated>(
@@ -204,7 +209,7 @@ export class OngoingGameShard implements WebShard {
           ONGOING_AUTO_SWITCH_TO_GAME_SETTING,
         );
         if (autoSwitch) {
-          const currentPhase = useOngoingGameStore.getState().phase;
+          const currentPhase = ongoingGameStore.getState().phase;
           if (
             !isVisibleOngoingPhase(currentPhase) &&
             isVisibleOngoingPhase(event.payload.phase)
@@ -213,7 +218,7 @@ export class OngoingGameShard implements WebShard {
           }
         }
 
-        // Coalesce rapid Updated events — only the latest snapshot matters.
+        // Coalesce rapid Updated events; only the latest snapshot matters.
         this.pendingUpdated = event.payload;
         if (this.updateRafId == null) {
           this.updateRafId = requestAnimationFrame(() => {
@@ -221,7 +226,7 @@ export class OngoingGameShard implements WebShard {
             const pending = this.pendingUpdated;
             if (pending) {
               this.pendingUpdated = null;
-              useOngoingGameStore.getState().applyUpdated(pending);
+              ongoingGameStore.getState().applyUpdated(pending);
             }
           });
         }
@@ -241,7 +246,7 @@ export class OngoingGameShard implements WebShard {
     void invoke("ongoing_game_refresh");
   }
 
-  public teardown(_jax: Jax): void {
+  public teardown(): void {
     if (this.updateRafId != null) {
       cancelAnimationFrame(this.updateRafId);
       this.updateRafId = null;
@@ -261,18 +266,14 @@ export class OngoingGameShard implements WebShard {
       this.ongoingMatchHistoriesUpdatedUnlisten();
       this.ongoingMatchHistoriesUpdatedUnlisten = null;
     }
-    useOngoingGameStore.getState().reset();
+    ongoingGameStore.getState().reset();
   }
 
   public routes() {
     return [
       {
         path: "game",
-        element: (
-          <Suspense fallback={null}>
-            <OngoingGameRoute />
-          </Suspense>
-        ),
+        component: OngoingGameRoute,
         order: 20,
       },
     ];
@@ -303,6 +304,6 @@ export class OngoingGameShard implements WebShard {
   }
 
   public i18nResources() {
-    return ongoingGameI18n;
+    return mergeDeep(ongoingGameI18n, historyI18n);
   }
 }

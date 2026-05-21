@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Accessor } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { RawMatchSummaryGame } from "@/bindings/matches";
 import type {
   LcuReplayDownloadState,
@@ -49,36 +50,40 @@ export function replayMatchContextFromSummary(
   };
 }
 
-export function useMatchReplay(context: ReplayMatchContext) {
-  const [state, setState] = useState<ReplayMatchState | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isActing, setIsActing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function useSolidMatchReplay(context: Accessor<ReplayMatchContext>) {
+  const [state, setState] = createSignal<ReplayMatchState | null>(null);
+  const [isLoading, setIsLoading] = createSignal(false);
+  const [isActing, setIsActing] = createSignal(false);
+  const [error, setError] = createSignal<string | null>(null);
 
-  const gameId = context.gameId;
-  const downloadState = state?.metadata.state ?? null;
-  const progress = useMemo(
-    () => (state ? normalizeProgress(state.metadata.downloadProgress) : null),
-    [state],
-  );
+  const gameId = createMemo(() => context().gameId);
+  const downloadState = createMemo(() => state()?.metadata.state ?? null);
+  const progress = createMemo(() => {
+    const current = state();
+    return current
+      ? normalizeProgress(current.metadata.downloadProgress)
+      : null;
+  });
 
-  const refresh = useCallback(async () => {
-    if (!gameId) {
+  const refresh = async () => {
+    if (!gameId()) {
       return null;
     }
 
     const next = await invoke<ReplayMatchState>("replay_get_match_metadata", {
-      gameId,
+      gameId: gameId(),
     });
     setState(next);
     return next;
-  }, [gameId]);
+  };
 
-  useEffect(() => {
+  createEffect(() => {
+    const currentContext = context();
+    const currentGameId = currentContext.gameId;
     let cancelled = false;
 
     async function prepare() {
-      if (!gameId) {
+      if (!currentGameId) {
         return;
       }
 
@@ -86,7 +91,7 @@ export function useMatchReplay(context: ReplayMatchContext) {
       setError(null);
       try {
         const next = await invoke<ReplayMatchState>("replay_prepare_match", {
-          context,
+          context: currentContext,
         });
         if (!cancelled) {
           setState(next);
@@ -104,13 +109,14 @@ export function useMatchReplay(context: ReplayMatchContext) {
 
     void prepare();
 
-    return () => {
+    onCleanup(() => {
       cancelled = true;
-    };
-  }, [context, gameId]);
+    });
+  });
 
-  useEffect(() => {
-    if (!downloadState || !isPollingState(downloadState)) {
+  createEffect(() => {
+    const currentState = downloadState();
+    if (!currentState || !isPollingState(currentState)) {
       return;
     }
 
@@ -120,13 +126,13 @@ export function useMatchReplay(context: ReplayMatchContext) {
       });
     }, POLL_INTERVAL_MS);
 
-    return () => {
+    onCleanup(() => {
       window.clearInterval(timer);
-    };
-  }, [downloadState, refresh]);
+    });
+  });
 
-  const download = useCallback(async () => {
-    if (!gameId) {
+  const download = async () => {
+    if (!gameId()) {
       return;
     }
 
@@ -134,7 +140,7 @@ export function useMatchReplay(context: ReplayMatchContext) {
     setError(null);
     try {
       const next = await invoke<ReplayMatchState>("replay_download_match", {
-        gameId,
+        gameId: gameId(),
       });
       setState(next);
     } catch (caught) {
@@ -142,23 +148,23 @@ export function useMatchReplay(context: ReplayMatchContext) {
     } finally {
       setIsActing(false);
     }
-  }, [gameId]);
+  };
 
-  const watch = useCallback(async () => {
-    if (!gameId) {
+  const watch = async () => {
+    if (!gameId()) {
       return;
     }
 
     setIsActing(true);
     setError(null);
     try {
-      await invoke("replay_watch_match", { gameId });
+      await invoke("replay_watch_match", { gameId: gameId() });
     } catch (caught) {
       setError(String(caught));
     } finally {
       setIsActing(false);
     }
-  }, [gameId]);
+  };
 
   return {
     state,

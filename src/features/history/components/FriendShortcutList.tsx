@@ -1,17 +1,12 @@
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { keyArray } from "@solid-primitives/keyed";
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import type { LcuChatFriend } from "@/bindings/lcu_chat";
 import { ProfileIcon } from "@/components/ProfileIcon";
 import { RefreshButton } from "@/components/RefreshButton";
+import { useSolidTranslation } from "@/i18n/solid";
 import * as s from "./HistoryToolbar.css";
-
-type FriendShortcutListProps = {
-  friends: LcuChatFriend[];
-  isLoading: boolean;
-  errorMessage: string | null;
-  onRefresh: () => void;
-  onOpenFriend: (friend: LcuChatFriend) => void;
-};
 
 type FriendSection = {
   id: "online" | "offline";
@@ -90,52 +85,50 @@ function compareFriends(a: LcuChatFriend, b: LcuChatFriend): number {
   });
 }
 
-function useFriendSections(
+function resolveFriendSections(
   friends: LcuChatFriend[],
   query: string,
 ): FriendSection[] {
-  return useMemo(() => {
-    const normalizedQuery = normalize(query);
-    const filtered =
-      normalizedQuery.length === 0
-        ? friends
-        : friends.filter((friend) => {
-            const haystack = normalize(
-              [
-                friendDisplayName(friend),
-                `${friend.gameName}#${friend.gameTag}`,
-                friend.gameName,
-                friend.gameTag,
-                friend.name,
-                friend.puuid,
-              ].join(" "),
-            );
-            return haystack.includes(normalizedQuery);
-          });
+  const normalizedQuery = normalize(query);
+  const filtered =
+    normalizedQuery.length === 0
+      ? friends
+      : friends.filter((friend) => {
+          const haystack = normalize(
+            [
+              friendDisplayName(friend),
+              `${friend.gameName}#${friend.gameTag}`,
+              friend.gameName,
+              friend.gameTag,
+              friend.name,
+              friend.puuid,
+            ].join(" "),
+          );
+          return haystack.includes(normalizedQuery);
+        });
 
-    const sorted = filtered.toSorted(compareFriends);
-    const online = sorted.filter((friend) => !isOffline(friend));
-    const offline = sorted.filter(isOffline);
+  const sorted = filtered.toSorted(compareFriends);
+  const online = sorted.filter((friend) => !isOffline(friend));
+  const offline = sorted.filter(isOffline);
 
-    return [
-      {
-        id: "online",
-        titleKey: "history.searchDialog.friendsOnline",
-        friends: online,
-      },
-      {
-        id: "offline",
-        titleKey: "history.searchDialog.friendsOffline",
-        friends: offline,
-      },
-    ].filter((section) => section.friends.length > 0) as FriendSection[];
-  }, [friends, query]);
+  return [
+    {
+      id: "online",
+      titleKey: "history.searchDialog.friendsOnline",
+      friends: online,
+    },
+    {
+      id: "offline",
+      titleKey: "history.searchDialog.friendsOffline",
+      friends: offline,
+    },
+  ].filter((section) => section.friends.length > 0) as FriendSection[];
 }
 
-function FriendAvatar({ icon }: { icon: number }) {
+function FriendAvatar(props: { icon: number }): JSX.Element {
   return (
     <ProfileIcon
-      profileIconId={icon}
+      profileIconId={props.icon}
       alt=""
       className={s.friendAvatar}
       fallbackClassName={s.friendAvatarFallback}
@@ -143,108 +136,121 @@ function FriendAvatar({ icon }: { icon: number }) {
   );
 }
 
-function FriendRow({
-  friend,
-  onOpenFriend,
-}: {
+function FriendRow(props: {
   friend: LcuChatFriend;
   onOpenFriend: (friend: LcuChatFriend) => void;
-}) {
-  const { t } = useTranslation();
-  const displayName = friendDisplayName(friend);
-  const displayGroupName = friendDisplayGroupName(friend);
-  const statusKey = friendStatusKey(friend);
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const displayName = () => friendDisplayName(props.friend);
+  const displayGroupName = () => friendDisplayGroupName(props.friend);
+  const statusKey = () => friendStatusKey(props.friend);
 
   return (
     <button
       type="button"
-      className={s.friendButton}
-      aria-label={`Open match history for ${displayName}`}
-      onClick={() => onOpenFriend(friend)}
+      class={s.friendButton}
+      aria-label={`Open match history for ${displayName()}`}
+      onClick={() => props.onOpenFriend(props.friend)}
     >
-      <FriendAvatar icon={friend.icon} />
-      <span className={s.friendInfo}>
-        <span className={s.friendName}>{displayName}</span>
-        <span className={s.friendMeta}>{displayGroupName}</span>
+      <FriendAvatar icon={props.friend.icon} />
+      <span class={s.friendInfo}>
+        <span class={s.friendName}>{displayName()}</span>
+        <span class={s.friendMeta}>{displayGroupName()}</span>
       </span>
-      <span className={friendStatusClass(friend)}>
-        {t(`history.searchDialog.friendStatus.${statusKey}`)}
+      <span class={friendStatusClass(props.friend)}>
+        {t(`history.searchDialog.friendStatus.${statusKey()}`)}
       </span>
     </button>
   );
 }
 
-export function FriendShortcutList({
-  friends,
-  isLoading,
-  errorMessage,
-  onRefresh,
-  onOpenFriend,
-}: FriendShortcutListProps) {
-  const { t } = useTranslation();
-  const [friendQuery, setFriendQuery] = useState("");
-  const sections = useFriendSections(friends, friendQuery);
-  const hasQuery = friendQuery.trim().length > 0;
+export function FriendShortcutList(props: {
+  friends: LcuChatFriend[];
+  isLoading: boolean;
+  errorMessage: string | null;
+  onRefresh: () => void;
+  onOpenFriend: (friend: LcuChatFriend) => void;
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const [friendQuery, setFriendQuery] = createSignal("");
+  const sections = createMemo(() =>
+    resolveFriendSections(props.friends, friendQuery()),
+  );
+  const hasQuery = () => friendQuery().trim().length > 0;
 
-  let emptyText: string | null = null;
-  if (errorMessage) {
-    emptyText = t("history.searchDialog.friendsError");
-  } else if (isLoading && friends.length === 0) {
-    emptyText = t("history.searchDialog.friendsLoading");
-  } else if (friends.length === 0) {
-    emptyText = t("history.searchDialog.friendsEmpty");
-  } else if (sections.length === 0 && hasQuery) {
-    emptyText = t("history.searchDialog.friendsNoMatches");
-  }
+  const emptyText = createMemo(() => {
+    if (props.errorMessage) {
+      return t("history.searchDialog.friendsError");
+    }
+    if (props.isLoading && props.friends.length === 0) {
+      return t("history.searchDialog.friendsLoading");
+    }
+    if (props.friends.length === 0) {
+      return t("history.searchDialog.friendsEmpty");
+    }
+    if (sections().length === 0 && hasQuery()) {
+      return t("history.searchDialog.friendsNoMatches");
+    }
+    return null;
+  });
+  const friendSections = keyArray(
+    sections,
+    (section) => section.id,
+    (section) => {
+      const friendRows = keyArray(
+        () => section().friends,
+        (friend) => friend.puuid,
+        (friend) => (
+          <FriendRow friend={friend()} onOpenFriend={props.onOpenFriend} />
+        ),
+      );
+
+      return (
+        <div class={s.friendSection}>
+          <div class={s.friendSectionTitle}>
+            <span>{t(section().titleKey)}</span>
+            <span>{section().friends.length}</span>
+          </div>
+          {friendRows()}
+        </div>
+      );
+    },
+  );
 
   return (
-    <aside className={s.friendPanel}>
-      <div className={s.friendHeader}>
-        <div className={s.friendHeaderText}>
-          <span className={s.friendTitle}>
+    <aside class={s.friendPanel}>
+      <div class={s.friendHeader}>
+        <div class={s.friendHeaderText}>
+          <span class={s.friendTitle}>
             {t("history.searchDialog.friendsTitle")}
           </span>
-          <span className={s.friendCount}>
+          <span class={s.friendCount}>
             {t("history.searchDialog.friendsCount", {
-              count: friends.length,
+              count: props.friends.length,
             })}
           </span>
         </div>
         <input
-          className={s.friendSearchInput}
-          value={friendQuery}
-          onChange={(event) => setFriendQuery(event.currentTarget.value)}
+          class={s.friendSearchInput}
+          value={friendQuery()}
+          onInput={(event) => setFriendQuery(event.currentTarget.value)}
           placeholder={t("history.searchDialog.friendsSearchPlaceholder")}
           aria-label="Search friends"
         />
         <RefreshButton
-          loading={isLoading}
-          onClick={onRefresh}
+          loading={props.isLoading}
+          onClick={props.onRefresh}
           ariaLabel="Refresh friends"
           size={13}
           minLoadingMs={1000}
         />
       </div>
 
-      <div className={s.friendList}>
-        {emptyText ? (
-          <div className={s.friendEmptyText}>{emptyText}</div>
-        ) : null}
-        {sections.map((section) => (
-          <div key={section.id} className={s.friendSection}>
-            <div className={s.friendSectionTitle}>
-              <span>{t(section.titleKey)}</span>
-              <span>{section.friends.length}</span>
-            </div>
-            {section.friends.map((friend) => (
-              <FriendRow
-                key={friend.id}
-                friend={friend}
-                onOpenFriend={onOpenFriend}
-              />
-            ))}
-          </div>
-        ))}
+      <div class={s.friendList}>
+        <Show when={emptyText()}>
+          {(text) => <div class={s.friendEmptyText}>{text()}</div>}
+        </Show>
+        {friendSections()}
       </div>
     </aside>
   );

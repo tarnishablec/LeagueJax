@@ -1,9 +1,10 @@
-import { useMemo } from "react";
-import useSWR from "swr";
+import type { Accessor } from "solid-js";
+import { createMemo } from "solid-js";
 import {
   CDRAGON_GAME_DATA_BASE,
   CDRAGON_PERK_STYLE_ICON_BY_ID,
 } from "@/features/history/components/match-card/match-card-display";
+import { createSolidQuery } from "@/infra/solid-query";
 
 type CdragonItem = {
   id?: number | string;
@@ -308,32 +309,33 @@ function needsStaticCatalog(
   return assets.some((assetParam) => assetParam.type !== "profile-icon");
 }
 
-export function useCdragonStaticData(
+export function useSolidCdragonStaticData(
   param: CdragonAssetParam,
-): CdragonAssetData;
-export function useCdragonStaticData(
+): Accessor<CdragonAssetData>;
+export function useSolidCdragonStaticData(
   param: readonly CdragonAssetParam[],
-): CdragonAssetData[];
-export function useCdragonStaticData(
+): Accessor<CdragonAssetData[]>;
+export function useSolidCdragonStaticData(
   param: CdragonAssetParam | readonly CdragonAssetParam[],
-): CdragonAssetData | CdragonAssetData[] {
-  const requireCatalog = useMemo(() => needsStaticCatalog(param), [param]);
+): Accessor<CdragonAssetData | CdragonAssetData[]> {
+  const requireCatalog = createMemo(() => needsStaticCatalog(param));
 
-  const { data: cdragonCatalog = EMPTY_CDRAGON_CATALOG } = useSWR(
-    requireCatalog ? "history:cdragon-static-catalog" : null,
+  const cdragonCatalog = createSolidQuery<CdragonStaticCatalog>(
+    () => (requireCatalog() ? "history:cdragon-static-catalog" : null),
     () => fetchCdragonStaticCatalog(),
     {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-      fallbackData: EMPTY_CDRAGON_CATALOG,
+      initialValue: EMPTY_CDRAGON_CATALOG,
+      keepPreviousData: true,
     },
   );
 
-  return useMemo(() => {
+  return createMemo(() => {
+    const catalog = cdragonCatalog.data() ?? EMPTY_CDRAGON_CATALOG;
     if (Array.isArray(param)) {
       return param.map((assetParam) =>
-        resolveCdragonAsset(assetParam, cdragonCatalog),
+        resolveCdragonAsset(assetParam, catalog),
       );
     }
-    return resolveCdragonAsset(param as CdragonAssetParam, cdragonCatalog);
-  }, [cdragonCatalog, param]);
+    return resolveCdragonAsset(param as CdragonAssetParam, catalog);
+  });
 }

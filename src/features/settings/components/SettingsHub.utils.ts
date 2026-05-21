@@ -134,7 +134,7 @@ export const buildSettingsPages = (
   }
 
   for (const definition of definitions) {
-    if (definition.visible === false) {
+    if (!definition.visible) {
       continue;
     }
 

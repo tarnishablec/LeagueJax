@@ -2,12 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { OngoingGameUpdated } from "@/bindings/ongoing_game";
 import type { Jax } from "@/jax";
-import type { WebShard } from "@/runtime/web-contract";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { ongoingGameI18n } from "../ongoing-game/i18n";
-import { useOngoingGameStore } from "../ongoing-game/store";
+import { ongoingGameStore } from "../ongoing-game/store-core";
 import { SHARD_IDS } from "../shard-ids";
 
-export class MiniOngoingGameShard implements WebShard {
+export class MiniOngoingGameShard implements SolidWebShard {
   private ongoingUpdatedUnlisten: UnlistenFn | null = null;
   private pendingUpdated: OngoingGameUpdated | null = null;
   private updateRafId: number | null = null;
@@ -38,7 +38,7 @@ export class MiniOngoingGameShard implements WebShard {
           const pending = this.pendingUpdated;
           if (pending) {
             this.pendingUpdated = null;
-            useOngoingGameStore.getState().applyUpdated(pending);
+            ongoingGameStore.getState().applyUpdated(pending);
           }
         });
       },
@@ -57,7 +57,7 @@ export class MiniOngoingGameShard implements WebShard {
       this.ongoingUpdatedUnlisten();
       this.ongoingUpdatedUnlisten = null;
     }
-    useOngoingGameStore.getState().reset();
+    ongoingGameStore.getState().reset();
   }
 
   public i18nResources() {

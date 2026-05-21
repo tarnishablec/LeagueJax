@@ -1,6 +1,9 @@
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import type { CSSProperties } from "react";
+import type { JSX } from "solid-js";
 import * as s from "./SettingsControl.css";
+
+type CSSProperties = JSX.CSSProperties;
+type CSSDimension = string | number;
 
 export type SettingsControlFit = "fill" | "content";
 export type SettingsControlSize = "md" | "sm" | "auto";
@@ -8,9 +11,9 @@ export type SettingsControlSize = "md" | "sm" | "auto";
 export interface SettingsControlLayoutProps {
   className?: string;
   fit?: SettingsControlFit;
-  height?: CSSProperties["height"];
+  height?: CSSDimension;
   size?: SettingsControlSize;
-  width?: CSSProperties["width"];
+  width?: CSSDimension;
 }
 
 const defaultWidthByFit: Record<SettingsControlFit, string> = {
@@ -24,7 +27,7 @@ const defaultHeightBySize: Record<SettingsControlSize, string> = {
   auto: "auto",
 };
 
-function toCssDimension(value: CSSProperties["height"]): string {
+function toCssDimension(value: CSSDimension): string {
   return typeof value === "number" ? `${value}px` : String(value);
 }
 
@@ -49,5 +52,5 @@ export function settingsControlStyle({
   return assignInlineVars({
     [s.controlWidth]: toCssDimension(width ?? defaultWidthByFit[fit]),
     [s.controlHeight]: toCssDimension(height ?? defaultHeightBySize[size]),
-  });
+  }) as CSSProperties;
 }

@@ -1,13 +1,17 @@
+/** @jsxImportSource solid-js */
 import { ClientStatus } from "@/components/ClientStatus";
 import en from "@/i18n/locales/en.json";
 import jaJP from "@/i18n/locales/ja-JP.json";
 import zhCN from "@/i18n/locales/zh-CN.json";
-import type { SidebarSlot, WebShard } from "@/runtime/web-contract";
+import type {
+  SolidSidebarSlot,
+  SolidWebShard,
+} from "@/runtime/solid-web-contract";
 import { SHARD_IDS } from "../shard-ids";
 
-export class ShellShard implements WebShard {
+export class SolidShellShard implements SolidWebShard {
   public label() {
-    return "ShellShard";
+    return "SolidShellShard";
   }
 
   public id() {
@@ -18,7 +22,7 @@ export class ShellShard implements WebShard {
     return [SHARD_IDS.SETTINGS];
   }
 
-  public sidebarSlots(): SidebarSlot[] {
+  public sidebarSlots(): SolidSidebarSlot[] {
     return [
       {
         id: "shell-client-status",

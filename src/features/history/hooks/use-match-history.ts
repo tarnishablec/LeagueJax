@@ -1,40 +1,63 @@
 import { invoke } from "@tauri-apps/api/core";
-import useSWR from "swr";
+import type { Accessor } from "solid-js";
 import type {
   RawMatchSummariesResponse,
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
+import { createSolidQuery } from "@/infra/solid-query";
 import type { MatchModeTag } from "../types/match-mode";
 
 export type EnrichedMatch = RawMatchSummaryGame & {
   me: RawMatchSummaryParticipant;
 };
 
+type MatchHistoryKey = readonly [
+  "get_match_summaries",
+  string,
+  string | null,
+  number,
+  number,
+  MatchModeTag,
+  boolean,
+];
+
 function modeTagToQueryTag(tag: MatchModeTag): string | undefined {
   return tag === "all" ? undefined : tag;
 }
 
-export function useMatchHistory(
-  puuid: string | undefined,
-  sgpServerId: string | null,
-  page: number,
-  pageSize = 20,
-  modeTag: MatchModeTag = "all",
-  autoRefreshOnSwitch = false,
-) {
-  const { data, error, isLoading, isValidating, mutate } = useSWR(
-    puuid
-      ? ["get_match_summaries", puuid, sgpServerId, page, pageSize, modeTag]
-      : null,
-    async ([
-      cmd,
-      resolvedPuuid,
-      resolvedSgpServerId,
-      resolvedPage,
-      resolvedPageSize,
-      resolvedTag,
-    ]) => {
+export function useSolidMatchHistory(params: {
+  puuid: Accessor<string | undefined>;
+  sgpServerId: Accessor<string | null>;
+  page: Accessor<number>;
+  pageSize: Accessor<number>;
+  modeTag: Accessor<MatchModeTag>;
+  autoRefreshOnSwitch: Accessor<boolean>;
+}) {
+  const query = createSolidQuery<EnrichedMatch[]>(
+    () => {
+      const resolvedPuuid = params.puuid();
+      return resolvedPuuid
+        ? ([
+            "get_match_summaries",
+            resolvedPuuid,
+            params.sgpServerId(),
+            params.page(),
+            params.pageSize(),
+            params.modeTag(),
+            params.autoRefreshOnSwitch(),
+          ] as const)
+        : null;
+    },
+    async (key) => {
+      const [
+        cmd,
+        resolvedPuuid,
+        resolvedSgpServerId,
+        resolvedPage,
+        resolvedPageSize,
+        resolvedTag,
+      ] = key as MatchHistoryKey;
       const res = await invoke<RawMatchSummariesResponse>(cmd, {
         puuid: resolvedPuuid,
         beginIndex: (resolvedPage - 1) * resolvedPageSize,
@@ -45,7 +68,7 @@ export function useMatchHistory(
 
       return res.games.map((game) => {
         const me = game.json.participants.find(
-          (p) => p.puuid === resolvedPuuid,
+          (participant) => participant.puuid === resolvedPuuid,
         );
         if (!me) {
           throw new Error(
@@ -55,20 +78,15 @@ export function useMatchHistory(
         return { ...game, me };
       });
     },
-    {
-      dedupingInterval: Number.POSITIVE_INFINITY,
-      revalidateIfStale: autoRefreshOnSwitch,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    },
+    { keepPreviousData: true },
   );
 
   return {
-    matches: data,
-    error,
-    isLoading,
-    isRefreshing: isValidating && !isLoading,
-    hasNextPage: (data?.length ?? 0) === pageSize,
-    refresh: () => mutate(),
+    matches: query.data,
+    error: query.error,
+    isLoading: query.isLoading,
+    isRefreshing: query.isValidating,
+    hasNextPage: () => (query.data()?.length ?? 0) === params.pageSize(),
+    refresh: query.refetch,
   };
 }

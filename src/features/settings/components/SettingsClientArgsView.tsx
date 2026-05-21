@@ -1,11 +1,13 @@
-import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { type ColumnDef, createColumnHelper } from "@tanstack/solid-table";
+import type { JSX } from "solid-js";
+import { createMemo } from "solid-js";
 import type { LeagueClientCmdArgs } from "@/bindings/lcu.ts";
 import { DataTable } from "@/components/DataTable";
-import * as dt from "@/components/DataTable/DataTable.css";
-import { useLcuStore } from "@/stores/lcu";
-import * as s from "./SettingsClientArgsView.css";
+import * as dt from "@/components/DataTable/DataTable.css.ts";
+import { useSolidTranslation } from "@/i18n/solid";
+import { useSolidLcuStore } from "@/stores/lcu.solid";
+import * as s from "./SettingsClientArgsView.css.ts";
 
 interface CmdArgRow {
   key: string;
@@ -60,51 +62,49 @@ const toCmdLine = (
 
 const col = createColumnHelper<CmdArgRow>();
 
-export function SettingsClientArgsView() {
-  const { t } = useTranslation();
-  const focused = useLcuStore((state) =>
+export function SettingsClientArgsView(): JSX.Element {
+  const { t } = useSolidTranslation();
+  const focused = useSolidLcuStore((state) =>
     state.instances.find((instance) => instance.isFocused),
   );
 
-  const rows = useMemo(() => {
-    if (!focused?.cmdArgs) {
+  const rows = createMemo(() => {
+    const cmdArgs = focused()?.cmdArgs;
+    if (!cmdArgs) {
       return [];
     }
-    return toRows(focused.cmdArgs);
-  }, [focused?.cmdArgs]);
+    return toRows(cmdArgs);
+  });
 
-  const commandLine = useMemo(() => {
-    return toCmdLine(focused?.cmdArgs, focused?.installDir);
-  }, [focused?.cmdArgs, focused?.installDir]);
+  const commandLine = createMemo(() => {
+    return toCmdLine(focused()?.cmdArgs, focused()?.installDir);
+  });
 
-  // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column
-  const columns: ColumnDef<CmdArgRow, any>[] = useMemo(
-    () => [
-      col.accessor("key", {
-        header: () =>
-          t("settings.clientArgs.columns.key", {
-            defaultValue: "Key",
-          }),
-        size: 280,
-        meta: { className: dt.monospace },
-        cell: (info) => info.getValue(),
-      }),
-      col.accessor("value", {
-        header: () =>
-          t("settings.clientArgs.columns.value", {
-            defaultValue: "Value",
-          }),
-        meta: { className: dt.monospace },
-        cell: (info) => info.getValue(),
-      }),
-    ],
-    [t],
-  );
+  // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column.
+  const columns = createMemo<ColumnDef<CmdArgRow, any>[]>(() => [
+    col.accessor("key", {
+      header: () =>
+        t("settings.clientArgs.columns.key", {
+          defaultValue: "Key",
+        }),
+      size: 280,
+      meta: { className: dt.monospace },
+      cell: (info) => info.getValue(),
+    }),
+    col.accessor("value", {
+      header: () =>
+        t("settings.clientArgs.columns.value", {
+          defaultValue: "Value",
+        }),
+      meta: { className: dt.monospace },
+      cell: (info) => info.getValue(),
+    }),
+  ]);
 
   return (
-    <div className={s.page}>
-      <div className={s.card}>
-        <span className={s.sectionTitle}>
+    <div class={s.page}>
+      <div class={s.card}>
+        <span class={s.sectionTitle}>
           {t("settings.clientArgs.commandTitle", {
             defaultValue: "Command Line",
           })}
@@ -113,14 +113,14 @@ export function SettingsClientArgsView() {
           aria-label="Client command line"
           name="Client command line"
           readOnly
-          value={commandLine}
-          className={s.commandBox}
+          value={commandLine()}
+          class={s.commandBox}
         />
       </div>
 
       <DataTable
-        data={rows}
-        columns={columns}
+        data={rows()}
+        columns={columns()}
         emptyText={t("settings.clientArgs.empty", {
           defaultValue: "No focused client.",
         })}

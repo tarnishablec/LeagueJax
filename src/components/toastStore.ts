@@ -1,6 +1,6 @@
-import { createToaster } from "@ark-ui/react/toast";
+import { createToaster } from "@ark-ui/solid/toast";
 
-export const appToaster = createToaster({
+export const solidAppToaster = createToaster({
   placement: "bottom-end",
   gap: 12,
   max: 4,

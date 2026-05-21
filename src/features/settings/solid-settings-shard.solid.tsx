@@ -1,8 +1,9 @@
+/** @jsxImportSource solid-js */
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { Settings } from "lucide-react";
-import { lazy, Suspense } from "react";
+import { Settings } from "lucide-solid";
 import { mergeDeep } from "remeda";
+import { lazy } from "solid-js";
 import type {
   SettingsBootstrapDto,
   SettingsChangedEventDto,
@@ -11,11 +12,16 @@ import type {
 } from "@/bindings/settings.ts";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BACKEND_SHARD_IDS } from "@/features/backend-shard-ids";
+import { SHARD_IDS } from "@/features/shard-ids";
 import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
 import { waitBackendShards } from "@/runtime/backend-shards";
-import type { WebShard } from "@/runtime/web-contract";
-import { SHARD_IDS } from "../shard-ids";
+import type {
+  SolidNavItem,
+  SolidRouteContribution,
+  SolidToolbarSlot,
+  SolidWebShard,
+} from "@/runtime/solid-web-contract";
 import { settingsAboutI18n } from "./about.i18n";
 import { settingsI18n } from "./i18n";
 import { SettingsStore } from "./store";
@@ -36,34 +42,20 @@ import type {
 
 const BACKEND_SETTINGS_WAIT_TIMEOUT_MS = 10_000;
 
-const SettingsRoute = lazy(() =>
-  import("./routes/SettingsRoute").then((module) => ({
-    default: module.SettingsRoute,
-  })),
-);
+const SettingsRoute = lazy(() => import("./routes/SettingsRoute"));
+const SettingsIndexRoute = lazy(() => import("./routes/SettingsIndexRoute"));
+const SettingsPageRoute = lazy(() => import("./routes/SettingsPageRoute"));
 
-const SettingsIndexRoute = lazy(() =>
-  import("./routes/SettingsIndexRoute").then((module) => ({
-    default: module.SettingsIndexRoute,
-  })),
-);
-
-const SettingsPageRoute = lazy(() =>
-  import("./routes/SettingsPageRoute").then((module) => ({
-    default: module.SettingsPageRoute,
-  })),
-);
-
-export class SettingsShard implements WebShard, SettingsShardApi {
-  private readonly sourceId = `web-${crypto.randomUUID()}`;
+export class SolidSettingsShard implements SolidWebShard, SettingsShardApi {
+  private readonly sourceId = `solid-main-${crypto.randomUUID()}`;
   private changedUnlisten: UnlistenFn | null = null;
   private definitionsChangedUnlisten: UnlistenFn | null = null;
   private patchQueue = Promise.resolve();
-  private readonly logger = createLogger("settings-shard");
+  private readonly logger = createLogger("solid-settings-shard");
   private readonly store = new SettingsStore();
 
   public label() {
-    return "SettingsShard";
+    return "SolidSettingsShard";
   }
 
   public id() {
@@ -177,31 +169,18 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     return this.store.getSectionRenderer(key);
   }
 
-  public routes() {
+  public routes(): SolidRouteContribution[] {
     return [
       {
         path: "settings",
-        element: (
-          <Suspense fallback={null}>
-            <SettingsRoute />
-          </Suspense>
-        ),
+        component: SettingsRoute,
         children: [
           {
-            index: true,
-            element: (
-              <Suspense fallback={null}>
-                <SettingsIndexRoute />
-              </Suspense>
-            ),
+            component: SettingsIndexRoute,
           },
           {
             path: ":pageId",
-            element: (
-              <Suspense fallback={null}>
-                <SettingsPageRoute />
-              </Suspense>
-            ),
+            component: SettingsPageRoute,
           },
         ],
         order: 90,
@@ -209,7 +188,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     ];
   }
 
-  public navItems() {
+  public navItems(): SolidNavItem[] {
     return [
       {
         to: "/main/settings",
@@ -221,7 +200,7 @@ export class SettingsShard implements WebShard, SettingsShardApi {
     ];
   }
 
-  public toolbarSlots() {
+  public toolbarSlots(): SolidToolbarSlot[] {
     return [
       {
         id: "settings-theme-toggle",

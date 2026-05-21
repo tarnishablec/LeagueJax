@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
 import { LcuImage } from "@/components/LcuImage";
 import { resolveProfileIconAssetPath } from "@/utils/profile-icon-assets";
 
@@ -9,27 +10,19 @@ type ProfileIconProps = {
   fallbackClassName?: string;
   loadingClassName?: string;
   onError?: () => void;
-  style?: CSSProperties;
+  style?: JSX.CSSProperties;
 };
 
-export function ProfileIcon({
-  profileIconId,
-  alt = "",
-  className,
-  fallbackClassName,
-  loadingClassName,
-  onError,
-  style,
-}: ProfileIconProps) {
+export function ProfileIcon(props: ProfileIconProps): JSX.Element {
   return (
     <LcuImage
-      src={resolveProfileIconAssetPath(profileIconId)}
-      alt={alt}
-      className={className}
-      fallbackClassName={fallbackClassName}
-      loadingClassName={loadingClassName}
-      onError={onError}
-      style={style}
+      src={resolveProfileIconAssetPath(props.profileIconId)}
+      alt={props.alt ?? ""}
+      className={props.className}
+      fallbackClassName={props.fallbackClassName}
+      loadingClassName={props.loadingClassName}
+      onError={props.onError}
+      style={props.style}
     />
   );
 }

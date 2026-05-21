@@ -1,6 +1,6 @@
-﻿import type { Resource } from "i18next";
+﻿import type { LocaleResource } from "@/i18n/types";
 
-export const ongoingGameI18n: Resource = {
+export const ongoingGameI18n: LocaleResource = {
   en: {
     nav: {
       game: "Game",

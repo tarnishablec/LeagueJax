@@ -1,9 +1,9 @@
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { createMemo } from "solid-js";
 import type { SgpServersConfig } from "@/bindings/sgp";
-import { createListCollection } from "@/components/settings-ui";
-import { useHistorySearchServerContext } from "./useHistorySearchServerContext";
-import { useSummonerSearch } from "./useSummonerSearch";
+import { createListCollection } from "@/components/settings-ui/index";
+import { useSolidTranslation } from "@/i18n/solid";
+import { useSolidHistorySearchServerContext } from "./useHistorySearchServerContext";
+import { useSolidSummonerSearch } from "./useSummonerSearch";
 
 function serverDisplayName(
   config: SgpServersConfig,
@@ -18,71 +18,58 @@ function serverDisplayCode(code: string): string {
   return code.startsWith("TENCENT_") ? code.slice("TENCENT_".length) : code;
 }
 
-type UseHistorySearchParams = {
-  open: boolean;
-  config: SgpServersConfig;
-  enabled: boolean;
-};
-
-export function useHistorySearch({
-  open,
-  config,
-  enabled,
-}: UseHistorySearchParams) {
-  const { t, i18n } = useTranslation();
-
-  const serverContext = useHistorySearchServerContext({
-    open,
-    config,
-    enabled,
-  });
-  const search = useSummonerSearch({
-    effectiveServerCode: serverContext.region.effectiveServerCode,
+export function useSolidHistorySearch(params: {
+  open: () => boolean;
+  config: () => SgpServersConfig;
+  enabled: () => boolean;
+}) {
+  const { language, t } = useSolidTranslation();
+  const serverContext = useSolidHistorySearchServerContext(params);
+  const search = useSolidSummonerSearch({
+    effectiveServerCode: () => serverContext.region().effectiveServerCode,
   });
 
-  const serverCollection = useMemo(() => {
-    if (!serverContext.region.focusedServerCode) {
+  const serverCollection = createMemo(() => {
+    const focusedServerCode = serverContext.region().focusedServerCode;
+    if (!focusedServerCode) {
       return createListCollection({
         items: [{ value: "", label: t("history.searchDialog.focused") }],
       });
     }
 
-    const lang = i18n.language;
-    const focused = serverContext.region.focusedServerCode;
+    const config = params.config();
     const items = [
       {
-        value: focused,
-        label: `${serverDisplayName(config, focused, lang)} (${serverDisplayCode(focused)})`,
+        value: focusedServerCode,
+        label: `${serverDisplayName(config, focusedServerCode, language())} (${serverDisplayCode(
+          focusedServerCode,
+        )})`,
       },
     ];
 
-    for (const code of serverContext.region.availableServerCodes) {
-      if (code === focused) continue;
+    for (const code of serverContext.region().availableServerCodes) {
+      if (code === focusedServerCode) {
+        continue;
+      }
       items.push({
         value: code,
-        label: `${serverDisplayName(config, code, lang)} (${serverDisplayCode(code)})`,
+        label: `${serverDisplayName(config, code, language())} (${serverDisplayCode(code)})`,
       });
     }
 
     return createListCollection({ items });
-  }, [
-    serverContext.region.availableServerCodes,
-    serverContext.region.focusedServerCode,
-    config,
-    i18n.language,
-    t,
-  ]);
+  });
 
-  const serverGroups = useMemo(() => {
-    const focused = serverContext.region.focusedServerCode;
+  const serverGroups = createMemo(() => {
+    const focused = serverContext.region().focusedServerCode;
     if (!focused) {
       return undefined;
     }
 
-    const focusedItem = serverCollection.items.find(
+    const focusedItem = serverCollection().items.find(
       (item) => item.value === focused,
     );
-    const otherItems = serverCollection.items.filter(
+    const otherItems = serverCollection().items.filter(
       (item) => item.value !== focused,
     );
 
@@ -94,11 +81,15 @@ export function useHistorySearch({
       { id: "focused-server", items: [focusedItem] },
       { id: "other-servers", items: otherItems },
     ];
-  }, [serverCollection.items, serverContext.region.focusedServerCode]);
+  });
 
-  const errorMessage =
-    search.searchError ??
-    (serverContext.bootstrapError ? t("history.searchDialog.noClient") : null);
+  const errorMessage = createMemo(
+    () =>
+      search.searchError() ??
+      (serverContext.bootstrapError()
+        ? t("history.searchDialog.noClient")
+        : null),
+  );
 
   return {
     server: {
@@ -106,8 +97,8 @@ export function useHistorySearch({
       groups: serverGroups,
       selectedId: serverContext.selectedServerId,
       setSelectedId: serverContext.setSelectedServerId,
-      focusedServerCode: serverContext.region.focusedServerCode,
-      effectiveServerCode: serverContext.region.effectiveServerCode,
+      focusedServerCode: () => serverContext.region().focusedServerCode,
+      effectiveServerCode: () => serverContext.region().effectiveServerCode,
       show: serverContext.showServerSelect,
       disabled: serverContext.serverSelectDisabled,
       isBootstrapping: serverContext.isBootstrapping,
@@ -118,7 +109,7 @@ export function useHistorySearch({
       handleSearch: search.handleSearch,
       isSearching: search.isSearching,
       results: search.results,
-      searched: search.lastQuery.length > 0,
+      searched: () => search.lastQuery().length > 0,
     },
     errorMessage,
   };

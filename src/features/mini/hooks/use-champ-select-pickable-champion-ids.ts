@@ -1,21 +1,22 @@
 import { invoke } from "@tauri-apps/api/core";
-import useSWR from "swr";
+import type { Accessor } from "solid-js";
+import { createSolidQuery } from "@/infra/solid-query";
 
 const PICKABLE_COMMAND = "lcu_get_pickable_champion_ids";
 
-export function useChampSelectPickableChampionIds(
-  gameId: number | null,
-  refreshKey: number | null,
+export function useSolidChampSelectPickableChampionIds(
+  gameId: Accessor<number | null>,
+  refreshKey: Accessor<number | null>,
 ) {
-  return useSWR(
-    gameId ? [PICKABLE_COMMAND, gameId, refreshKey] : null,
-    ([cmd]) => invoke<number[]>(cmd),
+  return createSolidQuery<number[]>(
+    () =>
+      gameId() ? ([PICKABLE_COMMAND, gameId(), refreshKey()] as const) : null,
+    (key) => {
+      const [cmd] = key as readonly [string, number | null, number | null];
+      return invoke<number[]>(cmd);
+    },
     {
-      dedupingInterval: Number.POSITIVE_INFINITY,
       keepPreviousData: true,
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
     },
   );
 }

@@ -1,32 +1,29 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
+import type { Accessor, Setter } from "solid-js";
+import { createSignal } from "solid-js";
 import type { SummonerSearchResult } from "@/bindings/summoner";
 
-type UseSummonerSearchParams = {
-  effectiveServerCode: string | null;
-};
-
 type UseSummonerSearchResult = {
-  query: string;
-  setQuery: (query: string) => void;
-  results: SummonerSearchResult[];
-  isSearching: boolean;
-  searchError: string | null;
-  lastQuery: string;
+  query: Accessor<string>;
+  setQuery: Setter<string>;
+  results: Accessor<SummonerSearchResult[]>;
+  isSearching: Accessor<boolean>;
+  searchError: Accessor<string | null>;
+  lastQuery: Accessor<string>;
   handleSearch: () => Promise<void>;
 };
 
-export function useSummonerSearch({
-  effectiveServerCode,
-}: UseSummonerSearchParams): UseSummonerSearchResult {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SummonerSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [lastQuery, setLastQuery] = useState("");
+export function useSolidSummonerSearch(params: {
+  effectiveServerCode: Accessor<string | null>;
+}): UseSummonerSearchResult {
+  const [query, setQuery] = createSignal("");
+  const [results, setResults] = createSignal<SummonerSearchResult[]>([]);
+  const [isSearching, setIsSearching] = createSignal(false);
+  const [searchError, setSearchError] = createSignal<string | null>(null);
+  const [lastQuery, setLastQuery] = createSignal("");
 
   const handleSearch = async () => {
-    const trimmed = query.trim();
+    const trimmed = query().trim();
     if (trimmed.length === 0) {
       setResults([]);
       setLastQuery("");
@@ -36,6 +33,7 @@ export function useSummonerSearch({
     setIsSearching(true);
     setSearchError(null);
     try {
+      const effectiveServerCode = params.effectiveServerCode();
       const payload = await invoke<SummonerSearchResult[]>("search_summoners", {
         query: trimmed,
         ...(effectiveServerCode ? { sgpServerId: effectiveServerCode } : {}),

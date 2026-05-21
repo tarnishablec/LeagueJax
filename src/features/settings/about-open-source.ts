@@ -8,7 +8,8 @@ type CargoWorkspaceFile = {
   };
 };
 
-type PackageMetadata = {
+export type PackageMetadata = {
+  version?: string;
   dependencies?: Record<string, string | undefined>;
   devDependencies?: Record<string, string | undefined>;
 };
@@ -19,13 +20,16 @@ export type OpenSourceRoleKey =
   | "jax"
   | "lucide"
   | "maokai"
-  | "react"
-  | "reactRouter"
   | "rust"
   | "serde"
   | "sled"
   | "snafu"
-  | "swr"
+  | "solid"
+  | "solidFlow"
+  | "solidMotionOne"
+  | "solidPrimitives"
+  | "solidRouter"
+  | "solidZustand"
   | "tauri"
   | "thaterror"
   | "tokio"
@@ -136,20 +140,20 @@ export function createOpenSourceSoftware(
       url: "https://tauri.app",
     },
     {
-      name: "React",
-      version: normalizeVersion(dependencyVersions.react),
+      name: "SolidJS",
+      version: normalizeVersion(dependencyVersions["solid-js"]),
       license: "MIT",
       linkKind: "website",
-      roleKey: "react",
-      url: "https://react.dev/",
+      roleKey: "solid",
+      url: "https://www.solidjs.com/",
     },
     {
-      name: "React Router",
-      version: normalizeVersion(dependencyVersions["react-router"]),
+      name: "Solid Router",
+      version: normalizeVersion(dependencyVersions["@solidjs/router"]),
       license: "MIT",
       linkKind: "github",
-      roleKey: "reactRouter",
-      url: "https://github.com/remix-run/react-router",
+      roleKey: "solidRouter",
+      url: "https://github.com/solidjs/solid-router",
     },
     {
       name: "TypeScript",
@@ -177,7 +181,7 @@ export function createOpenSourceSoftware(
     },
     {
       name: "Ark UI",
-      version: normalizeVersion(dependencyVersions["@ark-ui/react"]),
+      version: normalizeVersion(dependencyVersions["@ark-ui/solid"]),
       license: "MIT",
       linkKind: "website",
       roleKey: "arkUi",
@@ -192,20 +196,44 @@ export function createOpenSourceSoftware(
       url: "https://github.com/vanilla-extract-css/vanilla-extract",
     },
     {
-      name: "Lucide React",
-      version: normalizeVersion(dependencyVersions["lucide-react"]),
+      name: "Lucide Solid",
+      version: normalizeVersion(dependencyVersions["lucide-solid"]),
       license: "ISC",
       linkKind: "website",
       roleKey: "lucide",
       url: "https://lucide.dev",
     },
     {
-      name: "SWR",
-      version: normalizeVersion(dependencyVersions.swr),
+      name: "solid-primitives",
+      version: normalizeVersion(dependencyVersions["@solid-primitives/i18n"]),
       license: "MIT",
-      linkKind: "website",
-      roleKey: "swr",
-      url: "https://swr.vercel.app",
+      linkKind: "github",
+      roleKey: "solidPrimitives",
+      url: "https://github.com/solidjs-community/solid-primitives",
+    },
+    {
+      name: "solid-zustand",
+      version: normalizeVersion(dependencyVersions["solid-zustand"]),
+      license: "MIT",
+      linkKind: "github",
+      roleKey: "solidZustand",
+      url: "https://github.com/solidjs-community/solid-zustand",
+    },
+    {
+      name: "solid-motionone",
+      version: normalizeVersion(dependencyVersions["solid-motionone"]),
+      license: "MIT",
+      linkKind: "github",
+      roleKey: "solidMotionOne",
+      url: "https://github.com/solidjs-community/solid-motionone",
+    },
+    {
+      name: "solid-flow",
+      version: normalizeVersion(dependencyVersions["@dschz/solid-flow"]),
+      license: "MIT",
+      linkKind: "github",
+      roleKey: "solidFlow",
+      url: "https://github.com/dschz/solid-flow",
     },
     {
       name: "zustand",

@@ -1,7 +1,10 @@
-import { HoverCard } from "@ark-ui/react/hover-card";
-import { Portal } from "@ark-ui/react/portal";
-import { useMemo } from "react";
-import { useCdragonCherryAugments } from "../../hooks/use-cdragon-cherry-augments";
+/** @jsxImportSource solid-js */
+import { HoverCard } from "@ark-ui/solid/hover-card";
+import { keyArray } from "@solid-primitives/keyed";
+import type { JSX } from "solid-js";
+import { createMemo, Show } from "solid-js";
+import { Portal } from "solid-js/web";
+import { useSolidCdragonCherryAugments } from "../../hooks/use-cdragon-cherry-augments";
 import * as s from "./MatchCard.css";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import { CDRAGON_GAME_DATA_BASE } from "./match-card-display";
@@ -76,9 +79,7 @@ function rarityVariant(
   }
 }
 
-export function MatchCardAugments({
-  augmentIds,
-}: {
+export function MatchCardAugments(props: {
   augmentIds: readonly [
     number | null,
     number | null,
@@ -87,72 +88,85 @@ export function MatchCardAugments({
     number | null,
     number | null,
   ];
-}) {
-  const { byId } = useCdragonCherryAugments();
-
-  const slots = useMemo(() => {
-    return AUGMENT_SLOT_KEYS.map((slotKey, slotIndex) => ({
+}): JSX.Element {
+  const { byId } = useSolidCdragonCherryAugments();
+  const slots = createMemo(() =>
+    AUGMENT_SLOT_KEYS.map((slotKey, slotIndex) => ({
       slotKey,
-      id: augmentIds[slotIndex],
-    }));
-  }, [augmentIds]);
+      id: props.augmentIds[slotIndex],
+    })),
+  );
+  const hasAugments = createMemo(() =>
+    slots().some((slot) => slot.id != null && slot.id > 0),
+  );
+  const augmentSlots = keyArray(
+    slots,
+    (slot) => slot.slotKey,
+    (slot) => {
+      const hasAugment = () => {
+        const id = slot().id;
+        return id != null && id > 0;
+      };
 
-  if (!slots.some((slot) => slot.id != null && slot.id > 0)) {
-    return null;
-  }
+      return (
+        <Show
+          when={hasAugment()}
+          fallback={<span class={s.augmentEmptySlot} aria-hidden="true" />}
+        >
+          <HoverCard.Root openDelay={100} closeDelay={60}>
+            <HoverCard.Trigger
+              asChild={(getTriggerProps) => {
+                const augment = () => byId()[slot().id ?? 0];
+                const rarity = () => rarityVariant(augment()?.rarity);
+                const iconSrc = () =>
+                  augment()?.augmentSmallIconPath
+                    ? normalizeAugmentIconPath(
+                        augment()?.augmentSmallIconPath ?? "",
+                      )
+                    : null;
+                const fallbackIconSrc = () =>
+                  augment()?.augmentSmallIconPath
+                    ? normalizeAugmentIconPathLowercase(
+                        augment()?.augmentSmallIconPath ?? "",
+                      )
+                    : null;
 
-  return (
-    <div className={s.augmentGrid}>
-      {slots.map(({ slotKey, id }) => {
-        if (id == null || id <= 0) {
-          return (
-            <span
-              key={`augment-empty-${slotKey}`}
-              className={s.augmentEmptySlot}
-              aria-hidden="true"
+                return (
+                  <span
+                    {...getTriggerProps({
+                      class: s.augmentHoverTrigger,
+                    })}
+                  >
+                    <MatchCardAssetIcon
+                      src={iconSrc()}
+                      fallbacks={[fallbackIconSrc()]}
+                      alt="Hextech augment"
+                      className={s.augmentIcon({ rarity: rarity() })}
+                      fallbackClassName={s.augmentIconFallback({
+                        rarity: rarity(),
+                      })}
+                    />
+                  </span>
+                );
+              }}
             />
-          );
-        }
-
-        const augment = byId[id];
-        const rarity = rarityVariant(augment?.rarity);
-        const name = augment?.nameTRA?.trim() || `Augment #${id}`;
-        const iconSrc = augment?.augmentSmallIconPath
-          ? normalizeAugmentIconPath(augment.augmentSmallIconPath)
-          : null;
-        const fallbackIconSrc = augment?.augmentSmallIconPath
-          ? normalizeAugmentIconPathLowercase(augment.augmentSmallIconPath)
-          : null;
-
-        return (
-          <HoverCard.Root
-            key={`augment-${slotKey}-${id}`}
-            openDelay={100}
-            closeDelay={60}
-          >
-            <HoverCard.Trigger asChild>
-              <span className={s.augmentHoverTrigger}>
-                <MatchCardAssetIcon
-                  src={iconSrc}
-                  fallbacks={[fallbackIconSrc]}
-                  alt="Hextech augment"
-                  className={s.augmentIcon({ rarity })}
-                  fallbackClassName={s.augmentIconFallback({
-                    rarity,
-                  })}
-                />
-              </span>
-            </HoverCard.Trigger>
             <Portal>
-              <HoverCard.Positioner className={s.augmentHoverPositioner}>
-                <HoverCard.Content className={s.augmentHoverContent}>
-                  {name}
+              <HoverCard.Positioner class={s.augmentHoverPositioner}>
+                <HoverCard.Content class={s.augmentHoverContent}>
+                  {byId()[slot().id ?? 0]?.nameTRA?.trim() ||
+                    `Augment #${slot().id}`}
                 </HoverCard.Content>
               </HoverCard.Positioner>
             </Portal>
           </HoverCard.Root>
-        );
-      })}
-    </div>
+        </Show>
+      );
+    },
+  );
+
+  return (
+    <Show when={hasAugments()}>
+      <div class={s.augmentGrid}>{augmentSlots()}</div>
+    </Show>
   );
 }

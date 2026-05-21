@@ -18,8 +18,8 @@ or backend shard.
 ## Technology Stack
 
 - Desktop shell: Tauri v2
-- Frontend: React + TypeScript + Vite
-- Routing: React Router hash routing
+- Frontend: SolidJS + TypeScript + Vite
+- Routing: `@solidjs/router` hash routing
 - Backend: Rust + Tokio
 - Runtime orchestration:
   - Rust side: `jax` / `jax-probes` crates from the workspace dependencies
@@ -31,7 +31,7 @@ or backend shard.
 ## System Overview
 
 ```text
-React WebView (src/)
+SolidJS WebView (src/)
   - Hash router
   - Main and mini layouts
   - Web shards and contribution registry
@@ -102,15 +102,16 @@ Entry: `D:/Desktop/Web/LeagueJax/src-tauri/src/lib.rs`
 
 ### 3) Frontend bootstrap
 
-Entry: `D:/Desktop/Web/LeagueJax/src/main.tsx`
+Entry: `D:/Desktop/Web/LeagueJax/src/main.solid.tsx`
 
-1. Create the React root.
-2. Start web shards through `initializeWebShards()`.
+1. Render the SolidJS app through `solid-js/web`.
+2. Start main-window web shards through `initializeSolidMainWebShards()`.
 3. Resolve the web `SettingsShard` from the runtime.
-4. Render `<App />` inside `SettingsProvider`.
+4. Render `<App />` inside `SolidSettingsProvider`.
 5. Render a bootstrap error screen if initialization fails.
 
-The i18n setup is owned by the web `I18nShard`, not by `main.tsx` directly.
+The i18n setup is owned by the web `I18nShard`, not by `main.solid.tsx`
+directly.
 
 ## Runtime Composition
 
@@ -338,11 +339,11 @@ bun run sync_rs_types
 
 ```text
 LeagueJax/
-  src/                         # React + TypeScript frontend
+  src/                         # SolidJS + TypeScript frontend
     bindings/                  # Generated TS contracts from Rust
     components/                # Shared UI components and primitives
     features/                  # Web shards, feature routes, i18n, settings
-    hooks/                     # Cross-cutting React hooks
+    hooks/                     # Cross-cutting frontend hooks
     i18n/                      # i18next initialization and global locales
     infra/                     # Logger and error helpers
     jax/                       # TS shard lifecycle runtime

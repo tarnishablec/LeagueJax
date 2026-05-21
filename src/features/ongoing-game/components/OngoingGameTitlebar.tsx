@@ -1,17 +1,20 @@
+/** @jsxImportSource solid-js */
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import type { OngoingGamePhase } from "@/bindings/ongoing_game";
 import { LcuImage } from "@/components/LcuImage";
 import { RefreshButton } from "@/components/RefreshButton";
-import { createListCollection, SettingsSelect } from "@/components/settings-ui";
+import {
+  createListCollection,
+  SettingsSelect,
+} from "@/components/settings-ui/index";
 import { modeOptions } from "@/features/history/components/match-list-options";
 import type { MatchModeTag } from "@/features/history/types/match-mode";
-import { useLcuMapQuery } from "@/hooks/use-lcu-maps";
-import { useLcuStore } from "@/stores/lcu";
+import { useSolidLcuMapQuery } from "@/hooks/use-lcu-maps";
+import { useSolidTranslation } from "@/i18n/solid";
+import { useSolidLcuStore } from "@/stores/lcu.solid";
 import { preferredLcuMapAsset } from "@/utils/lcu-map-assets";
 import { resolveOwnOngoingTeamSide } from "../routes/ongoing-game.player-utils.ts";
-import { useOngoingGameStore } from "../store";
+import { useSolidOngoingGameStore } from "../store.solid";
 import * as s from "./OngoingGameTitlebar.css";
 
 const CURRENT_MODE_VALUE = "__current_mode__";
@@ -46,47 +49,49 @@ function resolveSelectedValue(
 }
 
 export function OngoingGameTitlebar() {
-  const { t } = useTranslation();
-  const phase = useOngoingGameStore((state) => state.phase);
-  const isOngoingVisible = isVisibleOngoingPhase(phase);
-
-  const modeTag = useOngoingGameStore((state) => state.modeTag);
-  const teamMembers = useOngoingGameStore((state) => state.teamMembers);
-  const gameflowSession = useOngoingGameStore((state) => state.gameflowSession);
-  const champSelectSession = useOngoingGameStore(
+  const { t } = useSolidTranslation();
+  const phase = useSolidOngoingGameStore((state) => state.phase);
+  const isOngoingVisible = () => isVisibleOngoingPhase(phase());
+  const modeTag = useSolidOngoingGameStore((state) => state.modeTag);
+  const teamMembers = useSolidOngoingGameStore((state) => state.teamMembers);
+  const gameflowSession = useSolidOngoingGameStore(
+    (state) => state.gameflowSession,
+  );
+  const champSelectSession = useSolidOngoingGameStore(
     (state) => state.champSelectSession,
   );
-  const effectiveQueueId = useOngoingGameStore(
+  const effectiveQueueId = useSolidOngoingGameStore(
     (state) => state.effectiveQueueId,
   );
-  const ownPuuid = useLcuStore(
-    (state) =>
-      state.instances
-        .find((instance) => instance.isFocused && instance.state === "ready")
-        ?.summoner?.puuid.trim() || null,
-  );
-  const matchHistoriesPending = useOngoingGameStore((state) =>
+  const lcuState = useSolidLcuStore();
+  const ownPuuid = () =>
+    lcuState()
+      .instances.find(
+        (instance) => instance.isFocused && instance.state === "ready",
+      )
+      ?.summoner?.puuid.trim() || null;
+  const matchHistoriesPending = useSolidOngoingGameStore((state) =>
     Object.values(state.historyStatesByPuuid).some(
-      (s) => s.status === "loading",
+      (historyState) => historyState.status === "loading",
     ),
   );
-  const gameflowMap = gameflowSession?.map ?? null;
-  const queueAssetMutator = gameflowSession?.gameData.queue.assetMutator ?? "";
-  const gameflowMapMutators = useMemo(
-    () => [gameflowMap?.gameMutator ?? "", queueAssetMutator],
-    [gameflowMap?.gameMutator, queueAssetMutator],
-  );
-  const { data: knownMap } = useLcuMapQuery(
-    gameflowMap?.id ?? 0,
+  const gameflowMap = () => gameflowSession()?.map ?? null;
+  const queueAssetMutator = () =>
+    gameflowSession()?.gameData.queue.assetMutator ?? "";
+  const gameflowMapMutators = () => [
+    gameflowMap()?.gameMutator ?? "",
+    queueAssetMutator(),
+  ];
+  const { data: knownMap } = useSolidLcuMapQuery(
+    () => gameflowMap()?.id ?? 0,
     gameflowMapMutators,
-    gameflowMap?.gameMode ?? "",
+    () => gameflowMap()?.gameMode ?? "",
   );
-  const rawQueueDetailedDescription = useMemo(() => {
-    const session = gameflowSession;
+  const rawQueueDetailedDescription = () => {
+    const session = gameflowSession();
     if (!session) return null;
-    // Some queues (e.g., Hextech ARAM, queue 2400) leave `detailedDescription`
-    // as an empty string. Walk the queue → map chain until we find something
-    // non-empty, so the titlebar always shows a recognizable mode label.
+    // Some queues (e.g., Hextech ARAM, queue 2400) leave detailedDescription
+    // empty, so walk the queue -> map chain until a recognizable label exists.
     const candidates = [
       session.gameData.queue.detailedDescription,
       session.gameData.queue.description,
@@ -98,126 +103,95 @@ export function OngoingGameTitlebar() {
       if (trimmed.length > 0) return trimmed;
     }
     return null;
-  }, [gameflowSession]);
-
-  const setModeTag = useOngoingGameStore((state) => state.setModeTag);
-  const ownTeamSide = useMemo(
-    () =>
-      resolveOwnOngoingTeamSide({
-        phase,
-        teamMembers,
-        gameflowSession,
-        champSelectSession,
-        effectiveQueueId,
-        ownPuuid,
-      }),
-    [
-      champSelectSession,
-      effectiveQueueId,
-      gameflowSession,
-      ownPuuid,
-      phase,
-      teamMembers,
-    ],
-  );
-
-  const queueIconPath = useMemo(() => {
-    if (!isOngoingVisible || !gameflowMap) {
+  };
+  const setModeTag = useSolidOngoingGameStore((state) => state.setModeTag);
+  const ownTeamSide = () =>
+    resolveOwnOngoingTeamSide({
+      phase: phase(),
+      teamMembers: teamMembers(),
+      gameflowSession: gameflowSession(),
+      champSelectSession: champSelectSession(),
+      effectiveQueueId: effectiveQueueId(),
+      ownPuuid: ownPuuid(),
+    });
+  const queueIconPath = () => {
+    const currentMap = gameflowMap();
+    if (!isOngoingVisible() || !currentMap) {
       return null;
     }
 
-    return preferredLcuMapAsset(knownMap) ?? preferredLcuMapAsset(gameflowMap);
-  }, [gameflowMap, isOngoingVisible, knownMap]);
-  const queueDetailedDescription = isOngoingVisible
-    ? rawQueueDetailedDescription
-    : null;
-  const ownTeamSideLabel =
-    ownTeamSide === "blue"
+    return preferredLcuMapAsset(knownMap()) ?? preferredLcuMapAsset(currentMap);
+  };
+  const queueDetailedDescription = () =>
+    isOngoingVisible() ? rawQueueDetailedDescription() : null;
+  const ownTeamSideLabel = () =>
+    ownTeamSide() === "blue"
       ? t("ongoingGame.titlebar.sideBlue", { defaultValue: "Blue Side" })
-      : ownTeamSide === "red"
+      : ownTeamSide() === "red"
         ? t("ongoingGame.titlebar.sideRed", { defaultValue: "Red Side" })
         : null;
-
-  const currentModeLabel = t("ongoingGame.titlebar.filterCurrentMode", {
-    defaultValue: "Current Mode",
-  });
-  const queueGroupLabel = t("ongoingGame.titlebar.filterQueueGroup", {
-    defaultValue: "Queues",
-  });
-
-  const allItems = useMemo(
-    () => [
-      { value: CURRENT_MODE_VALUE, label: currentModeLabel },
-      ...modeOptions.map((option) => ({
+  const currentModeLabel = () =>
+    t("ongoingGame.titlebar.filterCurrentMode", {
+      defaultValue: "Current Mode",
+    });
+  const queueGroupLabel = () =>
+    t("ongoingGame.titlebar.filterQueueGroup", {
+      defaultValue: "Queues",
+    });
+  const allItems = () => [
+    { value: CURRENT_MODE_VALUE, label: currentModeLabel() },
+    ...modeOptions.map((option) => ({
+      value: option.value,
+      label: t(option.labelKey),
+    })),
+  ];
+  const collection = () => createListCollection({ items: allItems() });
+  const selectableValues = () => new Set(allItems().map((item) => item.value));
+  const groups = () => [
+    {
+      label: currentModeLabel(),
+      items: [{ value: CURRENT_MODE_VALUE, label: currentModeLabel() }],
+    },
+    {
+      label: queueGroupLabel(),
+      items: modeOptions.map((option) => ({
         value: option.value,
         label: t(option.labelKey),
       })),
-    ],
-    [currentModeLabel, t],
-  );
-
-  const collection = useMemo(
-    () => createListCollection({ items: allItems }),
-    [allItems],
-  );
-
-  const selectableValues = useMemo(
-    () => new Set(allItems.map((item) => item.value)),
-    [allItems],
-  );
-
-  const groups = useMemo(
-    () => [
-      {
-        label: currentModeLabel,
-        items: [{ value: CURRENT_MODE_VALUE, label: currentModeLabel }],
-      },
-      {
-        label: queueGroupLabel,
-        items: modeOptions.map((option) => ({
-          value: option.value,
-          label: t(option.labelKey),
-        })),
-      },
-    ],
-    [currentModeLabel, queueGroupLabel, t],
-  );
-
-  const activeModeTag = isOngoingVisible ? modeTag : null;
-  const selectedValue = resolveSelectedValue(activeModeTag, selectableValues);
-
-  if (!isOngoingVisible) {
-    return null;
-  }
+    },
+  ];
+  const activeModeTag = () => (isOngoingVisible() ? modeTag() : null);
+  const selectedValue = () =>
+    resolveSelectedValue(activeModeTag(), selectableValues());
 
   return (
-    <div className={s.root} data-tauri-drag-region>
-      <div className={s.labels}>
-        <span className={s.queueMeta}>
-          {queueIconPath ? (
+    <div class={s.root} data-tauri-drag-region hidden={!isOngoingVisible()}>
+      <div class={s.labels}>
+        <span class={s.queueMeta}>
+          {queueIconPath() ? (
             <LcuImage
-              src={queueIconPath}
+              src={queueIconPath()}
               alt=""
               className={s.queueIcon}
               fallbackClassName={s.queueIconFallback}
             />
           ) : null}
-          <span className={s.queueDesc}>{queueDetailedDescription}</span>
-          {ownTeamSide && ownTeamSideLabel ? (
-            <span className={s.sideBadge}>
-              <span className={s.sideDiamond[ownTeamSide]} />
-              <span>{ownTeamSideLabel}</span>
+          <span class={s.queueDesc}>{queueDetailedDescription()}</span>
+          {ownTeamSide() && ownTeamSideLabel() ? (
+            <span class={s.sideBadge}>
+              <span class={s.sideDiamond[ownTeamSide() ?? "blue"]} />
+              <span>{ownTeamSideLabel()}</span>
             </span>
           ) : null}
         </span>
       </div>
 
-      <div className={s.controls}>
-        <div className={s.filterSelect}>
+      <div class={s.controls}>
+        <div class={s.filterSelect}>
           <SettingsSelect
-            collection={collection}
-            groups={groups}
-            value={[selectedValue]}
+            collection={collection()}
+            groups={groups()}
+            value={[selectedValue()]}
             onValueChange={(details) => {
               const next = details.value[0];
               if (!next) return;
@@ -234,7 +208,7 @@ export function OngoingGameTitlebar() {
         </div>
 
         <RefreshButton
-          loading={matchHistoriesPending}
+          loading={matchHistoriesPending()}
           ariaLabel={t("ongoingGame.titlebar.refreshAria", {
             defaultValue: "Refresh ongoing game",
           })}

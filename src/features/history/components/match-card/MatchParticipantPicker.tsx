@@ -1,4 +1,7 @@
-import { ToggleGroup } from "@ark-ui/react/toggle-group";
+/** @jsxImportSource solid-js */
+import { ToggleGroup } from "@ark-ui/solid/toggle-group";
+import { keyArray } from "@solid-primitives/keyed";
+import type { JSX } from "solid-js";
 import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
@@ -12,80 +15,76 @@ import {
   matchParticipantTeamTone,
 } from "./match-participant-display";
 
-export function MatchParticipantPicker({
-  summary,
-  participants,
-  selectedKey,
-  onSelectedKeyChange,
-  ariaLabel,
-  actionLabel,
-}: {
+export function MatchParticipantPicker(props: {
   summary: RawMatchSummaryGame;
   participants: RawMatchSummaryParticipant[];
   selectedKey: string;
   onSelectedKeyChange: (value: string) => void;
   ariaLabel: string;
   actionLabel: (displayName: string) => string;
-}) {
+}): JSX.Element {
+  const participantItems = keyArray(
+    () => props.participants,
+    matchParticipantKey,
+    (participant, index) => {
+      const key = () => matchParticipantKey(participant(), index());
+      const championName = () => matchParticipantChampionName(participant());
+      const displayName = () => matchParticipantDisplayName(participant());
+
+      return (
+        <ToggleGroup.Item
+          value={key()}
+          class={s.participantTrigger({
+            team: matchParticipantTeamTone(participant(), props.summary),
+          })}
+          aria-label={props.actionLabel(displayName())}
+        >
+          <ChampionAvatar
+            championId={participant().championId}
+            imageClassName={s.participantChampionIcon}
+            fallbackClassName={s.participantChampionFallback}
+            alt={championName()}
+          />
+        </ToggleGroup.Item>
+      );
+    },
+  );
+
   return (
     <ToggleGroup.Root
-      className={s.participantPicker}
-      value={selectedKey ? [selectedKey] : []}
+      class={s.participantPicker}
+      value={props.selectedKey ? [props.selectedKey] : []}
       deselectable={false}
       onValueChange={({ value }) => {
         if (value[0]) {
-          onSelectedKeyChange(value[0]);
+          props.onSelectedKeyChange(value[0]);
         }
       }}
-      aria-label={ariaLabel}
+      aria-label={props.ariaLabel}
     >
-      {participants.map((participant, index) => {
-        const key = matchParticipantKey(participant, index);
-        const championName = matchParticipantChampionName(participant);
-        const displayName = matchParticipantDisplayName(participant);
-
-        return (
-          <ToggleGroup.Item
-            key={key}
-            value={key}
-            className={s.participantTrigger({
-              team: matchParticipantTeamTone(participant, summary),
-            })}
-            aria-label={actionLabel(displayName)}
-          >
-            <ChampionAvatar
-              championId={participant.championId}
-              imageClassName={s.participantChampionIcon}
-              fallbackClassName={s.participantChampionFallback}
-              alt={championName}
-            />
-          </ToggleGroup.Item>
-        );
-      })}
+      {participantItems()}
     </ToggleGroup.Root>
   );
 }
 
-export function MatchSelectedParticipantHeader({
-  participant,
-}: {
+export function MatchSelectedParticipantHeader(props: {
   participant: RawMatchSummaryParticipant;
-}) {
-  const displayName = matchParticipantDisplayName(participant);
-  const championName = matchParticipantChampionName(participant);
+}): JSX.Element {
+  const displayName = () => matchParticipantDisplayName(props.participant);
+  const championName = () => matchParticipantChampionName(props.participant);
 
   return (
-    <header className={s.selectedHeader}>
+    <header class={s.selectedHeader}>
       <ChampionAvatar
-        championId={participant.championId}
+        championId={props.participant.championId}
         imageClassName={s.selectedChampionIcon}
         fallbackClassName={s.selectedChampionFallback}
-        level={participant.champLevel}
-        alt={championName}
+        level={props.participant.champLevel}
+        alt={championName()}
       />
-      <span className={s.selectedText}>
-        <span className={s.selectedName}>{displayName}</span>
-        <span className={s.selectedChampionName}>{championName}</span>
+      <span class={s.selectedText}>
+        <span class={s.selectedName}>{displayName()}</span>
+        <span class={s.selectedChampionName}>{championName()}</span>
       </span>
     </header>
   );

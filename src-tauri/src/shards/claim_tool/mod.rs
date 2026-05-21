@@ -76,10 +76,7 @@ impl ClaimNotificationCollector {
         self.saw_focus_changed
     }
 
-    fn observe(
-        &mut self,
-        fingerprint: Option<String>,
-    ) -> ClaimNotificationCollectionDecision {
+    fn observe(&mut self, fingerprint: Option<String>) -> ClaimNotificationCollectionDecision {
         self.sample_count = self.sample_count.saturating_add(1);
 
         let Some(fingerprint) = fingerprint else {

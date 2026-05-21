@@ -1,18 +1,20 @@
-import { MapPinned } from "lucide-react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { MapPinned } from "lucide-solid";
 import { uncapitalize } from "remeda";
+import { createMemo, Show } from "solid-js";
 import { LcuImage } from "@/components/LcuImage";
+import { useSolidTranslation } from "@/i18n/solid";
 import {
   ACCEPT_DELAY_SECONDS_SETTING_ID,
   AUTO_ACCEPT_SETTING_ID,
   MiniBottomPanel,
-  useAutoAcceptCountdown,
-  useMiniSettingValue,
+  useSolidAutoAcceptCountdown,
+  useSolidMiniSettingValue,
 } from "../components/MiniBottomPanel";
 import { MiniChampSelectView } from "../components/MiniChampSelectView";
 import {
   type MiniWindowModel,
-  useMiniWindowModel,
+  useSolidMiniWindowModel,
 } from "../hooks/use-mini-window-model";
 import * as s from "./MiniRoute.css";
 
@@ -25,53 +27,67 @@ function phaseLabelKey(model: MiniWindowModel): string {
 }
 
 export function MiniRoute() {
-  const model = useMiniWindowModel();
-  const { t } = useTranslation();
-  const autoAccept =
-    useMiniSettingValue<boolean>(AUTO_ACCEPT_SETTING_ID) ?? false;
-  const acceptDelay =
-    useMiniSettingValue<number>(ACCEPT_DELAY_SECONDS_SETTING_ID) ?? 0;
-  const autoAcceptCountdown = useAutoAcceptCountdown(
-    autoAccept,
-    acceptDelay,
-    model.readyCheck,
+  const model = useSolidMiniWindowModel();
+  const { t } = useSolidTranslation();
+  const autoAccept = useSolidMiniSettingValue<boolean>(AUTO_ACCEPT_SETTING_ID);
+  const acceptDelay = useSolidMiniSettingValue<number>(
+    ACCEPT_DELAY_SECONDS_SETTING_ID,
   );
-
-  if (model.phase === "ChampSelect" && model.champSelect) {
-    return <MiniChampSelectView model={model} />;
-  }
+  const autoAcceptCountdown = useSolidAutoAcceptCountdown(
+    () => autoAccept() ?? false,
+    () => acceptDelay() ?? 0,
+    () => model().readyCheck,
+  );
+  const queueName = createMemo(
+    () => model().queueName ?? t("mini.queue.empty"),
+  );
+  const phaseLabel = createMemo(() => t(phaseLabelKey(model())));
 
   return (
-    <section className={s.root}>
-      <div className={s.hero}>
-        <div className={s.mapIconFrame}>
-          {model.queueIconSrc ? (
-            <LcuImage
-              className={s.mapImage}
-              src={model.queueIconSrc}
-              alt="Queue icon"
-            />
-          ) : (
-            <MapPinned className={s.mapFallback} size={52} aria-hidden="true" />
-          )}
-        </div>
+    <Show
+      when={model().phase === "ChampSelect" && model().champSelect}
+      fallback={
+        <section class={s.root}>
+          <div class={s.hero}>
+            <div class={s.mapIconFrame}>
+              <Show
+                when={model().queueIconSrc}
+                fallback={
+                  <MapPinned
+                    class={s.mapFallback}
+                    size={52}
+                    aria-hidden="true"
+                  />
+                }
+              >
+                {(src) => (
+                  <LcuImage
+                    className={s.mapImage}
+                    src={src()}
+                    alt="Queue icon"
+                  />
+                )}
+              </Show>
+            </div>
 
-        <div className={s.meta}>
-          <strong className={s.queueName}>
-            {model.queueName ?? t("mini.queue.empty")}
-          </strong>
-          <span className={s.phase}>{t(phaseLabelKey(model))}</span>
-          {autoAcceptCountdown != null ? (
-            <span className={s.autoAcceptCountdown}>
-              {t("mini.autoAccept.countdown", {
-                count: autoAcceptCountdown,
-              })}
-            </span>
-          ) : null}
-        </div>
-      </div>
+            <div class={s.meta}>
+              <strong class={s.queueName}>{queueName()}</strong>
+              <span class={s.phase}>{phaseLabel()}</span>
+              <Show when={autoAcceptCountdown() != null}>
+                <span class={s.autoAcceptCountdown}>
+                  {t("mini.autoAccept.countdown", {
+                    count: autoAcceptCountdown() ?? 0,
+                  })}
+                </span>
+              </Show>
+            </div>
+          </div>
 
-      <MiniBottomPanel model={model} />
-    </section>
+          <MiniBottomPanel model={model()} />
+        </section>
+      }
+    >
+      <MiniChampSelectView model={model()} />
+    </Show>
   );
 }

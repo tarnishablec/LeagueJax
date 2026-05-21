@@ -1,21 +1,19 @@
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
 import * as s from "./MatchCardMetrics.css";
 
-export function MatchCardKdaRecord({
-  kills,
-  deaths,
-  assists,
-}: {
+export function MatchCardKdaRecord(props: {
   kills: number;
   deaths: number;
   assists: number;
-}) {
+}): JSX.Element {
   return (
-    <span className={s.kdaRecord} style={{ textBoxTrim: "trim-both" }}>
-      <span>{kills}</span>
-      <span className={s.kdaSeparator}>/</span>
-      <span className={s.kdaDeaths}>{deaths}</span>
-      <span className={s.kdaSeparator}>/</span>
-      <span>{assists}</span>
+    <span class={s.kdaRecord} style={{ "text-box-trim": "trim-both" }}>
+      <span>{props.kills}</span>
+      <span class={s.kdaSeparator}>/</span>
+      <span class={s.kdaDeaths}>{props.deaths}</span>
+      <span class={s.kdaSeparator}>/</span>
+      <span>{props.assists}</span>
     </span>
   );
 }

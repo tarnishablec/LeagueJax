@@ -1,11 +1,13 @@
-import { type ColumnDef, createColumnHelper } from "@tanstack/react-table";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Key } from "@solid-primitives/keyed";
+import { type ColumnDef, createColumnHelper } from "@tanstack/solid-table";
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import type { ShardInfoDto } from "@/bindings/shards";
 import { CopyButton } from "@/components/CopyButton";
-import { DataTable } from "@/components/DataTable";
-import * as dt from "@/components/DataTable/DataTable.css";
-import * as s from "./ShardsTable.css";
+import { DataTable, monospace, mutedCell } from "@/components/DataTable";
+import { useSolidTranslation } from "@/i18n/solid";
+import * as s from "./ShardsTable.css.ts";
 
 interface ShardsTableProps {
   shards: ShardInfoDto[];
@@ -14,19 +16,19 @@ interface ShardsTableProps {
 
 const col = createColumnHelper<ShardInfoDto>();
 
-export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
-  const { t } = useTranslation();
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+export function ShardsTable(props: ShardsTableProps): JSX.Element {
+  const { t } = useSolidTranslation();
+  const [highlightedId, setHighlightedId] = createSignal<string | null>(null);
 
-  // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column
-  const columns: ColumnDef<ShardInfoDto, any>[] = [
+  // biome-ignore lint/suspicious/noExplicitAny: TanStack Table's second generic varies per column.
+  const columns = createMemo<ColumnDef<ShardInfoDto, any>[]>(() => [
     col.accessor("label", {
       header: () => t("settings.shards.columns.name"),
       cell: (info) => {
         const name = info.getValue();
         return (
-          <span className={s.copyCell}>
-            <span className={s.copyText}>{name}</span>
+          <span class={s.copyCell}>
+            <span class={s.copyText}>{name}</span>
             <CopyButton
               text={name}
               className={s.copyButton}
@@ -38,12 +40,12 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
     }),
     col.accessor("id", {
       header: () => t("settings.shards.columns.id"),
-      meta: { className: dt.monospace },
+      meta: { className: monospace },
       cell: (info) => {
         const id = info.getValue() as string;
         return (
-          <span className={s.copyCell} title={id}>
-            <span className={s.copyText}>{id}</span>
+          <span class={s.copyCell} title={id}>
+            <span class={s.copyText}>{id}</span>
             <CopyButton
               text={id}
               className={s.copyButton}
@@ -59,7 +61,7 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
       cell: (info) => {
         const status = info.getValue() as ShardInfoDto["status"];
         return (
-          <span className={s.status({ kind: status.kind })}>
+          <span class={s.status({ kind: status.kind })}>
             {t(`settings.shards.status.${status.kind}`)}
           </span>
         );
@@ -69,27 +71,30 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
       header: () => t("settings.shards.columns.dependencies"),
       cell: (info) => {
         const deps = info.getValue() as string[];
-        if (deps.length === 0) {
-          return (
-            <span className={dt.mutedCell}>
-              {t("settings.shards.noDependencies")}
-            </span>
-          );
-        }
         return (
-          <div className={s.depList}>
-            {deps.map((depId) => (
-              <button
-                type="button"
-                key={depId}
-                className={s.depItem}
-                onMouseEnter={() => setHighlightedId(depId)}
-                onMouseLeave={() => setHighlightedId(null)}
-              >
-                {labelMap.get(depId) ?? depId.slice(0, 8)}
-              </button>
-            ))}
-          </div>
+          <Show
+            when={deps.length > 0}
+            fallback={
+              <span class={mutedCell}>
+                {t("settings.shards.noDependencies")}
+              </span>
+            }
+          >
+            <div class={s.depList}>
+              <Key each={deps} by={(depId) => depId}>
+                {(depId) => (
+                  <button
+                    type="button"
+                    class={s.depItem}
+                    onMouseEnter={() => setHighlightedId(depId())}
+                    onMouseLeave={() => setHighlightedId(null)}
+                  >
+                    {props.labelMap.get(depId()) ?? depId().slice(0, 8)}
+                  </button>
+                )}
+              </Key>
+            </div>
+          </Show>
         );
       },
     }),
@@ -101,20 +106,18 @@ export function ShardsTable({ shards, labelMap }: ShardsTableProps) {
         return ms != null ? (
           `${ms.toFixed(1)} ms`
         ) : (
-          <span className={dt.mutedCell}>
-            {t("settings.shards.noDuration")}
-          </span>
+          <span class={mutedCell}>{t("settings.shards.noDuration")}</span>
         );
       },
     }),
-  ];
+  ]);
 
   return (
     <DataTable
-      data={shards}
-      columns={columns}
+      data={props.shards}
+      columns={columns()}
       getRowClassName={(row) =>
-        row.original.id === highlightedId ? s.rowHighlight : undefined
+        row.original.id === highlightedId() ? s.rowHighlight : undefined
       }
       stickyHeader={false}
     />

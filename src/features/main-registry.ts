@@ -1,39 +1,39 @@
-import type { WebShard } from "@/runtime/web-contract";
-import { AutomationShard } from "./automation/manifest";
-import { HistoryShard } from "./history/manifest";
-import { I18nShard } from "./i18n/manifest";
-import { MiniShard } from "./mini/manifest";
-import { NotificationsShard } from "./notifications/manifest";
-import { OngoingGameShard } from "./ongoing-game/manifest";
-import { initializeWebShards } from "./registry";
-import { ReplayShard } from "./replay/manifest";
-import { SettingsShard } from "./settings/manifest";
-import { ShellShard } from "./shell/manifest";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
+import { SolidAutomationShard } from "./automation/manifest";
+import { SolidHistoryShard } from "./history/manifest";
+import { I18nRuntimeShard } from "./i18n/runtime-shard";
+import { SolidMiniShard } from "./mini/manifest";
+import { SolidNotificationsShard } from "./notifications/manifest";
+import { SolidOngoingGameShard } from "./ongoing-game/manifest";
+import { SolidReplayShard } from "./replay/manifest";
+import { SolidSettingsShard } from "./settings/solid-settings-shard.solid";
+import { SolidShellShard } from "./shell/manifest";
+import { initializeSolidWebShards } from "./solid-registry";
 import { StaticCacheShard } from "./static-cache/manifest";
-import { ToolsShard } from "./tools/manifest";
-import { TrayShard } from "./tray/manifest";
-import { UpdaterFeature } from "./updater/manifest";
+import { SolidToolsShard } from "./tools/manifest";
+import { SolidTrayShard } from "./tray/manifest";
+import { SolidUpdaterFeature } from "./updater/manifest";
 import { WindowEffectShard } from "./window-effect/manifest";
 
-export function createMainWebShards(): WebShard[] {
+export function createSolidMainWebShards(): SolidWebShard[] {
   return [
-    new SettingsShard(),
+    new SolidSettingsShard(),
     new WindowEffectShard(),
-    new I18nShard(),
-    new NotificationsShard(),
-    new UpdaterFeature(),
-    new ShellShard(),
+    new I18nRuntimeShard(),
+    new SolidNotificationsShard(),
+    new SolidUpdaterFeature(),
+    new SolidShellShard(),
     new StaticCacheShard(),
-    new TrayShard(),
-    new MiniShard(),
-    new HistoryShard(),
-    new ReplayShard(),
-    new OngoingGameShard(),
-    new AutomationShard(),
-    new ToolsShard(),
+    new SolidTrayShard(),
+    new SolidMiniShard(),
+    new SolidHistoryShard(),
+    new SolidReplayShard(),
+    new SolidOngoingGameShard(),
+    new SolidAutomationShard(),
+    new SolidToolsShard(),
   ];
 }
 
-export function initializeMainWebShards(): Promise<void> {
-  return initializeWebShards(createMainWebShards());
+export function initializeSolidMainWebShards(): Promise<void> {
+  return initializeSolidWebShards(createSolidMainWebShards());
 }

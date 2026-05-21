@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useMemo } from "react";
-import useSWR from "swr";
+import type { Accessor } from "solid-js";
+import { createMemo } from "solid-js";
 import type { RawMatchDetailsGame } from "@/bindings/matches.ts";
+import { createSolidQuery } from "@/infra/solid-query";
 
 type MatchDetailsKey = readonly ["get_match_details", number, string | null];
 
@@ -150,38 +151,39 @@ function fetchMatchDetailsImmediate(
   return startMatchDetailsRequest(cacheKey, key);
 }
 
-export function useMatchDetails(
-  gameId: number | null,
-  sgpServerId: string | null,
-  enabled: boolean,
+export function useSolidMatchDetails(
+  gameId: Accessor<number | null>,
+  sgpServerId: Accessor<string | null>,
+  enabled: Accessor<boolean>,
 ) {
-  const key = useMemo<MatchDetailsKey | null>(
-    () => (gameId ? ["get_match_details", gameId, sgpServerId] : null),
-    [gameId, sgpServerId],
+  const key = createMemo<MatchDetailsKey | null>(() =>
+    gameId()
+      ? (["get_match_details", gameId() ?? 0, sgpServerId()] as const)
+      : null,
   );
 
-  const swr = useSWR(key, enabled ? fetchMatchDetailsQueued : null, {
-    dedupingInterval: Number.POSITIVE_INFINITY,
-    revalidateIfStale: enabled,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  });
+  const query = createSolidQuery<RawMatchDetailsGame>(
+    () => (enabled() ? key() : null),
+    (resolvedKey) => fetchMatchDetailsQueued(resolvedKey as MatchDetailsKey),
+    { keepPreviousData: true },
+  );
 
-  const load = useCallback(() => {
-    if (!key) {
+  const load = () => {
+    const resolvedKey = key();
+    const currentData = query.data();
+    if (!resolvedKey) {
       return Promise.resolve(undefined);
     }
-    if (swr.data) {
-      return Promise.resolve(swr.data);
+    if (currentData) {
+      return Promise.resolve(currentData);
     }
-    return swr.mutate(fetchMatchDetailsImmediate(key), {
-      populateCache: true,
-      revalidate: false,
-    });
-  }, [key, swr.data, swr.mutate]);
+    return query.mutate(fetchMatchDetailsImmediate(resolvedKey));
+  };
 
   return {
-    ...swr,
+    data: query.data,
+    error: query.error,
+    isValidating: query.isValidating,
     load,
   };
 }

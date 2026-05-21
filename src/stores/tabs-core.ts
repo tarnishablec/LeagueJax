@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 
 export interface HistoryTab {
   id: string;
@@ -15,7 +15,7 @@ export interface HistoryTabIdentity {
   privacy?: string;
 }
 
-interface TabState {
+export interface TabState {
   tabs: HistoryTab[];
   activeTabId: string | null;
   openTab: (
@@ -30,7 +30,7 @@ interface TabState {
   setActiveTab: (id: string) => void;
 }
 
-export const useTabStore = create<TabState>((set, get) => ({
+export const tabStore = createStore<TabState>()((set, get) => ({
   tabs: [],
   activeTabId: null,
 

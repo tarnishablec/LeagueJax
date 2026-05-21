@@ -1,13 +1,16 @@
+/** @jsxImportSource solid-js */
 import {
   isPermissionGranted,
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
-import i18n from "i18next";
-import { createElement } from "react";
+import { getSolidI18n } from "@/i18n/solid";
 import { createLogger } from "@/infra/logger";
 import type { Jax } from "@/jax";
-import type { ToolbarSlot, WebShard } from "@/runtime/web-contract";
+import type {
+  SolidToolbarSlot,
+  SolidWebShard,
+} from "@/runtime/solid-web-contract";
 import type { SettingsShardApi } from "../settings/types";
 import { SHARD_IDS } from "../shard-ids";
 import { notificationsI18n } from "./i18n";
@@ -15,15 +18,15 @@ import { NotificationCenterButton } from "./NotificationCenterButton";
 import { createNotificationsStore, type NotificationsStore } from "./store";
 import type { AppNotification, NotificationDraft } from "./types";
 
-const logger = createLogger("notifications-shard");
+const logger = createLogger("solid-notifications-shard");
 
-export class NotificationsShard implements WebShard {
+export class SolidNotificationsShard implements SolidWebShard {
   private readonly store = createNotificationsStore();
   private settings: SettingsShardApi | null = null;
   private permissionRequest: Promise<boolean> | null = null;
 
   public label() {
-    return "NotificationsShard";
+    return "SolidNotificationsShard";
   }
 
   public id() {
@@ -49,11 +52,11 @@ export class NotificationsShard implements WebShard {
     return this.store;
   }
 
-  public toolbarSlots(): ToolbarSlot[] {
+  public toolbarSlots(): SolidToolbarSlot[] {
     return [
       {
         id: "notification-center",
-        node: createElement(NotificationCenterButton, { store: this.store }),
+        node: <NotificationCenterButton store={this.store} />,
         order: 94,
         routes: ["*"],
       },
@@ -83,7 +86,7 @@ export class NotificationsShard implements WebShard {
       return false;
     }
 
-    return this.settings.get<boolean>(notification.systemSettingId) === true;
+    return this.settings.get<boolean>(notification.systemSettingId);
   }
 
   private async maybeSendSystemNotification(
@@ -103,11 +106,12 @@ export class NotificationsShard implements WebShard {
         return;
       }
 
-      const title = String(i18n.t(notification.titleKey, notification.values));
+      const { t } = getSolidI18n();
+      const title = t(notification.titleKey, notification.values);
       const body =
         notification.bodyKey == null
           ? undefined
-          : String(i18n.t(notification.bodyKey, notification.values));
+          : t(notification.bodyKey, notification.values);
       sendNotification(body == null ? { title } : { title, body });
     } catch (error) {
       logger.warn(

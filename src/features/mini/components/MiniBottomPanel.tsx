@@ -1,12 +1,22 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+
+import type { Accessor } from "solid-js";
 import {
-  SettingsFieldRow,
-  SettingsInput,
-  SettingsToggle,
-} from "@/components/settings-ui";
-import { useSettings } from "@/features/settings/context";
+  createEffect,
+  createMemo,
+  createSignal,
+  Match,
+  onCleanup,
+  Show,
+  Switch,
+} from "solid-js";
+import { SettingsFieldRow } from "@/components/settings-ui/SettingsFieldRow";
+import { SettingsInput } from "@/components/settings-ui/SettingsInput";
+import { SettingsToggle } from "@/components/settings-ui/SettingsToggle";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
 import type { SettingId } from "@/features/settings/types";
+import { useSolidSettingValue } from "@/features/settings/use-setting-value";
+import { useSolidTranslation } from "@/i18n/solid";
 import type { MiniWindowModel } from "../hooks/use-mini-window-model";
 import * as s from "./MiniBottomPanel.css";
 import { MiniChampSelectDodgeSection } from "./MiniChampSelectDodgeSection";
@@ -31,13 +41,10 @@ interface ChampSelectDodgePanel {
   onDodge: () => void;
 }
 
-export function useMiniSettingValue<T>(id: SettingId): T | undefined {
-  const settings = useSettings();
-  return useSyncExternalStore(
-    (onStoreChange) => settings.subscribe(id, onStoreChange),
-    () => settings.get<T>(id),
-    () => settings.get<T>(id),
-  );
+export function useSolidMiniSettingValue<T>(
+  id: SettingId,
+): Accessor<T | undefined> {
+  return useSolidSettingValue<T>(id);
 }
 
 function shouldShowAutoAcceptCountdown(
@@ -51,17 +58,19 @@ function shouldShowAutoAcceptCountdown(
   );
 }
 
-export function useAutoAcceptCountdown(
-  enabled: boolean,
-  delaySeconds: number,
-  readyCheck: MiniWindowModel["readyCheck"],
-): number | null {
-  const active = shouldShowAutoAcceptCountdown(enabled, readyCheck);
-  const [deadline, setDeadline] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+export function useSolidAutoAcceptCountdown(
+  enabled: Accessor<boolean>,
+  delaySeconds: Accessor<number>,
+  readyCheck: Accessor<MiniWindowModel["readyCheck"]>,
+): Accessor<number | null> {
+  const active = createMemo(() =>
+    shouldShowAutoAcceptCountdown(enabled(), readyCheck()),
+  );
+  const [deadline, setDeadline] = createSignal<number | null>(null);
+  const [now, setNow] = createSignal(Date.now());
 
-  useEffect(() => {
-    if (!active) {
+  createEffect(() => {
+    if (!active()) {
       setDeadline(null);
       return;
     }
@@ -70,46 +79,49 @@ export function useAutoAcceptCountdown(
     setNow(current);
     const normalizedDelay = Math.min(
       ACCEPT_DELAY_MAX_SECONDS,
-      Math.max(ACCEPT_DELAY_MIN_SECONDS, delaySeconds),
+      Math.max(ACCEPT_DELAY_MIN_SECONDS, delaySeconds()),
     );
     setDeadline(current + normalizedDelay * 1000);
-  }, [active, delaySeconds]);
+  });
 
-  useEffect(() => {
-    if (deadline == null) {
+  createEffect(() => {
+    if (deadline() == null) {
       return;
     }
 
     const tick = () => setNow(Date.now());
     tick();
     const intervalId = window.setInterval(tick, 250);
-    return () => window.clearInterval(intervalId);
-  }, [deadline]);
+    onCleanup(() => window.clearInterval(intervalId));
+  });
 
-  if (!active || deadline == null) {
-    return null;
-  }
+  return createMemo(() => {
+    const currentDeadline = deadline();
+    if (!active() || currentDeadline == null) {
+      return null;
+    }
 
-  return Math.max(0, Math.ceil((deadline - now) / 1000));
+    return Math.max(0, Math.ceil((currentDeadline - now()) / 1000));
+  });
 }
 
 function MiniAutoAcceptSettings() {
-  const settings = useSettings();
-  const { t } = useTranslation();
-  const autoAccept =
-    useMiniSettingValue<boolean>(AUTO_ACCEPT_SETTING_ID) ?? false;
-  const acceptDelay =
-    useMiniSettingValue<number>(ACCEPT_DELAY_SECONDS_SETTING_ID) ?? 0;
+  const settings = useSolidSettings();
+  const { t } = useSolidTranslation();
+  const autoAccept = useSolidMiniSettingValue<boolean>(AUTO_ACCEPT_SETTING_ID);
+  const acceptDelay = useSolidMiniSettingValue<number>(
+    ACCEPT_DELAY_SECONDS_SETTING_ID,
+  );
 
   return (
-    <section className={s.autoAcceptPanel}>
+    <section class={s.autoAcceptPanel}>
       <SettingsFieldRow
         label={t("settings.ongoing.matchmaking.autoAccept.label")}
         settingId={AUTO_ACCEPT_SETTING_ID}
       >
         <SettingsToggle
           ariaLabel="Setting ongoing.matchmaking.autoAccept"
-          checked={autoAccept}
+          checked={autoAccept() ?? false}
           onCheckedChange={(checked) => {
             settings.set(AUTO_ACCEPT_SETTING_ID, checked);
           }}
@@ -122,7 +134,7 @@ function MiniAutoAcceptSettings() {
         <SettingsInput
           ariaLabel="Setting ongoing.matchmaking.acceptDelayMs"
           type="number"
-          value={String(acceptDelay)}
+          value={String(acceptDelay() ?? 0)}
           min={ACCEPT_DELAY_MIN_SECONDS}
           max={ACCEPT_DELAY_MAX_SECONDS}
           step={1}
@@ -142,27 +154,30 @@ function MiniAutoAcceptSettings() {
   );
 }
 
-export function MiniBottomPanel({
-  champSelectDodge,
-  model,
-}: {
+export function MiniBottomPanel(props: {
   champSelectDodge?: ChampSelectDodgePanel;
   model: MiniWindowModel;
 }) {
-  const panelKind = resolveMiniBottomPanelKind(model.phase);
+  const panelKind = createMemo(() =>
+    resolveMiniBottomPanelKind(props.model.phase),
+  );
 
-  switch (panelKind) {
-    case "autoAccept":
-      return <MiniAutoAcceptSettings />;
-    case "champSelectDodge":
-      return champSelectDodge ? (
-        <MiniChampSelectDodgeSection
-          pending={champSelectDodge.pending}
-          error={champSelectDodge.error}
-          onDodge={champSelectDodge.onDodge}
-        />
-      ) : null;
-    case "none":
-      return null;
-  }
+  return (
+    <Switch>
+      <Match when={panelKind() === "autoAccept"}>
+        <MiniAutoAcceptSettings />
+      </Match>
+      <Match when={panelKind() === "champSelectDodge"}>
+        <Show when={props.champSelectDodge}>
+          {(champSelectDodge) => (
+            <MiniChampSelectDodgeSection
+              pending={champSelectDodge().pending}
+              error={champSelectDodge().error}
+              onDodge={champSelectDodge().onDodge}
+            />
+          )}
+        </Show>
+      </Match>
+    </Switch>
+  );
 }

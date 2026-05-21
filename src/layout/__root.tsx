@@ -1,44 +1,39 @@
-import { Portal } from "@ark-ui/react/portal";
-import { Tooltip } from "@ark-ui/react/tooltip";
+/** @jsxImportSource solid-js */
+import { Tooltip } from "@ark-ui/solid/tooltip";
+import { keyArray } from "@solid-primitives/keyed";
+import { A, useLocation } from "@solidjs/router";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-solid";
 import {
-  cloneElement,
-  isValidElement,
-  lazy,
-  Suspense,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useTranslation } from "react-i18next";
-import { NavLink, useLocation, useOutlet } from "react-router";
+  children,
+  createEffect,
+  createMemo,
+  createSignal,
+  type JSX,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
+import { Portal } from "solid-js/web";
+import { Motion } from "solid-motionone";
 import { JaxLogo } from "@/components/JaxLogo";
 import { TitleBar } from "@/components/TitleBar";
 import {
-  getNavItems,
-  getSidebarSlots,
-  getTitlebarSlots,
-  getToolbarSlots,
-} from "@/features/registry";
-import { useWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
-import { useLcuEvents } from "@/hooks/use-lcu-events";
-import { useTheme } from "@/hooks/use-theme";
-import type { NavItem } from "@/runtime/web-contract";
-import * as s from "./__root.css";
+  getSolidNavItems,
+  getSolidSidebarSlots,
+  getSolidTitlebarSlots,
+  getSolidToolbarSlots,
+} from "@/features/solid-registry";
+import { useSolidWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
+import { useSolidLcuEvents } from "@/hooks/use-lcu-events.solid";
+import { useSolidTheme } from "@/hooks/use-theme.solid";
+import { useSolidTranslation } from "@/i18n/solid";
+import type { SolidNavItem } from "@/runtime/solid-web-contract";
+import * as s from "./__root.css.ts";
 
-const DebugCommandPanel = import.meta.env.DEV
-  ? lazy(() =>
-      import("@/components/DebugCommandPanel").then((module) => ({
-        default: module.DebugCommandPanel,
-      })),
-    )
-  : null;
 const SIDEBAR_TRANSITION_MS = 200;
 
-interface SidebarNavLinkProps extends NavItem {
+interface SidebarNavLinkProps extends SolidNavItem {
   collapsed: boolean;
   label: string;
   showEndAdornment: boolean;
@@ -53,64 +48,59 @@ function getMainRouteKey(pathname: string): string {
   return `/${layout}/${route}`;
 }
 
-function MainRouteOutlet({ pathname }: { pathname: string }) {
-  const outlet = useOutlet();
-  const reduceMotion = useReducedMotion();
-  const routeKey = getMainRouteKey(pathname);
+function usePrefersReducedMotion() {
+  const [reduceMotion, setReduceMotion] = createSignal(false);
+
+  onMount(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    onCleanup(() => media.removeEventListener("change", sync));
+  });
+
+  return reduceMotion;
+}
+
+function MainRouteOutlet(props: {
+  children?: JSX.Element;
+  pathname: string;
+}): JSX.Element {
+  const routeContent = children(() => props.children);
+  const reduceMotion = usePrefersReducedMotion();
+  const routeKey = createMemo(() => getMainRouteKey(props.pathname));
 
   return (
-    <div className={s.routeTransitionSurface}>
-      {outlet ? (
-        <motion.div
-          key={routeKey}
-          className={s.routeLayer}
-          initial={reduceMotion ? false : { opacity: 0.65 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.26, ease: "easeOut" }}
-        >
-          {outlet}
-        </motion.div>
-      ) : null}
+    <div class={s.routeTransitionSurface}>
+      <Show when={routeContent()}>
+        <Show when={routeKey()} keyed>
+          <Motion.div
+            class={s.routeLayer}
+            initial={reduceMotion() ? false : { opacity: 0.65 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.26, easing: "ease-out" }}
+          >
+            {routeContent()}
+          </Motion.div>
+        </Show>
+      </Show>
     </div>
   );
 }
 
-function SidebarNavLink({
-  to,
-  icon: Icon,
-  collapsed,
-  label,
-  endAdornment,
-  showEndAdornment,
-}: SidebarNavLinkProps) {
-  const visibleEndAdornment = showEndAdornment ? endAdornment : null;
-  const hasEndAdornment = !!visibleEndAdornment;
-  const link = (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        s.navItem({
-          collapsed,
-          active: isActive,
-          adorned: hasEndAdornment,
-        })
-      }
-      draggable={false}
-    >
-      <Icon size={16} aria-hidden="true" className={s.navIcon({ collapsed })} />
-      <span className={s.navLabel({ collapsed, adorned: hasEndAdornment })}>
-        {label}
-      </span>
-      {visibleEndAdornment ? (
-        <span
-          className={s.navEndAdornment({ collapsed })}
-          data-collapsed={collapsed ? "true" : undefined}
-        >
-          {visibleEndAdornment}
-        </span>
-      ) : null}
-    </NavLink>
+function isNavItemActive(pathname: string, to: string): boolean {
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
+
+function SidebarNavLink(props: SidebarNavLinkProps): JSX.Element {
+  const location = useLocation();
+  const isActive = createMemo(() =>
+    isNavItemActive(location.pathname, props.to),
   );
+  const visibleEndAdornment = () =>
+    props.showEndAdornment ? props.endAdornment : null;
+  const hasEndAdornment = () => !!visibleEndAdornment();
+  const Icon = props.icon;
 
   return (
     <Tooltip.Root
@@ -120,154 +110,198 @@ function SidebarNavLink({
       closeDelay={0}
       positioning={{ placement: "right", gutter: 8 }}
     >
-      <Tooltip.Trigger asChild>{link}</Tooltip.Trigger>
-      {collapsed ? (
+      <Tooltip.Trigger
+        asChild={(getTriggerProps) => (
+          <A
+            {...getTriggerProps({
+              class: s.navItem({
+                collapsed: props.collapsed,
+                active: isActive(),
+                adorned: hasEndAdornment(),
+              }),
+              draggable: false,
+            })}
+            href={props.to}
+          >
+            <Icon
+              size={16}
+              aria-hidden="true"
+              class={s.navIcon({ collapsed: props.collapsed })}
+            />
+            <span
+              class={s.navLabel({
+                collapsed: props.collapsed,
+                adorned: hasEndAdornment(),
+              })}
+            >
+              {props.label}
+            </span>
+            <Show when={visibleEndAdornment()}>
+              {(endAdornment) => (
+                <span
+                  class={s.navEndAdornment({ collapsed: props.collapsed })}
+                  data-collapsed={props.collapsed ? "true" : undefined}
+                >
+                  {endAdornment()}
+                </span>
+              )}
+            </Show>
+          </A>
+        )}
+      />
+      <Show when={props.collapsed}>
         <Portal>
-          <Tooltip.Positioner className={s.navTooltipPositioner}>
-            <Tooltip.Content className={s.navTooltipContent}>
-              {label}
+          <Tooltip.Positioner class={s.navTooltipPositioner}>
+            <Tooltip.Content class={s.navTooltipContent}>
+              {props.label}
             </Tooltip.Content>
           </Tooltip.Positioner>
         </Portal>
-      ) : null}
+      </Show>
     </Tooltip.Root>
   );
 }
 
-export function MainWindowLayout() {
-  const { t } = useTranslation();
-  const { pathname } = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
-  const [showNavEndAdornment, setShowNavEndAdornment] = useState(true);
-  const previousCollapsedRef = useRef(collapsed);
+export function MainWindowLayout(props: {
+  children?: JSX.Element;
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const location = useLocation();
+  const [collapsed, setCollapsed] = createSignal(false);
+  const [showNavEndAdornment, setShowNavEndAdornment] = createSignal(true);
+  let previousCollapsed = collapsed();
 
-  useWindowEffectBackgroundFallback();
-  useLcuEvents();
-  useTheme();
+  useSolidWindowEffectBackgroundFallback();
+  useSolidLcuEvents();
+  useSolidTheme();
 
-  useEffect(() => {
-    if (previousCollapsedRef.current === collapsed) {
+  createEffect(() => {
+    const nextCollapsed = collapsed();
+    if (previousCollapsed === nextCollapsed) {
       return;
     }
 
-    previousCollapsedRef.current = collapsed;
+    previousCollapsed = nextCollapsed;
     setShowNavEndAdornment(false);
     const timer = window.setTimeout(() => {
       setShowNavEndAdornment(true);
     }, SIDEBAR_TRANSITION_MS);
 
-    return () => window.clearTimeout(timer);
-  }, [collapsed]);
+    onCleanup(() => window.clearTimeout(timer));
+  });
 
-  const iconSize = collapsed ? 20 : 16;
-  const mainNavItems = useMemo(() => getNavItems("main"), []);
-  const bottomNavItems = useMemo(() => getNavItems("bottom"), []);
-
-  const toolbarSlots = useMemo(
-    () =>
-      getToolbarSlots(pathname).map((slot) => (
-        <div key={slot.id} className={s.toolbarSlot}>
-          {slot.node}
-        </div>
-      )),
-    [pathname],
+  const iconSize = createMemo(() => (collapsed() ? 20 : 16));
+  const mainNavItems = createMemo(() => getSolidNavItems("main"));
+  const bottomNavItems = createMemo(() => getSolidNavItems("bottom"));
+  const toolbarSlots = createMemo(() =>
+    getSolidToolbarSlots(location.pathname),
   );
-
-  const titlebarSlots = useMemo(
-    () =>
-      getTitlebarSlots(pathname).map((slot) => {
-        if (!isValidElement(slot.node)) {
-          return slot.node;
-        }
-
-        return cloneElement(slot.node, { key: slot.id });
-      }),
-    [pathname],
+  const titlebarSlots = createMemo(() =>
+    getSolidTitlebarSlots(location.pathname),
   );
-
-  const sidebarSlots = useMemo(
-    () =>
-      getSidebarSlots({
-        currentPath: pathname,
-        collapsed,
-        iconSize,
-      }),
-    [collapsed, iconSize, pathname],
+  const sidebarSlots = createMemo(() =>
+    getSolidSidebarSlots({
+      currentPath: location.pathname,
+      collapsed: collapsed(),
+      iconSize: iconSize(),
+    }),
+  );
+  const toolbarSlotNodes = keyArray(
+    toolbarSlots,
+    (slot) => slot.id,
+    (slot) => <div class={s.toolbarSlot}>{slot().node}</div>,
+  );
+  const titlebarSlotNodes = keyArray(
+    titlebarSlots,
+    (slot) => slot.id,
+    (slot) => slot().node,
+  );
+  const mainNavNodes = keyArray(
+    mainNavItems,
+    (item) => item.to,
+    (item) => (
+      <SidebarNavLink
+        {...item()}
+        collapsed={collapsed()}
+        label={t(item().labelKey)}
+        showEndAdornment={showNavEndAdornment()}
+      />
+    ),
+  );
+  const sidebarSlotNodes = keyArray(
+    sidebarSlots,
+    (slot) => slot.id,
+    (slot) => <div>{slot().node}</div>,
+  );
+  const bottomNavNodes = keyArray(
+    bottomNavItems,
+    (item) => item.to,
+    (item) => (
+      <SidebarNavLink
+        {...item()}
+        collapsed={collapsed()}
+        label={t(item().labelKey)}
+        showEndAdornment={showNavEndAdornment()}
+      />
+    ),
   );
 
   return (
     <div
-      className={s.shell}
+      class={s.shell}
       data-tauri-drag-region
       style={assignInlineVars({
-        [s.sidebarWidth]: collapsed
+        [s.sidebarWidth]: collapsed()
           ? `calc(${s.iconCol} + ${s.navPad} * 2) 1fr`
           : "12rem 1fr",
       })}
     >
-      <div data-tauri-drag-region className={s.logoButton}>
+      <div data-tauri-drag-region class={s.logoButton}>
         <button
           type="button"
-          style={{ display: "grid", placeItems: "center" }}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          style={{ display: "grid", "place-items": "center" }}
+          aria-label={collapsed() ? "Expand sidebar" : "Collapse sidebar"}
           onClick={() => setCollapsed((value) => !value)}
         >
-          <JaxLogo size={25} className={s.logoIcon} />
-          {collapsed ? (
+          <JaxLogo size={25} class={s.logoIcon} />
+          <Show
+            when={collapsed()}
+            fallback={
+              <PanelLeftClose
+                size={25}
+                aria-hidden="true"
+                class={s.collapseIcon}
+              />
+            }
+          >
             <PanelLeftOpen
               size={25}
               aria-hidden="true"
-              className={s.collapseIcon}
+              class={s.collapseIcon}
             />
-          ) : (
-            <PanelLeftClose
-              size={25}
-              aria-hidden="true"
-              className={s.collapseIcon}
-            />
-          )}
+          </Show>
         </button>
       </div>
 
-      <TitleBar toolbarSlots={toolbarSlots} titlebarSlots={titlebarSlots} />
+      <TitleBar
+        toolbarSlots={toolbarSlotNodes()}
+        titlebarSlots={titlebarSlotNodes()}
+      />
 
-      <aside className={s.sidebar}>
-        <nav className={s.navList}>
-          {mainNavItems.map((item) => (
-            <SidebarNavLink
-              key={item.to}
-              {...item}
-              collapsed={collapsed}
-              label={t(item.labelKey)}
-              showEndAdornment={showNavEndAdornment}
-            />
-          ))}
-        </nav>
+      <aside class={s.sidebar}>
+        <nav class={s.navList}>{mainNavNodes()}</nav>
 
-        <div className={s.navList}>
-          {sidebarSlots.map((slot) => (
-            <div key={slot.id}>{slot.node}</div>
-          ))}
-          {bottomNavItems.map((item) => (
-            <SidebarNavLink
-              key={item.to}
-              {...item}
-              collapsed={collapsed}
-              label={t(item.labelKey)}
-              showEndAdornment={showNavEndAdornment}
-            />
-          ))}
+        <div class={s.navList}>
+          {sidebarSlotNodes()}
+          {bottomNavNodes()}
         </div>
       </aside>
 
-      <main className={s.main}>
-        <MainRouteOutlet pathname={pathname} />
+      <main class={s.main}>
+        <MainRouteOutlet pathname={location.pathname}>
+          {props.children}
+        </MainRouteOutlet>
       </main>
-      {DebugCommandPanel ? (
-        <Suspense fallback={null}>
-          <DebugCommandPanel />
-        </Suspense>
-      ) : null}
     </div>
   );
 }

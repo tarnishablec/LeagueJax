@@ -1,5 +1,6 @@
-import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createStore } from "zustand/vanilla";
+import { createSolidStoreHook } from "./solid-zustand";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -8,7 +9,7 @@ interface ThemeState {
   setTheme: (theme: Theme) => void;
 }
 
-export const useThemeStore = create<ThemeState>()(
+export const themeStore = createStore<ThemeState>()(
   persist(
     (set) => ({
       theme: "system",
@@ -17,3 +18,5 @@ export const useThemeStore = create<ThemeState>()(
     { name: "league-jax-theme" },
   ),
 );
+
+export const useSolidThemeStore = createSolidStoreHook(themeStore);

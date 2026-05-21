@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useMatchListViewStore } from "../stores/match-list-view-store";
+import type { Accessor } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { useSolidMatchListViewStore } from "../stores/match-list-view-store";
+import { matchListViewStore } from "../stores/match-list-view-store-core";
 import type { MatchModeTag } from "../types/match-mode";
 
 type MatchListViewState = {
@@ -56,43 +58,54 @@ function resetCachedPages(): void {
   }
 }
 
-export function useMatchListViewState(
-  puuid: string,
-  sgpServerId: string | null,
+export function useSolidMatchListViewState(
+  puuid: Accessor<string>,
+  sgpServerId: Accessor<string | null>,
 ) {
-  const key = useMemo(
-    () => getListKey(puuid, sgpServerId),
-    [puuid, sgpServerId],
+  const key = createMemo(() => getListKey(puuid(), sgpServerId()));
+  const [state, setState] = createSignal(getCachedViewState(key()), {
+    equals: false,
+  });
+  const modeTag = useSolidMatchListViewStore((store) => store.modeTag);
+  const setSharedModeTag = useSolidMatchListViewStore(
+    (store) => store.setModeTag,
   );
-  const [state, setState] = useState(() => getCachedViewState(key));
-  const modeTag = useMatchListViewStore((store) => store.modeTag);
-  const setSharedModeTag = useMatchListViewStore((store) => store.setModeTag);
+  let previousKey = key();
 
-  useEffect(() => {
-    setState(getCachedViewState(key));
-  }, [key]);
+  const syncKey = () => {
+    const nextKey = key();
+    if (nextKey !== previousKey) {
+      previousKey = nextKey;
+      setState(getCachedViewState(nextKey));
+    }
+  };
 
-  useEffect(() => {
-    return useMatchListViewStore.subscribe((state, previousState) => {
-      if (state.modeTag !== previousState.modeTag) {
-        setState(getCachedViewState(key));
-      }
+  createEffect(syncKey);
+
+  const unsubscribe = matchListViewStore.subscribe((nextState, previous) => {
+    syncKey();
+    if (nextState.modeTag !== previous.modeTag) {
+      setState(getCachedViewState(key()));
+    }
+  });
+
+  onCleanup(unsubscribe);
+
+  const updateState = (
+    resolve: (current: MatchListViewState) => MatchListViewState,
+  ) => {
+    setState((current) => {
+      const next = normalizeViewState(resolve(current));
+      viewStateByListKey.set(key(), next);
+      return next;
     });
-  }, [key]);
+  };
 
-  const updateState = useCallback(
-    (resolve: (current: MatchListViewState) => MatchListViewState) => {
-      setState((current) => {
-        const next = normalizeViewState(resolve(current));
-        viewStateByListKey.set(key, next);
-        return next;
-      });
-    },
-    [key],
-  );
-
-  const setModeTag = useCallback(
-    (nextModeTag: MatchModeTag) => {
+  return {
+    modeTag,
+    pageSize: () => state().pageSize,
+    page: () => state().page,
+    setModeTag: (nextModeTag: MatchModeTag) => {
       resetCachedPages();
       updateState((current) => ({
         ...current,
@@ -100,36 +113,18 @@ export function useMatchListViewState(
       }));
       setSharedModeTag(nextModeTag);
     },
-    [setSharedModeTag, updateState],
-  );
-
-  const setPageSize = useCallback(
-    (pageSize: number) => {
+    setPageSize: (pageSize: number) => {
       updateState((current) => ({
         ...current,
         pageSize,
         page: 1,
       }));
     },
-    [updateState],
-  );
-
-  const setPage = useCallback(
-    (page: PageUpdater) => {
+    setPage: (page: PageUpdater) => {
       updateState((current) => ({
         ...current,
         page: typeof page === "function" ? page(current.page) : page,
       }));
     },
-    [updateState],
-  );
-
-  return {
-    modeTag,
-    pageSize: state.pageSize,
-    page: state.page,
-    setModeTag,
-    setPageSize,
-    setPage,
   };
 }

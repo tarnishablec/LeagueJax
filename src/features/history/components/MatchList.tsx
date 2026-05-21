@@ -1,20 +1,23 @@
-import { Loader } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
-import { useSyncExternalStore } from "react";
-import { useTranslation } from "react-i18next";
-import { ScrollArea } from "@/components/scroll-area";
-import { useSettings } from "@/features/settings/context";
+/** @jsxImportSource solid-js */
+import { keyArray } from "@solid-primitives/keyed";
+import { Loader } from "lucide-solid";
+import type { Accessor, JSX } from "solid-js";
+import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { Motion } from "solid-motionone";
+import { ScrollArea } from "@/components/scroll-area/ScrollArea";
+import { useSolidSettingValue } from "@/features/settings/use-setting-value";
+import { useSolidTranslation } from "@/i18n/solid";
 import {
   type EnrichedMatch,
-  useMatchHistory,
+  useSolidMatchHistory,
 } from "../hooks/use-match-history";
-import { useMatchListViewState } from "../hooks/use-match-list-view-state";
-import { HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING } from "../manifest";
+import { useSolidMatchListViewState } from "../hooks/use-match-list-view-state";
+import { HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING } from "../settings-ids";
 import type { MatchModeTag } from "../types/match-mode";
 import * as s from "./MatchList.css";
 import { MatchListFilters } from "./MatchListFilters";
 import { MatchListPager } from "./MatchListPager";
-import { MatchCard } from "./match-card";
+import { MatchCard } from "./match-card/index";
 import { modeOptions, pageSizeOptions } from "./match-list-options";
 
 interface MatchListBodyProps {
@@ -25,10 +28,24 @@ interface MatchListBodyProps {
   matches: EnrichedMatch[] | undefined;
   sgpServerId: string | null;
   listAnimationKey: string | null;
-  reduceMotion: boolean | null;
+  reduceMotion: boolean;
   loadFailedLabel: string;
   noMatchesLabel: string;
   noMatchesInFilterLabel: string;
+}
+
+function usePrefersReducedMotion(): Accessor<boolean> {
+  const [reduceMotion, setReduceMotion] = createSignal(false);
+
+  onMount(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    onCleanup(() => media.removeEventListener("change", sync));
+  });
+
+  return reduceMotion;
 }
 
 function buildListAnimationKey({
@@ -60,159 +77,162 @@ function buildListAnimationKey({
   ].join(":");
 }
 
-function MatchListBody({
-  isLoading,
-  hasError,
-  matchCount,
-  modeTag,
-  matches,
-  sgpServerId,
-  listAnimationKey,
-  reduceMotion,
-  loadFailedLabel,
-  noMatchesLabel,
-  noMatchesInFilterLabel,
-}: MatchListBodyProps) {
-  if (isLoading) {
-    return (
-      <div className={s.emptyState}>
-        <Loader size={18} aria-hidden="true" className={s.loadingSpinner} />
-      </div>
-    );
-  }
-
-  if (hasError) {
-    return <div className={s.emptyState}>{loadFailedLabel}</div>;
-  }
-
-  if (matchCount === 0) {
-    return (
-      <div className={s.emptyState}>
-        {modeTag === "all" ? noMatchesLabel : noMatchesInFilterLabel}
-      </div>
-    );
-  }
+function MatchListBody(props: MatchListBodyProps): JSX.Element {
+  const matchCards = keyArray(
+    () => props.matches ?? [],
+    (match) =>
+      `${match.json.platformId ?? props.sgpServerId ?? "focused"}:${match.json.gameId}`,
+    (match) => (
+      <MatchCard
+        match={match()}
+        me={match().me}
+        sgpServerId={props.sgpServerId}
+      />
+    ),
+  );
 
   return (
-    <motion.div
-      key={listAnimationKey}
-      className={s.listMotionLayer}
-      initial={reduceMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.16, ease: "easeOut" }}
+    <Show
+      when={!props.isLoading}
+      fallback={
+        <div class={s.emptyState}>
+          <Loader size={18} aria-hidden="true" class={s.loadingSpinner} />
+        </div>
+      }
     >
-      <ScrollArea
-        className={s.listScroller}
-        contentClassName={s.list}
-        direction="vertical"
-        mode="outset"
-        outsetWidth="12px"
+      <Show
+        when={!props.hasError}
+        fallback={<div class={s.emptyState}>{props.loadFailedLabel}</div>}
       >
-        {(matches ?? []).map((match) => (
-          <MatchCard
-            key={match.json.gameId}
-            match={match}
-            me={match.me}
-            sgpServerId={sgpServerId}
-          />
-        ))}
-      </ScrollArea>
-    </motion.div>
+        <Show
+          when={props.matchCount > 0}
+          fallback={
+            <div class={s.emptyState}>
+              {props.modeTag === "all"
+                ? props.noMatchesLabel
+                : props.noMatchesInFilterLabel}
+            </div>
+          }
+        >
+          <Show when={props.listAnimationKey} keyed>
+            <Motion.div
+              class={s.listMotionLayer}
+              initial={props.reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.16, easing: "ease-out" }}
+            >
+              <ScrollArea
+                className={s.listScroller}
+                contentClassName={s.list}
+                direction="vertical"
+                mode="outset"
+                outsetWidth="12px"
+              >
+                {matchCards()}
+              </ScrollArea>
+            </Motion.div>
+          </Show>
+        </Show>
+      </Show>
+    </Show>
   );
 }
 
-export function MatchList({
-  puuid,
-  sgpServerId,
-}: {
+export function MatchList(props: {
   puuid: string;
   sgpServerId: string | null;
-}) {
-  const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
-  const settings = useSettings();
-  const autoRefreshOnSwitch = useSyncExternalStore(
-    (cb) => settings.subscribe(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING, cb),
-    () =>
-      settings.get<boolean>(HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING) ??
-      false,
+}): JSX.Element {
+  const reduceMotion = usePrefersReducedMotion();
+  const autoRefreshOnSwitch = useSolidSettingValue<boolean>(
+    HISTORY_AUTO_REFRESH_ON_TAB_SWITCH_SETTING,
+    false,
   );
-  const { modeTag, pageSize, page, setModeTag, setPageSize, setPage } =
-    useMatchListViewState(puuid, sgpServerId);
-  const { matches, error, isLoading, isRefreshing, hasNextPage, refresh } =
-    useMatchHistory(
-      puuid,
-      sgpServerId,
-      page,
-      pageSize,
-      modeTag,
-      autoRefreshOnSwitch,
-    );
-
-  const matchCount = matches?.length ?? 0;
-  const isMatchHistoryBusy = isLoading || isRefreshing;
-  const canGoPrev = page > 1 && !isMatchHistoryBusy;
-  const canGoNext = hasNextPage && !isMatchHistoryBusy;
-
-  const modeSelectOptions = modeOptions.map((option) => ({
-    value: option.value,
-    label: t(option.labelKey),
-  }));
-  const pageSizeSelectOptions = pageSizeOptions.map((option) => ({
-    value: String(option),
-    label: String(option),
-  }));
-
-  const canRefresh = !isMatchHistoryBusy;
-  const listAnimationKey = buildListAnimationKey({
-    matches,
-    modeTag,
-    page,
-    pageSize,
-    puuid,
-    sgpServerId,
+  const { t } = useSolidTranslation();
+  const viewState = useSolidMatchListViewState(
+    () => props.puuid,
+    () => props.sgpServerId,
+  );
+  const history = useSolidMatchHistory({
+    puuid: () => props.puuid,
+    sgpServerId: () => props.sgpServerId,
+    page: viewState.page,
+    pageSize: viewState.pageSize,
+    modeTag: viewState.modeTag,
+    autoRefreshOnSwitch: () => autoRefreshOnSwitch() ?? false,
   });
 
+  const matchCount = createMemo(() => history.matches()?.length ?? 0);
+  const isMatchHistoryBusy = createMemo(
+    () => history.isLoading() || history.isRefreshing(),
+  );
+  const canGoPrev = createMemo(
+    () => viewState.page() > 1 && !isMatchHistoryBusy(),
+  );
+  const canGoNext = createMemo(
+    () => history.hasNextPage() && !isMatchHistoryBusy(),
+  );
+
+  const modeSelectOptions = createMemo(() =>
+    modeOptions.map((option) => ({
+      value: option.value,
+      label: t(option.labelKey),
+    })),
+  );
+  const pageSizeSelectOptions = createMemo(() =>
+    pageSizeOptions.map((option) => ({
+      value: String(option),
+      label: String(option),
+    })),
+  );
+  const listAnimationKey = createMemo(() =>
+    buildListAnimationKey({
+      matches: history.matches(),
+      modeTag: viewState.modeTag(),
+      page: viewState.page(),
+      pageSize: viewState.pageSize(),
+      puuid: props.puuid,
+      sgpServerId: props.sgpServerId,
+    }),
+  );
+
   return (
-    <div className={s.panel}>
-      <div className={s.toolbar}>
+    <div class={s.panel}>
+      <div class={s.toolbar}>
         <MatchListFilters
-          modeTag={modeTag}
-          pageSize={pageSize}
-          disabled={isMatchHistoryBusy}
-          modeSelectOptions={modeSelectOptions}
-          pageSizeSelectOptions={pageSizeSelectOptions}
-          onModeChange={(value) => {
-            setModeTag(value);
-          }}
-          onPageSizeChange={(value) => {
-            setPageSize(Number(value));
-          }}
+          modeTag={viewState.modeTag()}
+          pageSize={viewState.pageSize()}
+          disabled={isMatchHistoryBusy()}
+          modeSelectOptions={modeSelectOptions()}
+          pageSizeSelectOptions={pageSizeSelectOptions()}
+          onModeChange={viewState.setModeTag}
+          onPageSizeChange={(value) => viewState.setPageSize(Number(value))}
         />
 
         <MatchListPager
-          page={page}
-          canGoPrev={canGoPrev}
-          canGoNext={canGoNext}
-          canRefresh={canRefresh}
-          refreshing={isMatchHistoryBusy}
-          onPrev={() => setPage((current) => Math.max(1, current - 1))}
-          onNext={() => setPage((current) => current + 1)}
+          page={viewState.page()}
+          canGoPrev={canGoPrev()}
+          canGoNext={canGoNext()}
+          canRefresh={!isMatchHistoryBusy()}
+          refreshing={isMatchHistoryBusy()}
+          onPrev={() =>
+            viewState.setPage((current) => Math.max(1, current - 1))
+          }
+          onNext={() => viewState.setPage((current) => current + 1)}
           onRefresh={() => {
-            void refresh();
+            void history.refresh();
           }}
         />
       </div>
 
       <MatchListBody
-        isLoading={isLoading}
-        hasError={Boolean(error)}
-        matchCount={matchCount}
-        modeTag={modeTag}
-        matches={matches}
-        sgpServerId={sgpServerId}
-        listAnimationKey={listAnimationKey}
-        reduceMotion={reduceMotion}
+        isLoading={history.isLoading()}
+        hasError={Boolean(history.error())}
+        matchCount={matchCount()}
+        modeTag={viewState.modeTag()}
+        matches={history.matches()}
+        sgpServerId={props.sgpServerId}
+        listAnimationKey={listAnimationKey()}
+        reduceMotion={reduceMotion()}
         loadFailedLabel={t("history.loadFailed", {
           defaultValue: "Failed to load match history",
         })}

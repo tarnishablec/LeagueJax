@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::error::AppError;
 use crate::shards::lcu::concepts::chat::{LcuChatFriend, LcuChatFriendGroup};
 use crate::shards::lcu::concepts::rank::RankedTierSummary;
+use crate::shards::lcu::manager::LcuInstanceInfo;
 use crate::shards::lcu::LcuShard;
 use crate::shards::ongoing_game::types::OngoingGameInput;
 use crate::shards::ongoing_game::OngoingGameShard;
@@ -17,6 +18,15 @@ pub async fn lcu_update_focus(pid: Option<u32>, jax: State<'_, Arc<Jax>>) -> Res
         .ok_or(AppError::LcuNotConnected)?;
     manager.update_focus(pid).await;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn lcu_get_instances(jax: State<'_, Arc<Jax>>) -> Result<Vec<LcuInstanceInfo>, AppError> {
+    let manager = jax
+        .get_shard::<LcuShard>()
+        .manager()
+        .ok_or(AppError::LcuNotConnected)?;
+    Ok(manager.current_instances_snapshot().await)
 }
 
 #[tauri::command]

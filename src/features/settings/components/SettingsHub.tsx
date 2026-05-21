@@ -1,9 +1,19 @@
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
-import { useLocation, useOutlet } from "react-router";
-import { ScrollArea } from "@/components/scroll-area";
-import { useSettings } from "@/features/settings/context";
-import * as s from "./SettingsHub.css";
+/** @jsxImportSource solid-js */
+import { useLocation } from "@solidjs/router";
+import type { JSX } from "solid-js";
+import {
+  children,
+  createContext,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onMount,
+  useContext,
+} from "solid-js";
+import { Motion } from "solid-motionone";
+import { ScrollArea } from "@/components/scroll-area/ScrollArea";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import * as s from "./SettingsHub.css.ts";
 import {
   buildSettingsPages,
   resolveSettingsTransitionKey,
@@ -15,68 +25,97 @@ export interface SettingsOutletContext {
   pages: PageEntry[];
 }
 
-function SettingsRouteOutlet({
-  outletContext,
-  pathname,
-}: {
-  outletContext: SettingsOutletContext;
-  pathname: string;
-}) {
-  const outlet = useOutlet(outletContext);
-  const reduceMotion = useReducedMotion();
-  const hasMountedRef = useRef(false);
-  const routeKey = resolveSettingsTransitionKey(pathname);
+const SettingsPagesContext = createContext<() => PageEntry[]>();
 
-  useEffect(() => {
-    hasMountedRef.current = true;
-  }, []);
-
-  return outlet ? (
-    <motion.div
-      key={routeKey}
-      className={s.outletRouteLayer}
-      initial={reduceMotion || !hasMountedRef.current ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.75, ease: "easeIn" }}
-    >
-      {outlet}
-    </motion.div>
-  ) : null;
+export function useSolidSettingsPages(): () => PageEntry[] {
+  const ctx = useContext(SettingsPagesContext);
+  if (!ctx) {
+    throw new Error("useSolidSettingsPages must be used within SettingsHub");
+  }
+  return ctx;
 }
 
-export function SettingsHub() {
-  const settings = useSettings();
-  const { pathname } = useLocation();
-  const definitionsVersion = useSyncExternalStore(
-    (onStoreChange) => settings.subscribeDefinitions(onStoreChange),
-    () => settings.getDefinitionsVersion(),
-    () => settings.getDefinitionsVersion(),
+function usePrefersReducedMotion() {
+  const [reduceMotion, setReduceMotion] = createSignal(false);
+
+  onMount(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    onCleanup(() => media.removeEventListener("change", sync));
+  });
+
+  return reduceMotion;
+}
+
+function SettingsRouteOutlet(props: {
+  children?: JSX.Element;
+  pathname: string;
+}): JSX.Element {
+  const routeContent = children(() => props.children);
+  const reduceMotion = usePrefersReducedMotion();
+  const [hasMounted, setHasMounted] = createSignal(false);
+  const routeKey = createMemo(() =>
+    resolveSettingsTransitionKey(props.pathname),
   );
-  const pages = useMemo(() => {
-    void definitionsVersion;
+
+  onMount(() => {
+    setHasMounted(true);
+  });
+
+  return (
+    <Motion.div
+      class={s.outletRouteLayer}
+      initial={reduceMotion() || !hasMounted() ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.75, easing: "ease-in" }}
+      data-route-key={routeKey()}
+    >
+      {routeContent()}
+    </Motion.div>
+  );
+}
+
+export function SettingsHub(props: { children?: JSX.Element }): JSX.Element {
+  const settings = useSolidSettings();
+  const location = useLocation();
+  const [definitionsVersion, setDefinitionsVersion] = createSignal(
+    settings.getDefinitionsVersion(),
+  );
+
+  onMount(() => {
+    const unsubscribe = settings.subscribeDefinitions(() => {
+      setDefinitionsVersion(settings.getDefinitionsVersion());
+    });
+    onCleanup(unsubscribe);
+  });
+
+  const pages = createMemo(() => {
+    definitionsVersion();
     return buildSettingsPages(
       settings.listDefinitions(),
       settings.listPages(),
       settings.listSections(),
     );
-  }, [settings, definitionsVersion]);
-  const outletContext: SettingsOutletContext = { pages };
+  });
 
   return (
-    <div className={s.page}>
-      <SettingsPageTabs pages={pages} />
-      <ScrollArea
-        className={s.outlet}
-        contentClassName={s.outletContent}
-        direction="vertical"
-        mode="outset"
-        outsetWidth="12px"
-      >
-        <SettingsRouteOutlet
-          outletContext={outletContext}
-          pathname={pathname}
-        />
-      </ScrollArea>
-    </div>
+    <SettingsPagesContext.Provider value={pages}>
+      <div class={s.page}>
+        <SettingsPageTabs pages={pages()} />
+        <ScrollArea
+          className={s.outlet}
+          contentClassName={s.outletContent}
+          direction="vertical"
+          mode="outset"
+          outsetWidth="12px"
+        >
+          <SettingsRouteOutlet pathname={location.pathname}>
+            {props.children}
+          </SettingsRouteOutlet>
+        </ScrollArea>
+      </div>
+    </SettingsPagesContext.Provider>
   );
 }

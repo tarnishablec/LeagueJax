@@ -1,14 +1,21 @@
-import { selectIsFocused, useLcuStore } from "@/stores/lcu";
+import type { Accessor } from "solid-js";
+import { createMemo } from "solid-js";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
 
 const CDRAGON_GAME_DATA_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";
 
-export function useChampionIcon(championId: number | null | undefined) {
-  const connected = useLcuStore(selectIsFocused);
+export function useSolidChampionIcon(
+  championId: Accessor<number | null | undefined>,
+) {
+  const connected = useSolidLcuStore(selectIsFocused);
 
-  if (!connected || !championId) {
-    return null;
-  }
+  return createMemo(() => {
+    const id = championId();
+    if (!connected() || !id) {
+      return null;
+    }
 
-  return `${CDRAGON_GAME_DATA_BASE}/v1/champion-icons/${championId}.png`;
+    return `${CDRAGON_GAME_DATA_BASE}/v1/champion-icons/${id}.png`;
+  });
 }

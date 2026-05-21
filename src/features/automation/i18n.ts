@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const automationI18n: Resource = {
+export const automationI18n: LocaleResource = {
   en: {
     nav: {
       automation: "Automation",

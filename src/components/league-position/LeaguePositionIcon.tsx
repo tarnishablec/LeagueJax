@@ -1,4 +1,8 @@
+/** @jsxImportSource solid-js */
+import { Key } from "@solid-primitives/keyed";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
 import * as s from "./LeaguePositionIcon.css";
 
 const CDRAGON_POSITION_ICON_BASE =
@@ -53,44 +57,32 @@ export function normalizeLeaguePosition(
   return null;
 }
 
-export function LeaguePositionIcon({
-  position,
-  width = 16,
-  height = 16,
-  emphasis = "strong",
-}: {
+export function LeaguePositionIcon(props: {
   position: string | null | undefined;
   width?: number;
   height?: number;
   emphasis?: "strong" | "subtle";
-}) {
-  const normalized = normalizeLeaguePosition(position);
-  if (!normalized) {
-    return null;
-  }
+}): JSX.Element {
+  const normalized = () => normalizeLeaguePosition(props.position);
 
   return (
-    <img
-      className={s.icon({ emphasis })}
-      style={assignInlineVars({
-        [s.iconWidthVar]: `${width}px`,
-        [s.iconHeightVar]: `${height}px`,
-      })}
-      src={iconUrl(normalized)}
-      alt={`position-${normalized}`}
-    />
+    <Show when={normalized()}>
+      {(position) => (
+        <img
+          class={s.icon({ emphasis: props.emphasis ?? "strong" })}
+          style={assignInlineVars({
+            [s.iconWidthVar]: `${props.width ?? 16}px`,
+            [s.iconHeightVar]: `${props.height ?? 16}px`,
+          })}
+          src={iconUrl(position())}
+          alt={`position-${position()}`}
+        />
+      )}
+    </Show>
   );
 }
 
-export function LeaguePositionPair({
-  assigned,
-  primary,
-  secondary,
-  assignedWidth = 16,
-  assignedHeight = 16,
-  preferenceWidth = 12,
-  preferenceHeight = 12,
-}: {
+export function LeaguePositionPair(props: {
   assigned: string | null | undefined;
   primary: string | null | undefined;
   secondary: string | null | undefined;
@@ -98,58 +90,67 @@ export function LeaguePositionPair({
   assignedHeight?: number;
   preferenceWidth?: number;
   preferenceHeight?: number;
-}) {
-  const assignedIcon = normalizeLeaguePosition(assigned);
-  const primaryIcon = normalizeLeaguePosition(primary);
-  const secondaryIcon = normalizeLeaguePosition(secondary);
+}): JSX.Element {
+  const assignedIcon = () => normalizeLeaguePosition(props.assigned);
+  const primaryIcon = () => normalizeLeaguePosition(props.primary);
+  const secondaryIcon = () => normalizeLeaguePosition(props.secondary);
+  const prefs = () => {
+    const items: Array<{
+      key: "primary" | "secondary";
+      value: LeaguePosition;
+    }> = [];
+    const primary = primaryIcon();
+    const secondary = secondaryIcon();
 
-  const prefs: Array<{
-    key: "primary" | "secondary";
-    value: LeaguePosition;
-  }> = [];
-  if (primaryIcon && primaryIcon !== "none") {
-    prefs.push({ key: "primary", value: primaryIcon });
-  }
-  if (secondaryIcon && secondaryIcon !== "none") {
-    prefs.push({ key: "secondary", value: secondaryIcon });
-  }
+    if (primary && primary !== "none") {
+      items.push({ key: "primary", value: primary });
+    }
+    if (secondary && secondary !== "none") {
+      items.push({ key: "secondary", value: secondary });
+    }
 
-  const hasAssignedIcon = assignedIcon !== null && assignedIcon !== "none";
+    return items;
+  };
+  const hasAssignedIcon = () =>
+    assignedIcon() !== null && assignedIcon() !== "none";
 
   return (
     <div
-      className={s.pair}
+      class={s.pair}
       style={assignInlineVars({
-        [s.pairMinHeightVar]: `${assignedHeight}px`,
+        [s.pairMinHeightVar]: `${props.assignedHeight ?? 16}px`,
       })}
     >
-      {hasAssignedIcon && assignedIcon ? (
-        <img
-          className={s.icon({ emphasis: "strong" })}
-          style={assignInlineVars({
-            [s.iconWidthVar]: `${assignedWidth}px`,
-            [s.iconHeightVar]: `${assignedHeight}px`,
-          })}
-          src={iconUrl(assignedIcon)}
-          alt={`position-assigned-${assignedIcon}`}
-        />
-      ) : null}
-      {prefs.length > 0 ? (
-        <div className={s.prefGroup}>
-          {prefs.map((item) => (
-            <img
-              key={item.key}
-              className={s.icon({ emphasis: "subtle" })}
-              style={assignInlineVars({
-                [s.iconWidthVar]: `${preferenceWidth}px`,
-                [s.iconHeightVar]: `${preferenceHeight}px`,
-              })}
-              src={iconUrl(item.value)}
-              alt={`position-pref-${item.value}`}
-            />
-          ))}
+      <Show when={hasAssignedIcon() && assignedIcon()}>
+        {(position) => (
+          <img
+            class={s.icon({ emphasis: "strong" })}
+            style={assignInlineVars({
+              [s.iconWidthVar]: `${props.assignedWidth ?? 16}px`,
+              [s.iconHeightVar]: `${props.assignedHeight ?? 16}px`,
+            })}
+            src={iconUrl(position())}
+            alt={`position-assigned-${position()}`}
+          />
+        )}
+      </Show>
+      <Show when={prefs().length > 0}>
+        <div class={s.prefGroup}>
+          <Key each={prefs()} by="key">
+            {(item) => (
+              <img
+                class={s.icon({ emphasis: "subtle" })}
+                style={assignInlineVars({
+                  [s.iconWidthVar]: `${props.preferenceWidth ?? 12}px`,
+                  [s.iconHeightVar]: `${props.preferenceHeight ?? 12}px`,
+                })}
+                src={iconUrl(item().value)}
+                alt={`position-pref-${item().value}`}
+              />
+            )}
+          </Key>
         </div>
-      ) : null}
+      </Show>
     </div>
   );
 }

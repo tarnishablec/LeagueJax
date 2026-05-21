@@ -1,12 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useEffect, useEffectEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { onCleanup, onMount } from "solid-js";
 import type { UpdaterStateDto } from "@/bindings/updater";
+import { useSolidTranslation } from "@/i18n/solid";
 import { createLogger } from "@/infra/logger";
-import { showUpdateSettingsToast } from "../toasts";
+import { showSolidUpdateSettingsToast } from "../toasts";
 
-const logger = createLogger("updater-toast-bridge");
+const logger = createLogger("solid-updater-toast-bridge");
 const seenUpdateToastIds = new Set<string>();
 
 const buildToastId = (state: UpdaterStateDto): string | null => {
@@ -17,10 +17,10 @@ const buildToastId = (state: UpdaterStateDto): string | null => {
   return `updater:${state.currentVersion}:${state.latestVersion}`;
 };
 
-export function UpdaterToastBridge() {
-  const { t } = useTranslation();
+export function UpdaterToastBridge(): null {
+  const { t } = useSolidTranslation();
 
-  const notifyUpdateAvailable = useEffectEvent((state: UpdaterStateDto) => {
+  const notifyUpdateAvailable = (state: UpdaterStateDto) => {
     if (state.kind !== "updateAvailable" || !state.latestVersion) {
       return;
     }
@@ -32,16 +32,16 @@ export function UpdaterToastBridge() {
 
     seenUpdateToastIds.add(toastId);
 
-    showUpdateSettingsToast({
+    showSolidUpdateSettingsToast({
       id: toastId,
       title: t("settings.update.status.updateAvailable"),
       closable: false,
       duration: 10000,
       hideIcon: true,
     });
-  });
+  };
 
-  useEffect(() => {
+  onMount(() => {
     let cancelled = false;
     let unlisten: UnlistenFn | null = null;
 
@@ -65,13 +65,13 @@ export function UpdaterToastBridge() {
 
     void setup();
 
-    return () => {
+    onCleanup(() => {
       cancelled = true;
       if (unlisten) {
         void unlisten();
       }
-    };
-  }, []);
+    });
+  });
 
   return null;
 }

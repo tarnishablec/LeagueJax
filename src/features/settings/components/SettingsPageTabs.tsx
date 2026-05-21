@@ -1,7 +1,12 @@
-import { Tabs } from "@ark-ui/react/tabs";
-import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router";
-import * as s from "./SettingsHub.css";
+/** @jsxImportSource solid-js */
+
+import { Tabs } from "@ark-ui/solid/tabs";
+import { keyArray } from "@solid-primitives/keyed";
+import { A, useParams } from "@solidjs/router";
+import type { JSX } from "solid-js";
+import { createMemo } from "solid-js";
+import { useSolidTranslation } from "@/i18n/solid";
+import * as s from "./SettingsHub.css.ts";
 import { resolveActivePage } from "./SettingsHub.utils";
 import type { PageEntry } from "./settings-view-model";
 
@@ -36,64 +41,86 @@ const utilityPages = [
   },
 ] as const;
 
-export function SettingsPageTabs({ pages }: SettingsPageTabsProps) {
-  const { t } = useTranslation();
-  const { pageId } = useParams();
-  const activePrimaryPageId = resolveActivePage(pages, pageId)?.id ?? null;
-  const activeUtilityPageId =
-    pageId && utilityPages.some((page) => page.id === pageId) ? pageId : null;
+export function SettingsPageTabs(props: SettingsPageTabsProps): JSX.Element {
+  const { t } = useSolidTranslation();
+  const params = useParams();
+  const pageId = () => params.pageId;
+  const activePrimaryPageId = createMemo(
+    () => resolveActivePage(props.pages, pageId())?.id ?? null,
+  );
+  const activeUtilityPageId = createMemo(() =>
+    pageId() && utilityPages.some((page) => page.id === pageId())
+      ? pageId()
+      : null,
+  );
+  const primaryTabs = keyArray(
+    () => props.pages,
+    (page) => page.id,
+    (page) => (
+      <Tabs.Trigger
+        value={page().id}
+        asChild={(getTriggerProps) => (
+          <A
+            {...getTriggerProps({
+              class: s.primaryTab,
+            })}
+            href={`/main/settings/${page().id}`}
+          >
+            {t(`settings.pages.${page().id}.title`, {
+              defaultValue: page().id,
+            })}
+          </A>
+        )}
+      />
+    ),
+  );
+  const utilityTabs = keyArray(
+    () => utilityPages,
+    (page) => page.id,
+    (page) => (
+      <Tabs.Trigger
+        value={page().id}
+        asChild={(getTriggerProps) => (
+          <A
+            {...getTriggerProps({
+              class: s.primaryTab,
+            })}
+            href={page().to}
+          >
+            {t(page().labelKey, { defaultValue: page().defaultValue })}
+          </A>
+        )}
+      />
+    ),
+  );
 
   return (
-    <div className={s.pageTabs}>
+    <div class={s.pageTabs}>
       <Tabs.Root
-        className={s.primaryTabsRoot}
-        value={activePrimaryPageId}
+        class={s.primaryTabsRoot}
+        value={activePrimaryPageId()}
         activationMode="manual"
       >
         <Tabs.List
-          className={s.primaryTabsList}
+          class={s.primaryTabsList}
           data-scrollbar="hidden"
           aria-label="Settings pages"
         >
-          {pages.map((page) => (
-            <Tabs.Trigger
-              key={page.id}
-              value={page.id}
-              asChild
-              className={s.primaryTab}
-            >
-              <Link to={`/main/settings/${page.id}`}>
-                {t(`settings.pages.${page.id}.title`, {
-                  defaultValue: page.id,
-                })}
-              </Link>
-            </Tabs.Trigger>
-          ))}
+          {primaryTabs()}
         </Tabs.List>
       </Tabs.Root>
 
       <Tabs.Root
-        className={s.utilityTabsRoot}
-        value={activeUtilityPageId}
+        class={s.utilityTabsRoot}
+        value={activeUtilityPageId()}
         activationMode="manual"
       >
         <Tabs.List
-          className={s.utilityTabsList}
+          class={s.utilityTabsList}
           data-scrollbar="hidden"
           aria-label="Settings utility pages"
         >
-          {utilityPages.map((page) => (
-            <Tabs.Trigger
-              key={page.id}
-              value={page.id}
-              asChild
-              className={s.primaryTab}
-            >
-              <Link to={page.to}>
-                {t(page.labelKey, { defaultValue: page.defaultValue })}
-              </Link>
-            </Tabs.Trigger>
-          ))}
+          {utilityTabs()}
         </Tabs.List>
       </Tabs.Root>
     </div>

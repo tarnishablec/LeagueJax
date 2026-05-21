@@ -1,23 +1,23 @@
-import type { WebShard } from "@/runtime/web-contract";
-import { I18nShard } from "./i18n/manifest";
+import type { SolidWebShard } from "@/runtime/solid-web-contract";
+import { I18nRuntimeShard } from "./i18n/runtime-shard";
 import { MiniOngoingGameShard } from "./mini/mini-ongoing-game-shard";
 import { MiniRuntimeShard } from "./mini/mini-runtime-shard";
-import { initializeWebShards } from "./registry";
 import { MiniSettingsShard } from "./settings/mini-settings-shard";
+import { initializeSolidWebShards } from "./solid-registry";
 import { StaticCacheShard } from "./static-cache/manifest";
 import { WindowEffectShard } from "./window-effect/manifest";
 
-export function createMiniWebShards(): WebShard[] {
+export function createSolidMiniWebShards(): SolidWebShard[] {
   return [
     new MiniSettingsShard(),
     new WindowEffectShard(),
-    new I18nShard(),
+    new I18nRuntimeShard(),
     new StaticCacheShard(),
     new MiniRuntimeShard(),
     new MiniOngoingGameShard(),
   ];
 }
 
-export function initializeMiniWebShards(): Promise<void> {
-  return initializeWebShards(createMiniWebShards());
+export function initializeSolidMiniWebShards(): Promise<void> {
+  return initializeSolidWebShards(createSolidMiniWebShards());
 }

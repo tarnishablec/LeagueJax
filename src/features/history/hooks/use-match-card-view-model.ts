@@ -1,18 +1,20 @@
+import { type Accessor, createMemo } from "solid-js";
 import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches.ts";
-import { formatStartTime } from "@/features/history/components/match-card";
-import { useLcuMapQuery } from "@/hooks/use-lcu-maps.ts";
-import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
+import { formatStartTime } from "@/features/history/components/match-card/match-card-display";
+import { useSolidLcuMapQuery } from "@/hooks/use-lcu-maps";
+import { useSolidLcuQueueName } from "@/hooks/use-lcu-queues";
+import { normalizeHistoryPosition } from "../utils/history-position";
 import {
   matchUsesSubteams,
   resolveMatchParticipantGroups,
 } from "../utils/match-participant-groups.ts";
 import { resolveMatchPerformanceBadge } from "../utils/match-performance-badge.ts";
-import { useMatchPerformanceStrategy } from "./use-match-performance-strategy";
+import { useSolidMatchPerformanceStrategy } from "./use-match-performance-strategy";
 import { useParticipantBrief } from "./use-participant-brief.ts";
-import { useRoleQuestSlot } from "./use-role-quest-slot.ts";
+import { useSolidRoleQuestSlot } from "./use-role-quest-slot";
 
 export type MatchOutcome = "victory" | "defeat" | "remake" | "terminated";
 
@@ -282,32 +284,14 @@ function computeMatchPills(
   return pills;
 }
 
-export function normalizeHistoryPosition(
-  value: string | null | undefined,
-): string | null {
-  const normalized = value?.trim().toUpperCase();
-  if (!normalized || normalized === "INVALID") {
-    return null;
-  }
-  if (normalized === "NONE") {
-    return null;
-  }
-
-  if (normalized === "AFK") {
-    return null;
-  }
-
-  return normalized;
-}
-
-export function useMatchCardViewModel({
+export function useSolidMatchCardViewModel({
   match,
   me,
   resolvedJungleEggItemId,
 }: {
   me: RawMatchSummaryParticipant;
   match: RawMatchSummaryGame;
-  resolvedJungleEggItemId?: number | null;
+  resolvedJungleEggItemId?: number | null | Accessor<number | null | undefined>;
 }) {
   const {
     mapId,
@@ -321,86 +305,96 @@ export function useMatchCardViewModel({
     participants,
   } = match.json;
 
-  const { data: map } = useLcuMapQuery(mapId, gameModeMutators, gameMode);
-  const queueName = useLcuQueueName(queueId);
-  const performanceStrategy = useMatchPerformanceStrategy();
+  const { data: map } = useSolidLcuMapQuery(
+    () => mapId,
+    () => gameModeMutators,
+    () => gameMode,
+  );
+  const queueName = useSolidLcuQueueName(queueId);
+  const performanceStrategy = useSolidMatchPerformanceStrategy();
   const startedAt = formatStartTime(gameCreation);
   const { items, augments, outcome } = useParticipantBrief(me);
-  const roleQuest = useRoleQuestSlot({
+  const roleQuest = useSolidRoleQuestSlot({
     participant: me,
     match,
     resolvedJungleEggItemId,
   });
 
-  const gameResult: MatchOutcome = endOfGameResult.startsWith("Abort_")
-    ? "terminated"
-    : outcome;
+  return createMemo(() => {
+    const gameResult: MatchOutcome = endOfGameResult.startsWith("Abort_")
+      ? "terminated"
+      : outcome;
 
-  const hasAugments = gameMode === "CHERRY" || gameMode === "KIWI";
-  const supportsPosition = mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
-  const participantGroups = resolveMatchParticipantGroups(match);
-  const meGroup =
-    participantGroups.find((group) => group.participants.includes(me)) ?? null;
-  const teammates = meGroup?.participants ?? participants;
-  const isSubteamMatch = matchUsesSubteams(match);
+    const hasAugments = gameMode === "CHERRY" || gameMode === "KIWI";
+    const supportsPosition =
+      mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
+    const participantGroups = resolveMatchParticipantGroups(match);
+    const meGroup =
+      participantGroups.find((group) => group.participants.includes(me)) ??
+      null;
+    const teammates = meGroup?.participants ?? participants;
+    const isSubteamMatch = matchUsesSubteams(match);
 
-  const { primaryRuneId, subStyleId } = getPerkIds(me);
-  const damageShare = computeDamageShare(me, teammates);
-  const fallbackPosition = supportsPosition
-    ? (normalizeHistoryPosition(me.teamPosition) ??
-      normalizeHistoryPosition(me.individualPosition) ??
-      normalizeHistoryPosition(me.lane) ??
-      "FILL")
-    : null;
+    const { primaryRuneId, subStyleId } = getPerkIds(me);
+    const damageShare = computeDamageShare(me, teammates);
+    const fallbackPosition = supportsPosition
+      ? (normalizeHistoryPosition(me.teamPosition) ??
+        normalizeHistoryPosition(me.individualPosition) ??
+        normalizeHistoryPosition(me.lane) ??
+        "FILL")
+      : null;
 
-  // console.log("inferredPosition", roleQuest.inferredPosition);
+    // console.log("inferredPosition", roleQuest.inferredPosition);
 
-  const position = roleQuest.inferredPosition ?? fallbackPosition;
-  const myDamage = me.totalDamageDealtToChampions ?? 0;
-  const damageRank =
-    participants.filter((p) => (p.totalDamageDealtToChampions ?? 0) > myDamage)
-      .length + 1;
-  const pills = computeMatchPills(
-    me,
-    participants,
-    teammates,
-    // gameResult === "victory",
-    damageRank,
-  );
-  const performanceBadge = resolveMatchPerformanceBadge({
-    me,
-    teammates,
-    isVictory: gameResult === "victory",
-    strategy: performanceStrategy,
+    const roleQuestValue = roleQuest();
+    const position = roleQuestValue.inferredPosition ?? fallbackPosition;
+    const myDamage = me.totalDamageDealtToChampions ?? 0;
+    const damageRank =
+      participants.filter(
+        (p) => (p.totalDamageDealtToChampions ?? 0) > myDamage,
+      ).length + 1;
+    const pills = computeMatchPills(
+      me,
+      participants,
+      teammates,
+      // gameResult === "victory",
+      damageRank,
+    );
+    const performanceBadge = resolveMatchPerformanceBadge({
+      me,
+      teammates,
+      isVictory: gameResult === "victory",
+      strategy: performanceStrategy(),
+    });
+    const myGold = me.goldEarned ?? 0;
+    const goldRank =
+      participants.filter((p) => (p.goldEarned ?? 0) > myGold).length + 1;
+
+    return {
+      me,
+      gameId,
+      gameDuration,
+      participants,
+      participantGroups,
+      meGroup,
+      queueName: queueName() ?? "",
+      mapName: map()?.name ?? "",
+      startedAt,
+      items,
+      augments,
+      gameResult,
+      isSubteamMatch,
+      placement: meGroup?.placement ?? null,
+      hasAugments,
+      primaryRuneId,
+      subStyleId,
+      damageShare,
+      damageRank,
+      goldRank,
+      position,
+      performanceBadge,
+      pills,
+      roleQuestSlot: roleQuestValue.slot,
+    };
   });
-  const myGold = me.goldEarned ?? 0;
-  const goldRank =
-    participants.filter((p) => (p.goldEarned ?? 0) > myGold).length + 1;
-
-  return {
-    me,
-    gameId,
-    gameDuration,
-    participants,
-    participantGroups,
-    meGroup,
-    queueName: queueName ?? "",
-    mapName: map?.name ?? "",
-    startedAt,
-    items,
-    augments,
-    gameResult,
-    isSubteamMatch,
-    placement: meGroup?.placement ?? null,
-    hasAugments,
-    primaryRuneId,
-    subStyleId,
-    damageShare,
-    damageRank,
-    goldRank,
-    position,
-    performanceBadge,
-    pills,
-    roleQuestSlot: roleQuest.slot,
-  };
 }

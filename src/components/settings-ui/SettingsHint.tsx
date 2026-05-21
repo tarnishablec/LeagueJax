@@ -1,6 +1,8 @@
-import { Portal } from "@ark-ui/react/portal";
-import { Tooltip } from "@ark-ui/react/tooltip";
-import { CircleAlert } from "lucide-react";
+/** @jsxImportSource solid-js */
+import { Tooltip } from "@ark-ui/solid/tooltip";
+import { CircleAlert } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { Portal } from "solid-js/web";
 import * as s from "./SettingsHint.css";
 
 export type SettingsHintTone = "info" | "warning" | "error";
@@ -10,7 +12,9 @@ interface SettingsHintProps {
   tone?: SettingsHintTone;
 }
 
-export function SettingsHint({ hint, tone = "info" }: SettingsHintProps) {
+export function SettingsHint(props: SettingsHintProps): JSX.Element {
+  const tone = () => props.tone ?? "info";
+
   return (
     <Tooltip.Root
       lazyMount
@@ -25,15 +29,21 @@ export function SettingsHint({ hint, tone = "info" }: SettingsHintProps) {
         strategy: "fixed",
       }}
     >
-      <Tooltip.Trigger asChild>
-        <span className={`${s.trigger} ${s.triggerTone[tone]}`}>
-          <CircleAlert size={14} aria-hidden="true" />
-        </span>
-      </Tooltip.Trigger>
+      <Tooltip.Trigger
+        asChild={(getTriggerProps) => (
+          <span
+            {...getTriggerProps({
+              class: `${s.trigger} ${s.triggerTone[tone()]}`,
+            })}
+          >
+            <CircleAlert size={14} aria-hidden="true" />
+          </span>
+        )}
+      />
       <Portal>
-        <Tooltip.Positioner className={s.positioner}>
-          <Tooltip.Content className={`${s.content} ${s.contentTone[tone]}`}>
-            {hint}
+        <Tooltip.Positioner class={s.positioner}>
+          <Tooltip.Content class={`${s.content} ${s.contentTone[tone()]}`}>
+            {props.hint}
           </Tooltip.Content>
         </Tooltip.Positioner>
       </Portal>

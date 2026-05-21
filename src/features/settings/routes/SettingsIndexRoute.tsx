@@ -1,18 +1,25 @@
-import { useTranslation } from "react-i18next";
-import { useOutletContext } from "react-router";
-import type { SettingsOutletContext } from "../components/SettingsHub";
-import * as s from "../components/SettingsHub.css";
+/** @jsxImportSource solid-js */
+import type { JSX } from "solid-js";
+import { Show } from "solid-js";
+import { useSolidTranslation } from "@/i18n/solid";
+import { useSolidSettingsPages } from "../components/SettingsHub";
+import * as s from "../components/SettingsHub.css.ts";
 import { resolveActivePage } from "../components/SettingsHub.utils";
 import { SettingsSections } from "../components/SettingsSections";
 
-export function SettingsIndexRoute() {
-  const { t } = useTranslation();
-  const { pages } = useOutletContext<SettingsOutletContext>();
-  const activePage = resolveActivePage(pages);
+export function SettingsIndexRoute(): JSX.Element {
+  const { t } = useSolidTranslation();
+  const pages = useSolidSettingsPages();
+  const activePage = () => resolveActivePage(pages());
 
-  if (!activePage) {
-    return <h1 className={s.title}>{t("settings.title")}</h1>;
-  }
-
-  return <SettingsSections page={activePage} />;
+  return (
+    <Show
+      when={activePage()}
+      fallback={<h1 class={s.title}>{t("settings.title")}</h1>}
+    >
+      {(page) => <SettingsSections page={page()} />}
+    </Show>
+  );
 }
+
+export default SettingsIndexRoute;

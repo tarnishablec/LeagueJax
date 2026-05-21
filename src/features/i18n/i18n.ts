@@ -1,6 +1,6 @@
-import type { Resource } from "i18next";
+import type { LocaleResource } from "@/i18n/types";
 
-export const i18nShardI18n: Resource = {
+export const i18nShardI18n: LocaleResource = {
   en: {
     rank: {
       tierShort: {

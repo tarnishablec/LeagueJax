@@ -1,24 +1,26 @@
-import { Dialog } from "@ark-ui/react/dialog";
-import { Portal } from "@ark-ui/react/portal";
-import { Bot } from "lucide-react";
-import { memo } from "react";
-import { useTranslation } from "react-i18next";
-import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
+/** @jsxImportSource solid-js */
+
+import { Dialog } from "@ark-ui/solid/dialog";
+import { keyArray } from "@solid-primitives/keyed";
+import { Bot } from "lucide-solid";
+import type { JSX } from "solid-js";
+import { For, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { ChampionAvatar } from "@/components/champion-avatar/ChampionAvatar";
 import { LeaguePositionIcon } from "@/components/league-position/LeaguePositionIcon";
-import { MatchCard } from "@/features/history/components/match-card/MatchCard";
-import { normalizeHistoryPosition } from "@/features/history/hooks/use-match-card-view-model";
-import { useMatchPerformanceStrategy } from "@/features/history/hooks/use-match-performance-strategy";
+import { MatchCard } from "@/features/history/components/match-card";
+import { useSolidMatchPerformanceStrategy } from "@/features/history/hooks/use-match-performance-strategy";
+import { normalizeHistoryPosition } from "@/features/history/utils/history-position";
 import { resolveMatchPerformanceBadgeForMatch } from "@/features/history/utils/match-performance-badge.ts";
-import { useLcuQueueName } from "@/hooks/use-lcu-queues.ts";
-import { theme } from "@/styles/theme.css.ts";
+import { useSolidLcuQueueName } from "@/hooks/use-lcu-queues";
+import { useSolidTranslation } from "@/i18n/solid";
 import {
   historyResultClassName,
   historyResultLabel,
   resolveRecentGameResult,
 } from "../routes/ongoing-game.history-utils.ts";
 import * as s from "./OngoingGameCards.css.ts";
-import type { EnrichedMatch } from "./use-snapshot-player-card-state.ts";
+import type { EnrichedMatch } from "./use-snapshot-player-card-state";
 
 const HISTORY_SKELETON_ROW_IDS = [
   "one",
@@ -41,106 +43,120 @@ function formatGameTime(epochMs: number): string {
   return `${month}/${day} ${hour}:${minute}`;
 }
 
-const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
-  const { game } = props;
-  const { t } = useTranslation();
-  const result = resolveRecentGameResult(game);
-  const queueName = useLcuQueueName(game.json.queueId);
-  const performanceStrategy = useMatchPerformanceStrategy();
-  const performanceBadge = resolveMatchPerformanceBadgeForMatch(
-    game,
-    game.me,
-    result === "Win",
-    performanceStrategy,
-  );
-  const championId = game.me.championId > 0 ? game.me.championId : null;
-  const { mapId, gameMode } = game.json;
-  const supportsPosition = mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
-  const position = supportsPosition
-    ? (normalizeHistoryPosition(game.me.teamPosition) ??
-      normalizeHistoryPosition(game.me.individualPosition) ??
-      normalizeHistoryPosition(game.me.lane))
-    : null;
+function HistoryRow(props: { game: EnrichedMatch }): JSX.Element {
+  const { t } = useSolidTranslation();
+  const result = () => resolveRecentGameResult(props.game);
+  const queueName = useSolidLcuQueueName(props.game.json.queueId);
+  const performanceStrategy = useSolidMatchPerformanceStrategy();
+  const performanceBadge = () =>
+    resolveMatchPerformanceBadgeForMatch(
+      props.game,
+      props.game.me,
+      result() === "Win",
+      performanceStrategy(),
+    );
+  const championId = () =>
+    props.game.me.championId > 0 ? props.game.me.championId : null;
+  const supportsPosition = () => {
+    const { mapId, gameMode } = props.game.json;
+    return mapId === 11 || gameMode.toUpperCase() === "CLASSIC";
+  };
+  const position = () =>
+    supportsPosition()
+      ? (normalizeHistoryPosition(props.game.me.teamPosition) ??
+        normalizeHistoryPosition(props.game.me.individualPosition) ??
+        normalizeHistoryPosition(props.game.me.lane))
+      : null;
 
   return (
     <Dialog.Root lazyMount unmountOnExit closeOnEscape>
-      <Dialog.Trigger asChild>
-        <button
-          type="button"
-          className={`${s.historyRowButtonReset} ${s.historyRow} ${historyResultClassName(
-            result,
-            {
-              winText: s.winRow,
-              loseText: s.loseRow,
-              remakeText: s.remakeRow,
-              terminatedText: s.terminatedRow,
-            },
-          )}`}
-        >
-          <ChampionAvatar
-            championId={championId}
-            imageClassName={s.historyChampionAvatar}
-            fallbackClassName={s.historyChampionFallback}
-          />
-          <div className={s.matchBrief}>
-            <div className={s.queueNameRow}>
-              <span className={s.queueNameText}>{queueName}</span>
-              {performanceBadge ? (
+      <Dialog.Trigger
+        asChild={(getTriggerProps) => (
+          <button
+            {...getTriggerProps({
+              type: "button",
+              class: `${s.historyRowButtonReset} ${s.historyRow} ${historyResultClassName(
+                result(),
+                {
+                  winText: s.winRow,
+                  loseText: s.loseRow,
+                  remakeText: s.remakeRow,
+                  terminatedText: s.terminatedRow,
+                },
+              )}`,
+            })}
+          >
+            <ChampionAvatar
+              championId={championId()}
+              imageClassName={s.historyChampionAvatar}
+              fallbackClassName={s.historyChampionFallback}
+            />
+            <div class={s.matchBrief}>
+              <div class={s.queueNameRow}>
+                <span class={s.queueNameText}>{queueName()}</span>
+                <Show when={performanceBadge()}>
+                  {(badge) => (
+                    <span
+                      class={s.historyPerformanceBadge({
+                        badge: badge(),
+                      })}
+                    >
+                      {badge().toUpperCase()}
+                    </span>
+                  )}
+                </Show>
+              </div>
+              <div class={s.matchBriefDown}>
                 <span
-                  className={s.historyPerformanceBadge({
-                    badge: performanceBadge,
+                  class={historyResultClassName(result(), {
+                    winText: s.winText,
+                    loseText: s.loseText,
+                    remakeText: s.remakeText,
+                    terminatedText: s.terminatedText,
                   })}
+                  style={{
+                    "font-size": "0.75rem",
+                  }}
                 >
-                  {performanceBadge.toUpperCase()}
+                  {historyResultLabel(result(), t)}
                 </span>
-              ) : null}
+                <span class={s.gameTimeText}>
+                  {formatGameTime(props.game.json.gameCreation)}
+                </span>
+              </div>
             </div>
-            <div className={s.matchBriefDown}>
-              <span
-                className={`${historyResultClassName(result, {
-                  winText: s.winText,
-                  loseText: s.loseText,
-                  remakeText: s.remakeText,
-                  terminatedText: s.terminatedText,
-                })}`}
-                style={{
-                  fontSize: "0.75rem",
-                }}
-              >
-                {historyResultLabel(result, t)}
+            <div class={s.kdaCell}>
+              <span class={s.kdaText}>
+                {props.game.me.kills ?? 0}/{props.game.me.deaths ?? 0}/
+                {props.game.me.assists ?? 0}
               </span>
-              <span className={s.gameTimeText}>
-                {formatGameTime(game.json.gameCreation)}
-              </span>
+              <Show when={supportsPosition()}>
+                <Show
+                  when={position()}
+                  fallback={<span class={s.positionText}>-</span>}
+                >
+                  {(resolvedPosition) => (
+                    <LeaguePositionIcon
+                      position={resolvedPosition()}
+                      width={14}
+                      height={14}
+                    />
+                  )}
+                </Show>
+              </Show>
             </div>
-          </div>
-          <div className={s.kdaCell}>
-            <span className={s.kdaText}>
-              {game.me.kills ?? 0}/{game.me.deaths ?? 0}/{game.me.assists ?? 0}
-            </span>
-            {supportsPosition ? (
-              position ? (
-                <LeaguePositionIcon
-                  position={position}
-                  width={14}
-                  height={14}
-                />
-              ) : (
-                <span className={s.positionText}>-</span>
-              )
-            ) : null}
-          </div>
-        </button>
-      </Dialog.Trigger>
+          </button>
+        )}
+      />
       <Portal>
-        <Dialog.Backdrop className={s.historyDialogBackdrop} />
-        <Dialog.Positioner className={s.historyDialogPositioner}>
-          <Dialog.Content className={s.historyDialogContent}>
-            <div className={s.historyDialogScroller}>
-              <div className={s.historyDialogScrollerContent}>
+        <Dialog.Backdrop class={s.historyDialogBackdrop} />
+        <Dialog.Positioner class={s.historyDialogPositioner}>
+          <Dialog.Content class={s.historyDialogContent}>
+            <div class={s.historyDialogScroller}>
+              <div class={s.historyDialogScrollerContent}>
                 <MatchCard
-                  match={game}
-                  me={game.me}
+                  match={props.game}
+                  me={props.game.me}
                   sgpServerId={null}
                   defaultExpanded
                 />
@@ -151,49 +167,40 @@ const HistoryRow = memo(function HistoryRow(props: { game: EnrichedMatch }) {
       </Portal>
     </Dialog.Root>
   );
-});
+}
 
-function HistorySkeletonRow() {
+function HistorySkeletonRow(): JSX.Element {
   return (
-    <Skeleton
-      width="100%"
-      height={40}
-      borderRadius={6}
-      containerClassName={s.historySkeletonRow}
-    />
+    <span class={s.historySkeletonRow}>
+      <span class={s.historySkeletonBlock} />
+    </span>
   );
 }
 
-function HistoryLoadingState() {
+function HistoryLoadingState(): JSX.Element {
   return (
-    <SkeletonTheme
-      baseColor={`color-mix(in oklch, ${theme.color.foreground} 8%, transparent)`}
-      highlightColor={`color-mix(in oklch, ${theme.color.foreground} 16%, transparent)`}
-      duration={1.2}
-    >
-      <div className={s.historyListScroller}>
-        <div className={s.historyList}>
-          {HISTORY_SKELETON_ROW_IDS.map((id) => (
-            <HistorySkeletonRow key={id} />
-          ))}
-        </div>
+    <div class={s.historyListScroller}>
+      <div class={s.historyList}>
+        <For each={HISTORY_SKELETON_ROW_IDS}>
+          {() => <HistorySkeletonRow />}
+        </For>
       </div>
-    </SkeletonTheme>
+    </div>
   );
 }
 
 function SnapshotPlayerCardHistoryList(props: {
   recentGames: EnrichedMatch[];
-}) {
-  const { recentGames } = props;
+}): JSX.Element {
+  const historyRows = keyArray(
+    () => props.recentGames,
+    (game) => String(game.json.gameId),
+    (game) => <HistoryRow game={game()} />,
+  );
 
   return (
-    <div className={s.historyListScroller}>
-      <div className={s.historyList}>
-        {recentGames.map((game) => (
-          <HistoryRow key={game.json.gameId} game={game} />
-        ))}
-      </div>
+    <div class={s.historyListScroller}>
+      <div class={s.historyList}>{historyRows()}</div>
     </div>
   );
 }
@@ -207,47 +214,41 @@ type SnapshotPlayerCardHistoryProps = {
   recentGames: EnrichedMatch[];
 };
 
-export const SnapshotPlayerCardHistory = memo(
-  function SnapshotPlayerCardHistory(props: SnapshotPlayerCardHistoryProps) {
-    const {
-      hasHistoryLoadFailed,
-      historyLoadFailedText,
-      isBot,
-      isHistoryLoading,
-      noHistoryText,
-      recentGames,
-    } = props;
-
-    if (isBot) {
-      return (
-        <div className={s.historyCenteredState}>
+export function SnapshotPlayerCardHistory(
+  props: SnapshotPlayerCardHistoryProps,
+): JSX.Element {
+  return (
+    <Show
+      when={!props.isBot}
+      fallback={
+        <div class={s.historyCenteredState}>
           <div>
             <Bot />
           </div>
         </div>
-      );
-    }
-
-    if (isHistoryLoading) {
-      return <HistoryLoadingState />;
-    }
-
-    if (hasHistoryLoadFailed) {
-      return (
-        <div className={s.historyCenteredState}>
-          <div>{historyLoadFailedText}</div>
-        </div>
-      );
-    }
-
-    if (recentGames.length === 0) {
-      return (
-        <div className={s.historyCenteredState}>
-          <div>{noHistoryText}</div>
-        </div>
-      );
-    }
-
-    return <SnapshotPlayerCardHistoryList recentGames={recentGames} />;
-  },
-);
+      }
+    >
+      <Show when={!props.isHistoryLoading} fallback={<HistoryLoadingState />}>
+        <Show
+          when={!props.hasHistoryLoadFailed}
+          fallback={
+            <div class={s.historyCenteredState}>
+              <div>{props.historyLoadFailedText}</div>
+            </div>
+          }
+        >
+          <Show
+            when={props.recentGames.length > 0}
+            fallback={
+              <div class={s.historyCenteredState}>
+                <div>{props.noHistoryText}</div>
+              </div>
+            }
+          >
+            <SnapshotPlayerCardHistoryList recentGames={props.recentGames} />
+          </Show>
+        </Show>
+      </Show>
+    </Show>
+  );
+}

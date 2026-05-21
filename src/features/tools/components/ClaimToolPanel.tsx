@@ -1,4 +1,6 @@
-import { Checkbox } from "@ark-ui/react/checkbox";
+/** @jsxImportSource solid-js */
+import { Checkbox } from "@ark-ui/solid/checkbox";
+import { keyArray } from "@solid-primitives/keyed";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
@@ -12,16 +14,16 @@ import {
   Minus,
   PackageX,
   Play,
-} from "lucide-react";
+} from "lucide-solid";
+import type { Accessor, JSX } from "solid-js";
 import {
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from "react";
-import { useTranslation } from "react-i18next";
-import useSWR from "swr";
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import type {
   ClaimToolActivityEntryDto,
   ClaimToolCategory,
@@ -36,9 +38,11 @@ import { LcuImage } from "@/components/LcuImage";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SummonerID } from "@/components/SummonerID";
 import { SettingsToggle } from "@/components/settings-ui";
-import { useSettings } from "@/features/settings/context";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
+import { useSolidTranslation } from "@/i18n/solid";
 import { toErrorMessage } from "@/infra/errors";
-import { selectIsFocused, useLcuStore } from "@/stores/lcu";
+import { createSolidQuery } from "@/infra/solid-query";
+import { selectIsFocused, useSolidLcuStore } from "@/stores/lcu.solid";
 import {
   CLAIM_TOOL_CLAIMABLES_AVAILABLE_EVENT,
   CLAIM_TOOL_NOTIFICATION_SETTING_ID,
@@ -57,7 +61,7 @@ import {
   requestFromSelection,
   selectedCount,
 } from "../claim-tool-selection";
-import * as s from "./ClaimToolPanel.css";
+import * as s from "./ClaimToolPanel.css.ts";
 
 const CLAIM_TOOL_SNAPSHOT_REFRESH_INTERVAL_MS = 5000;
 const CLAIM_TOOL_MIN_CLAIMING_MS = 1000;
@@ -80,14 +84,27 @@ const sectionConfig = [
   },
 ] as const;
 
-function useClaimNotificationEnabled(): boolean {
-  const settings = useSettings();
-  return useSyncExternalStore(
-    (onStoreChange) =>
-      settings.subscribe(CLAIM_TOOL_NOTIFICATION_SETTING_ID, onStoreChange),
-    () => settings.get<boolean>(CLAIM_TOOL_NOTIFICATION_SETTING_ID) ?? false,
-    () => settings.get<boolean>(CLAIM_TOOL_NOTIFICATION_SETTING_ID) ?? false,
+function useClaimNotificationEnabled(): Accessor<boolean> {
+  const settings = useSolidSettings();
+  const [enabled, setEnabled] = createSignal(
+    settings.get<boolean>(CLAIM_TOOL_NOTIFICATION_SETTING_ID) ?? false,
   );
+
+  onMount(() => {
+    const sync = () => {
+      setEnabled(
+        settings.get<boolean>(CLAIM_TOOL_NOTIFICATION_SETTING_ID) ?? false,
+      );
+    };
+    const unsubscribe = settings.subscribe(
+      CLAIM_TOOL_NOTIFICATION_SETTING_ID,
+      sync,
+    );
+    sync();
+    onCleanup(unsubscribe);
+  });
+
+  return enabled;
 }
 
 function categoryLabelKey(category: ClaimToolCategory | null): string {
@@ -138,129 +155,146 @@ async function waitForMinimumClaimingDuration(startedAtMs: number) {
   });
 }
 
-function ItemIcon({item}: { item: ClaimToolItemDto }) {
-  const FallbackIcon = item.category === "eventHub" ? CalendarCheck : PackageX;
+function cloneClaimBucketIds(ids: ClaimBucketIds): ClaimBucketIds {
+  return {
+    rewards: new Set(ids.rewards),
+    missions: new Set(ids.missions),
+    eventHub: new Set(ids.eventHub),
+  };
+}
 
-  if (!item.iconUrl) {
-    return (
-      <span className={s.itemImageFallback} aria-hidden="true">
-        <FallbackIcon size={16}/>
-      </span>
-    );
-  }
+async function fetchClaimables(): Promise<ClaimToolClaimablesDto> {
+  return invoke<ClaimToolClaimablesDto>("claim_tool_refresh");
+}
+
+async function fetchSnapshot(): Promise<ClaimToolSnapshotDto> {
+  return invoke<ClaimToolSnapshotDto>("claim_tool_get_snapshot");
+}
+
+function ItemIcon(props: { item: ClaimToolItemDto }): JSX.Element {
+  const FallbackIcon =
+    props.item.category === "eventHub" ? CalendarCheck : PackageX;
 
   return (
-    <LcuImage
-      src={item.iconUrl}
-      alt=""
-      className={s.itemImage}
-      fallbackClassName={s.itemImageFallback}
-      loadingClassName={s.itemImageFallback}
-    />
+    <Show
+      when={props.item.iconUrl}
+      fallback={
+        <span class={s.itemImageFallback} aria-hidden="true">
+          <FallbackIcon size={16} />
+        </span>
+      }
+    >
+      {(iconUrl) => (
+        <LcuImage
+          src={iconUrl()}
+          alt=""
+          className={s.itemImage}
+          fallbackClassName={s.itemImageFallback}
+          loadingClassName={s.itemImageFallback}
+        />
+      )}
+    </Show>
   );
 }
 
-function ClaimItemRow({
-                        bucket,
-                        checked,
-                        disabled,
-                        item,
-                        onCheckedChange,
-                      }: {
+function ClaimItemRow(props: {
   bucket: ClaimBucket;
   checked: boolean;
   disabled: boolean;
   item: ClaimToolItemDto;
   onCheckedChange: (bucket: ClaimBucket, id: string, checked: boolean) => void;
-}) {
-  const {t} = useTranslation();
-  const claimable = item.status === "claimable";
-  const hasMeta = Boolean(item.subtitle || item.choiceCount > 1 || item.reason);
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const claimable = () => props.item.status === "claimable";
+  const hasMeta = () =>
+    Boolean(
+      props.item.subtitle || props.item.choiceCount > 1 || props.item.reason,
+    );
+  const childItems = keyArray(
+    () => props.item.children,
+    (child) => child.id,
+    (child) => (
+      <span class={s.childItem}>
+        <LcuImage
+          src={child().iconUrl}
+          alt=""
+          className={s.childImage}
+          fallbackClassName={s.childImageFallback}
+          loadingClassName={s.childImageFallback}
+        />
+        <span class={s.childText}>{child().title}</span>
+        <Show when={child().quantity}>
+          {(quantity) => <span class={s.childText}>x{quantity()}</span>}
+        </Show>
+      </span>
+    ),
+  );
 
   return (
-    <div className={s.itemRow} data-status={item.status}>
+    <div class={s.itemRow} data-status={props.item.status}>
       <Checkbox.Root
-        aria-label={`Select claim item ${item.id}`}
-        checked={checked}
-        disabled={!claimable || disabled}
-        className={s.checkboxRoot}
+        aria-label={`Select claim item ${props.item.id}`}
+        checked={props.checked}
+        disabled={!claimable() || props.disabled}
+        class={s.checkboxRoot}
         onCheckedChange={(details) => {
-          if (disabled) {
+          if (props.disabled) {
             return;
           }
-          onCheckedChange(bucket, item.id, details.checked === true);
+          props.onCheckedChange(
+            props.bucket,
+            props.item.id,
+            details.checked === true,
+          );
         }}
       >
-        <Checkbox.HiddenInput/>
-        <Checkbox.Control className={s.checkboxControl}>
-          <Checkbox.Indicator className={s.checkboxIndicator}>
-            <Check size={13} aria-hidden="true"/>
+        <Checkbox.HiddenInput />
+        <Checkbox.Control class={s.checkboxControl}>
+          <Checkbox.Indicator class={s.checkboxIndicator}>
+            <Check size={13} aria-hidden="true" />
           </Checkbox.Indicator>
         </Checkbox.Control>
       </Checkbox.Root>
 
-      <ItemIcon item={item}/>
+      <ItemIcon item={props.item} />
 
-      <div className={s.itemMain}>
-        <div className={s.itemTitleLine}>
-          <span className={s.itemTitle}>{item.title}</span>
-          {item.quantity ? (
-            <span className={s.quantity}>x{item.quantity}</span>
-          ) : null}
+      <div class={s.itemMain}>
+        <div class={s.itemTitleLine}>
+          <span class={s.itemTitle}>{props.item.title}</span>
+          <Show when={props.item.quantity}>
+            {(quantity) => <span class={s.quantity}>x{quantity()}</span>}
+          </Show>
         </div>
-        {hasMeta ? (
-          <div className={s.itemMeta}>
-            {item.subtitle ? (
-              <span className={s.itemMetaText}>{item.subtitle}</span>
-            ) : null}
-            {item.choiceCount > 1 ? (
-              <span className={s.itemMetaText}>
-                {t("tools.claimTool.choiceCount", {count: item.choiceCount})}
+        <Show when={hasMeta()}>
+          <div class={s.itemMeta}>
+            <Show when={props.item.subtitle}>
+              {(subtitle) => <span class={s.itemMetaText}>{subtitle()}</span>}
+            </Show>
+            <Show when={props.item.choiceCount > 1}>
+              <span class={s.itemMetaText}>
+                {t("tools.claimTool.choiceCount", {
+                  count: props.item.choiceCount,
+                })}
               </span>
-            ) : null}
-            {item.reason ? (
-              <span className={s.itemMetaText}>{item.reason}</span>
-            ) : null}
+            </Show>
+            <Show when={props.item.reason}>
+              {(reason) => <span class={s.itemMetaText}>{reason()}</span>}
+            </Show>
           </div>
-        ) : null}
-        {item.children.length > 0 ? (
-          <div className={s.childList}>
-            {item.children.map((child) => (
-              <span className={s.childItem} key={child.id}>
-                <LcuImage
-                  src={child.iconUrl}
-                  alt=""
-                  className={s.childImage}
-                  fallbackClassName={s.childImageFallback}
-                  loadingClassName={s.childImageFallback}
-                />
-                <span className={s.childText}>{child.title}</span>
-                {child.quantity ? (
-                  <span className={s.childText}>x{child.quantity}</span>
-                ) : null}
-              </span>
-            ))}
-          </div>
-        ) : null}
+        </Show>
+        <Show when={props.item.children.length > 0}>
+          <div class={s.childList}>{childItems()}</div>
+        </Show>
       </div>
 
-      <span className={s.statusPill({status: item.status})}>
-        {t(`tools.claimTool.status.${item.status}`)}
+      <span class={s.statusPill({ status: props.item.status })}>
+        {t(`tools.claimTool.status.${props.item.status}`)}
       </span>
     </div>
   );
 }
 
-function ClaimSection({
-                        bucket,
-                        busy,
-                        icon: Icon,
-                        items,
-                        selected,
-                        title,
-                        onBucketCheckedChange,
-                        onCheckedChange,
-                      }: {
+function ClaimSection(props: {
   bucket: ClaimBucket;
   busy: boolean;
   icon: LucideIcon;
@@ -273,202 +307,228 @@ function ClaimSection({
     checked: boolean,
   ) => void;
   onCheckedChange: (bucket: ClaimBucket, id: string, checked: boolean) => void;
-}) {
-  const {t} = useTranslation();
-  const claimableCount = items.filter(
-    (item) => item.status === "claimable",
-  ).length;
-  const bucketCheckedState = bucketSelectionCheckedState(items, selected);
-  const canToggleBucket = !busy && bucketHasClaimableItems(items);
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const claimableCount = createMemo(
+    () => props.items.filter((item) => item.status === "claimable").length,
+  );
+  const bucketCheckedState = createMemo(() =>
+    bucketSelectionCheckedState(props.items, props.selected),
+  );
+  const canToggleBucket = createMemo(
+    () => !props.busy && bucketHasClaimableItems(props.items),
+  );
+  const itemRows = keyArray(
+    () => props.items,
+    (item) => item.id,
+    (item) => (
+      <ClaimItemRow
+        bucket={props.bucket}
+        disabled={props.busy}
+        item={item()}
+        checked={props.selected.has(item().id)}
+        onCheckedChange={props.onCheckedChange}
+      />
+    ),
+  );
 
   return (
-    <section className={s.section} aria-busy={busy} data-busy={busy}>
-      <div className={s.sectionHeader}>
-        <div className={s.sectionTitle}>
-
-          <Icon size={16} aria-hidden="true"/>
-          <span className={s.sectionTitleText}>{title}</span>
+    <section class={s.section} aria-busy={props.busy} data-busy={props.busy}>
+      <div class={s.sectionHeader}>
+        <div class={s.sectionTitle}>
+          <props.icon size={16} aria-hidden="true" />
+          <span class={s.sectionTitleText}>{props.title}</span>
         </div>
-        <span className={s.sectionCount}>
-           <Checkbox.Root
-             aria-label={bucketSelectAllAriaLabel(bucket)}
-             checked={bucketCheckedState}
-             disabled={!canToggleBucket}
-             className={s.checkboxRoot}
-             onCheckedChange={() => {
-               if (!canToggleBucket) {
-                 return;
-               }
-               onBucketCheckedChange(
-                 bucket,
-                 items,
-                 bucketCheckedState === false,
-               );
-             }}
-           >
-            <Checkbox.HiddenInput/>
-            <Checkbox.Control className={s.checkboxControl}>
-              <Checkbox.Indicator className={s.checkboxIndicator}>
-                {bucketCheckedState === "indeterminate" ? (
-                  <Minus size={13} aria-hidden="true"/>
+        <span class={s.sectionCount}>
+          <Checkbox.Root
+            aria-label={bucketSelectAllAriaLabel(props.bucket)}
+            checked={bucketCheckedState()}
+            disabled={!canToggleBucket()}
+            class={s.checkboxRoot}
+            onCheckedChange={() => {
+              if (!canToggleBucket()) {
+                return;
+              }
+              props.onBucketCheckedChange(
+                props.bucket,
+                props.items,
+                bucketCheckedState() === false,
+              );
+            }}
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control class={s.checkboxControl}>
+              <Checkbox.Indicator class={s.checkboxIndicator}>
+                {bucketCheckedState() === "indeterminate" ? (
+                  <Minus size={13} aria-hidden="true" />
                 ) : (
-                  <Check size={13} aria-hidden="true"/>
+                  <Check size={13} aria-hidden="true" />
                 )}
               </Checkbox.Indicator>
             </Checkbox.Control>
           </Checkbox.Root>
           <span>
-            {claimableCount}/{items.length}
+            {claimableCount()}/{props.items.length}
           </span>
         </span>
       </div>
 
-      {items.length > 0 ? (
-        <div className={s.itemList}>
-          {items.map((item) => (
-            <ClaimItemRow
-              key={item.id}
-              bucket={bucket}
-              disabled={busy}
-              item={item}
-              checked={selected.has(item.id)}
-              onCheckedChange={onCheckedChange}
-            />
-          ))}
+      <Show
+        when={props.items.length > 0}
+        fallback={
+          props.busy ? (
+            <div class={s.emptyPlaceholder} />
+          ) : (
+            <div class={s.emptyState}>{t("tools.claimTool.empty")}</div>
+          )
+        }
+      >
+        <div class={s.itemList}>{itemRows()}</div>
+      </Show>
+      <Show when={props.busy}>
+        <div class={s.panelBusyOverlay} aria-hidden="true">
+          <Loader size={18} class={s.busyIcon} />
         </div>
-      ) : busy ? (
-        <div className={s.emptyPlaceholder}/>
-      ) : (
-        <div className={s.emptyState}>{t("tools.claimTool.empty")}</div>
-      )}
-      {busy ? (
-        <div className={s.panelBusyOverlay} aria-hidden="true">
-          <Loader size={18} className={s.busyIcon}/>
-        </div>
-      ) : null}
+      </Show>
     </section>
   );
 }
 
-function ActivityList({
-                        busy,
-                        entries,
-                      }: {
+function ActivityList(props: {
   busy: boolean;
   entries: ClaimToolActivityEntryDto[];
-}) {
-  const {i18n, t} = useTranslation();
+}): JSX.Element {
+  const { language, t } = useSolidTranslation();
+  const activityRows = keyArray(
+    () => props.entries,
+    (entry) => `${entry.timestampMs}-${entry.action}-${entry.message}`,
+    (entry) => (
+      <div
+        class={s.activityRow}
+        data-level={entry().level}
+        data-key={`${entry().timestampMs}-${entry().action}-${entry().message}`}
+      >
+        <span class={s.activityTime}>
+          {formatActivityTime(entry().timestampMs, language())}
+        </span>
+        <span>{t(categoryLabelKey(entry().category))}</span>
+        <span class={s.activityMessage}>{entry().message}</span>
+      </div>
+    ),
+  );
 
   return (
-    <section className={s.activitySection} aria-busy={busy} data-busy={busy}>
-      <div className={s.sectionHeader}>
-        <div className={s.sectionTitle}>
-          <Activity size={16} aria-hidden="true"/>
-          <span className={s.sectionTitleText}>
+    <section
+      class={s.activitySection}
+      aria-busy={props.busy}
+      data-busy={props.busy}
+    >
+      <div class={s.sectionHeader}>
+        <div class={s.sectionTitle}>
+          <Activity size={16} aria-hidden="true" />
+          <span class={s.sectionTitleText}>
             {t("tools.claimTool.activity.title")}
           </span>
         </div>
       </div>
-      {entries.length > 0 ? (
-        <div className={s.activityList}>
-          {entries.map((entry) => (
-            <div
-              className={s.activityRow}
-              data-level={entry.level}
-              key={`${entry.timestampMs}-${entry.action}-${entry.message}`}
-            >
-              <span className={s.activityTime}>
-                {formatActivityTime(entry.timestampMs, i18n.language)}
-              </span>
-              <span>{t(categoryLabelKey(entry.category))}</span>
-              <span className={s.activityMessage}>{entry.message}</span>
+      <Show
+        when={props.entries.length > 0}
+        fallback={
+          props.busy ? (
+            <div class={s.emptyPlaceholder} />
+          ) : (
+            <div class={s.emptyState}>
+              {t("tools.claimTool.activity.empty")}
             </div>
-          ))}
+          )
+        }
+      >
+        <div class={s.activityList}>{activityRows()}</div>
+      </Show>
+      <Show when={props.busy}>
+        <div class={s.panelBusyOverlay} aria-hidden="true">
+          <Loader size={18} class={s.busyIcon} />
         </div>
-      ) : busy ? (
-        <div className={s.emptyPlaceholder}/>
-      ) : (
-        <div className={s.emptyState}>
-          {t("tools.claimTool.activity.empty")}
-        </div>
-      )}
-      {busy ? (
-        <div className={s.panelBusyOverlay} aria-hidden="true">
-          <Loader size={18} className={s.busyIcon}/>
-        </div>
-      ) : null}
+      </Show>
     </section>
   );
 }
 
-function StatusRow({
-                     connectionLabelKey,
-                     errorMessage,
-                     focusedClient,
-                   }: {
+function StatusRow(props: {
   connectionLabelKey: string | null;
   errorMessage: string | null;
   focusedClient: LcuInstanceInfo | undefined;
-}) {
-  const {t} = useTranslation();
-
-  if (!focusedClient) {
-    return (
-      <div className={s.statusRow} data-tone="neutral">
-        {t("tools.claimTool.noFocusedClient")}
-      </div>
-    );
-  }
-
-  if (connectionLabelKey) {
-    return (
-      <div className={s.statusRow} data-tone="neutral">
-        {t(connectionLabelKey)}
-      </div>
-    );
-  }
-
-  if (errorMessage) {
-    return (
-      <div className={s.statusRow} data-tone="error">
-        {errorMessage}
-      </div>
-    );
-  }
+}): JSX.Element {
+  const { t } = useSolidTranslation();
 
   return (
-    <div className={s.statusRow} data-tone="neutral">
-      <span className={s.statusLabel}>
-        {t("tools.claimTool.focusedClient")}
-      </span>
-      {focusedClient.summoner ? (
-        <SummonerID summoner={focusedClient.summoner}/>
-      ) : (
-        <span className={s.statusText}>PID: {focusedClient.pid}</span>
+    <Show
+      when={props.focusedClient}
+      fallback={
+        <div class={s.statusRow} data-tone="neutral">
+          {t("tools.claimTool.noFocusedClient")}
+        </div>
+      }
+    >
+      {(focusedClient) => (
+        <Show
+          when={!props.connectionLabelKey}
+          fallback={
+            <div class={s.statusRow} data-tone="neutral">
+              {t(props.connectionLabelKey ?? "")}
+            </div>
+          }
+        >
+          <Show
+            when={!props.errorMessage}
+            fallback={
+              <div class={s.statusRow} data-tone="error">
+                {props.errorMessage}
+              </div>
+            }
+          >
+            <div class={s.statusRow} data-tone="neutral">
+              <span class={s.statusLabel}>
+                {t("tools.claimTool.focusedClient")}
+              </span>
+              <Show
+                when={focusedClient().summoner}
+                fallback={
+                  <span class={s.statusText}>PID: {focusedClient().pid}</span>
+                }
+              >
+                {(summoner) => <SummonerID summoner={summoner()} />}
+              </Show>
+            </div>
+          </Show>
+        </Show>
       )}
-    </div>
+    </Show>
   );
 }
 
 function useClaimToolClientState() {
-  const focusedInstance = useLcuStore((state) =>
+  const focusedInstance = useSolidLcuStore((state) =>
     state.instances.find((instance) => instance.isFocused),
   );
-  const focusedReadyClient = useLcuStore(selectIsFocused);
-  const connectingInstance = useLcuStore((state) =>
+  const focusedReadyClient = useSolidLcuStore(selectIsFocused);
+  const connectingInstance = useSolidLcuStore((state) =>
     state.instances.find(
       (instance) => instance.state !== "ready" && instance.state !== "closing",
     ),
   );
-  const displayClient =
-    focusedReadyClient ?? focusedInstance ?? connectingInstance;
+  const displayClient = createMemo(
+    () => focusedReadyClient() ?? focusedInstance() ?? connectingInstance(),
+  );
 
   return {
     displayClient,
     focusedReadyClient,
-    focusedClientKey: displayClient ? String(displayClient.pid) : null,
-    hasFocusedClient: focusedReadyClient !== undefined,
-    hasVisibleClient: displayClient !== undefined,
+    focusedClientKey: createMemo(() =>
+      displayClient() ? String(displayClient()?.pid) : null,
+    ),
+    hasFocusedClient: createMemo(() => focusedReadyClient() !== undefined),
+    hasVisibleClient: createMemo(() => displayClient() !== undefined),
   };
 }
 
@@ -489,9 +549,9 @@ function claimToolConnectionLabelKey(
   return null;
 }
 
-export function ClaimToolPanel() {
-  const {t} = useTranslation();
-  const settings = useSettings();
+export function ClaimToolPanel(): JSX.Element {
+  const { t } = useSolidTranslation();
+  const settings = useSolidSettings();
   const {
     displayClient,
     focusedClientKey,
@@ -500,72 +560,77 @@ export function ClaimToolPanel() {
     hasVisibleClient,
   } = useClaimToolClientState();
   const claimNotificationEnabled = useClaimNotificationEnabled();
-  const [selection, setSelection] = useState<ClaimBucketIds>(() =>
+  const [selection, setSelection] = createSignal<ClaimBucketIds>(
     createEmptyClaimBucketIds(),
+    { equals: false },
   );
-  const [hiddenClaimedIds, setHiddenClaimedIds] = useState<ClaimBucketIds>(() =>
+  const [hiddenClaimedIds, setHiddenClaimedIds] = createSignal<ClaimBucketIds>(
     createEmptyClaimBucketIds(),
-  );
-  const [isClaiming, setIsClaiming] = useState(false);
-
-  const claimables = useSWR(
-    focusedReadyClient
-      ? (["claim_tool_refresh", focusedReadyClient.pid] as const)
-      : null,
-    () => invoke<ClaimToolClaimablesDto>("claim_tool_refresh"),
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
+      equals: false,
     },
   );
-  const snapshot = useSWR(
-    "claim_tool_get_snapshot",
-    () => invoke<ClaimToolSnapshotDto>("claim_tool_get_snapshot"),
-    {
-      refreshInterval: CLAIM_TOOL_SNAPSHOT_REFRESH_INTERVAL_MS,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    },
+  const [isClaiming, setIsClaiming] = createSignal(false);
+  const [isRefreshing, setIsRefreshing] = createSignal(false);
+
+  const claimables = createSolidQuery<ClaimToolClaimablesDto>(
+    () =>
+      focusedReadyClient()
+        ? (["claim_tool_refresh", focusedReadyClient()?.pid] as const)
+        : null,
+    () => fetchClaimables(),
   );
-  const isClaimablesInitializing = hasFocusedClient && !claimables.data;
-  const connectionLabelKey = claimToolConnectionLabelKey(
-    displayClient,
-    hasFocusedClient,
-    hasVisibleClient,
-    isClaimablesInitializing,
+  const snapshot = createSolidQuery<ClaimToolSnapshotDto>(
+    () => "claim_tool_get_snapshot",
+    () => fetchSnapshot(),
   );
-  const rawClaimablesData =
-    hasFocusedClient && !isClaimablesInitializing ? claimables.data : undefined;
-  const claimablesData = useMemo(
-    () => filterClaimablesByHiddenIds(rawClaimablesData, hiddenClaimedIds),
-    [hiddenClaimedIds, rawClaimablesData],
+  const isClaimablesInitializing = createMemo(
+    () => hasFocusedClient() && !claimables.data(),
+  );
+  const connectionLabelKey = createMemo(() =>
+    claimToolConnectionLabelKey(
+      displayClient(),
+      hasFocusedClient(),
+      hasVisibleClient(),
+      isClaimablesInitializing(),
+    ),
+  );
+  const rawClaimablesData = createMemo(() =>
+    hasFocusedClient() && !isClaimablesInitializing()
+      ? claimables.data()
+      : undefined,
+  );
+  const claimablesData = createMemo(() =>
+    filterClaimablesByHiddenIds(rawClaimablesData(), hiddenClaimedIds()),
   );
 
-  useEffect(() => {
-    if (focusedClientKey === null) {
-      setHiddenClaimedIds(createEmptyClaimBucketIds());
-      return;
-    }
+  createEffect(() => {
+    focusedClientKey();
     setHiddenClaimedIds(createEmptyClaimBucketIds());
-  }, [focusedClientKey]);
+  });
 
-  useEffect(() => {
+  createEffect(() => {
     setHiddenClaimedIds((current) =>
-      pruneHiddenClaimedIds(current, rawClaimablesData),
+      pruneHiddenClaimedIds(current, rawClaimablesData()),
     );
-  }, [rawClaimablesData]);
+  });
 
-  useEffect(() => {
-    setSelection(claimableIds(claimablesData));
-  }, [claimablesData]);
+  createEffect(() => {
+    setSelection(claimableIds(claimablesData()));
+  });
 
-  const count = selectedCount(selection);
-  const isBusy = isClaiming || snapshot.data?.isRunning === true;
-  const canClaim = hasFocusedClient && count > 0 && !isBusy;
-  const errorMessage =
-    hasFocusedClient && !isClaimablesInitializing && claimables.error
-      ? toErrorMessage(claimables.error)
-      : null;
+  const count = createMemo(() => selectedCount(selection()));
+  const isBusy = createMemo(
+    () => isClaiming() || snapshot.data()?.isRunning === true,
+  );
+  const canClaim = createMemo(
+    () => hasFocusedClient() && count() > 0 && !isBusy(),
+  );
+  const errorMessage = createMemo(() =>
+    hasFocusedClient() && !isClaimablesInitializing() && claimables.error()
+      ? toErrorMessage(claimables.error())
+      : null,
+  );
 
   const toggleSelection = (
     bucket: ClaimBucket,
@@ -573,11 +638,7 @@ export function ClaimToolPanel() {
     checked: boolean,
   ) => {
     setSelection((current) => {
-      const next = {
-        rewards: new Set(current.rewards),
-        missions: new Set(current.missions),
-        eventHub: new Set(current.eventHub),
-      };
+      const next = cloneClaimBucketIds(current);
       if (checked) {
         next[bucket].add(id);
       } else {
@@ -598,21 +659,26 @@ export function ClaimToolPanel() {
   };
 
   const refresh = async () => {
-    if (!hasFocusedClient) {
+    if (!hasFocusedClient() || isRefreshing()) {
       return;
     }
-    await claimables.mutate();
-    await snapshot.mutate();
+
+    setIsRefreshing(true);
+    try {
+      await Promise.all([claimables.refetch(), snapshot.refetch()]);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
-  const handleClaimablesAvailable = useEffectEvent(
-    (payload: ClaimToolClaimablesAvailableEventDto) => {
-      void snapshot.mutate(payload.snapshot, {revalidate: false});
-      void claimables.mutate(payload.claimables, {revalidate: false});
-    },
-  );
+  onMount(() => {
+    const intervalId = window.setInterval(() => {
+      void snapshot.mutate(fetchSnapshot());
+    }, CLAIM_TOOL_SNAPSHOT_REFRESH_INTERVAL_MS);
+    onCleanup(() => window.clearInterval(intervalId));
+  });
 
-  useEffect(() => {
+  onMount(() => {
     let cancelled = false;
     let unlisten: UnlistenFn | null = null;
 
@@ -623,21 +689,21 @@ export function ClaimToolPanel() {
           if (cancelled) {
             return;
           }
-
-          handleClaimablesAvailable(event.payload);
+          void snapshot.mutate(event.payload.snapshot);
+          void claimables.mutate(event.payload.claimables);
         },
       );
     };
 
     void setup();
 
-    return () => {
+    onCleanup(() => {
       cancelled = true;
       if (unlisten) {
         void unlisten();
       }
-    };
-  }, []);
+    });
+  });
 
   const applyRunResult = async (
     result: ClaimToolRunResultDto,
@@ -647,27 +713,23 @@ export function ClaimToolPanel() {
     setHiddenClaimedIds((current) =>
       addHiddenClaimedIds(current, request, result),
     );
-    await snapshot.mutate(result.snapshot, {revalidate: false});
-    if (hasFocusedClient) {
-      await claimables.mutate();
+    await snapshot.mutate(result.snapshot);
+    if (hasFocusedClient()) {
+      await claimables.mutate(fetchClaimables());
     }
   };
 
   const claimSelected = async () => {
-    if (!canClaim) {
+    if (!canClaim()) {
       return;
     }
-    const requestedIds = {
-      rewards: new Set(selection.rewards),
-      missions: new Set(selection.missions),
-      eventHub: new Set(selection.eventHub),
-    };
+    const requestedIds = cloneClaimBucketIds(selection());
     const claimingStartedAtMs = performance.now();
     setIsClaiming(true);
     try {
       const result = await invoke<ClaimToolRunResultDto>(
         "claim_tool_claim_selected",
-        {request: requestFromSelection(requestedIds)},
+        { request: requestFromSelection(requestedIds) },
       );
       await applyRunResult(result, requestedIds);
     } finally {
@@ -677,10 +739,10 @@ export function ClaimToolPanel() {
   };
 
   const claimAll = async () => {
-    if (!hasFocusedClient) {
+    if (!hasFocusedClient()) {
       return;
     }
-    const requestedIds = claimableIds(claimablesData);
+    const requestedIds = claimableIds(claimablesData());
     const claimingStartedAtMs = performance.now();
     setIsClaiming(true);
     try {
@@ -694,102 +756,105 @@ export function ClaimToolPanel() {
     }
   };
 
-  const sections = useMemo(
-    () =>
-      sectionConfig.map((section) => ({
-        ...section,
-        items: claimablesData?.[section.key] ?? [],
-      })),
-    [claimablesData],
+  const sections = createMemo(() =>
+    sectionConfig.map((section) => ({
+      ...section,
+      items: claimablesData()?.[section.key] ?? [],
+    })),
+  );
+  const sectionNodes = keyArray(
+    sections,
+    (section) => section.key,
+    (section) => (
+      <ClaimSection
+        bucket={section().key}
+        busy={isBusy()}
+        icon={section().icon}
+        title={t(section().titleKey)}
+        items={section().items}
+        selected={selection()[section().key]}
+        onBucketCheckedChange={toggleBucketSelection}
+        onCheckedChange={toggleSelection}
+      />
+    ),
   );
 
   return (
-    <div className={s.root}>
-      <div className={s.toolbar}>
-        <div className={s.heading}>
-          <span className={s.subtle}>
-            {snapshot.data?.lastRunAtMs
+    <div class={s.root}>
+      <div class={s.toolbar}>
+        <div class={s.heading}>
+          <span class={s.subtle}>
+            {snapshot.data()?.lastRunAtMs
               ? t("tools.claimTool.lastRun", {
-                time: formatActivityTime(
-                  snapshot.data.lastRunAtMs,
-                  window.navigator.language,
-                ),
-              })
+                  time: formatActivityTime(
+                    snapshot.data()?.lastRunAtMs ?? 0,
+                    window.navigator.language,
+                  ),
+                })
               : t("tools.claimTool.idle")}
           </span>
         </div>
 
-        <div className={s.actions}>
-          <div className={s.notificationControl}>
+        <div class={s.actions}>
+          <div class={s.notificationControl}>
             <span>{t("tools.claimTool.claimNotificationText")}</span>
             <SettingsToggle
               ariaLabel="Toggle claim notifications"
-              checked={claimNotificationEnabled}
-              disabled={isBusy}
+              checked={claimNotificationEnabled()}
+              disabled={isBusy()}
               onCheckedChange={(checked) => {
                 settings.set(CLAIM_TOOL_NOTIFICATION_SETTING_ID, checked);
-                void snapshot.mutate();
+                void snapshot.mutate(fetchSnapshot());
               }}
             />
           </div>
           <RefreshButton
             ariaLabel="Refresh claimable rewards"
-            loading={claimables.isValidating || isClaiming}
-            disabled={!hasFocusedClient || isBusy}
+            loading={isRefreshing()}
+            disabled={!hasFocusedClient() || isBusy() || isRefreshing()}
+            minLoadingMs={350}
             onClick={() => {
               void refresh();
             }}
           />
           <button
             type="button"
-            className={s.actionButton}
-            disabled={!canClaim}
+            class={s.actionButton}
+            disabled={!canClaim()}
             onClick={() => {
               void claimSelected();
             }}
           >
-            <Check size={15} aria-hidden="true"/>
-            <span>{t("tools.claimTool.claimSelected", {count})}</span>
+            <Check size={15} aria-hidden="true" />
+            <span>
+              {t("tools.claimTool.claimSelected", { count: count() })}
+            </span>
           </button>
           <button
             type="button"
-            className={s.actionButton}
-            disabled={!hasFocusedClient || isBusy}
+            class={s.actionButton}
+            disabled={!hasFocusedClient() || isBusy()}
             onClick={() => {
               void claimAll();
             }}
           >
-            <Play size={15} aria-hidden="true"/>
+            <Play size={15} aria-hidden="true" />
             <span>{t("tools.claimTool.claimAll")}</span>
           </button>
         </div>
       </div>
 
       <StatusRow
-        connectionLabelKey={connectionLabelKey}
-        errorMessage={errorMessage}
-        focusedClient={displayClient}
+        connectionLabelKey={connectionLabelKey()}
+        errorMessage={errorMessage()}
+        focusedClient={displayClient()}
       />
 
-      <div className={s.sections}>
-        {sections.map((section) => (
-          <ClaimSection
-            key={section.key}
-            bucket={section.key}
-            busy={isBusy}
-            icon={section.icon}
-            title={t(section.titleKey)}
-            items={section.items}
-            selected={selection[section.key]}
-            onBucketCheckedChange={toggleBucketSelection}
-            onCheckedChange={toggleSelection}
-          />
-        ))}
-      </div>
+      <div class={s.sections}>{sectionNodes()}</div>
 
       <ActivityList
-        busy={isBusy}
-        entries={snapshot.data?.recentActivity ?? []}
+        busy={isBusy()}
+        entries={snapshot.data()?.recentActivity ?? []}
       />
     </div>
   );

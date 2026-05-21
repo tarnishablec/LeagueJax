@@ -1,8 +1,9 @@
-import { Portal } from "@ark-ui/react/portal";
-import { Tooltip } from "@ark-ui/react/tooltip";
-import type { ReactElement } from "react";
-import { useMemo, useSyncExternalStore } from "react";
-import { useTranslation } from "react-i18next";
+/** @jsxImportSource solid-js */
+import { Tooltip } from "@ark-ui/solid/tooltip";
+import { keyArray } from "@solid-primitives/keyed";
+import type { JSX } from "solid-js";
+import { createMemo, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
@@ -10,18 +11,23 @@ import type {
   RawMatchSummaryStatPerks,
   RawMatchSummaryStyle,
 } from "@/bindings/matches.ts";
-import { useSettings } from "@/features/settings/context";
+import { useSolidSettingValue } from "@/features/settings/use-setting-value";
+import { useSolidTranslation } from "@/i18n/solid";
 import {
   type CdragonGameDataCatalog,
   type CdragonGameDataCatalogPerk,
   type CdragonGameDataCatalogPerkStyle,
   normalizeCdragonGameAssetPath,
-  useCdragonGameDataCatalog,
-} from "../../hooks/use-cdragon-game-data-catalog.ts";
-import { HISTORY_SHOW_AUGMENT_DETAILS_SETTING } from "../../manifest.tsx";
+  useSolidCdragonGameDataCatalog,
+} from "../../hooks/use-cdragon-game-data-catalog";
+import { HISTORY_SHOW_AUGMENT_DETAILS_SETTING } from "../../settings-ids";
 import { MatchCardAssetIcon } from "./MatchCardAssetIcon";
 import * as s from "./MatchRunesTab.css";
 import { CDRAGON_PERK_STYLE_ICON_BY_ID } from "./match-card-display";
+
+type TooltipTriggerProps = Parameters<
+  NonNullable<Parameters<typeof Tooltip.Trigger>[0]["asChild"]>
+>[0];
 
 type AugmentRarityVariant =
   | "default"
@@ -282,20 +288,27 @@ function rarityDefaultLabel(rarity: string | null | undefined): string {
   }
 }
 
-function GameDataTooltip({
-  title,
-  description,
-  stats,
-  statsRarity = "default",
-  children,
-}: {
+function GameDataTooltip(props: {
   title: string;
   description?: string | null;
   stats?: readonly string[];
   statsRarity?: AugmentRarityVariant;
-  children: ReactElement;
-}) {
-  const statLines = stats ?? [];
+  children: (triggerProps: TooltipTriggerProps) => JSX.Element;
+}): JSX.Element {
+  const statLines = () => props.stats ?? [];
+  const statLineItems = keyArray(
+    statLines,
+    (statLine, index) => `${index}:${statLine}`,
+    (statLine) => (
+      <span
+        class={s.tooltipStatLine({
+          rarity: props.statsRarity ?? "default",
+        })}
+      >
+        {statLine()}
+      </span>
+    ),
+  );
 
   return (
     <Tooltip.Root
@@ -304,26 +317,21 @@ function GameDataTooltip({
       closeOnPointerDown={false}
       closeOnClick={false}
     >
-      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
+      <Tooltip.Trigger
+        asChild={(triggerProps) => props.children(triggerProps)}
+      />
       <Portal>
-        <Tooltip.Positioner className={s.tooltipPositioner}>
-          <Tooltip.Content className={s.tooltipContent}>
-            <span className={s.tooltipTitle}>{title}</span>
-            {description ? (
-              <span className={s.tooltipDescription}>{description}</span>
-            ) : null}
-            {statLines.length > 0 ? (
-              <span className={s.tooltipStats}>
-                {statLines.map((statLine) => (
-                  <span
-                    key={statLine}
-                    className={s.tooltipStatLine({ rarity: statsRarity })}
-                  >
-                    {statLine}
-                  </span>
-                ))}
-              </span>
-            ) : null}
+        <Tooltip.Positioner class={s.tooltipPositioner}>
+          <Tooltip.Content class={s.tooltipContent}>
+            <span class={s.tooltipTitle}>{props.title}</span>
+            <Show when={props.description}>
+              {(description) => (
+                <span class={s.tooltipDescription}>{description()}</span>
+              )}
+            </Show>
+            <Show when={statLines().length > 0}>
+              <span class={s.tooltipStats}>{statLineItems()}</span>
+            </Show>
           </Tooltip.Content>
         </Tooltip.Positioner>
       </Portal>
@@ -331,105 +339,117 @@ function GameDataTooltip({
   );
 }
 
-function RuneEntry({
-  catalog,
-  perkId,
-  selection,
-  meta,
-}: {
+function RuneEntry(props: {
   catalog: CdragonGameDataCatalog;
   perkId: number;
   selection: RawMatchSummaryPerkSelection | null;
   meta?: string | null;
-}) {
-  const { t } = useTranslation();
-  const perk = catalog.perksById[perkId];
-  const name =
-    perk?.name?.trim() ||
-    t("history.matchRunes.unknownRune", {
-      id: perkId,
-      defaultValue: `Rune #${perkId}`,
-    });
-  const description = perkDescription(perk);
-  const stats = perkStatLines(perk, selection);
-  const iconSrc = perkIconSrc(perk);
-  const visibleMeta = stats[0] ?? meta;
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const perk = createMemo(() => props.catalog.perksById[props.perkId]);
+  const name = createMemo(
+    () =>
+      perk()?.name?.trim() ||
+      t("history.matchRunes.unknownRune", {
+        id: props.perkId,
+        defaultValue: `Rune #${props.perkId}`,
+      }),
+  );
+  const description = createMemo(() => perkDescription(perk()));
+  const stats = createMemo(() => perkStatLines(perk(), props.selection));
+  const iconSrc = createMemo(() => perkIconSrc(perk()));
+  const visibleMeta = createMemo(() => stats()[0] ?? props.meta);
 
   return (
-    <GameDataTooltip title={name} description={description} stats={stats}>
-      <span className={s.runeEntry}>
-        <MatchCardAssetIcon
-          src={iconSrc}
-          alt=""
-          className={s.runeIcon}
-          fallbackClassName={s.runeIconFallback}
-        />
-        <span className={s.runeText}>
-          <span className={s.runeName}>{name}</span>
-          {visibleMeta ? (
-            <span className={s.runeMeta}>{visibleMeta}</span>
-          ) : null}
+    <GameDataTooltip title={name()} description={description()} stats={stats()}>
+      {(triggerProps) => (
+        <span
+          {...triggerProps({
+            class: s.runeEntry,
+          })}
+        >
+          <MatchCardAssetIcon
+            src={iconSrc()}
+            alt=""
+            className={s.runeIcon}
+            fallbackClassName={s.runeIconFallback}
+          />
+          <span class={s.runeText}>
+            <span class={s.runeName}>{name()}</span>
+            <Show when={visibleMeta()}>
+              {(meta) => <span class={s.runeMeta}>{meta()}</span>}
+            </Show>
+          </span>
         </span>
-      </span>
+      )}
     </GameDataTooltip>
   );
 }
 
-function RuneStyleSection({
-  catalog,
-  fallbackTitle,
-  style,
-}: {
+function RuneStyleSection(props: {
   catalog: CdragonGameDataCatalog;
   fallbackTitle: string;
   style: RawMatchSummaryStyle | null;
-}) {
-  const { t } = useTranslation();
-  const styleId = style?.style ?? 0;
-  const styleData = styleId > 0 ? catalog.perkStylesById[styleId] : undefined;
-  const label =
-    styleData?.name?.trim() ||
-    (styleId > 0
-      ? t("history.runeStyle.unknown", {
-          styleId,
-          defaultValue: `Style ${styleId}`,
-        })
-      : fallbackTitle);
-  const iconSources = styleIconSources(styleId, styleData);
-  const selections = (style?.selections ?? []).filter(
-    (selection) => selection.perk !== null && selection.perk > 0,
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const styleId = createMemo(() => props.style?.style ?? 0);
+  const styleData = createMemo(() =>
+    styleId() > 0 ? props.catalog.perkStylesById[styleId()] : undefined,
+  );
+  const label = createMemo(
+    () =>
+      styleData()?.name?.trim() ||
+      (styleId() > 0
+        ? t("history.runeStyle.unknown", {
+            styleId: styleId(),
+            defaultValue: `Style ${styleId()}`,
+          })
+        : props.fallbackTitle),
+  );
+  const iconSources = createMemo(() =>
+    styleIconSources(styleId(), styleData()),
+  );
+  const selections = createMemo(() =>
+    (props.style?.selections ?? []).filter(
+      (selection) => selection.perk !== null && selection.perk > 0,
+    ),
+  );
+  const runeEntries = keyArray(
+    selections,
+    (selection) => String(selection.perk ?? 0),
+    (selection) => (
+      <RuneEntry
+        catalog={props.catalog}
+        perkId={selection().perk ?? 0}
+        selection={selection()}
+      />
+    ),
   );
 
   return (
-    <section className={s.section}>
-      <header className={s.sectionHeader}>
+    <section class={s.section}>
+      <header class={s.sectionHeader}>
         <MatchCardAssetIcon
-          src={iconSources.src}
-          fallbacks={iconSources.fallbacks}
+          src={iconSources().src}
+          fallbacks={iconSources().fallbacks}
           alt=""
           className={s.styleIcon}
           fallbackClassName={s.styleIconFallback}
         />
-        <span>{label}</span>
+        <span>{label()}</span>
       </header>
-      {selections.length > 0 ? (
-        <div className={s.runeList}>
-          {selections.map((selection) => (
-            <RuneEntry
-              key={`${styleId}-${selection.perk}`}
-              catalog={catalog}
-              perkId={selection.perk ?? 0}
-              selection={selection}
-            />
-          ))}
-        </div>
-      ) : (
-        <span className={s.emptyState}>
-          {t("history.matchRunes.noData", {
-            defaultValue: "No rune data",
-          })}
-        </span>
-      )}
+      <Show
+        when={selections().length > 0}
+        fallback={
+          <span class={s.emptyState}>
+            {t("history.matchRunes.noData", {
+              defaultValue: "No rune data",
+            })}
+          </span>
+        }
+      >
+        <div class={s.runeList}>{runeEntries()}</div>
+      </Show>
     </section>
   );
 }
@@ -470,7 +490,7 @@ function statPerkValueFromDescription(
 
   if (perkId === 5008) {
     const abilityPowerValue = description.match(
-      /([+＋]?\s*\d+(?:\.\d+)?)\s*(?:Ability Power|法术强度|魔力|魔法攻撃力)/i,
+      /([+＋]?\s*\d+(?:\.\d+)?)\s*(?:Ability Power|法术强度|魔力|魔法攻击力)/i,
     )?.[1];
     return normalizeStatPerkValue(abilityPowerValue);
   }
@@ -483,7 +503,7 @@ function statPerkValueFromDescription(
   }
 
   const rangedValue = description.match(
-    /([+＋]?\s*\d+(?:\.\d+)?\s*[-－–—~～至到]\s*\d+(?:\.\d+)?)/,
+    /([+＋]?\s*\d+(?:\.\d+)?\s*[-－–—至到]\s*\d+(?:\.\d+)?)/,
   )?.[1];
   if (rangedValue) {
     return normalizeStatPerkValue(rangedValue);
@@ -501,8 +521,8 @@ function normalizeStatPerkValue(
   }
 
   const normalized = value
-    .replace(/＋/g, "+")
-    .replace(/[－–—~～]|至|到/g, "-")
+    .replace(/[＋﹢]/g, "+")
+    .replace(/[－–—至到]/g, "-")
     .replace(/\s+/g, "")
     .trim();
   if (normalized.length === 0) {
@@ -511,241 +531,242 @@ function normalizeStatPerkValue(
 
   return normalized.startsWith("+") ? normalized : `+${normalized}`;
 }
-
-function StatPerksSection({
-  catalog,
-  statPerks,
-}: {
+function StatPerksSection(props: {
   catalog: CdragonGameDataCatalog;
   statPerks: RawMatchSummaryStatPerks | null | undefined;
-}) {
-  const { t } = useTranslation();
-  const slots = STAT_PERK_SLOTS.map((slot) => ({
-    slot,
-    perkId: statPerkId(statPerks, slot),
-    fallbackLabel: t(`history.matchRunes.statSlots.${slot}`, {
-      defaultValue: slot,
-    }),
-  })).filter((slot) => slot.perkId > 0);
-
-  if (slots.length === 0) {
-    return null;
-  }
-
-  const firstStatPerk = catalog.perksById[slots[0]?.perkId ?? 0];
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const slots = createMemo(() =>
+    STAT_PERK_SLOTS.map((slot) => ({
+      slot,
+      perkId: statPerkId(props.statPerks, slot),
+      fallbackLabel: t(`history.matchRunes.statSlots.${slot}`, {
+        defaultValue: slot,
+      }),
+    })).filter((slot) => slot.perkId > 0),
+  );
+  const firstStatPerk = createMemo(
+    () => props.catalog.perksById[slots()[0]?.perkId ?? 0],
+  );
+  const statEntries = keyArray(
+    slots,
+    (slot) => slot.slot,
+    (slot) => (
+      <RuneEntry
+        catalog={props.catalog}
+        perkId={slot().perkId}
+        selection={null}
+        meta={statPerkMeta(props.catalog, slot().perkId, slot().fallbackLabel)}
+      />
+    ),
+  );
 
   return (
-    <section className={classNames(s.section, s.statSection)}>
-      <header className={s.sectionHeader}>
-        <MatchCardAssetIcon
-          src={perkIconSrc(firstStatPerk)}
-          alt=""
-          className={s.styleIcon}
-          fallbackClassName={s.styleIconFallback}
-        />
-        <span>
-          {t("history.matchRunes.statPerks", {
-            defaultValue: "Stat Shards",
+    <Show when={slots().length > 0}>
+      <section class={classNames(s.section, s.statSection)}>
+        <header class={s.sectionHeader}>
+          <MatchCardAssetIcon
+            src={perkIconSrc(firstStatPerk())}
+            alt=""
+            className={s.styleIcon}
+            fallbackClassName={s.styleIconFallback}
+          />
+          <span>
+            {t("history.matchRunes.statPerks", {
+              defaultValue: "Stat Shards",
+            })}
+          </span>
+        </header>
+        <div class={s.statShardGrid}>{statEntries()}</div>
+      </section>
+    </Show>
+  );
+}
+
+function NormalRunesPanel(props: {
+  catalog: CdragonGameDataCatalog;
+  participant: RawMatchSummaryParticipant;
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+
+  return (
+    <Show
+      when={props.participant.perks}
+      fallback={
+        <span class={s.emptyState}>
+          {t("history.matchRunes.noData", {
+            defaultValue: "No rune data",
           })}
         </span>
-      </header>
-      <div className={s.statShardGrid}>
-        {slots.map((slot) => (
-          <RuneEntry
-            key={`stat-${slot.slot}-${slot.perkId}`}
-            catalog={catalog}
-            perkId={slot.perkId}
-            selection={null}
-            meta={statPerkMeta(catalog, slot.perkId, slot.fallbackLabel)}
-          />
-        ))}
+      }
+    >
+      <div class={s.sectionGrid}>
+        <RuneStyleSection
+          catalog={props.catalog}
+          fallbackTitle={t("history.matchRunes.primaryStyle", {
+            defaultValue: "Primary",
+          })}
+          style={primaryStyle(props.participant)}
+        />
+        <RuneStyleSection
+          catalog={props.catalog}
+          fallbackTitle={t("history.matchRunes.subStyle", {
+            defaultValue: "Secondary",
+          })}
+          style={secondaryStyle(props.participant)}
+        />
+        <StatPerksSection
+          catalog={props.catalog}
+          statPerks={props.participant.perks?.statPerks}
+        />
       </div>
-    </section>
+    </Show>
   );
 }
 
-function NormalRunesPanel({
-  catalog,
-  participant,
-}: {
+function AugmentPanel(props: {
   catalog: CdragonGameDataCatalog;
   participant: RawMatchSummaryParticipant;
-}) {
-  const { t } = useTranslation();
-
-  if (!participant.perks) {
-    return (
-      <span className={s.emptyState}>
-        {t("history.matchRunes.noData", {
-          defaultValue: "No rune data",
-        })}
-      </span>
-    );
-  }
-
-  return (
-    <div className={s.sectionGrid}>
-      <RuneStyleSection
-        catalog={catalog}
-        fallbackTitle={t("history.matchRunes.primaryStyle", {
-          defaultValue: "Primary",
-        })}
-        style={primaryStyle(participant)}
-      />
-      <RuneStyleSection
-        catalog={catalog}
-        fallbackTitle={t("history.matchRunes.subStyle", {
-          defaultValue: "Secondary",
-        })}
-        style={secondaryStyle(participant)}
-      />
-      <StatPerksSection
-        catalog={catalog}
-        statPerks={participant.perks.statPerks}
-      />
-    </div>
-  );
-}
-
-function AugmentPanel({
-  catalog,
-  participant,
-}: {
-  catalog: CdragonGameDataCatalog;
-  participant: RawMatchSummaryParticipant;
-}) {
-  const { t } = useTranslation();
-  const augmentSlots = useMemo(() => {
-    const augmentIds = getParticipantAugments(participant);
-    return AUGMENT_SLOT_KEYS.map((slotKey, slotIndex) => ({
-      slotKey,
+}): JSX.Element {
+  const { t } = useSolidTranslation();
+  const augmentSlots = createMemo(() => {
+    const augmentIds = getParticipantAugments(props.participant);
+    return AUGMENT_SLOT_KEYS.map((_slotKey, slotIndex) => ({
+      slotKey: _slotKey,
       id: augmentIds[slotIndex],
     })).filter((slot) => slot.id !== null && slot.id > 0);
-  }, [participant]);
+  });
+  const augmentEntries = keyArray(
+    augmentSlots,
+    (slot) => slot.slotKey,
+    (slot) => {
+      const augmentId = () => slot().id ?? 0;
+      const augment = () => props.catalog.augmentsById[augmentId()];
+      const name = () =>
+        augment()?.nameTRA?.trim() ||
+        augment()?.simpleNameTRA?.trim() ||
+        t("history.matchRunes.unknownAugment", {
+          defaultValue: "Unknown augment",
+        });
+      const rarity = () => augment()?.rarity ?? null;
+      const rarityLabel = () =>
+        rarity() === null
+          ? null
+          : t(`history.matchRunes.rarity.${rarity()}`, {
+              defaultValue: rarityDefaultLabel(rarity()),
+            });
+      const iconSources = () =>
+        augmentIconSources(augment()?.augmentSmallIconPath);
+      const description = () =>
+        augment()?.tooltip?.trim() || augment()?.description?.trim() || null;
 
-  if (augmentSlots.length === 0) {
-    return (
-      <span className={s.emptyState}>
-        {t("history.matchRunes.noAugmentData", {
-          defaultValue: "No augment data",
-        })}
-      </span>
-    );
-  }
+      return (
+        <GameDataTooltip
+          title={name()}
+          description={description()}
+          stats={rarityLabel() ? [rarityLabel() ?? ""] : []}
+          statsRarity={rarityVariant(rarity())}
+        >
+          {(triggerProps) => (
+            <span
+              {...triggerProps({
+                class: s.augmentEntry({
+                  rarity: rarityVariant(rarity()),
+                }),
+              })}
+            >
+              <MatchCardAssetIcon
+                src={iconSources().src}
+                fallbacks={iconSources().fallbacks}
+                alt=""
+                className={s.augmentIcon}
+                fallbackClassName={s.augmentIconFallback}
+              />
+              <span class={s.runeText}>
+                <span class={s.runeName}>{name()}</span>
+                <Show when={rarityLabel()}>
+                  {(label) => <span class={s.runeMeta}>{label()}</span>}
+                </Show>
+              </span>
+            </span>
+          )}
+        </GameDataTooltip>
+      );
+    },
+  );
 
   return (
-    <div className={s.augmentPanel}>
-      <header className={s.augmentHeader}>
-        <span>
-          {t("history.matchRunes.augments", {
-            defaultValue: "Augments",
+    <Show
+      when={augmentSlots().length > 0}
+      fallback={
+        <span class={s.emptyState}>
+          {t("history.matchRunes.noAugmentData", {
+            defaultValue: "No augment data",
           })}
         </span>
-      </header>
-      <div className={s.augmentGrid}>
-        {augmentSlots.map(({ slotKey, id }) => {
-          const augmentId = id ?? 0;
-          const augment = catalog.augmentsById[augmentId];
-          const name =
-            augment?.nameTRA?.trim() ||
-            augment?.simpleNameTRA?.trim() ||
-            t("history.matchRunes.unknownAugment", {
-              defaultValue: "Unknown augment",
-            });
-          const rarity = augment?.rarity ?? null;
-          const rarityLabel =
-            rarity === null
-              ? null
-              : t(`history.matchRunes.rarity.${rarity}`, {
-                  defaultValue: rarityDefaultLabel(rarity),
-                });
-          const iconSources = augmentIconSources(augment?.augmentSmallIconPath);
-          const description =
-            augment?.tooltip?.trim() || augment?.description?.trim() || null;
-
-          return (
-            <GameDataTooltip
-              key={`${slotKey}-${augmentId}`}
-              title={name}
-              description={description}
-              stats={rarityLabel ? [rarityLabel] : []}
-              statsRarity={rarityVariant(rarity)}
-            >
-              <span
-                className={s.augmentEntry({
-                  rarity: rarityVariant(rarity),
-                })}
-              >
-                <MatchCardAssetIcon
-                  src={iconSources.src}
-                  fallbacks={iconSources.fallbacks}
-                  alt=""
-                  className={s.augmentIcon}
-                  fallbackClassName={s.augmentIconFallback}
-                />
-                <span className={s.runeText}>
-                  <span className={s.runeName}>{name}</span>
-                  {rarityLabel ? (
-                    <span className={s.runeMeta}>{rarityLabel}</span>
-                  ) : null}
-                </span>
-              </span>
-            </GameDataTooltip>
-          );
-        })}
+      }
+    >
+      <div class={s.augmentPanel}>
+        <header class={s.augmentHeader}>
+          <span>
+            {t("history.matchRunes.augments", {
+              defaultValue: "Augments",
+            })}
+          </span>
+        </header>
+        <div class={s.augmentGrid}>{augmentEntries()}</div>
       </div>
-    </div>
+    </Show>
   );
 }
 
-function SelectedParticipantContent({
-  catalog,
-  summary,
-  participant,
-}: {
+function SelectedParticipantContent(props: {
   catalog: CdragonGameDataCatalog;
   summary: RawMatchSummaryGame;
   participant: RawMatchSummaryParticipant;
-}) {
-  if (matchUsesAugments(summary) || participantHasAugments(participant)) {
-    return <AugmentPanel catalog={catalog} participant={participant} />;
-  }
-
-  return <NormalRunesPanel catalog={catalog} participant={participant} />;
+}): JSX.Element {
+  return (
+    <Show
+      when={
+        matchUsesAugments(props.summary) ||
+        participantHasAugments(props.participant)
+      }
+      fallback={
+        <NormalRunesPanel
+          catalog={props.catalog}
+          participant={props.participant}
+        />
+      }
+    >
+      <AugmentPanel catalog={props.catalog} participant={props.participant} />
+    </Show>
+  );
 }
 
-export function MatchRunesTab({
-  summary,
-  participant,
-}: {
+export function MatchRunesTab(props: {
   summary: RawMatchSummaryGame;
   participant: RawMatchSummaryParticipant;
-}) {
-  const settings = useSettings();
-  const showAugmentDetails = useSyncExternalStore(
-    (callback) =>
-      settings.subscribe(HISTORY_SHOW_AUGMENT_DETAILS_SETTING, callback),
-    () => settings.get<boolean>(HISTORY_SHOW_AUGMENT_DETAILS_SETTING) ?? false,
+}): JSX.Element {
+  const showAugmentDetails = useSolidSettingValue<boolean>(
+    HISTORY_SHOW_AUGMENT_DETAILS_SETTING,
+    false,
   );
-  const participants = summary.json.participants;
-  const augmentIds = useMemo(
-    () => matchAugmentIds(participants),
-    [participants],
-  );
-  const catalog = useCdragonGameDataCatalog(
-    summary.json.gameMode,
-    showAugmentDetails,
+  const participants = createMemo(() => props.summary.json.participants);
+  const augmentIds = createMemo(() => matchAugmentIds(participants()));
+  const catalog = useSolidCdragonGameDataCatalog(
+    () => props.summary.json.gameMode,
+    () => showAugmentDetails() ?? false,
     {
-      gameVersion: summary.json.gameVersion,
+      gameVersion: () => props.summary.json.gameVersion,
       augmentIds,
     },
   );
 
   return (
     <SelectedParticipantContent
-      catalog={catalog}
-      summary={summary}
-      participant={participant}
+      catalog={catalog()}
+      summary={props.summary}
+      participant={props.participant}
     />
   );
 }

@@ -1,38 +1,37 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useState } from "react";
+import type { Accessor } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import type { LcuChatFriend } from "@/bindings/lcu_chat";
 
-type UseLcuFriendsParams = {
-  enabled: boolean;
-};
-
 type UseLcuFriendsResult = {
-  friends: LcuChatFriend[];
-  isLoading: boolean;
-  errorMessage: string | null;
+  friends: Accessor<LcuChatFriend[]>;
+  isLoading: Accessor<boolean>;
+  errorMessage: Accessor<string | null>;
   refresh: () => void;
 };
 
-export function useLcuFriends({
-  enabled,
-}: UseLcuFriendsParams): UseLcuFriendsResult {
-  const [friends, setFriends] = useState<LcuChatFriend[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export function useSolidLcuFriends(params: {
+  enabled: Accessor<boolean>;
+}): UseLcuFriendsResult {
+  const [friends, setFriends] = createSignal<LcuChatFriend[]>([]);
+  const [isLoading, setIsLoading] = createSignal(false);
+  const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
+  let requestId = 0;
 
-  const loadFriends = useCallback((isCancelled: () => boolean) => {
+  const loadFriends = () => {
+    const currentRequestId = ++requestId;
     setIsLoading(true);
     setErrorMessage(null);
 
     void invoke<LcuChatFriend[]>("lcu_get_chat_friends")
       .then((payload) => {
-        if (isCancelled()) {
+        if (requestId !== currentRequestId) {
           return;
         }
         setFriends(payload.filter((friend) => friend.puuid.trim().length > 0));
       })
       .catch((error) => {
-        if (isCancelled()) {
+        if (requestId !== currentRequestId) {
           return;
         }
         const message =
@@ -41,34 +40,30 @@ export function useLcuFriends({
         setErrorMessage(message);
       })
       .finally(() => {
-        if (!isCancelled()) {
+        if (requestId === currentRequestId) {
           setIsLoading(false);
         }
       });
-  }, []);
+  };
 
-  useEffect(() => {
-    if (!enabled) {
+  createEffect(() => {
+    if (!params.enabled()) {
+      requestId += 1;
       setFriends([]);
       setIsLoading(false);
       setErrorMessage(null);
       return;
     }
 
-    let cancelled = false;
-    loadFriends(() => cancelled);
+    loadFriends();
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, loadFriends]);
-
-  const refresh = useCallback(() => {
-    if (!enabled || isLoading) {
+  const refresh = () => {
+    if (!params.enabled() || isLoading()) {
       return;
     }
-    loadFriends(() => false);
-  }, [enabled, isLoading, loadFriends]);
+    loadFriends();
+  };
 
   return {
     friends,

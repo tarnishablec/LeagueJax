@@ -1,21 +1,22 @@
-import { Menu } from "@ark-ui/react/menu";
-import { Portal } from "@ark-ui/react/portal";
-import type { MouseEvent, ReactNode } from "react";
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useSettings } from "@/features/settings/context";
+/** @jsxImportSource solid-js */
+import { Menu } from "@ark-ui/solid/menu";
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
+import { Portal } from "solid-js/web";
+import { useSolidSettings } from "@/features/settings/solid-context.solid";
 import type {
   RegisteredSetting,
   SettingId,
   SettingsGroupKey,
   SettingsSectionKey,
 } from "@/features/settings/types";
-import * as s from "./SettingsContextMenu.css";
+import { useSolidTranslation } from "@/i18n/solid";
+import * as s from "./SettingsContextMenu.css.ts";
 import type { PageEntry, SectionEntry } from "./settings-view-model";
 
 interface SettingsContextMenuProps {
   page: PageEntry;
-  children: ReactNode;
+  children: JSX.Element;
 }
 
 interface ContextTarget {
@@ -32,20 +33,19 @@ const isResettableSetting = (field: RegisteredSetting): boolean => {
   return field.control.kind !== "action";
 };
 
-export function SettingsContextMenu({
-  page,
-  children,
-}: SettingsContextMenuProps) {
-  const settings = useSettings();
-  const { t } = useTranslation();
-  const [target, setTarget] = useState<ContextTarget>({});
+export function SettingsContextMenu(
+  props: SettingsContextMenuProps,
+): JSX.Element {
+  const settings = useSolidSettings();
+  const { t } = useSolidTranslation();
+  const [target, setTarget] = createSignal<ContextTarget>({});
 
-  const context = useMemo(() => {
+  const context = createMemo(() => {
     const fields = new Map<SettingId, RegisteredSetting>();
     const sections = new Map<SettingsSectionKey, SectionEntry>();
 
-    for (const section of page.sections) {
-      const sectionKey = `${page.id}.${section.id}` as SettingsSectionKey;
+    for (const section of props.page.sections) {
+      const sectionKey = `${props.page.id}.${section.id}` as SettingsSectionKey;
       sections.set(sectionKey, section);
 
       for (const field of section.fields) {
@@ -54,47 +54,52 @@ export function SettingsContextMenu({
     }
 
     return { fields, sections };
-  }, [page]);
+  });
 
-  const resettableFields = useMemo(
-    () => [...context.fields.values()].filter(isResettableSetting),
-    [context.fields],
+  const resettableFields = createMemo(() =>
+    [...context().fields.values()].filter(isResettableSetting),
   );
   const resetIdsByPrefix = (prefix: string): SettingId[] =>
-    resettableFields
+    resettableFields()
       .filter(
         (field) => field.id === prefix || field.id.startsWith(`${prefix}.`),
       )
       .map((field) => field.id);
-  const activeField = target.settingId
-    ? context.fields.get(target.settingId)
-    : undefined;
-  const activeSection = target.sectionKey
-    ? context.sections.get(target.sectionKey)
-    : undefined;
-  const groupResetIds = target.groupKey
-    ? resetIdsByPrefix(target.groupKey)
-    : [];
-  const sectionResetIds =
-    target.sectionKey && activeSection
-      ? resetIdsByPrefix(target.sectionKey)
-      : [];
-  const pageResetIds = resetIdsByPrefix(page.id);
-  const canResetGroup = groupResetIds.length > 0;
-  const canResetSetting =
-    activeField !== undefined && isResettableSetting(activeField);
-  const canResetSection = sectionResetIds.length > 0;
-  const canResetPage = pageResetIds.length > 0;
+  const activeField = createMemo(() => {
+    const settingId = target().settingId;
+    return settingId ? context().fields.get(settingId) : undefined;
+  });
+  const activeSection = createMemo(() => {
+    const sectionKey = target().sectionKey;
+    return sectionKey ? context().sections.get(sectionKey) : undefined;
+  });
+  const groupResetIds = createMemo(() => {
+    const groupKey = target().groupKey;
+    return groupKey ? resetIdsByPrefix(groupKey) : [];
+  });
+  const sectionResetIds = createMemo(() => {
+    const sectionKey = target().sectionKey;
+    return sectionKey && activeSection() ? resetIdsByPrefix(sectionKey) : [];
+  });
+  const pageResetIds = createMemo(() => resetIdsByPrefix(props.page.id));
+  const canResetGroup = createMemo(() => groupResetIds().length > 0);
+  const canResetSetting = createMemo(() => {
+    const field = activeField();
+    return field !== undefined && isResettableSetting(field);
+  });
+  const canResetSection = createMemo(() => sectionResetIds().length > 0);
+  const canResetPage = createMemo(() => pageResetIds().length > 0);
 
   const resetActiveSetting = () => {
-    if (!activeField || !isResettableSetting(activeField)) {
+    const field = activeField();
+    if (!field || !isResettableSetting(field)) {
       return;
     }
 
-    settings.reset([activeField.id]);
+    settings.reset([field.id]);
   };
 
-  const handleContextMenu = (event: MouseEvent<HTMLElement>) => {
+  const handleContextMenu = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) {
       setTarget({});
       return;
@@ -121,66 +126,80 @@ export function SettingsContextMenu({
           ? groupKey
           : undefined,
       settingId:
-        settingId && context.fields.has(settingId) ? settingId : undefined,
+        settingId && context().fields.has(settingId) ? settingId : undefined,
       sectionKey:
-        sectionKey && context.sections.has(sectionKey) ? sectionKey : undefined,
+        sectionKey && context().sections.has(sectionKey)
+          ? sectionKey
+          : undefined,
     });
   };
 
   return (
     <Menu.Root positioning={{ placement: "bottom-start", strategy: "fixed" }}>
-      <Menu.ContextTrigger asChild onContextMenu={handleContextMenu}>
-        <div className={s.scope}>{children}</div>
-      </Menu.ContextTrigger>
-      <Portal>
-        <Menu.Positioner className={s.positioner}>
-          <Menu.Content
-            className={s.content}
-            aria-label="Settings context menu"
+      <Menu.ContextTrigger
+        asChild={(getTriggerProps) => (
+          <div
+            {...getTriggerProps({
+              role: "presentation",
+              class: s.scope,
+              onContextMenu: handleContextMenu,
+            })}
           >
-            {canResetGroup ? (
+            {props.children}
+          </div>
+        )}
+      />
+      <Portal>
+        <Menu.Positioner class={s.positioner}>
+          <Menu.Content class={s.content} aria-label="Settings context menu">
+            <Show when={canResetGroup()}>
               <Menu.Item
-                className={s.item}
+                class={s.item}
                 value="reset-group"
-                onSelect={() => settings.reset(groupResetIds)}
+                onSelect={() => settings.reset(groupResetIds())}
               >
                 {t("settings.contextMenu.resetSetting")}
               </Menu.Item>
-            ) : canResetSetting ? (
+            </Show>
+            <Show when={!canResetGroup() && canResetSetting()}>
               <Menu.Item
-                className={s.item}
+                class={s.item}
                 value="reset-setting"
                 onSelect={resetActiveSetting}
               >
                 {t("settings.contextMenu.resetSetting")}
               </Menu.Item>
-            ) : null}
-            {canResetSection ? (
+            </Show>
+            <Show when={canResetSection()}>
               <Menu.Item
-                className={s.item}
+                class={s.item}
                 value="reset-section"
-                onSelect={() => settings.reset(sectionResetIds)}
+                onSelect={() => settings.reset(sectionResetIds())}
               >
                 {t("settings.contextMenu.resetSection")}
               </Menu.Item>
-            ) : null}
-            {canResetPage ? (
+            </Show>
+            <Show when={canResetPage()}>
               <Menu.Item
-                className={s.item}
+                class={s.item}
                 value="reset-page"
-                onSelect={() => settings.reset(pageResetIds)}
+                onSelect={() => settings.reset(pageResetIds())}
               >
                 {t("settings.contextMenu.resetPage")}
               </Menu.Item>
-            ) : null}
-            {canResetGroup ||
-            canResetSetting ||
-            canResetSection ||
-            canResetPage ? (
-              <Menu.Separator className={s.separator} />
-            ) : null}
+            </Show>
+            <Show
+              when={
+                canResetGroup() ||
+                canResetSetting() ||
+                canResetSection() ||
+                canResetPage()
+              }
+            >
+              <Menu.Separator class={s.separator} />
+            </Show>
             <Menu.Item
-              className={s.item}
+              class={s.item}
               value="reset-all-settings"
               onSelect={() => settings.reset()}
             >

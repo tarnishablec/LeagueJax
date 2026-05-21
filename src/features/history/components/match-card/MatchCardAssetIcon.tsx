@@ -1,53 +1,55 @@
-import { useState } from "react";
+/** @jsxImportSource solid-js */
+
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import { LazyImage } from "@/components/LazyImage";
 
 type IconSource = string | null | undefined;
 
-export function MatchCardAssetIcon({
-  src,
-  fallbacks = [],
-  alt,
-  className,
-  fallbackClassName,
-  loadingClassName = fallbackClassName,
-}: {
+export function MatchCardAssetIcon(props: {
   src?: IconSource;
   fallbacks?: IconSource[];
   alt: string;
   className: string;
   fallbackClassName: string;
   loadingClassName?: string;
-}) {
-  const candidates = [...new Set([src, ...fallbacks])].filter(
-    (value): value is string => {
-      return typeof value === "string" && value.trim().length > 0;
-    },
+}): JSX.Element {
+  const candidates = createMemo(() =>
+    [...new Set([props.src, ...(props.fallbacks ?? [])])].filter(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    ),
   );
-  const signature = candidates.join("|");
-  const [state, setState] = useState({
+  const signature = createMemo(() => candidates().join("|"));
+  const [state, setState] = createSignal({
     signature: "",
     index: 0,
   });
-  const index = state.signature === signature ? state.index : 0;
-  const current = candidates[index] ?? null;
-
-  if (!current) {
-    return <span className={fallbackClassName} aria-hidden="true" />;
-  }
+  const index = createMemo(() =>
+    state().signature === signature() ? state().index : 0,
+  );
+  const current = createMemo(() => candidates()[index()] ?? null);
 
   return (
-    <LazyImage
-      src={current}
-      alt={alt}
-      className={className}
-      fallbackClassName={fallbackClassName}
-      loadingClassName={loadingClassName}
-      onError={() =>
-        setState({
-          signature,
-          index: index + 1,
-        })
-      }
-    />
+    <Show
+      when={current()}
+      fallback={<span class={props.fallbackClassName} aria-hidden="true" />}
+    >
+      {(src) => (
+        <LazyImage
+          src={src()}
+          alt={props.alt}
+          className={props.className}
+          fallbackClassName={props.fallbackClassName}
+          loadingClassName={props.loadingClassName ?? props.fallbackClassName}
+          onError={() =>
+            setState({
+              signature: signature(),
+              index: index() + 1,
+            })
+          }
+        />
+      )}
+    </Show>
   );
 }

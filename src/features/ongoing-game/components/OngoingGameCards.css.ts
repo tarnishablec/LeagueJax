@@ -1,9 +1,9 @@
-import { createVar, fallbackVar, style } from "@vanilla-extract/css";
+import { createVar, fallbackVar, keyframes, style } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
 import {
   summonerIdGameNameColorVar,
   summonerIdTagLineColorVar,
-} from "@/components/SummonerID";
+} from "@/components/SummonerID.vars";
 import { gameColorVars } from "@/styles/game-colors.css";
 import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
@@ -452,6 +452,25 @@ export const historySkeletonRow = style({
   display: "block",
   height: 40,
   lineHeight: 0,
+});
+
+const historySkeletonShimmer = keyframes({
+  from: {
+    backgroundPosition: "100% 0",
+  },
+  to: {
+    backgroundPosition: "-100% 0",
+  },
+});
+
+export const historySkeletonBlock = style({
+  display: "block",
+  width: "100%",
+  height: 40,
+  borderRadius: 6,
+  background: `linear-gradient(90deg, color-mix(in oklch, ${theme.color.foreground} 8%, transparent), color-mix(in oklch, ${theme.color.foreground} 16%, transparent), color-mix(in oklch, ${theme.color.foreground} 8%, transparent))`,
+  backgroundSize: "200% 100%",
+  animation: `${historySkeletonShimmer} 1.2s ease-in-out infinite`,
 });
 
 export const historyRowButtonReset = style({
