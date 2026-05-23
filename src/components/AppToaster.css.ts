@@ -52,7 +52,7 @@ export const rootClickable = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
   },
 });

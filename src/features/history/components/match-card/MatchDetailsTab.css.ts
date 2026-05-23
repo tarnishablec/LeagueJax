@@ -35,6 +35,7 @@ export const teamBlock = recipe({
     padding: 10,
     borderRadius: 8,
     outline: `1px solid ${theme.color.border}`,
+    outlineOffset: -1,
     background: `color-mix(in srgb, ${theme.color.background} 16%, transparent)`,
     vars: {
       [teamAccentColorVar]: theme.color.border,
@@ -44,12 +45,15 @@ export const teamBlock = recipe({
     team: {
       blue: {
         outline: `1px solid ${gameColorVars.team.blueAccent}`,
+        outlineOffset: -1,
       },
       red: {
         outline: `1px solid ${gameColorVars.team.redAccent}`,
+        outlineOffset: -1,
       },
       neutral: {
         outline: `1px solid color-mix(in srgb, ${teamAccentColorVar} 76%, transparent)`,
+        outlineOffset: -1,
       },
     },
   },
@@ -105,6 +109,7 @@ export const teamBanIcon = style({
   borderRadius: 4,
   objectFit: "cover",
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
 });
 
 export const teamBanIconFallback = style({
@@ -113,6 +118,7 @@ export const teamBanIconFallback = style({
   height: 23,
   borderRadius: 4,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.accent} 42%, transparent)`,
   selectors: {
     "&::after": {
@@ -121,6 +127,7 @@ export const teamBanIconFallback = style({
       inset: 5,
       borderRadius: 3,
       outline: `1px solid color-mix(in srgb, ${theme.color.mutedForeground} 54%, transparent)`,
+      outlineOffset: -1,
       background: `color-mix(in srgb, ${theme.color.surface} 62%, transparent)`,
     },
   },
@@ -423,7 +430,7 @@ export const summonerName = style({
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 1,
+      outlineOffset: -1,
       borderRadius: 4,
     },
     "&:hover": {

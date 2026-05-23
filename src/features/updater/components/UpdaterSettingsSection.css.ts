@@ -20,6 +20,7 @@ export const valueText = style({
   color: theme.color.foreground,
   background: theme.color.blurry,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   fontSize: "0.85rem",
   lineHeight: 1.4,
   wordBreak: "break-word",

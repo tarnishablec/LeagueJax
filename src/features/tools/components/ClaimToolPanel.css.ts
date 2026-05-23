@@ -87,7 +87,7 @@ export const actionButton = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
     "&:disabled": {
       opacity: 0.45,
@@ -241,7 +241,7 @@ export const checkboxRoot = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
       borderRadius: 4,
     },
   },

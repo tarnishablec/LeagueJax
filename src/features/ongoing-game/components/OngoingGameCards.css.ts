@@ -196,6 +196,7 @@ export const playerAvatarPlaceholder = style({
   borderRadius: 6,
   background: `color-mix(in oklch, ${theme.color.surface} 74%, ${theme.color.background})`,
   outline: `1px solid color-mix(in oklch, ${theme.color.border} 72%, transparent)`,
+  outlineOffset: -1,
   boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${theme.color.foreground} 4%, transparent)`,
 });
 

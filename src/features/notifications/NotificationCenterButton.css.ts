@@ -92,7 +92,7 @@ export const clearButton = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
     "&:disabled": {
       opacity: 0.4,
@@ -147,7 +147,7 @@ export const item = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
   },
 });

@@ -28,7 +28,7 @@ const buttonBase = style({
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 1,
+      outlineOffset: -1,
     },
     "&:active": {
       opacity: 0.9,

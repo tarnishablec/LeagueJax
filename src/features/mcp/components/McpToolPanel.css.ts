@@ -139,7 +139,7 @@ export const actionButton = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
     "&:disabled": {
       opacity: 0.55,
@@ -200,7 +200,7 @@ export const headerActionButton = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
     "&:disabled": {
       opacity: 0.4,
