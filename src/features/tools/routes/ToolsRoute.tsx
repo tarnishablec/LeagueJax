@@ -1,27 +1,48 @@
 /** @jsxImportSource solid-js */
 import { SegmentGroup } from "@ark-ui/solid/segment-group";
+import { useLocation, useNavigate } from "@solidjs/router";
 import type { JSX } from "solid-js";
-import { For } from "solid-js";
+import { createMemo, For } from "solid-js";
 import { useSolidTranslation } from "@/i18n/solid";
-import { ClaimToolPanel } from "../components/ClaimToolPanel";
 import * as s from "./ToolsRoute.css.ts";
 
-type ToolsPage = "claim";
+type ToolsPage = "claim" | "mcp";
 
 const pages = [
   {
     value: "claim",
     labelKey: "tools.pages.claim",
+    to: "/main/tools/claim",
+  },
+  {
+    value: "mcp",
+    labelKey: "tools.pages.mcp",
+    to: "/main/tools/mcp",
   },
 ] as const;
 
-export function ToolsRoute(): JSX.Element {
+function resolveActivePage(pathname: string): ToolsPage {
+  return pathname.includes("/main/tools/mcp") ? "mcp" : "claim";
+}
+
+export function ToolsRoute(props: { children?: JSX.Element }): JSX.Element {
   const { t } = useSolidTranslation();
-  const page: ToolsPage = "claim";
+  const location = useLocation();
+  const navigate = useNavigate();
+  const page = createMemo(() => resolveActivePage(location.pathname));
 
   return (
     <div class={s.page}>
-      <SegmentGroup.Root class={s.segmentRoot} value={page}>
+      <SegmentGroup.Root
+        class={s.segmentRoot}
+        value={page()}
+        onValueChange={(details) => {
+          const next = pages.find((item) => item.value === details.value);
+          if (next) {
+            navigate(next.to);
+          }
+        }}
+      >
         <For each={pages}>
           {(item) => (
             <SegmentGroup.Item class={s.segmentItem} value={item.value}>
@@ -32,9 +53,7 @@ export function ToolsRoute(): JSX.Element {
         </For>
       </SegmentGroup.Root>
 
-      <div class={s.content}>
-        <ClaimToolPanel />
-      </div>
+      <div class={s.content}>{props.children}</div>
     </div>
   );
 }

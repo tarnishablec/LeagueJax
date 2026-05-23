@@ -13,6 +13,7 @@ import type {
 } from "@/runtime/solid-web-contract";
 import type { SettingsShardApi } from "../settings/types";
 import { SHARD_IDS } from "../shard-ids";
+import { setupBackendNotificationBridge } from "./backend-notification-bridge";
 import { notificationsI18n } from "./i18n";
 import { NotificationCenterButton } from "./NotificationCenterButton";
 import { createNotificationsStore, type NotificationsStore } from "./store";
@@ -24,6 +25,7 @@ export class SolidNotificationsShard implements SolidWebShard {
   private readonly store = createNotificationsStore();
   private settings: SettingsShardApi | null = null;
   private permissionRequest: Promise<boolean> | null = null;
+  private backendNotificationUnlisten: (() => void) | null = null;
 
   public label() {
     return "SolidNotificationsShard";
@@ -37,13 +39,17 @@ export class SolidNotificationsShard implements SolidWebShard {
     return [SHARD_IDS.SETTINGS, SHARD_IDS.I18N] as const;
   }
 
-  public setup(jax: Jax): void {
+  public async setup(jax: Jax): Promise<void> {
     this.settings = jax.getShardById(
       SHARD_IDS.SETTINGS,
     ) as unknown as SettingsShardApi;
+    this.backendNotificationUnlisten =
+      await setupBackendNotificationBridge(this);
   }
 
   public teardown(): void {
+    this.backendNotificationUnlisten?.();
+    this.backendNotificationUnlisten = null;
     this.settings = null;
     this.permissionRequest = null;
   }

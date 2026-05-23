@@ -1,7 +1,8 @@
 /** @jsxImportSource solid-js */
 import { Check, Loader } from "lucide-solid";
 import type { JSX } from "solid-js";
-import { createEffect, createSignal, onCleanup } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
+import { FadingLabel } from "@/components/FadingLabel";
 import * as s from "./SettingsActionButton.css.ts";
 import {
   type SettingsControlLayoutProps,
@@ -28,36 +29,13 @@ export function SettingsActionButton(
 ): JSX.Element {
   const [pending, setPending] = createSignal(false);
   const [showSuccess, setShowSuccess] = createSignal(false);
-  const [displayLabel, setDisplayLabel] = createSignal(props.label);
-  const [labelVisible, setLabelVisible] = createSignal(true);
   let successTimer: number | null = null;
-  let swapTimer: number | null = null;
   const busy = () => pending() || (props.loading ?? false);
 
   onCleanup(() => {
     if (successTimer !== null) {
       window.clearTimeout(successTimer);
     }
-    if (swapTimer !== null) {
-      window.clearTimeout(swapTimer);
-    }
-  });
-
-  createEffect(() => {
-    if (props.label === displayLabel()) {
-      setLabelVisible(true);
-      return;
-    }
-
-    setLabelVisible(false);
-    if (swapTimer !== null) {
-      window.clearTimeout(swapTimer);
-    }
-    swapTimer = window.setTimeout(() => {
-      setDisplayLabel(props.label);
-      setLabelVisible(true);
-      swapTimer = null;
-    }, s.labelFadeDurationMs);
   });
 
   const handleClick = async () => {
@@ -122,9 +100,7 @@ export function SettingsActionButton(
         void handleClick();
       }}
     >
-      <span class={`${s.label} ${labelVisible() ? "" : s.labelHidden}`}>
-        {displayLabel()}
-      </span>
+      <FadingLabel text={props.label} />
       <span class={s.loaderSlot} aria-hidden="true">
         <Loader
           size={14}

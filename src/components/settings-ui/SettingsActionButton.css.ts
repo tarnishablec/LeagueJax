@@ -1,8 +1,6 @@
 import { keyframes, style, styleVariants } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css";
 
-export const labelFadeDurationMs = 180;
-
 const spin = keyframes({
   from: {
     transform: "rotate(0deg)",
@@ -101,18 +99,6 @@ export const feedbackIconBase = style({
 export const feedbackIconVisible = style({
   opacity: 1,
   transform: "scale(1)",
-});
-
-export const label = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  whiteSpace: "nowrap",
-  transition: `opacity ${labelFadeDurationMs}ms ease`,
-});
-
-export const labelHidden = style({
-  opacity: 0,
 });
 
 export const loaderSlot = style({

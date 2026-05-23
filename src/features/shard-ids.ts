@@ -20,6 +20,7 @@ export const SHARD_IDS = {
 
   // Dual-side (use backend UUIDs)
   SETTINGS: shardId("b59f17b0-24ef-4ce1-a106-f430ec20457e"),
+  MCP: shardId("c7d2b8a8-8a35-4e7d-a802-3df705edb6d3"),
   AUTO_SELECT: shardId("2c98048a-4233-4aa4-b9d7-5d11282e1ad6"),
   AUTO_GAMEFLOW: shardId("e2701f9c-c27c-4ad8-8ff0-a993c7fb98ef"),
   CLAIM_TOOL: shardId("6df55ec3-2b54-4c72-9e6a-f403f23a22dd"),

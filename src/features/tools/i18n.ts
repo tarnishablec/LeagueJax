@@ -8,6 +8,7 @@ export const toolsI18n: LocaleResource = {
     tools: {
       pages: {
         claim: "Claim Tool",
+        mcp: "MCP",
       },
       claimTool: {
         claimNotificationText: "Claim notifications",
@@ -54,6 +55,7 @@ export const toolsI18n: LocaleResource = {
     tools: {
       pages: {
         claim: "领取工具",
+        mcp: "MCP",
       },
       claimTool: {
         claimNotificationText: "领取通知",
@@ -100,6 +102,7 @@ export const toolsI18n: LocaleResource = {
     tools: {
       pages: {
         claim: "受け取りツール",
+        mcp: "MCP",
       },
       claimTool: {
         claimNotificationText: "受け取り通知",
