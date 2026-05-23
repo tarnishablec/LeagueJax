@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next";
+import type { SolidTranslate } from "@/i18n/solid";
 
 export const CDRAGON_GAME_DATA_BASE =
   "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default";
@@ -65,7 +65,7 @@ export function formatStartTime(epoch: number): string {
 }
 
 export function resolveModeLabel(
-  t: TFunction,
+  t: SolidTranslate,
   queueId: number,
   gameMode: string,
   queueName?: string | null,
@@ -83,7 +83,7 @@ export function resolveModeLabel(
 }
 
 export function resolveRuneSubStyleLabel(
-  t: TFunction,
+  t: SolidTranslate,
   styleId: number,
 ): string {
   const key = RUNE_STYLE_KEY_BY_ID[styleId];

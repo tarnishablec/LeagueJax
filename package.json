@@ -44,7 +44,6 @@
     "@vanilla-extract/recipes": "^0.5.7",
     "@vanilla-extract/vite-plugin": "^5.2.2",
     "graphology": "^0.26.0",
-    "i18next": "^26.2.0",
     "lucide-solid": "^1.16.0",
     "pino": "^10.3.1",
     "remeda": "^2.34.1",
