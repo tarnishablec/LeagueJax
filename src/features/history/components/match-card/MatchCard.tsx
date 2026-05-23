@@ -82,7 +82,7 @@ export function MatchCard(props: {
       !matchDetails.error() &&
       !matchDetails.isValidating()
     ) {
-      void matchDetails.load();
+      void matchDetails.load().catch(() => undefined);
     }
   });
 

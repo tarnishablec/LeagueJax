@@ -31,8 +31,17 @@ function details(frames: MatchBuildEventInput[][]): RawMatchDetailsGame {
         events: frame.map(event),
       })),
     },
-    metadata: {},
-  } as RawMatchDetailsGame;
+    metadata: {
+      data_version: null,
+      info_type: null,
+      match_id: null,
+      participants: [],
+      private: null,
+      product: null,
+      tags: [],
+      timestamp: null,
+    },
+  };
 }
 
 describe("resolveParticipantBuildTimeline", () => {

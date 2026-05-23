@@ -143,7 +143,7 @@ export const cardMainButton = recipe({
       },
       subteam: {
         gridTemplateColumns: desktopCardColumns,
-        gridTemplateRows: "max-content max-content",
+        gridTemplateRows: "max-content minmax(0, 1fr) max-content",
         "@media": {
           [cardStackMediaQuery]: {
             gridTemplateColumns: "max-content minmax(0, 1fr)",
@@ -175,8 +175,12 @@ export const pillsSlot = recipe({
         },
       },
       subteam: {
-        gridColumn: "3 / -1",
-        gridRow: 1,
+        gridColumn: 2,
+        gridRow: 3,
+        alignSelf: "end",
+        justifySelf: "start",
+        paddingLeft: 0,
+        borderLeft: "none",
         "@media": {
           [cardStackMediaQuery]: {
             gridColumn: "2 / -1",
@@ -545,7 +549,7 @@ export const playersPanel = recipe({
       },
       subteam: {
         gridColumn: "3 / -1",
-        gridRow: 2,
+        gridRow: "1 / -1",
         gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
         gap: "8px 10px",
         "@media": {
