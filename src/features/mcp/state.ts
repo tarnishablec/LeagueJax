@@ -43,6 +43,12 @@ export async function toggleMcpServer(): Promise<McpServerStateDto> {
   return next;
 }
 
+export async function clearMcpCallRecords(): Promise<McpServerStateDto> {
+  const next = await invoke<McpServerStateDto>("mcp_clear_call_records");
+  setMcpServerState(next);
+  return next;
+}
+
 export async function initializeMcpServerState(): Promise<void> {
   stateSubscription ??= listen<McpServerStateDto>(
     MCP_SERVER_STATE_CHANGED_EVENT,

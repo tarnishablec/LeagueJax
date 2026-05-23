@@ -2,6 +2,7 @@ use std::future::Future;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 
+use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{Implementation, ProtocolVersion, ServerCapabilities, ServerInfo};
 use rmcp::service::{MaybeSendFuture, NotificationContext, RequestContext, RoleServer};
 use rmcp::transport::streamable_http_server::{
@@ -18,7 +19,7 @@ use crate::error::AppError;
 use super::calls::{self, McpCallRecords};
 use super::clients::{self, McpClients, McpServerStateDto};
 use super::tools::{
-    basic,
+    basic, history,
     registry::{self, McpToolDto},
 };
 
@@ -94,6 +95,174 @@ impl LeagueJaxMcpServer {
     fn list_jax_tools(&self, context: RequestContext<RoleServer>) -> rmcp::model::CallToolResult {
         self.record_tool_call("list_jax_tools", &context);
         registry::list_jax_tools(Self::rmcp_tools())
+    }
+
+    #[tool(
+        description = "Get the summoner profile for the focused League client session.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_current_summoner(
+        &self,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_current_summoner", &context);
+        history::get_current_summoner(&self.app).await
+    }
+
+    #[tool(
+        description = "Get the SGP server id for the focused League client session.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_current_sgp_server_id(
+        &self,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_current_sgp_server_id", &context);
+        history::get_current_sgp_server_id(&self.app).await
+    }
+
+    #[tool(
+        description = "Resolve a human server name or server id to matching SGP server ids.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn resolve_sgp_server_ids(
+        &self,
+        Parameters(params): Parameters<history::ResolveSgpServerIdsParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("resolve_sgp_server_ids", &context);
+        history::resolve_sgp_server_ids(params).await
+    }
+
+    #[tool(
+        description = "Search one summoner by exact Riot ID gameName and tagLine.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn search_summoner(
+        &self,
+        Parameters(params): Parameters<history::SearchSummonerParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("search_summoner", &context);
+        history::search_summoner(&self.app, params).await
+    }
+
+    #[tool(
+        description = "Search summoners by PUUID, exact Riot ID, or fuzzy name on an optional SGP server.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn search_summoners(
+        &self,
+        Parameters(params): Parameters<history::SearchSummonersParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("search_summoners", &context);
+        history::search_summoners(&self.app, params).await
+    }
+
+    #[tool(
+        description = "Get a summoner profile by PUUID on an optional SGP server.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_summoner_by_puuid(
+        &self,
+        Parameters(params): Parameters<history::GetSummonerByPuuidParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_summoner_by_puuid", &context);
+        history::get_summoner_by_puuid(&self.app, params).await
+    }
+
+    #[tool(
+        description = "Get ranked stats for a summoner PUUID from the focused League client session.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_ranked_summary(
+        &self,
+        Parameters(params): Parameters<history::GetRankedSummaryParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_ranked_summary", &context);
+        history::get_ranked_summary(&self.app, params).await
+    }
+
+    #[tool(
+        description = "Get match history summaries for a PUUID using the available match history API.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_match_summaries(
+        &self,
+        Parameters(params): Parameters<history::GetMatchSummariesParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_match_summaries", &context);
+        history::get_match_summaries(&self.app, params).await
+    }
+
+    #[tool(
+        description = "Get one match summary by game id using the available match history API.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_match_summary(
+        &self,
+        Parameters(params): Parameters<history::GetMatchSummaryParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_match_summary", &context);
+        history::get_match_summary(&self.app, params).await
+    }
+
+    #[tool(
+        description = "Get one match details payload by game id using the available match history API.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_match_details(
+        &self,
+        Parameters(params): Parameters<history::GetMatchDetailsParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_match_details", &context);
+        history::get_match_details(&self.app, params).await
     }
 }
 
@@ -180,6 +349,33 @@ pub(super) async fn server_state(
             clients::clients_snapshot(&clients).await,
             calls::call_records_snapshot(&call_records).await,
         ),
+        None => McpServerStateDto::stopped(),
+    }
+}
+
+pub(super) async fn clear_call_records(
+    runtime: &Arc<Mutex<Option<McpServerRuntime>>>,
+) -> McpServerStateDto {
+    let running = {
+        let guard = runtime.lock().await;
+        guard.as_ref().map(|server| {
+            (
+                server.endpoint.clone(),
+                server.clients.clone(),
+                server.call_records.clone(),
+            )
+        })
+    };
+
+    match running {
+        Some((endpoint, clients, call_records)) => {
+            calls::clear_call_records(&call_records).await;
+            McpServerStateDto::running(
+                endpoint,
+                clients::clients_snapshot(&clients).await,
+                calls::call_records_snapshot(&call_records).await,
+            )
+        }
         None => McpServerStateDto::stopped(),
     }
 }

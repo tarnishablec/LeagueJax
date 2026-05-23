@@ -150,9 +150,8 @@ export const actionButton = style({
 
 export const sectionHeader = style({
   display: "grid",
-  gridTemplateColumns: "auto minmax(0, max-content) auto",
+  gridTemplateColumns: "auto minmax(0, max-content) auto minmax(0, 1fr)",
   alignItems: "center",
-  justifyContent: "start",
   gap: 8,
   minHeight: 38,
   padding: "0 10px",
@@ -175,6 +174,39 @@ export const sectionCount = style({
   fontWeight: 650,
   outline: `1px solid ${theme.color.border}`,
   outlineOffset: -1,
+});
+
+export const headerActionButton = style({
+  display: "inline-grid",
+  gridAutoFlow: "column",
+  alignItems: "center",
+  justifySelf: "end",
+  gap: 5,
+  minHeight: 26,
+  border: "none",
+  borderRadius: 6,
+  padding: "0 8px",
+  background: "transparent",
+  color: theme.color.mutedForeground,
+  cursor: "pointer",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  lineHeight: 1,
+  transition: "background-color 120ms ease-out, color 120ms ease-out",
+  selectors: {
+    "&:hover:not(:disabled)": {
+      background: theme.color.blurry,
+      color: theme.color.foreground,
+    },
+    "&:focus-visible": {
+      outline: `2px solid ${theme.color.primary}`,
+      outlineOffset: 2,
+    },
+    "&:disabled": {
+      opacity: 0.4,
+      pointerEvents: "none",
+    },
+  },
 });
 
 export const endpointEditor = style({
@@ -377,7 +409,13 @@ export const clientList = style({
   overflowY: "auto",
 });
 
-export const toolList = clientList;
+export const toolList = style([
+  clientList,
+  {
+    display: "block",
+    paddingBottom: 8,
+  },
+]);
 export const callList = clientList;
 
 export const clientRow = style({
