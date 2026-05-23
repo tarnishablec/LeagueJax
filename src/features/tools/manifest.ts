@@ -9,6 +9,9 @@ import { setupClaimToolNotifications } from "./claim-tool-notifications";
 import { toolsI18n } from "./i18n";
 
 const ToolsRoute = lazy(() => import("./routes/ToolsRoute"));
+const ToolsIndexRoute = lazy(() => import("./routes/ToolsIndexRoute"));
+const ToolsClaimRoute = lazy(() => import("./routes/ToolsClaimRoute"));
+const ToolsMcpRoute = lazy(() => import("./routes/ToolsMcpRoute"));
 
 export class SolidToolsShard implements SolidWebShard {
   private claimToolNotificationsUnlisten: UnlistenFn | null = null;
@@ -22,7 +25,11 @@ export class SolidToolsShard implements SolidWebShard {
   }
 
   public dependsOn() {
-    return [SHARD_IDS.SETTINGS, SHARD_IDS.NOTIFICATIONS] as const;
+    return [
+      SHARD_IDS.SETTINGS,
+      SHARD_IDS.NOTIFICATIONS,
+      SHARD_IDS.MCP,
+    ] as const;
   }
 
   public async setup(jax: Jax): Promise<void> {
@@ -43,6 +50,19 @@ export class SolidToolsShard implements SolidWebShard {
       {
         path: "tools",
         component: ToolsRoute,
+        children: [
+          {
+            component: ToolsIndexRoute,
+          },
+          {
+            path: "claim",
+            component: ToolsClaimRoute,
+          },
+          {
+            path: "mcp",
+            component: ToolsMcpRoute,
+          },
+        ],
         order: 86,
       },
     ];

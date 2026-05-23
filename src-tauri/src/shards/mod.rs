@@ -7,6 +7,7 @@ pub mod keyboard;
 pub mod lcu;
 pub mod league_bridge;
 pub mod log;
+pub mod mcp;
 pub mod mini_window;
 pub mod network;
 pub mod ongoing_game;

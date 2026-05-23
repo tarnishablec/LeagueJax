@@ -3,6 +3,7 @@ pub mod claim_tool;
 pub mod history;
 pub mod lcu;
 pub mod map;
+pub mod mcp;
 pub mod mini_window;
 pub mod ongoing_game;
 pub mod platform;
