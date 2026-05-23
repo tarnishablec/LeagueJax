@@ -22,6 +22,7 @@ import {
   Show,
 } from "solid-js";
 import type { McpCallRecordDto, McpToolDto } from "@/bindings/mcp";
+import { AppTooltip } from "@/components/AppTooltip";
 import { FadingLabel } from "@/components/FadingLabel";
 import { useSolidSettings } from "@/features/settings/solid-context";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
@@ -254,13 +255,35 @@ function hintBadgeLabel(
 function ToolHintBadge(props: {
   label: string | null;
   tone: "safe" | "warning" | "muted";
+  tooltip?: string | null;
 }): JSX.Element {
   return (
     <Show when={props.label}>
       {(label) => (
-        <span class={s.toolBadge} data-tone={props.tone}>
-          {label()}
-        </span>
+        <Show
+          when={props.tooltip}
+          fallback={
+            <span class={s.toolBadge} data-tone={props.tone}>
+              {label()}
+            </span>
+          }
+        >
+          {(tooltip) => (
+            <AppTooltip content={tooltip()} placement="top">
+              {(triggerProps) => (
+                <button
+                  {...triggerProps({
+                    class: s.toolBadge,
+                    type: "button",
+                  })}
+                  data-tone={props.tone}
+                >
+                  {label()}
+                </button>
+              )}
+            </AppTooltip>
+          )}
+        </Show>
       )}
     </Show>
   );
@@ -321,6 +344,11 @@ function ToolRow(props: { tool: McpToolDto }): JSX.Element {
               t,
             )}
             tone={props.tool.openWorldHint === true ? "warning" : "safe"}
+            tooltip={
+              props.tool.openWorldHint === true
+                ? t("mcp.tools.tools.openWorldHint")
+                : t("mcp.tools.tools.closedWorldHint")
+            }
           />
         </div>
       </div>
