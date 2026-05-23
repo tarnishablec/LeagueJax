@@ -5,7 +5,8 @@ import { resolveResource } from "@tauri-apps/api/path";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
-import i18n from "i18next";
+import { createEffect, createRoot } from "solid-js";
+import { getSolidI18n } from "@/i18n/solid";
 import { createLogger } from "@/infra/logger";
 
 const TRAY_ID = "main-tray";
@@ -22,9 +23,7 @@ export class TrayController {
   private tray: TrayIcon | null = null;
   private menuResources: ClosableMenuResource[] = [];
   private initialized = false;
-  private readonly handleLanguageChanged = (language: string) => {
-    void this.refreshMenu(language);
-  };
+  private disposeLanguageWatcher: (() => void) | null = null;
 
   public async initialize(): Promise<void> {
     if (this.initialized || getCurrentWebviewWindow().label !== "main") {
@@ -37,13 +36,14 @@ export class TrayController {
     await this.setTrayIcon();
     await this.tray.setTooltip(TRAY_TOOLTIP);
     await this.tray.setShowMenuOnLeftClick(false);
-    await this.refreshMenu(i18n.resolvedLanguage ?? i18n.language);
+    await this.refreshMenu();
 
-    i18n.on("languageChanged", this.handleLanguageChanged);
+    this.disposeLanguageWatcher = this.watchLanguageChanges();
   }
 
   public async dispose(): Promise<void> {
-    i18n.off("languageChanged", this.handleLanguageChanged);
+    this.disposeLanguageWatcher?.();
+    this.disposeLanguageWatcher = null;
 
     const resources = this.menuResources;
     this.menuResources = [];
@@ -75,7 +75,29 @@ export class TrayController {
     }
   }
 
-  private async refreshMenu(language: string): Promise<void> {
+  // Tray lives outside the Solid component tree, so it owns a small root to
+  // react to language changes without tying native resources to UI rendering.
+  private watchLanguageChanges(): () => void {
+    const solidI18n = getSolidI18n();
+    let previousLanguage = solidI18n.language();
+
+    return createRoot((dispose) => {
+      createEffect(() => {
+        const nextLanguage = solidI18n.language();
+
+        if (nextLanguage === previousLanguage) {
+          return;
+        }
+
+        previousLanguage = nextLanguage;
+        void this.refreshMenu();
+      });
+
+      return dispose;
+    });
+  }
+
+  private async refreshMenu(): Promise<void> {
     if (!this.tray) {
       return;
     }
@@ -85,10 +107,7 @@ export class TrayController {
     try {
       const toggleMiniWindowItem = await MenuItem.new({
         id: TOGGLE_MINI_WINDOW_ID,
-        text: i18n.t("tray.toggleMiniWindow", {
-          lng: language,
-          defaultValue: "Mini Window",
-        }),
+        text: translateTrayText("tray.toggleMiniWindow", "Mini Window"),
         action: () => {
           void invoke("toggle_mini_window");
         },
@@ -100,10 +119,7 @@ export class TrayController {
 
       const quitItem = await MenuItem.new({
         id: QUIT_APP_ID,
-        text: i18n.t("tray.quit", {
-          lng: language,
-          defaultValue: "Quit",
-        }),
+        text: translateTrayText("tray.quit", "Quit"),
         action: () => {
           void exit();
         },
@@ -125,6 +141,11 @@ export class TrayController {
       throw error;
     }
   }
+}
+
+function translateTrayText(key: string, fallback: string): string {
+  const text = getSolidI18n().t(key);
+  return text === key ? fallback : text;
 }
 
 // Menu refresh creates native resources on the Rust side; cleanup is best-effort

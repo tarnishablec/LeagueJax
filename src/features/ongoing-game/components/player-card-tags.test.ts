@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { TFunction } from "i18next";
 import type {
   RawMatchSummaryGame,
   RawMatchSummaryParticipant,
 } from "@/bindings/matches";
 import type { MatchPerformanceStrategy } from "@/features/history/utils/match-performance-badge";
+import type { SolidTranslate } from "@/i18n/solid";
 import type { PlayerSlot } from "../routes/ongoing-game.types";
 import {
   collectMatchPlayerCardTags,
@@ -18,7 +18,7 @@ const IGNITE_SPELL_ID = 14;
 const SMITE_SPELL_ID = 11;
 const TELEPORT_SPELL_ID = 12;
 
-const t = ((key: string) => key) as TFunction;
+const t: SolidTranslate = (key) => key;
 
 function slot(spell1Id: number, spell2Id: number): PlayerSlot {
   return {
