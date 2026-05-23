@@ -53,6 +53,7 @@ export const mcpI18n: LocaleResource = {
         },
         calls: {
           title: "Call records",
+          clear: "Clear",
           empty: "No MCP calls recorded",
           titleLine: "{{clientName}} called {{toolName}}",
           calledAt: "{{time}}",
@@ -129,6 +130,7 @@ export const mcpI18n: LocaleResource = {
         },
         calls: {
           title: "调用记录",
+          clear: "清空",
           empty: "暂无 MCP 调用记录",
           titleLine: "{{clientName}} 调用了 {{toolName}}",
           calledAt: "{{time}}",
@@ -205,6 +207,7 @@ export const mcpI18n: LocaleResource = {
         },
         calls: {
           title: "呼び出し記録",
+          clear: "クリア",
           empty: "MCP 呼び出し記録はありません",
           titleLine: "{{clientName}} が {{toolName}} を呼び出しました",
           calledAt: "{{time}}",

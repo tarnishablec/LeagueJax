@@ -7,6 +7,7 @@ import {
   PowerOff,
   Server,
   ShieldCheck,
+  Trash2,
   WifiOff,
   Wrench,
 } from "lucide-solid";
@@ -27,6 +28,7 @@ import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { useSolidTranslation } from "@/i18n/solid";
 import { createLogger } from "@/infra/logger";
 import {
+  clearMcpCallRecords,
   MCP_DEFAULT_PORT,
   MCP_PORT_SETTING_ID,
   mcpServerState,
@@ -336,6 +338,7 @@ export function McpToolPanel(): JSX.Element {
   const [pendingIntent, setPendingIntent] = createSignal<ToggleIntent | null>(
     null,
   );
+  const [clearingCalls, setClearingCalls] = createSignal(false);
   const [portDraft, setPortDraft] = createSignal(String(MCP_DEFAULT_PORT));
   const state = mcpServerState;
   const callRecords = createMemo(() => state().callRecords);
@@ -399,6 +402,21 @@ export function McpToolPanel(): JSX.Element {
       logger.error({ error }, "Failed to toggle MCP server");
     } finally {
       setPendingIntent(null);
+    }
+  };
+
+  const clearCalls = async () => {
+    if (clearingCalls() || callRecords().length === 0) {
+      return;
+    }
+
+    setClearingCalls(true);
+    try {
+      await clearMcpCallRecords();
+    } catch (error) {
+      logger.error({ error }, "Failed to clear MCP call records");
+    } finally {
+      setClearingCalls(false);
     }
   };
 
@@ -478,6 +496,18 @@ export function McpToolPanel(): JSX.Element {
               <Activity size={15} aria-hidden="true" />
               <span>{t("mcp.tools.calls.title")}</span>
               <span class={s.sectionCount}>{callRecords().length}</span>
+              <button
+                type="button"
+                class={s.headerActionButton}
+                disabled={clearingCalls() || callRecords().length === 0}
+                aria-label="Clear MCP call records"
+                onClick={() => {
+                  void clearCalls();
+                }}
+              >
+                <Trash2 size={13} aria-hidden="true" />
+                <span>{t("mcp.tools.calls.clear")}</span>
+              </button>
             </div>
 
             <Show
