@@ -5,8 +5,32 @@ import { theme } from "@/styles/theme.css.ts";
 
 export const root = style({
   display: "grid",
-  gridTemplateColumns: "max-content",
+  gridTemplateColumns: "max-content max-content",
   alignItems: "center",
+  gap: 4,
+});
+
+export const copyButton = style({
+  width: 30,
+  height: 30,
+  display: "grid",
+  placeItems: "center",
+  border: "none",
+  borderRadius: 6,
+  background: `color-mix(in srgb, ${theme.color.accent} 42%, transparent)`,
+  color: theme.color.mutedForeground,
+  cursor: "copy",
+  transition: "background 140ms, color 140ms, opacity 140ms",
+  selectors: {
+    "&:hover": {
+      background: `color-mix(in srgb, ${theme.color.primary} 48%, transparent)`,
+      color: theme.color.foreground,
+    },
+    "&:focus-visible": {
+      outline: `2px solid ${theme.color.primary}`,
+      outlineOffset: -2,
+    },
+  },
 });
 
 export const button = recipe({
@@ -27,7 +51,7 @@ export const button = recipe({
       },
       "&:focus-visible": {
         outline: `2px solid ${theme.color.primary}`,
-        outlineOffset: 2,
+        outlineOffset: -2,
       },
       "&:disabled": {
         cursor: "not-allowed",

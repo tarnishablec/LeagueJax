@@ -25,6 +25,7 @@ export const participantTrigger = recipe({
     padding: 2,
     background: `color-mix(in srgb, ${theme.color.surface} 66%, transparent)`,
     outline: `1px solid ${theme.color.border}`,
+    outlineOffset: -1,
     cursor: "pointer",
     transition: "background 140ms, color 140ms, outline-color 140ms",
     selectors: {
@@ -37,7 +38,7 @@ export const participantTrigger = recipe({
       },
       "&:focus-visible": {
         outline: `2px solid ${theme.color.primary}`,
-        outlineOffset: 2,
+        outlineOffset: -2,
       },
     },
   },
@@ -68,6 +69,7 @@ export const participantChampionIcon = style({
   borderRadius: 7,
   objectFit: "cover",
   outline: `1px solid color-mix(in srgb, ${theme.color.border} 78%, transparent)`,
+  outlineOffset: -1,
 });
 
 export const participantChampionFallback = style({
@@ -90,6 +92,7 @@ export const selectedChampionIcon = style({
   borderRadius: 8,
   objectFit: "cover",
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
 });
 
 export const selectedChampionFallback = style({

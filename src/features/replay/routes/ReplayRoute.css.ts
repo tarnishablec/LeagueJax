@@ -83,7 +83,7 @@ export const scanButton = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
   },
 });
@@ -136,6 +136,7 @@ export const panel = style({
   padding: 12,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 68%, transparent)`,
 });
 
@@ -150,6 +151,7 @@ export const directoryDropzone = style({
   minHeight: 74,
   borderRadius: 8,
   outline: `1px dashed ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.deep} 34%, transparent)`,
   transition: "background 140ms, outline-color 140ms",
   selectors: {
@@ -208,6 +210,7 @@ export const input = style({
   border: "none",
   borderRadius: 6,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   padding: "0 10px",
   background: `color-mix(in srgb, ${theme.color.deep} 42%, transparent)`,
   color: theme.color.foreground,
@@ -215,6 +218,7 @@ export const input = style({
   selectors: {
     "&:focus": {
       outline: `2px solid ${theme.color.primary}`,
+      outlineOffset: -2,
     },
   },
 });
@@ -242,7 +246,7 @@ export const smallButton = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
   },
 });
@@ -261,6 +265,7 @@ export const resourceRow = style({
   padding: "7px 8px",
   borderRadius: 6,
   outline: "1px solid transparent",
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 52%, transparent)`,
   transition:
     "background 140ms, outline-color 140ms, opacity 180ms ease-out, transform 180ms ease-out",
@@ -287,6 +292,7 @@ export const loadingStatusRow = style({
   padding: "8px 10px",
   borderRadius: 6,
   outline: "1px solid transparent",
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 52%, transparent)`,
 });
 
@@ -356,7 +362,7 @@ export const folderOpenButton = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
       borderRadius: 4,
     },
   },
@@ -379,7 +385,7 @@ export const executableOpenButton = style([
       },
       "&:focus-visible": {
         outline: `2px solid ${theme.color.primary}`,
-        outlineOffset: 2,
+        outlineOffset: -2,
       },
     },
   },
@@ -440,6 +446,7 @@ export const tintText = style({
   borderRadius: 4,
   padding: "2px 6px",
   outline: `1px solid color-mix(in srgb, ${theme.color.primary} 36%, ${theme.color.border})`,
+  outlineOffset: -1,
   background: theme.color.tint,
 });
 
@@ -455,6 +462,7 @@ export const familyBadge = style({
   borderRadius: 4,
   padding: "0 6px",
   outline: "1px solid transparent",
+  outlineOffset: -1,
   fontSize: "0.625rem",
   fontWeight: 800,
   lineHeight: 1,
@@ -488,6 +496,7 @@ export const statusBadge = style({
   borderRadius: 4,
   padding: "0 8px",
   outline: "1px solid transparent",
+  outlineOffset: -1,
   fontSize: "0.6875rem",
   fontWeight: 800,
   lineHeight: 1,
@@ -567,6 +576,7 @@ export const replayRow = style({
   padding: 10,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 54%, transparent)`,
   color: "inherit",
   font: "inherit",
@@ -584,7 +594,7 @@ export const replayRow = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
   },
 });
@@ -621,20 +631,24 @@ export const replayPlayButton = style({
 export const playButtonTone = styleVariants({
   tencent: {
     outline: `1px solid color-mix(in srgb, ${tencentColor} 62%, ${theme.color.border})`,
+    outlineOffset: -1,
     background: `color-mix(in srgb, ${tencentColor} 22%, ${theme.color.accent})`,
     selectors: {
       "&:hover:not(:disabled)": {
         outline: `2px solid ${tencentColor}`,
+        outlineOffset: -2,
         background: `color-mix(in srgb, ${tencentColor} 34%, ${theme.color.accent})`,
       },
     },
   },
   riot: {
     outline: `1px solid color-mix(in srgb, ${riotColor} 62%, ${theme.color.border})`,
+    outlineOffset: -1,
     background: `color-mix(in srgb, ${riotColor} 22%, ${theme.color.accent})`,
     selectors: {
       "&:hover:not(:disabled)": {
         outline: `2px solid ${riotColor}`,
+        outlineOffset: -2,
         background: `color-mix(in srgb, ${riotColor} 34%, ${theme.color.accent})`,
       },
     },
@@ -663,6 +677,7 @@ export const replayChampionIcon = style({
   height: 20,
   borderRadius: 4,
   outline: `1px solid color-mix(in srgb, ${theme.color.border} 70%, transparent)`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.deep} 54%, transparent)`,
   overflow: "hidden",
 });
@@ -694,6 +709,7 @@ export const empty = style({
   placeItems: "center",
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   color: theme.color.mutedForeground,
   background: `color-mix(in srgb, ${theme.color.surface} 38%, transparent)`,
   fontSize: "0.8125rem",

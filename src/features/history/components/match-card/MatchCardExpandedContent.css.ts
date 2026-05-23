@@ -7,6 +7,7 @@ export const expandedRoot = style({
   padding: 10,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 72%, transparent)`,
 });
 
@@ -25,20 +26,22 @@ export const header = style({
 export const tabList = style({
   width: "100%",
   minWidth: 0,
+  height: "100%",
   display: "grid",
   gridAutoFlow: "column",
   gridAutoColumns: "minmax(0, 1fr)",
   gap: 4,
-  borderRadius: 8,
-  padding: 3,
+  // borderRadius: 8,
+  // padding: 3,
   outline: `1px solid color-mix(in srgb, ${theme.color.border} 68%, transparent)`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.deep} 30%, transparent)`,
   overflowX: "auto",
 });
 
 export const tabTrigger = style({
   minWidth: 0,
-  height: 28,
+  height: "100%",
   border: "none",
   borderRadius: 6,
   padding: "0 12px",
@@ -66,7 +69,7 @@ export const tabTrigger = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
   },
 });
@@ -88,6 +91,7 @@ export const participantTabContent = style({
   padding: 10,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.background} 20%, transparent)`,
 });
 
@@ -98,6 +102,7 @@ export const participantEmptyState = style({
   padding: 12,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 54%, transparent)`,
   color: theme.color.mutedForeground,
   fontSize: "0.75rem",

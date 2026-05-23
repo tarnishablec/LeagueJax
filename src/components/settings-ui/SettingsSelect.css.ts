@@ -32,7 +32,7 @@ export const trigger = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 1,
+      outlineOffset: -1,
     },
     "&[data-state='open']": {
       borderColor: theme.color.primary,

@@ -22,6 +22,7 @@ export const section = style({
   padding: 10,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 62%, transparent)`,
 });
 
@@ -56,6 +57,7 @@ export const skillBadge = recipe({
     borderRadius: 7,
     background: `color-mix(in srgb, ${theme.color.background} 18%, transparent)`,
     outline: `1px solid ${theme.color.border}`,
+    outlineOffset: -1,
     color: theme.color.foreground,
   },
   variants: {
@@ -99,6 +101,7 @@ export const skillLevel = style({
   background: theme.color.popupBackground,
   color: theme.color.foreground,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   fontSize: "0.5625rem",
   fontWeight: 800,
   lineHeight: 1,
@@ -124,6 +127,7 @@ export const itemIcon = style({
   borderRadius: 6,
   objectFit: "cover",
   outline: `1px solid color-mix(in srgb, ${theme.color.border} 80%, transparent)`,
+  outlineOffset: -1,
 });
 
 export const itemIconFallback = style({
@@ -151,6 +155,7 @@ export const inlineEmpty = style({
   padding: 10,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.background} 16%, transparent)`,
   color: theme.color.mutedForeground,
   fontSize: "0.75rem",
@@ -164,6 +169,7 @@ export const emptyState = style({
   padding: 12,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 54%, transparent)`,
   color: theme.color.mutedForeground,
   fontSize: "0.75rem",

@@ -101,7 +101,7 @@ export const markdownLink = style({
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
     "&:hover": {
       textDecoration: "underline",
@@ -163,7 +163,7 @@ export const softwareItem = style({
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
     },
     "&:hover": {
       borderColor: `oklch(from ${theme.color.primary} l c h / 0.44)`,
