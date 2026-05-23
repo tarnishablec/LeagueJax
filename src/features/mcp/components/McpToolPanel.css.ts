@@ -604,11 +604,15 @@ export const toolMeta = style({
 });
 
 export const toolBadge = style({
+  appearance: "none",
+  border: "none",
   display: "inline-grid",
+  fontFamily: "inherit",
   placeItems: "center",
   minHeight: 18,
   borderRadius: 999,
   padding: "0 7px",
+  margin: 0,
   color: theme.color.mutedForeground,
   background: theme.color.blurry,
   fontSize: "0.6875rem",
@@ -626,6 +630,13 @@ export const toolBadge = style({
       color: theme.color.error,
       background: `color-mix(in oklch, ${theme.color.error} 10%, ${theme.color.surface})`,
       outlineColor: `color-mix(in oklch, ${theme.color.error} 34%, ${theme.color.border})`,
+    },
+    "button&": {
+      cursor: "help",
+    },
+    "button&:focus-visible": {
+      outlineColor: theme.color.primary,
+      outlineOffset: 1,
     },
   },
 });

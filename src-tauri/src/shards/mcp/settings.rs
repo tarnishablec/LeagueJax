@@ -4,6 +4,7 @@ use crate::error::AppError;
 use crate::shards::settings::types::{SettingControlDto, SettingDefinitionDto, SettingScopeDto};
 
 const MCP_PORT_SETTING_ID: &str = "mcp.server.port";
+const MCP_START_ON_LAUNCH_SETTING_ID: &str = "mcp.server.startOnLaunch";
 const MCP_TOGGLE_ACTION_SETTING_ID: &str = "mcp.server.toggle";
 const MCP_DEFAULT_PORT: u16 = 31421;
 const MIN_PORT: u16 = 1;
@@ -24,6 +25,20 @@ pub(super) fn build_port_definition() -> SettingDefinitionDto {
         default_value: Value::Number(serde_json::Number::from(u64::from(MCP_DEFAULT_PORT))),
         order: Some(10),
         visible: Some(false),
+        options: None,
+    }
+}
+
+pub(super) fn build_start_on_launch_definition() -> SettingDefinitionDto {
+    SettingDefinitionDto {
+        id: MCP_START_ON_LAUNCH_SETTING_ID.to_string(),
+        label_key: "settings.mcp.startOnLaunch.label".to_string(),
+        hint_key: Some("settings.mcp.startOnLaunch.hint".to_string()),
+        scope: SettingScopeDto::Backend,
+        control: Some(SettingControlDto::Toggle),
+        default_value: Value::Bool(false),
+        order: Some(30),
+        visible: Some(true),
         options: None,
     }
 }
@@ -60,4 +75,8 @@ pub(super) fn port_from_value(value: &Value) -> Result<u16, AppError> {
 
     port.filter(|port| *port >= MIN_PORT)
         .ok_or_else(|| AppError::other("MCP port must be an integer between 1 and 65535"))
+}
+
+pub(super) fn start_on_launch_from_value(value: &Value) -> bool {
+    value.as_bool().unwrap_or(false)
 }
