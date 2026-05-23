@@ -13,6 +13,8 @@ use crate::shards::tauri_host::TauriHost;
 
 mod calls;
 mod clients;
+mod payload_store;
+mod result_transport;
 mod server;
 mod settings;
 mod tools;

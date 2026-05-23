@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Accessor } from "solid-js";
-import { createMemo } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
 import type { RawMatchDetailsGame } from "@/bindings/matches.ts";
 import { createSolidQuery } from "@/infra/solid-query";
 
@@ -14,6 +14,14 @@ type QueuedMatchDetailsRequest = {
   promise: Promise<RawMatchDetailsGame>;
   resolve: (value: RawMatchDetailsGame) => void;
   reject: (reason: unknown) => void;
+};
+
+type ManualMatchDetailsState = {
+  cacheKey: string | null;
+  data?: RawMatchDetailsGame;
+  error?: unknown;
+  isLoading: boolean;
+  request?: Promise<RawMatchDetailsGame>;
 };
 
 let activeAutoRequestCount = 0;
@@ -165,25 +173,56 @@ export function useSolidMatchDetails(
   const query = createSolidQuery<RawMatchDetailsGame>(
     () => (enabled() ? key() : null),
     (resolvedKey) => fetchMatchDetailsQueued(resolvedKey as MatchDetailsKey),
-    { keepPreviousData: true },
   );
+  const currentCacheKey = createMemo(() => {
+    const resolvedKey = key();
+    return resolvedKey ? matchDetailsCacheKey(resolvedKey) : null;
+  });
+  const [manualState, setManualState] = createSignal<ManualMatchDetailsState>(
+    { cacheKey: null, isLoading: false },
+    { equals: false },
+  );
+  const matchingManualState = () => {
+    const state = manualState();
+    return state.cacheKey === currentCacheKey() ? state : null;
+  };
 
   const load = () => {
     const resolvedKey = key();
-    const currentData = query.data();
     if (!resolvedKey) {
       return Promise.resolve(undefined);
     }
+
+    const cacheKey = matchDetailsCacheKey(resolvedKey);
+    const state = manualState();
+    const currentData =
+      query.data() ?? (state.cacheKey === cacheKey ? state.data : undefined);
     if (currentData) {
       return Promise.resolve(currentData);
     }
-    return query.mutate(fetchMatchDetailsImmediate(resolvedKey));
+
+    if (state.cacheKey === cacheKey && state.request) {
+      return state.request;
+    }
+
+    const request = fetchMatchDetailsImmediate(resolvedKey)
+      .then((value) => {
+        setManualState({ cacheKey, data: value, isLoading: false });
+        return value;
+      })
+      .catch((error: unknown) => {
+        setManualState({ cacheKey, error, isLoading: false });
+        throw error;
+      });
+    setManualState({ cacheKey, isLoading: true, request });
+    return request;
   };
 
   return {
-    data: query.data,
-    error: query.error,
-    isValidating: query.isValidating,
+    data: () => query.data() ?? matchingManualState()?.data,
+    error: () => query.error() ?? matchingManualState()?.error,
+    isValidating: () =>
+      query.isValidating() || (matchingManualState()?.isLoading ?? false),
     load,
   };
 }
