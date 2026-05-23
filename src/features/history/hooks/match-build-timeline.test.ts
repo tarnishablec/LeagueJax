@@ -12,12 +12,22 @@ type MatchBuildEventInput = Partial<RawMatchDetailsEvent> & {
 function event(overrides: MatchBuildEventInput): RawMatchDetailsEvent {
   return {
     type: null,
+    assistingParticipantIds: null,
+    buildingType: null,
     timestamp: null,
     participantId: null,
     itemId: null,
     beforeId: null,
     afterId: null,
+    killerId: null,
+    laneType: null,
+    monsterSubType: null,
+    monsterType: null,
+    position: null,
     skillSlot: null,
+    teamId: null,
+    towerType: null,
+    victimId: null,
     ...overrides,
   };
 }
@@ -28,6 +38,7 @@ function details(frames: MatchBuildEventInput[][]): RawMatchDetailsGame {
       gameId: 1,
       frames: frames.map((frame, frameIndex) => ({
         timestamp: frameIndex * 60_000,
+        participantFrames: {},
         events: frame.map(event),
       })),
     },

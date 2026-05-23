@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -42,7 +44,35 @@ pub struct RawMatchDetailsJson {
 pub struct RawMatchDetailsFrame {
     #[serde(default)]
     pub events: Vec<RawMatchDetailsEvent>,
+    #[serde(default)]
+    pub participant_frames: BTreeMap<i64, RawMatchDetailsParticipantFrame>,
     pub timestamp: Option<i64>,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawMatchDetailsParticipantFrame {
+    pub current_gold: Option<i64>,
+    pub dominion_score: Option<i64>,
+    pub jungle_minions_killed: Option<i64>,
+    pub level: Option<i64>,
+    pub minions_killed: Option<i64>,
+    pub participant_id: Option<i64>,
+    pub position: Option<RawMatchDetailsPosition>,
+    pub team_score: Option<i64>,
+    pub total_gold: Option<i64>,
+    pub xp: Option<i64>,
+}
+
+#[derive(TS)]
+#[ts(export, export_to = "matches.ts")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawMatchDetailsPosition {
+    pub x: Option<i64>,
+    pub y: Option<i64>,
 }
 
 #[derive(TS)]
@@ -52,12 +82,22 @@ pub struct RawMatchDetailsFrame {
 pub struct RawMatchDetailsEvent {
     #[serde(rename = "type")]
     pub event_type: Option<String>,
+    pub assisting_participant_ids: Option<Vec<i64>>,
+    pub building_type: Option<String>,
     pub timestamp: Option<i64>,
     pub participant_id: Option<i64>,
     pub item_id: Option<i64>,
     pub before_id: Option<i64>,
     pub after_id: Option<i64>,
+    pub killer_id: Option<i64>,
+    pub lane_type: Option<String>,
+    pub monster_sub_type: Option<String>,
+    pub monster_type: Option<String>,
+    pub position: Option<RawMatchDetailsPosition>,
     pub skill_slot: Option<i64>,
+    pub team_id: Option<i64>,
+    pub tower_type: Option<String>,
+    pub victim_id: Option<i64>,
 }
 
 #[derive(TS)]
@@ -945,4 +985,127 @@ pub struct RawMatchSummaryMissions {
     pub weeklymission_s2_featsofstrength: Option<f64>,
     #[serde(rename = "WeeklyMission_S2_SpiritPetals")]
     pub weeklymission_s2_spiritpetals: Option<f64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RawMatchDetailsGame;
+
+    #[test]
+    fn raw_match_details_deserializes_akari_timeline_fields(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let payload = r#"{
+            "json": {
+                "gameId": 123456789,
+                "frames": [
+                    {
+                        "timestamp": 60000,
+                        "participantFrames": {
+                            "1": {
+                                "currentGold": 300,
+                                "dominionScore": 0,
+                                "jungleMinionsKilled": 4,
+                                "level": 2,
+                                "minionsKilled": 6,
+                                "participantId": 1,
+                                "position": { "x": 1234, "y": 5678 },
+                                "teamScore": 0,
+                                "totalGold": 800,
+                                "xp": 900
+                            }
+                        },
+                        "events": [
+                            {
+                                "type": "CHAMPION_KILL",
+                                "timestamp": 61000,
+                                "killerId": 1,
+                                "victimId": 2,
+                                "assistingParticipantIds": [3, 4],
+                                "position": { "x": 1000, "y": 2000 }
+                            },
+                            {
+                                "type": "ELITE_MONSTER_KILL",
+                                "timestamp": 120000,
+                                "killerId": 1,
+                                "monsterType": "DRAGON",
+                                "monsterSubType": "FIRE_DRAGON",
+                                "position": { "x": 9866, "y": 4414 }
+                            },
+                            {
+                                "type": "BUILDING_KILL",
+                                "timestamp": 180000,
+                                "killerId": 1,
+                                "teamId": 200,
+                                "buildingType": "TOWER_BUILDING",
+                                "towerType": "OUTER_TURRET",
+                                "laneType": "MID_LANE",
+                                "position": { "x": 5846, "y": 6396 }
+                            }
+                        ]
+                    }
+                ]
+            },
+            "metadata": {
+                "data_version": "2",
+                "info_type": "DETAILS",
+                "match_id": "123456789",
+                "participants": [],
+                "private": false,
+                "product": "lol",
+                "tags": [],
+                "timestamp": "2026-05-24T00:00:00Z"
+            }
+        }"#;
+
+        let details: RawMatchDetailsGame = serde_json::from_str(payload)?;
+        let Some(frame) = details.json.frames.first() else {
+            panic!("expected one timeline frame");
+        };
+        let Some(participant_frame) = frame.participant_frames.get(&1) else {
+            panic!("expected participant frame for participant 1");
+        };
+        assert_eq!(
+            participant_frame.position.as_ref().and_then(|p| p.x),
+            Some(1234)
+        );
+        assert_eq!(
+            participant_frame.position.as_ref().and_then(|p| p.y),
+            Some(5678)
+        );
+
+        let Some(kill_event) = frame.events.first() else {
+            panic!("expected champion kill event");
+        };
+        assert_eq!(kill_event.event_type.as_deref(), Some("CHAMPION_KILL"));
+        assert_eq!(kill_event.killer_id, Some(1));
+        assert_eq!(kill_event.victim_id, Some(2));
+        assert_eq!(
+            kill_event.assisting_participant_ids.as_deref(),
+            Some(&[3, 4][..])
+        );
+        assert_eq!(kill_event.position.as_ref().and_then(|p| p.x), Some(1000));
+        assert_eq!(kill_event.position.as_ref().and_then(|p| p.y), Some(2000));
+
+        let Some(monster_event) = frame.events.get(1) else {
+            panic!("expected elite monster event");
+        };
+        assert_eq!(monster_event.monster_type.as_deref(), Some("DRAGON"));
+        assert_eq!(
+            monster_event.monster_sub_type.as_deref(),
+            Some("FIRE_DRAGON")
+        );
+
+        let Some(building_event) = frame.events.get(2) else {
+            panic!("expected building event");
+        };
+        assert_eq!(
+            building_event.building_type.as_deref(),
+            Some("TOWER_BUILDING")
+        );
+        assert_eq!(building_event.tower_type.as_deref(), Some("OUTER_TURRET"));
+        assert_eq!(building_event.lane_type.as_deref(), Some("MID_LANE"));
+        assert_eq!(building_event.team_id, Some(200));
+
+        Ok(())
+    }
 }
