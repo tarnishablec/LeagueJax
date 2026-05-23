@@ -35,7 +35,7 @@ export const trigger = recipe({
     selectors: {
       "&:focus-visible": {
         outline: `2px solid ${theme.color.primary}`,
-        outlineOffset: 1,
+        outlineOffset: -1,
       },
     },
   },
@@ -139,7 +139,7 @@ export const eyeDropperTrigger = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 1,
+      outlineOffset: -1,
     },
   },
 });
@@ -227,11 +227,11 @@ export const swatchTrigger = recipe({
     selectors: {
       "&[data-state=checked]": {
         outline: "2px solid oklch(1 0 0)",
-        outlineOffset: 2,
+        outlineOffset: -2,
       },
       "&:focus-visible": {
         outline: `2px solid ${theme.color.primary}`,
-        outlineOffset: 1,
+        outlineOffset: -1,
       },
     },
   },

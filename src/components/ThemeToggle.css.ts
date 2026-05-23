@@ -61,6 +61,7 @@ export const dropdownItem = recipe({
         background: `color-mix(in oklch, ${theme.color.primary} 18%, ${theme.color.background})`,
         color: theme.color.foreground,
         outline: `1px solid color-mix(in oklch, ${theme.color.primary} 55%, transparent)`,
+        outlineOffset: -1,
         selectors: {
           ":root.dark &": {
             background: theme.color.accent,

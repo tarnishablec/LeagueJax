@@ -50,15 +50,6 @@ This file provides guidance to Ai agents (Codex/claude code etc.) when working w
 - Do not add comments that merely restate obvious control flow or assignments. The comment should clarify intent,
   constraints, or reasoning that would not be clear from the code itself.
 
-## Design Reference
-
-This project takes [League Akari](https://github.com/Hanxven/LeagueAkari) as its design reference. When building UI:
-
-- Follow Akari's visual language: flat, clean, icon-driven sidebar navigation with a compact desktop-app feel.
-- Color palette: dark navy backgrounds, warm amber-gold accents (Jax's signature color).
-- Prefer subtle hover/active states over bold visual noise.
-- Keep the UI dense and information-rich — this is a power-user desktop tool, not a marketing page.
-
 ## Commands
 
 ### Development
@@ -225,6 +216,9 @@ This project uses **bun** (lockfile: `bun.lock`). Use `bun` / `bunx` instead of 
 - Prefer `outline` over `border` for visual strokes, focus rings, hover outlines, and card/panel framing so sizing and
   grid/flex layout are not affected. Use `border` only when the stroke should participate in the box model or when a
   true layout separator is required.
+- All UI outlines must be inner strokes. Whenever adding an `outline` for framing, hover, active, selected, or
+  `focus-visible` states, set `outlineOffset` to the negative outline width (for example `outlineOffset: -1` for
+  `1px`, `outlineOffset: -2` for `2px`).
 - **No Tailwind, no utility classes.** All styling must go through Vanilla Extract `.css.ts` files.
 
 ## Type Sharing (Rust → TypeScript)

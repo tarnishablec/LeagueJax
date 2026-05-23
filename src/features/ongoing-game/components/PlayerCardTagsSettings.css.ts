@@ -39,7 +39,7 @@ export const checkboxRoot = style({
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 2,
+      outlineOffset: -2,
       borderRadius: 6,
     },
   },

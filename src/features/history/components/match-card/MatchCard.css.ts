@@ -125,7 +125,7 @@ export const cardMainButton = recipe({
     selectors: {
       "&:focus-visible": {
         outline: `2px solid ${theme.color.primary}`,
-        outlineOffset: 2,
+        outlineOffset: -2,
         borderRadius: 6,
       },
     },
@@ -304,6 +304,7 @@ export const placementPill = style({
   padding: "4px 8px",
   borderRadius: 999,
   outline: `1px solid color-mix(in srgb, ${theme.color.primary} 58%, transparent)`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.accent} 74%, transparent)`,
   color: theme.color.primary,
   whiteSpace: "nowrap",
@@ -377,6 +378,7 @@ export const augmentIcon = recipe({
     objectFit: "cover",
     boxSizing: "border-box",
     outline: `1px solid ${theme.color.border}`,
+    outlineOffset: -1,
   },
   variants: {
     rarity: {
@@ -385,6 +387,7 @@ export const augmentIcon = recipe({
       },
       prismatic: {
         outline: "1px solid transparent",
+        outlineOffset: -1,
         background:
           "linear-gradient(oklch(0.3 0.04 300), oklch(0.3 0.04 300)) padding-box, linear-gradient(135deg, oklch(0.82 0.2 322), oklch(0.56 0.23 296)) border-box",
       },
@@ -414,6 +417,7 @@ export const augmentIconFallback = recipe({
     borderRadius: 4,
     boxSizing: "border-box",
     outline: `1px solid ${theme.color.border}`,
+    outlineOffset: -1,
     background: translucentSlotAccent,
   },
   variants: {
@@ -636,7 +640,7 @@ export const playerNameButton = style({
   selectors: {
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 1,
+      outlineOffset: -1,
       borderRadius: 4,
     },
     "&:hover": {

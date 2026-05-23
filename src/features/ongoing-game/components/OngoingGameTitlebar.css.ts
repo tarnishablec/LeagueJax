@@ -48,6 +48,7 @@ export const queueIcon = style({
   borderRadius: 4,
   objectFit: "cover",
   outline: `1px solid color-mix(in oklch, ${theme.color.border} 80%, transparent)`,
+  outlineOffset: -1,
 });
 
 export const queueIconFallback = style({
@@ -55,6 +56,7 @@ export const queueIconFallback = style({
   height: 18,
   borderRadius: 4,
   outline: `1px solid color-mix(in oklch, ${theme.color.border} 80%, transparent)`,
+  outlineOffset: -1,
   background: theme.color.surface,
 });
 
@@ -87,6 +89,7 @@ const sideDiamondBase = style({
   height: 8,
   transform: "rotate(45deg)",
   outline: `1px solid color-mix(in oklch, ${theme.color.foreground} 18%, transparent)`,
+  outlineOffset: -1,
 });
 
 export const sideDiamond = styleVariants({

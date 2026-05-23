@@ -26,6 +26,7 @@ export const section = style({
   padding: 10,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 62%, transparent)`,
 });
 
@@ -97,6 +98,7 @@ export const runeEntry = style({
   padding: 6,
   borderRadius: 8,
   outline: `1px solid transparent`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.background} 18%, transparent)`,
   color: theme.color.foreground,
   textAlign: "left",
@@ -115,6 +117,7 @@ export const runeIcon = style({
   borderRadius: 999,
   objectFit: "contain",
   outline: `1px solid color-mix(in srgb, ${theme.color.border} 80%, transparent)`,
+  outlineOffset: -1,
 });
 
 export const runeIconFallback = style({
@@ -173,6 +176,7 @@ export const augmentEntry = recipe({
     padding: 8,
     borderRadius: 8,
     outline: `1px solid ${theme.color.border}`,
+    outlineOffset: -1,
     background: `color-mix(in srgb, ${theme.color.surface} 62%, transparent)`,
     color: theme.color.foreground,
     textAlign: "left",
@@ -223,6 +227,7 @@ export const emptyState = style({
   padding: 12,
   borderRadius: 8,
   outline: `1px solid ${theme.color.border}`,
+  outlineOffset: -1,
   background: `color-mix(in srgb, ${theme.color.surface} 54%, transparent)`,
   color: theme.color.mutedForeground,
   fontSize: "0.75rem",
@@ -242,6 +247,7 @@ export const tooltipContent = style({
   padding: "8px 10px",
   borderRadius: 8,
   outline: `1px solid ${theme.color.popoverBorder}`,
+  outlineOffset: -1,
   background: theme.color.popupBackground,
   color: theme.color.foreground,
   fontSize: "0.75rem",

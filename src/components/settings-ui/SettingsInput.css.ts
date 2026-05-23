@@ -15,7 +15,7 @@ export const input = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 1,
+      outlineOffset: -1,
     },
   },
 });
@@ -35,7 +35,7 @@ export const numberRoot = style({
     },
     "&:focus-within": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: 1,
+      outlineOffset: -1,
     },
   },
 });

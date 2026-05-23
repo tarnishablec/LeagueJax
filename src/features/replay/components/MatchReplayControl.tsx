@@ -7,6 +7,7 @@ import type {
   ReplayMatchContext,
 } from "@/bindings/replay";
 import { AppTooltip } from "@/components/AppTooltip";
+import { CopyButton } from "@/components/CopyButton";
 import { useSolidTranslation } from "@/i18n/solid";
 import { useSolidMatchReplay } from "../hooks/use-match-replay";
 import * as s from "./MatchReplayControl.css.ts";
@@ -128,6 +129,11 @@ export function MatchReplayControl(props: {
 
   return (
     <span class={s.root}>
+      <CopyButton
+        text={String(props.context.gameId)}
+        className={s.copyButton}
+        aria-label="Copy game ID"
+      />
       <AppTooltip content={tooltip()} openDelay={180} closeDelay={0}>
         {(triggerProps) => (
           <button
