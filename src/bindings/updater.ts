@@ -2,19 +2,6 @@
 
 export type UpdaterSourceDto = "auto" | "gitee" | "github";
 
-export type UpdaterStateDto = {
-  kind: UpdaterStatusKindDto;
-  currentVersion: string;
-  latestVersion: string | null;
-  notes: string | null;
-  source: UpdaterSourceDto | null;
-  message: string | null;
-};
+export type UpdaterStateDto = { kind: UpdaterStatusKindDto, currentVersion: string, latestVersion: string | null, notes: string | null, source: UpdaterSourceDto | null, message: string | null, };
 
-export type UpdaterStatusKindDto =
-  | "idle"
-  | "checking"
-  | "upToDate"
-  | "updateAvailable"
-  | "installing"
-  | "error";
+export type UpdaterStatusKindDto = "idle" | "checking" | "upToDate" | "updateAvailable" | "installing" | "error";

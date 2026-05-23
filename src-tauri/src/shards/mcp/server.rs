@@ -18,8 +18,9 @@ use crate::error::AppError;
 
 use super::calls::{self, McpCallRecords};
 use super::clients::{self, McpClients, McpServerStateDto};
+use super::payload_store::{self, McpJsonPayloadStore};
 use super::tools::{
-    basic, history,
+    basic, history, payloads,
     registry::{self, McpToolDto},
 };
 
@@ -29,6 +30,7 @@ pub(super) struct McpServerRuntime {
     pub endpoint: String,
     pub clients: McpClients,
     pub call_records: McpCallRecords,
+    pub json_payloads: McpJsonPayloadStore,
     cancel_token: CancellationToken,
     task: JoinHandle<()>,
     prune_task: JoinHandle<()>,
@@ -40,6 +42,7 @@ struct LeagueJaxMcpServer {
     endpoint: String,
     clients: McpClients,
     call_records: McpCallRecords,
+    json_payloads: McpJsonPayloadStore,
 }
 
 #[tool_router]
@@ -49,12 +52,14 @@ impl LeagueJaxMcpServer {
         endpoint: String,
         clients: McpClients,
         call_records: McpCallRecords,
+        json_payloads: McpJsonPayloadStore,
     ) -> Self {
         Self {
             app,
             endpoint,
             clients,
             call_records,
+            json_payloads,
         }
     }
 
@@ -98,6 +103,73 @@ impl LeagueJaxMcpServer {
     }
 
     #[tool(
+        description = "List JSON payload handles currently held by the LeagueJax MCP server.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn list_json_payloads(
+        &self,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("list_json_payloads", &context);
+        payloads::list_json_payloads(&self.json_payloads).await
+    }
+
+    #[tool(
+        description = "Describe the schema shape of a cached JSON payload without returning the full payload.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn describe_json_payload(
+        &self,
+        Parameters(params): Parameters<payloads::DescribeJsonPayloadParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("describe_json_payload", &context);
+        payloads::describe_json_payload(&self.json_payloads, params).await
+    }
+
+    #[tool(
+        description = "Query selected values from a cached JSON payload using RFC 6901 JSON Pointers.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn query_json_payload_pointers(
+        &self,
+        Parameters(params): Parameters<payloads::QueryJsonPayloadPointersParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("query_json_payload_pointers", &context);
+        payloads::query_json_payload_pointers(&self.json_payloads, params).await
+    }
+
+    #[tool(
+        description = "Drop a cached JSON payload handle from the LeagueJax MCP server.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn drop_json_payload(
+        &self,
+        Parameters(params): Parameters<payloads::DropJsonPayloadParams>,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("drop_json_payload", &context);
+        payloads::drop_json_payload(&self.json_payloads, params).await
+    }
+
+    #[tool(
         description = "Get the summoner profile for the focused League client session.",
         annotations(
             read_only_hint = true,
@@ -110,7 +182,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("get_current_summoner", &context);
-        history::get_current_summoner(&self.app).await
+        history::get_current_summoner(&self.app, &self.json_payloads).await
     }
 
     #[tool(
@@ -126,7 +198,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("get_current_sgp_server_id", &context);
-        history::get_current_sgp_server_id(&self.app).await
+        history::get_current_sgp_server_id(&self.app, &self.json_payloads).await
     }
 
     #[tool(
@@ -143,7 +215,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("resolve_sgp_server_ids", &context);
-        history::resolve_sgp_server_ids(params).await
+        history::resolve_sgp_server_ids(&self.json_payloads, params).await
     }
 
     #[tool(
@@ -160,7 +232,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("search_summoner", &context);
-        history::search_summoner(&self.app, params).await
+        history::search_summoner(&self.app, &self.json_payloads, params).await
     }
 
     #[tool(
@@ -177,7 +249,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("search_summoners", &context);
-        history::search_summoners(&self.app, params).await
+        history::search_summoners(&self.app, &self.json_payloads, params).await
     }
 
     #[tool(
@@ -194,7 +266,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("get_summoner_by_puuid", &context);
-        history::get_summoner_by_puuid(&self.app, params).await
+        history::get_summoner_by_puuid(&self.app, &self.json_payloads, params).await
     }
 
     #[tool(
@@ -211,7 +283,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("get_ranked_summary", &context);
-        history::get_ranked_summary(&self.app, params).await
+        history::get_ranked_summary(&self.app, &self.json_payloads, params).await
     }
 
     #[tool(
@@ -228,11 +300,11 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("get_match_summaries", &context);
-        history::get_match_summaries(&self.app, params).await
+        history::get_match_summaries(&self.app, &self.json_payloads, params).await
     }
 
     #[tool(
-        description = "Get one match summary by game id using the available match history API.",
+        description = "Get one match summary by game id using the available match history API. Large results are returned as queryable JSON payload handles.",
         annotations(
             read_only_hint = true,
             destructive_hint = false,
@@ -245,11 +317,11 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("get_match_summary", &context);
-        history::get_match_summary(&self.app, params).await
+        history::get_match_summary(&self.app, &self.json_payloads, params).await
     }
 
     #[tool(
-        description = "Get one match details payload by game id using the available match history API.",
+        description = "Get one match details payload by game id using the available match history API. Large results are returned as queryable JSON payload handles.",
         annotations(
             read_only_hint = true,
             destructive_hint = false,
@@ -262,7 +334,7 @@ impl LeagueJaxMcpServer {
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
         self.record_tool_call("get_match_details", &context);
-        history::get_match_details(&self.app, params).await
+        history::get_match_details(&self.app, &self.json_payloads, params).await
     }
 }
 
@@ -409,6 +481,7 @@ pub(super) async fn start_server(
     let server_token = parent_token.child_token();
     let clients = clients::new_clients();
     let call_records = calls::new_call_records();
+    let json_payloads = payload_store::new_store();
     let prune_task = clients::start_client_prune_task(
         app.clone(),
         endpoint.clone(),
@@ -420,6 +493,7 @@ pub(super) async fn start_server(
     let service_endpoint = endpoint.clone();
     let service_clients = clients.clone();
     let service_call_records = call_records.clone();
+    let service_json_payloads = json_payloads.clone();
     let service = StreamableHttpService::new(
         move || {
             Ok(LeagueJaxMcpServer::new(
@@ -427,6 +501,7 @@ pub(super) async fn start_server(
                 service_endpoint.clone(),
                 service_clients.clone(),
                 service_call_records.clone(),
+                service_json_payloads.clone(),
             ))
         },
         LocalSessionManager::default().into(),
@@ -450,6 +525,7 @@ pub(super) async fn start_server(
         endpoint: endpoint.clone(),
         clients: clients.clone(),
         call_records: call_records.clone(),
+        json_payloads,
         cancel_token: server_token,
         task,
         prune_task,
@@ -470,6 +546,7 @@ pub(super) async fn stop_server(runtime: &Arc<Mutex<Option<McpServerRuntime>>>) 
     server.cancel_token.cancel();
     server.clients.lock().await.clear();
     server.call_records.lock().await.clear();
+    payload_store::clear_payloads(&server.json_payloads).await;
     match server.task.await {
         Ok(()) => {
             tracing::info!(endpoint, "MCP server stopped");

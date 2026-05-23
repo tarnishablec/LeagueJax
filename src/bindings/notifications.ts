@@ -2,17 +2,6 @@
 
 export type BackendNotificationLevelDto = "info" | "warning" | "error";
 
-export type BackendNotificationRequestDto = {
-  source: string;
-  level: BackendNotificationLevelDto;
-  titleKey: string;
-  bodyKey: string | null;
-  values: { [key: string]: string | number | boolean };
-  dedupeKey: string | null;
-  system: BackendNotificationSystemModeDto;
-};
+export type BackendNotificationRequestDto = { source: string, level: BackendNotificationLevelDto, titleKey: string, bodyKey: string | null, values: { [key: string]: string | number | boolean }, dedupeKey: string | null, system: BackendNotificationSystemModeDto, };
 
-export type BackendNotificationSystemModeDto =
-  | "off"
-  | "respectUserSetting"
-  | "force";
+export type BackendNotificationSystemModeDto = "off" | "respectUserSetting" | "force";
