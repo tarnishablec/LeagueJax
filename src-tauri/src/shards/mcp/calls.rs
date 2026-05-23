@@ -38,6 +38,10 @@ pub(super) async fn call_records_snapshot(call_records: &McpCallRecords) -> Vec<
     call_records.lock().await.iter().cloned().collect()
 }
 
+pub(super) async fn clear_call_records(call_records: &McpCallRecords) {
+    call_records.lock().await.clear();
+}
+
 pub(super) fn record_tool_call_from_context(
     app: &tauri::AppHandle,
     endpoint: &str,

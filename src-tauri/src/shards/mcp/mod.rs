@@ -35,6 +35,12 @@ impl McpShard {
         server::server_state(&self.runtime).await
     }
 
+    pub async fn clear_call_records(&self, app: tauri::AppHandle) -> McpServerStateDto {
+        let state = server::clear_call_records(&self.runtime).await;
+        clients::emit_state_changed(&app, &state);
+        state
+    }
+
     pub fn tools(&self) -> Vec<McpToolDto> {
         server::tool_dtos()
     }

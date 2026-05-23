@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::error::AppError;
@@ -172,6 +172,64 @@ fn resolve_target_sgp_server_id(
     )))
 }
 
+// Server resolution is local-only and returns all candidates so clients can decide on ambiguity.
+fn resolve_sgp_server_ids_from_config(query: &str, config: &SgpServersConfig) -> Vec<String> {
+    let normalized_query = normalize_search_query(query);
+    if normalized_query.is_empty() {
+        return Vec::new();
+    }
+
+    let query_id = normalize_server_id(&normalized_query);
+    let query_name = normalized_query.to_lowercase();
+
+    let mut exact_matches = BTreeSet::new();
+    if config.servers.contains_key(&query_id) {
+        exact_matches.insert(query_id.clone());
+    }
+
+    if !query_id.starts_with("TENCENT_") {
+        let tencent_query_id = format!("TENCENT_{query_id}");
+        if config.servers.contains_key(&tencent_query_id) {
+            exact_matches.insert(tencent_query_id);
+        }
+    }
+
+    for names in config.server_names.values() {
+        for (server_id, server_name) in names {
+            let normalized_name = normalize_search_query(server_name);
+            if normalized_name.to_lowercase() == query_name {
+                exact_matches.insert(server_id.clone());
+            }
+        }
+    }
+
+    if !exact_matches.is_empty() {
+        return exact_matches.into_iter().collect();
+    }
+
+    let mut fuzzy_matches = BTreeSet::new();
+    for server_id in config.servers.keys() {
+        let normalized_server_id = normalize_server_id(server_id);
+        let tencent_sub_id = normalized_server_id.strip_prefix("TENCENT_");
+        if normalized_server_id.contains(&query_id)
+            || tencent_sub_id.is_some_and(|sub_id| sub_id.contains(&query_id))
+        {
+            fuzzy_matches.insert(server_id.clone());
+        }
+    }
+
+    for names in config.server_names.values() {
+        for (server_id, server_name) in names {
+            let normalized_name = normalize_search_query(server_name);
+            if normalized_name.to_lowercase().contains(&query_name) {
+                fuzzy_matches.insert(server_id.clone());
+            }
+        }
+    }
+
+    fuzzy_matches.into_iter().collect()
+}
+
 fn first_non_empty(values: &[&str]) -> String {
     values
         .iter()
@@ -334,6 +392,19 @@ pub async fn get_current_sgp_server_id(jax: State<'_, Arc<Jax>>) -> Result<Strin
 #[tauri::command]
 pub async fn get_sgp_servers_config() -> Result<SgpServersConfig, AppError> {
     Ok(sgp_servers_config()?.clone())
+}
+
+#[tauri::command]
+pub async fn resolve_sgp_server_ids(query: String) -> Result<Vec<String>, AppError> {
+    let normalized_query = normalize_search_query(&query);
+    if normalized_query.is_empty() {
+        return Err(AppError::other("Server query is empty".to_string()));
+    }
+
+    Ok(resolve_sgp_server_ids_from_config(
+        &normalized_query,
+        sgp_servers_config()?,
+    ))
 }
 
 #[tauri::command]
