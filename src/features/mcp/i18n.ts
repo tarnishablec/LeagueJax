@@ -20,6 +20,10 @@ export const mcpI18n: LocaleResource = {
           label: "MCP Port",
           hint: "Local port for the Streamable HTTP MCP server. Changes apply the next time the server starts.",
         },
+        startOnLaunch: {
+          label: "Start MCP server on launch",
+          hint: "Automatically starts the local MCP server when LeagueJax opens.",
+        },
         toggle: {
           label: "MCP Server",
           start: "Start MCP Server",
@@ -73,7 +77,11 @@ export const mcpI18n: LocaleResource = {
           idempotent: "Idempotent",
           nonIdempotent: "Non-idempotent",
           openWorld: "External context",
+          openWorldHint:
+            "This tool may depend on information outside LeagueJax's local data or on the current external environment. The result may change even with the same input.",
           closedWorld: "Local context",
+          closedWorldHint:
+            "This tool only uses local data that LeagueJax already knows about. It is easier to reproduce and audit.",
         },
       },
     },
@@ -96,6 +104,10 @@ export const mcpI18n: LocaleResource = {
         port: {
           label: "MCP 端口",
           hint: "本地 Streamable HTTP MCP 服务使用的端口。修改后会在下次启动服务时生效。",
+        },
+        startOnLaunch: {
+          label: "启动时启动 MCP 服务",
+          hint: "打开 LeagueJax 时自动启动本地 MCP 服务。",
         },
         toggle: {
           label: "MCP 服务",
@@ -150,7 +162,11 @@ export const mcpI18n: LocaleResource = {
           idempotent: "幂等",
           nonIdempotent: "非幂等",
           openWorld: "外部上下文",
+          openWorldHint:
+            "这个工具可能会依赖 LeagueJax 本地数据之外的信息，或依赖当前外部环境。即使输入一样，结果也可能变化。",
           closedWorld: "本地上下文",
+          closedWorldHint:
+            "这个工具只使用 LeagueJax 当前已经知道的本地数据，结果更容易复现和审计。",
         },
       },
     },
@@ -173,6 +189,10 @@ export const mcpI18n: LocaleResource = {
         port: {
           label: "MCP ポート",
           hint: "ローカル Streamable HTTP MCP サーバーで使用するポートです。変更は次回起動時に反映されます。",
+        },
+        startOnLaunch: {
+          label: "起動時に MCP サーバーを起動",
+          hint: "LeagueJax を開いたときにローカル MCP サーバーを自動的に起動します。",
         },
         toggle: {
           label: "MCP サーバー",
@@ -227,7 +247,11 @@ export const mcpI18n: LocaleResource = {
           idempotent: "冪等",
           nonIdempotent: "非冪等",
           openWorld: "外部コンテキスト",
+          openWorldHint:
+            "このツールは LeagueJax のローカルデータ以外の情報や現在の外部環境に依存する場合があります。同じ入力でも結果が変わることがあります。",
           closedWorld: "ローカルコンテキスト",
+          closedWorldHint:
+            "このツールは LeagueJax がすでに把握しているローカルデータだけを使用します。再現や確認がしやすい分類です。",
         },
       },
     },

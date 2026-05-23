@@ -90,17 +90,48 @@ impl Shard for McpShard {
         let host = jax.get_shard::<TauriHost>();
         let settings_shard = jax.get_shard::<SettingsShard>();
         let port_handle = settings_shard.register_definition(settings::build_port_definition())?;
+        let start_on_launch_handle =
+            settings_shard.register_definition(settings::build_start_on_launch_definition())?;
         let runtime = self.runtime.clone();
         let parent_token = host.cancellation_token();
         let app = host.app.clone();
+        let action_runtime = runtime.clone();
+        let action_port_handle = port_handle.clone();
+        let action_parent_token = parent_token.clone();
+        let action_app = app.clone();
 
         settings_shard.register_action(settings::build_toggle_action_definition(), move || {
-            let runtime = runtime.clone();
-            let port_handle = port_handle.clone();
-            let parent_token = parent_token.clone();
-            let app = app.clone();
+            let runtime = action_runtime.clone();
+            let port_handle = action_port_handle.clone();
+            let parent_token = action_parent_token.clone();
+            let app = action_app.clone();
             async move { Self::toggle_server(&runtime, &port_handle, parent_token, app).await }
         })?;
+
+        let start_on_launch_value = start_on_launch_handle.get_value()?;
+        if settings::start_on_launch_from_value(&start_on_launch_value) {
+            let port_value = port_handle.get_value()?;
+            match settings::port_from_value(&port_value) {
+                Ok(port) => {
+                    match server::start_server(&runtime, parent_token, port, app.clone()).await {
+                        Ok((endpoint, clients, call_records)) => {
+                            let state = McpServerStateDto::running(
+                                endpoint,
+                                clients::clients_snapshot(&clients).await,
+                                calls::call_records_snapshot(&call_records).await,
+                            );
+                            clients::emit_state_changed(&app, &state);
+                        }
+                        Err(error) => {
+                            tracing::warn!(error = %error, "Failed to start MCP server on launch");
+                        }
+                    }
+                }
+                Err(error) => {
+                    tracing::warn!(error = %error, "Invalid MCP launch port setting");
+                }
+            }
+        }
 
         Ok(())
     }
