@@ -1,5 +1,6 @@
 mod commands;
 mod error;
+pub mod notifications;
 mod shards;
 mod storage;
 mod utils;
@@ -21,6 +22,7 @@ use crate::commands::claim_tool::*;
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
+use crate::commands::mcp::*;
 use crate::commands::mini_window::*;
 use crate::commands::ongoing_game::*;
 use crate::commands::platform::*;
@@ -299,6 +301,8 @@ pub fn run() {
             get_settings_bootstrap,
             set_settings_value,
             set_settings_values,
+            mcp_get_server_state,
+            mcp_list_tools,
             get_shards_status,
             lcu_get_platform_config_namespaces,
             lcu_get_help,
@@ -344,6 +348,7 @@ pub fn run() {
                 )))
                 .register(Arc::new(shards::settings::SettingsShard::new()))
                 .register(Arc::new(shards::settings_bridge::SettingsBridgeShard::new()))
+                .register(Arc::new(shards::mcp::McpShard::new()))
                 .register(Arc::new(shards::window_effect::WindowEffectShard::new()))
                 .register(Arc::new(shards::mini_window::MiniWindowShard::new()))
                 .register(Arc::new(shards::log::LogShard::new()))

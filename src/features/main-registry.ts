@@ -2,6 +2,7 @@ import type { SolidWebShard } from "@/runtime/solid-web-contract";
 import { SolidAutomationShard } from "./automation/manifest";
 import { SolidHistoryShard } from "./history/manifest";
 import { I18nRuntimeShard } from "./i18n/runtime-shard";
+import { SolidMcpFeature } from "./mcp/manifest";
 import { SolidMiniShard } from "./mini/manifest";
 import { SolidNotificationsShard } from "./notifications/manifest";
 import { SolidOngoingGameShard } from "./ongoing-game/manifest";
@@ -18,6 +19,7 @@ import { WindowEffectShard } from "./window-effect/manifest";
 export function createSolidMainWebShards(): SolidWebShard[] {
   return [
     new SolidSettingsShard(),
+    new SolidMcpFeature(),
     new WindowEffectShard(),
     new I18nRuntimeShard(),
     new SolidNotificationsShard(),
