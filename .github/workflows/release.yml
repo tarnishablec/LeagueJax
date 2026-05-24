@@ -62,8 +62,8 @@ jobs:
         with:
           name: tauri-build-${{ steps.version.outputs.tag }}
           path: |
-            target/release/bundle/nsis/*.exe
-            target/release/bundle/nsis/*.sig
+            target/release/bundle/nsis/LeagueJax_x64-setup.exe
+            target/release/bundle/nsis/LeagueJax_x64-setup.exe.sig
           if-no-files-found: error
 
     outputs:

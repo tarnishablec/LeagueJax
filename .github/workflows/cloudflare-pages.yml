@@ -7,7 +7,6 @@ on:
     paths:
       - "site/**"
       - "scripts/prepare-site-deploy.ts"
-      - "package.json"
       - ".github/workflows/cloudflare-pages.yml"
   workflow_dispatch:
 

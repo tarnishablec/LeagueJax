@@ -2,11 +2,10 @@ const defaultInstallerName = "LeagueJax_x64-setup.exe";
 
 const releaseSources = {
   github: {
-    api: "https://api.github.com/repos/tarnishablec/LeagueJax/releases/latest",
-    releaseBase: "https://github.com/tarnishablec/LeagueJax/releases/download",
-    latestBase:
-      "https://github.com/tarnishablec/LeagueJax/releases/latest/download",
     fallback: `https://github.com/tarnishablec/LeagueJax/releases/latest/download/${defaultInstallerName}`,
+  },
+  gitee: {
+    fallback: `https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download/${defaultInstallerName}`,
   },
 };
 
@@ -22,7 +21,7 @@ const translations = {
     githubDownload: "Download from GitHub",
     giteeDownload: "Download from Gitee",
     downloadNote:
-      "Windows x64 installer. Direct links resolve to the latest release when release metadata is available.",
+      "Windows x64 installer. Direct links use the latest release asset.",
     previewPhase: "Live session",
     previewTitle: "Champion select context",
     previewHistory: "Recent history",
@@ -215,43 +214,7 @@ const getSupportedLanguage = (language) =>
 
 let currentLanguage = "en";
 
-const findInstallerAsset = (release) => {
-  const assets = Array.isArray(release?.assets) ? release.assets : [];
-  return assets.find((asset) => {
-    const name = String(asset?.name ?? "");
-    return (
-      name.endsWith(".exe") && name.includes("x64") && name.includes("setup")
-    );
-  });
-};
-
-const installerNameForTag = (tagName) => {
-  const version = String(tagName || "").replace(/^v/u, "");
-  return version ? `LeagueJax_${version}_x64-setup.exe` : defaultInstallerName;
-};
-
-const resolveDownloadUrl = (source, release) => {
-  const tagName = release?.tag_name || release?.tagName || "";
-  const asset = findInstallerAsset(release);
-  const fileName = asset?.name || installerNameForTag(tagName);
-
-  if (source.latestBase) {
-    return `${source.latestBase}/${fileName}`;
-  }
-
-  const directUrl =
-    asset?.browser_download_url || asset?.download_url || asset?.url || null;
-
-  if (directUrl) {
-    return directUrl;
-  }
-
-  return tagName
-    ? `${source.releaseBase}/${tagName}/${fileName}`
-    : source.fallback;
-};
-
-const hydrateDownloadLink = async (key, elementId) => {
+const hydrateDownloadLink = (key, elementId) => {
   const link = document.getElementById(elementId);
   const source = releaseSources[key];
 
@@ -260,23 +223,6 @@ const hydrateDownloadLink = async (key, elementId) => {
   }
 
   link.href = link.getAttribute("data-fallback-href") || source.fallback;
-
-  try {
-    const response = await fetch(source.api, {
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      return;
-    }
-
-    const release = await response.json();
-    link.href = resolveDownloadUrl(source, release);
-  } catch {
-    link.href = link.getAttribute("data-fallback-href") || source.fallback;
-  }
 };
 
 const setLanguage = (language) => {
@@ -388,4 +334,5 @@ const browserLanguage = navigator.language.startsWith("zh")
     : "en";
 
 setLanguage(urlLanguage || storedLanguage || browserLanguage);
-void hydrateDownloadLink("github", "githubDownload");
+hydrateDownloadLink("github", "githubDownload");
+hydrateDownloadLink("gitee", "giteeDownload");
