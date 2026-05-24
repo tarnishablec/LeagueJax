@@ -85,6 +85,7 @@ impl SgpApi {
         start_index: u32,
         count: u32,
         tag: Option<&str>,
+        queue_id: Option<i64>,
         sgp_server_id: Option<&str>,
     ) -> Result<RawMatchSummariesResponse, AppError> {
         let target_server_id = self.resolve_target_server_id(sgp_server_id);
@@ -95,8 +96,8 @@ impl SgpApi {
             ("startIndex", start_index.to_string()),
             ("count", count.to_string()),
         ];
-        if let Some(tag) = tag {
-            query.push(("tag", tag.to_string()));
+        if let Some(tag) = Self::normalize_match_history_tag(tag, queue_id)? {
+            query.push(("tag", tag));
         }
 
         let response = self
@@ -112,6 +113,38 @@ impl SgpApi {
             .await?;
 
         Ok(serde_path_to_error::deserialize(response)?)
+    }
+
+    /// Queue filtering is encoded by the SGP match-history service as a `tag=q_<queueId>` query.
+    fn normalize_match_history_tag(
+        tag: Option<&str>,
+        queue_id: Option<i64>,
+    ) -> Result<Option<String>, AppError> {
+        let normalized_tag = tag.and_then(|raw| {
+            let trimmed = raw.trim();
+            if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("all") {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        });
+
+        let Some(queue_id) = queue_id else {
+            return Ok(normalized_tag);
+        };
+
+        if queue_id <= 0 {
+            return Err(AppError::other("queueId must be a positive integer"));
+        }
+
+        let queue_tag = format!("q_{queue_id}");
+        match normalized_tag {
+            Some(tag) if tag != queue_tag => Err(AppError::other(format!(
+                "tag and queueId select different match history filters: {tag} vs {queue_tag}"
+            ))),
+            Some(tag) => Ok(Some(tag)),
+            None => Ok(Some(queue_tag)),
+        }
     }
 
     pub async fn get_match_summary(

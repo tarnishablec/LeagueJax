@@ -1,9 +1,9 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use rmcp::service::{RequestContext, RoleServer};
 use serde::Serialize;
+use time::OffsetDateTime;
 use tokio::sync::Mutex;
 use ts_rs::TS;
 use uuid::Uuid;
@@ -76,7 +76,9 @@ pub(super) fn record_tool_call_from_context(
                 client_name,
                 client_version,
                 session_id,
-                called_at: current_epoch_millis(),
+                called_at: u64::try_from(OffsetDateTime::now_utc().unix_timestamp())
+                    .unwrap_or_default()
+                    .saturating_mul(1000),
                 protocol: MCP_PROTOCOL.to_string(),
                 transport: MCP_TRANSPORT.to_string(),
             },
@@ -91,18 +93,4 @@ async fn push_call_record(call_records: &McpCallRecords, record: McpCallRecordDt
     let mut guard = call_records.lock().await;
     guard.push_front(record);
     guard.truncate(MCP_CALL_RECORD_LIMIT);
-}
-
-fn current_epoch_millis() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(duration) => {
-            let millis = duration.as_millis();
-            if millis > u128::from(u64::MAX) {
-                u64::MAX
-            } else {
-                millis as u64
-            }
-        }
-        Err(_) => 0,
-    }
 }

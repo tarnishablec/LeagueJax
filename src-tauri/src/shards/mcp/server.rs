@@ -20,7 +20,7 @@ use super::calls::{self, McpCallRecords};
 use super::clients::{self, McpClients, McpServerStateDto};
 use super::payload_store::{self, McpJsonPayloadStore};
 use super::tools::{
-    basic, history, payloads,
+    basic, game_data, history, payloads,
     registry::{self, McpToolDto},
 };
 
@@ -100,6 +100,22 @@ impl LeagueJaxMcpServer {
     fn list_jax_tools(&self, context: RequestContext<RoleServer>) -> rmcp::model::CallToolResult {
         self.record_tool_call("list_jax_tools", &context);
         registry::list_jax_tools(Self::rmcp_tools())
+    }
+
+    #[tool(
+        description = "Get League queue metadata from the available game data source.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn get_queues(
+        &self,
+        context: RequestContext<RoleServer>,
+    ) -> Result<rmcp::model::CallToolResult, String> {
+        self.record_tool_call("get_queues", &context);
+        game_data::get_queues(&self.app, &self.json_payloads).await
     }
 
     #[tool(
@@ -287,7 +303,7 @@ impl LeagueJaxMcpServer {
     }
 
     #[tool(
-        description = "Get match history summaries for a PUUID using the available match history API.",
+        description = "Get match history summaries for a PUUID using the available match history API. Pass queueId from get_queues to fetch a server-filtered queue page; beginIndex/endIndex then apply within that queue result set.",
         annotations(
             read_only_hint = true,
             destructive_hint = false,
@@ -401,21 +417,23 @@ pub(super) fn tool_dtos() -> Vec<McpToolDto> {
     LeagueJaxMcpServer::tool_dtos()
 }
 
+async fn running_runtime_handles(
+    runtime: &Arc<Mutex<Option<McpServerRuntime>>>,
+) -> Option<(String, McpClients, McpCallRecords)> {
+    let guard = runtime.lock().await;
+    guard.as_ref().map(|server| {
+        (
+            server.endpoint.clone(),
+            server.clients.clone(),
+            server.call_records.clone(),
+        )
+    })
+}
+
 pub(super) async fn server_state(
     runtime: &Arc<Mutex<Option<McpServerRuntime>>>,
 ) -> McpServerStateDto {
-    let running = {
-        let guard = runtime.lock().await;
-        guard.as_ref().map(|server| {
-            (
-                server.endpoint.clone(),
-                server.clients.clone(),
-                server.call_records.clone(),
-            )
-        })
-    };
-
-    match running {
+    match running_runtime_handles(runtime).await {
         Some((endpoint, clients, call_records)) => McpServerStateDto::running(
             endpoint,
             clients::clients_snapshot(&clients).await,
@@ -428,18 +446,7 @@ pub(super) async fn server_state(
 pub(super) async fn clear_call_records(
     runtime: &Arc<Mutex<Option<McpServerRuntime>>>,
 ) -> McpServerStateDto {
-    let running = {
-        let guard = runtime.lock().await;
-        guard.as_ref().map(|server| {
-            (
-                server.endpoint.clone(),
-                server.clients.clone(),
-                server.call_records.clone(),
-            )
-        })
-    };
-
-    match running {
+    match running_runtime_handles(runtime).await {
         Some((endpoint, clients, call_records)) => {
             calls::clear_call_records(&call_records).await;
             McpServerStateDto::running(

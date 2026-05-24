@@ -354,6 +354,7 @@ export function ClientStatus(props: ClientStatusProps): JSX.Element {
         disabled={!shouldShowTooltip()}
         openDelay={0}
         closeDelay={80}
+        interactive
         positioning={{ placement: "right", gutter: 8 }}
       >
         <Tooltip.Trigger

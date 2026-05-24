@@ -616,6 +616,7 @@ pub async fn get_match_summaries(
     begin_index: u32,
     end_index: u32,
     tag: Option<String>,
+    queue_id: Option<i64>,
     sgp_server_id: Option<String>,
     jax: State<'_, Arc<Jax>>,
 ) -> Result<RawMatchSummariesResponse, AppError> {
@@ -632,22 +633,14 @@ pub async fn get_match_summaries(
         return Ok(RawMatchSummariesResponse { games: vec![] });
     }
 
-    let normalized_tag = tag.and_then(|raw| {
-        let trimmed = raw.trim();
-        if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("all") {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    });
-
     sgp_session
         .api()
         .get_match_summaries(
             &puuid,
             begin_index,
             count,
-            normalized_tag.as_deref(),
+            tag.as_deref(),
+            queue_id,
             sgp_server_id.as_deref(),
         )
         .await

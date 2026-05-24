@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use rmcp::model::Extensions;
 use serde::Serialize;
 use tauri::Emitter;
+use time::OffsetDateTime;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
@@ -160,7 +161,9 @@ pub(super) async fn upsert_client(
     client_name: String,
     client_version: String,
 ) {
-    let now = current_epoch_millis();
+    let now = u64::try_from(OffsetDateTime::now_utc().unix_timestamp())
+        .unwrap_or_default()
+        .saturating_mul(1000);
     let mut guard = clients.lock().await;
     if !guard.contains_key(&session_id) {
         remove_matching_pending_client(&mut guard, &client_name, &client_version);
@@ -183,7 +186,9 @@ pub(super) async fn upsert_client(
 }
 
 async fn prune_stale_clients(clients: &McpClients) -> bool {
-    let now = current_epoch_millis();
+    let now = u64::try_from(OffsetDateTime::now_utc().unix_timestamp())
+        .unwrap_or_default()
+        .saturating_mul(1000);
     let min_last_seen = now.saturating_sub(MCP_CLIENT_STALE_AFTER_MS);
     let mut removed = Vec::new();
 
@@ -253,20 +258,6 @@ fn remove_matching_pending_client(
     }
 }
 
-fn current_epoch_millis() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(duration) => {
-            let millis = duration.as_millis();
-            if millis > u128::from(u64::MAX) {
-                u64::MAX
-            } else {
-                millis as u64
-            }
-        }
-        Err(_) => 0,
-    }
-}
-
 fn non_empty_client_field(value: Option<&String>) -> Option<String> {
     let value = value?;
     let trimmed = value.trim();
@@ -292,7 +283,9 @@ mod tests {
 
     #[tokio::test]
     async fn prune_stale_clients_removes_only_inactive_sessions() {
-        let now = current_epoch_millis();
+        let now = u64::try_from(OffsetDateTime::now_utc().unix_timestamp())
+            .unwrap_or_default()
+            .saturating_mul(1000);
         let stale_last_seen = now.saturating_sub(MCP_CLIENT_STALE_AFTER_MS + 1);
         let clients = new_clients();
         {

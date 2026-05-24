@@ -1,15 +1,11 @@
-use std::sync::Arc;
-
-use jax::Jax;
 use rmcp::model::CallToolResult;
 use rmcp::schemars;
-use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use serde::Deserialize;
 
 use crate::commands;
-use crate::error::AppError;
 use crate::shards::mcp::payload_store::McpJsonPayloadStore;
-use crate::shards::mcp::result_transport;
+
+use super::{jax_state, structured_result};
 
 #[derive(Debug, Clone, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -45,6 +41,7 @@ pub(in crate::shards::mcp) struct GetMatchSummariesParams {
     pub begin_index: u32,
     pub end_index: u32,
     pub tag: Option<String>,
+    pub queue_id: Option<i64>,
     pub sgp_server_id: Option<String>,
 }
 
@@ -66,21 +63,6 @@ pub(in crate::shards::mcp) struct GetMatchDetailsParams {
 #[serde(rename_all = "camelCase")]
 pub(in crate::shards::mcp) struct ResolveSgpServerIdsParams {
     pub query: String,
-}
-
-/// MCP tools intentionally call Tauri command functions so commands remain the shared public boundary.
-fn jax_state(app: &tauri::AppHandle) -> Result<tauri::State<'_, Arc<Jax>>, String> {
-    app.try_state::<Arc<Jax>>()
-        .ok_or_else(|| "Jax state is not available".to_string())
-}
-
-async fn structured_result<T: Serialize>(
-    store: &McpJsonPayloadStore,
-    label: Option<String>,
-    result: Result<T, AppError>,
-) -> Result<CallToolResult, String> {
-    let value = result.map_err(|error| error.to_string())?;
-    result_transport::emit_json_result(store, label, value).await
 }
 
 pub(in crate::shards::mcp) async fn get_current_summoner(
@@ -191,6 +173,7 @@ pub(in crate::shards::mcp) async fn get_match_summaries(
             params.begin_index,
             params.end_index,
             params.tag,
+            params.queue_id,
             params.sgp_server_id,
             jax,
         )

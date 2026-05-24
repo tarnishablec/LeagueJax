@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use serde_json::{json, Value};
+use time::OffsetDateTime;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -95,11 +96,14 @@ pub(in crate::shards::mcp) async fn put_payload(
     value: Value,
     label: Option<String>,
 ) -> Result<JsonPayloadOpenResult, String> {
+    let created_at_ms = u64::try_from(OffsetDateTime::now_utc().unix_timestamp())
+        .unwrap_or_default()
+        .saturating_mul(1000);
     let metadata = JsonPayloadMetadata {
         payload_id: Uuid::new_v4().to_string(),
         label,
-        created_at_ms: unix_millis(),
-        expires_at_ms: unix_millis().saturating_add(PAYLOAD_TTL.as_millis() as u64),
+        created_at_ms,
+        expires_at_ms: created_at_ms.saturating_add(PAYLOAD_TTL.as_millis() as u64),
         estimated_bytes: estimate_value_bytes(&value)?,
         root_type: value_type(&value).to_string(),
     };
@@ -281,20 +285,6 @@ pub(in crate::shards::mcp) fn estimate_value_bytes(value: &Value) -> Result<usiz
 
 fn bounded_option(value: Option<usize>, default: usize, min: usize, max: usize) -> usize {
     value.unwrap_or(default).clamp(min, max)
-}
-
-fn unix_millis() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(duration) => {
-            let millis = duration.as_millis();
-            if millis > u64::MAX as u128 {
-                u64::MAX
-            } else {
-                millis as u64
-            }
-        }
-        Err(_) => 0,
-    }
 }
 
 fn value_type(value: &Value) -> &'static str {

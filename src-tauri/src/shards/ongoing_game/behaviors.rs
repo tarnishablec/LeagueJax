@@ -312,7 +312,7 @@ fn spawn_history_task(envo: &Envo, puuid: &str) {
             let _permit = permit;
             let resp = sgp_session
                 .api()
-                .get_match_summaries(&puuid_owned, 0, count, tag.as_deref(), None)
+                .get_match_summaries(&puuid_owned, 0, count, tag.as_deref(), None, None)
                 .await
                 .ok()?;
             Some(resp.games)
