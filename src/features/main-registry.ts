@@ -36,6 +36,19 @@ export function createSolidMainWebShards(): SolidWebShard[] {
   ];
 }
 
-export function initializeSolidMainWebShards(): Promise<void> {
-  return initializeSolidWebShards(createSolidMainWebShards());
+async function createDevOnlySolidMainWebShards(): Promise<SolidWebShard[]> {
+  if (!import.meta.env.DEV) {
+    return [];
+  }
+
+  const { SolidDebugCommandShard } = await import("./debug/manifest");
+  return [new SolidDebugCommandShard()];
+}
+
+export async function initializeSolidMainWebShards(): Promise<void> {
+  const devOnlyShards = await createDevOnlySolidMainWebShards();
+  return initializeSolidWebShards([
+    ...createSolidMainWebShards(),
+    ...devOnlyShards,
+  ]);
 }

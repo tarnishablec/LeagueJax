@@ -48,11 +48,11 @@ export const updaterI18n: LocaleResource = {
           notes: "Release Notes",
           none: "None",
         },
-        toast: {
-          title: "Update Available",
-          description:
-            "Current version: {{currentVersion}}\nLatest version: {{latestVersion}}",
-          action: "Open Update Settings",
+        notification: {
+          available: {
+            title: "Update Available: {{latestVersion}}",
+            body: "Current version: {{currentVersion}}\nLatest version: {{latestVersion}}",
+          },
         },
       },
     },
@@ -77,7 +77,7 @@ export const updaterI18n: LocaleResource = {
           },
         },
         autoCheckOnStartup: {
-          label: "启动时自动检查更新",
+          label: "启动时自动检测更新",
           hint: "只会自动检查更新，不会自动下载或安装。",
         },
         action: {
@@ -104,11 +104,11 @@ export const updaterI18n: LocaleResource = {
           notes: "更新说明",
           none: "无",
         },
-        toast: {
-          title: "发现新版本 {{latestVersion}}",
-          description:
-            "当前版本：{{currentVersion}}\n最新版本：{{latestVersion}}",
-          action: "打开更新设置",
+        notification: {
+          available: {
+            title: "发现新版本：{{latestVersion}}",
+            body: "当前版本：{{currentVersion}}\n最新版本：{{latestVersion}}",
+          },
         },
       },
     },
@@ -125,7 +125,7 @@ export const updaterI18n: LocaleResource = {
       update: {
         source: {
           label: "更新ソース",
-          hint: "更新メタデータとインストーラーの取得元を選択します。GitHub は現在のリポジトリ、Gitee は既存のリリースミラーを使用します。",
+          hint: "更新メタデータとインストーラーの取得元を選択します。GitHub は現在のリポジトリを使用し、Gitee は既存のリリースミラーを使用します。",
           options: {
             auto: "自動",
             gitee: "Gitee",
@@ -134,7 +134,7 @@ export const updaterI18n: LocaleResource = {
         },
         autoCheckOnStartup: {
           label: "起動時に更新を確認",
-          hint: "起動時に更新確認のみ行います。自動ダウンロードや自動インストールは行いません。",
+          hint: "起動時に自動で更新確認のみ行います。自動ダウンロードや自動インストールは行いません。",
         },
         action: {
           label: "更新操作",
@@ -160,11 +160,11 @@ export const updaterI18n: LocaleResource = {
           notes: "リリースノート",
           none: "なし",
         },
-        toast: {
-          title: "新しいバージョン {{latestVersion}} があります",
-          description:
-            "現在のバージョン: {{currentVersion}}\n最新バージョン: {{latestVersion}}",
-          action: "更新設定を開く",
+        notification: {
+          available: {
+            title: "新しいバージョンがあります: {{latestVersion}}",
+            body: "現在のバージョン: {{currentVersion}}\n最新バージョン: {{latestVersion}}",
+          },
         },
       },
     },

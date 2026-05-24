@@ -2,7 +2,6 @@
 import { HashRouter, Navigate } from "@solidjs/router";
 import { createMemo, type JSX } from "solid-js";
 import { AppToaster } from "@/components/AppToaster";
-import { UpdaterToastBridge } from "@/features/updater/components/UpdaterToastBridge";
 import { MainWindowLayout } from "@/layout/__root";
 import { toSolidRouteDefinition } from "@/runtime/solid-router";
 import { getSolidRouteContributions } from "./features/solid-registry";
@@ -56,7 +55,6 @@ export default function App(): JSX.Element {
 
   return (
     <>
-      <UpdaterToastBridge />
       <HashRouter>{routes()}</HashRouter>
       <AppToaster />
     </>
