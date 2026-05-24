@@ -80,6 +80,7 @@ export const replayI18n: LocaleResource = {
       },
       matchReplay: {
         checking: "Checking",
+        copyGameIdTooltip: "Copy game ID",
         download: "Download replay",
         downloading: "Downloading {{progress}}",
         watch: "Watch replay",
@@ -164,6 +165,7 @@ export const replayI18n: LocaleResource = {
       },
       matchReplay: {
         checking: "检查中",
+        copyGameIdTooltip: "复制对局 ID",
         download: "下载回放",
         downloading: "下载中 {{progress}}",
         watch: "观看回放",
@@ -254,6 +256,7 @@ export const replayI18n: LocaleResource = {
       },
       matchReplay: {
         checking: "確認中",
+        copyGameIdTooltip: "ゲーム ID をコピー",
         download: "リプレイをダウンロード",
         downloading: "ダウンロード中 {{progress}}",
         watch: "リプレイを見る",

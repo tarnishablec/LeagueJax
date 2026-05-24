@@ -129,11 +129,21 @@ export function MatchReplayControl(props: {
 
   return (
     <span class={s.root}>
-      <CopyButton
-        text={String(props.context.gameId)}
-        className={s.copyButton}
-        aria-label="Copy game ID"
-      />
+      <AppTooltip
+        content={t("replay.matchReplay.copyGameIdTooltip")}
+        openDelay={180}
+        closeDelay={0}
+      >
+        {(triggerProps) => (
+          <CopyButton
+            {...triggerProps({
+              class: s.copyButton,
+              "aria-label": "Copy game ID",
+            })}
+            text={String(props.context.gameId)}
+          />
+        )}
+      </AppTooltip>
       <AppTooltip content={tooltip()} openDelay={180} closeDelay={0}>
         {(triggerProps) => (
           <button
