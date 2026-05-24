@@ -11,7 +11,6 @@ import {
   createSignal,
   type JSX,
   onCleanup,
-  onMount,
   Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -26,6 +25,7 @@ import {
 } from "@/features/solid-registry";
 import { useSolidWindowEffectBackgroundFallback } from "@/features/window-effect/use-window-effect";
 import { useSolidLcuEvents } from "@/hooks/use-lcu-events";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useSolidTheme } from "@/hooks/use-theme";
 import { useSolidTranslation } from "@/i18n/solid";
 import type { SolidNavItem } from "@/runtime/solid-web-contract";
@@ -46,20 +46,6 @@ function getMainRouteKey(pathname: string): string {
   }
 
   return `/${layout}/${route}`;
-}
-
-function usePrefersReducedMotion() {
-  const [reduceMotion, setReduceMotion] = createSignal(false);
-
-  onMount(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduceMotion(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    onCleanup(() => media.removeEventListener("change", sync));
-  });
-
-  return reduceMotion;
 }
 
 function MainRouteOutlet(props: {

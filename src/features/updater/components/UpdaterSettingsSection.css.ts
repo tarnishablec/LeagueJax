@@ -6,11 +6,6 @@ export const root = style({
   gap: 12,
 });
 
-export const summaryGrid = style({
-  display: "grid",
-  gap: 8,
-});
-
 export const valueText = style({
   display: "grid",
   placeItems: "center",

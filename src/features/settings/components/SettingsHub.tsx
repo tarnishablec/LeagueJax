@@ -13,6 +13,7 @@ import {
 import { Motion } from "solid-motionone";
 import { ScrollArea } from "@/components/scroll-area/ScrollArea";
 import { useSolidSettings } from "@/features/settings/solid-context";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import * as s from "./SettingsHub.css.ts";
 import {
   buildSettingsPages,
@@ -33,20 +34,6 @@ export function useSolidSettingsPages(): () => PageEntry[] {
     throw new Error("useSolidSettingsPages must be used within SettingsHub");
   }
   return ctx;
-}
-
-function usePrefersReducedMotion() {
-  const [reduceMotion, setReduceMotion] = createSignal(false);
-
-  onMount(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduceMotion(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    onCleanup(() => media.removeEventListener("change", sync));
-  });
-
-  return reduceMotion;
 }
 
 function SettingsRouteOutlet(props: {

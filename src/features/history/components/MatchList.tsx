@@ -1,11 +1,12 @@
 /** @jsxImportSource solid-js */
 import { keyArray } from "@solid-primitives/keyed";
 import { Loader } from "lucide-solid";
-import type { Accessor, JSX } from "solid-js";
-import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import type { JSX } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { Motion } from "solid-motionone";
 import { ScrollArea } from "@/components/scroll-area/ScrollArea";
 import { useSolidSettingValue } from "@/features/settings/use-setting-value";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useSolidTranslation } from "@/i18n/solid";
 import {
   type EnrichedMatch,
@@ -32,20 +33,6 @@ interface MatchListBodyProps {
   loadFailedLabel: string;
   noMatchesLabel: string;
   noMatchesInFilterLabel: string;
-}
-
-function usePrefersReducedMotion(): Accessor<boolean> {
-  const [reduceMotion, setReduceMotion] = createSignal(false);
-
-  onMount(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduceMotion(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    onCleanup(() => media.removeEventListener("change", sync));
-  });
-
-  return reduceMotion;
 }
 
 function buildListAnimationKey({
