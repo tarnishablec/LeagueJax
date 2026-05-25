@@ -3,6 +3,8 @@ use serde::Serialize;
 use serde_json::json;
 use ts_rs::TS;
 
+use crate::shards::mcp::payloads::transport;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(export, export_to = "mcp.ts")]
 #[serde(rename_all = "camelCase")]
@@ -20,8 +22,8 @@ pub(in crate::shards::mcp) fn tools_to_dtos(tools: Vec<Tool>) -> Vec<McpToolDto>
     tools.into_iter().map(tool_to_dto).collect()
 }
 
-pub(in crate::shards::mcp) fn list_jax_tools(tools: Vec<Tool>) -> CallToolResult {
-    CallToolResult::structured(json!({
+pub(in crate::shards::mcp) fn list_jax_tools(tools: Vec<Tool>) -> Result<CallToolResult, String> {
+    transport::inline_json_result(json!({
         "tools": tools_to_dtos(tools)
     }))
 }

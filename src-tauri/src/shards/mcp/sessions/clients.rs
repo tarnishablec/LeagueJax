@@ -19,7 +19,7 @@ pub const MCP_SERVER_STATE_CHANGED_EVENT: &str = "mcp_server_state_changed";
 const MCP_CLIENT_STALE_AFTER_MS: u64 = 120_000;
 const MCP_CLIENT_PRUNE_INTERVAL_MS: u64 = 15_000;
 
-pub(super) type McpClients = Arc<Mutex<BTreeMap<String, McpClientDto>>>;
+pub(in crate::shards::mcp) type McpClients = Arc<Mutex<BTreeMap<String, McpClientDto>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(export, export_to = "mcp.ts")]
@@ -43,7 +43,7 @@ pub struct McpServerStateDto {
 }
 
 impl McpServerStateDto {
-    pub(super) fn stopped() -> Self {
+    pub(in crate::shards::mcp) fn stopped() -> Self {
         Self {
             running: false,
             endpoint: None,
@@ -52,7 +52,7 @@ impl McpServerStateDto {
         }
     }
 
-    pub(super) fn running(
+    pub(in crate::shards::mcp) fn running(
         endpoint: String,
         clients: Vec<McpClientDto>,
         call_records: Vec<McpCallRecordDto>,
@@ -66,29 +66,32 @@ impl McpServerStateDto {
     }
 }
 
-pub(super) struct McpClientIdentity {
+pub(in crate::shards::mcp) struct McpClientIdentity {
     pub session_id: String,
     pub client_name: String,
     pub client_version: String,
 }
 
-pub(super) fn new_clients() -> McpClients {
+pub(in crate::shards::mcp) fn new_clients() -> McpClients {
     Arc::new(Mutex::new(BTreeMap::new()))
 }
 
-pub(super) async fn clients_snapshot(clients: &McpClients) -> Vec<McpClientDto> {
+pub(in crate::shards::mcp) async fn clients_snapshot(clients: &McpClients) -> Vec<McpClientDto> {
     let mut clients = clients.lock().await.values().cloned().collect::<Vec<_>>();
     clients.sort_by_key(|client| (client.connected_at, client.session_id.clone()));
     clients
 }
 
-pub(super) fn emit_state_changed(app: &tauri::AppHandle, state: &McpServerStateDto) {
+pub(in crate::shards::mcp) fn emit_state_changed(
+    app: &tauri::AppHandle,
+    state: &McpServerStateDto,
+) {
     if let Err(error) = app.emit(MCP_SERVER_STATE_CHANGED_EVENT, state) {
         tracing::warn!(error = %error, "Failed to emit MCP server state");
     }
 }
 
-pub(super) async fn emit_running_state(
+pub(in crate::shards::mcp) async fn emit_running_state(
     app: &tauri::AppHandle,
     endpoint: String,
     clients: &McpClients,
@@ -103,7 +106,7 @@ pub(super) async fn emit_running_state(
 }
 
 /// Many Streamable HTTP clients do not explicitly close sessions on process exit.
-pub(super) fn start_client_prune_task(
+pub(in crate::shards::mcp) fn start_client_prune_task(
     app: tauri::AppHandle,
     endpoint: String,
     clients: McpClients,
@@ -127,7 +130,7 @@ pub(super) fn start_client_prune_task(
 }
 
 /// Streamable HTTP initialization can happen before the client receives a session header.
-pub(super) async fn register_client_connected(
+pub(in crate::shards::mcp) async fn register_client_connected(
     app: &tauri::AppHandle,
     endpoint: &str,
     clients: &McpClients,
@@ -155,7 +158,7 @@ pub(super) async fn register_client_connected(
 }
 
 /// Tool calls keep the session visible without blocking the synchronous tool response path.
-pub(super) async fn upsert_client(
+pub(in crate::shards::mcp) async fn upsert_client(
     clients: &McpClients,
     session_id: String,
     client_name: String,
@@ -216,7 +219,9 @@ async fn prune_stale_clients(clients: &McpClients) -> bool {
     true
 }
 
-pub(super) fn client_identity(client_info: Option<&rmcp::model::ClientInfo>) -> (String, String) {
+pub(in crate::shards::mcp) fn client_identity(
+    client_info: Option<&rmcp::model::ClientInfo>,
+) -> (String, String) {
     let client = client_info.map(|info| &info.client_info);
     let client_name = non_empty_client_field(client.map(|client| &client.name))
         .unwrap_or_else(|| "Unknown MCP client".to_string());
@@ -226,7 +231,9 @@ pub(super) fn client_identity(client_info: Option<&rmcp::model::ClientInfo>) -> 
     (client_name, client_version)
 }
 
-pub(super) fn session_id_from_extensions(extensions: &Extensions) -> Option<String> {
+pub(in crate::shards::mcp) fn session_id_from_extensions(
+    extensions: &Extensions,
+) -> Option<String> {
     extensions
         .get::<axum::http::request::Parts>()
         .and_then(|parts| parts.headers.get("mcp-session-id"))

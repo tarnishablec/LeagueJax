@@ -11,16 +11,16 @@ use crate::error::AppError;
 use crate::shards::settings::{SettingHandle, SettingsShard};
 use crate::shards::tauri_host::TauriHost;
 
-mod calls;
-mod clients;
-mod payload_store;
-mod result_transport;
+mod payloads;
 mod server;
+mod sessions;
 mod settings;
 mod tools;
 
-pub use clients::McpServerStateDto;
-pub use tools::registry::McpToolDto;
+pub use sessions::clients::McpServerStateDto;
+pub use tools::catalog::McpToolDto;
+
+use sessions::{calls, clients};
 
 pub struct McpShard {
     runtime: Arc<Mutex<Option<server::McpServerRuntime>>>,

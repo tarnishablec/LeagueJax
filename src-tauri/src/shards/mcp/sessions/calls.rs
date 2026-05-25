@@ -11,10 +11,10 @@ use uuid::Uuid;
 use super::clients::{self, McpClients};
 
 const MCP_CALL_RECORD_LIMIT: usize = 100;
-const MCP_PROTOCOL: &str = "MCP 2024-11-05";
+const MCP_PROTOCOL: &str = "MCP 2025-11-25";
 const MCP_TRANSPORT: &str = "Streamable HTTP";
 
-pub(super) type McpCallRecords = Arc<Mutex<VecDeque<McpCallRecordDto>>>;
+pub(in crate::shards::mcp) type McpCallRecords = Arc<Mutex<VecDeque<McpCallRecordDto>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(export, export_to = "mcp.ts")]
@@ -30,19 +30,21 @@ pub struct McpCallRecordDto {
     pub transport: String,
 }
 
-pub(super) fn new_call_records() -> McpCallRecords {
+pub(in crate::shards::mcp) fn new_call_records() -> McpCallRecords {
     Arc::new(Mutex::new(VecDeque::new()))
 }
 
-pub(super) async fn call_records_snapshot(call_records: &McpCallRecords) -> Vec<McpCallRecordDto> {
+pub(in crate::shards::mcp) async fn call_records_snapshot(
+    call_records: &McpCallRecords,
+) -> Vec<McpCallRecordDto> {
     call_records.lock().await.iter().cloned().collect()
 }
 
-pub(super) async fn clear_call_records(call_records: &McpCallRecords) {
+pub(in crate::shards::mcp) async fn clear_call_records(call_records: &McpCallRecords) {
     call_records.lock().await.clear();
 }
 
-pub(super) fn record_tool_call_from_context(
+pub(in crate::shards::mcp) fn record_tool_call_from_context(
     app: &tauri::AppHandle,
     endpoint: &str,
     clients: &McpClients,

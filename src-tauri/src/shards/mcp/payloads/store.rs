@@ -23,7 +23,7 @@ pub(in crate::shards::mcp) type McpJsonPayloadStore = Arc<Mutex<JsonPayloadStore
 
 #[derive(Default)]
 pub(in crate::shards::mcp) struct JsonPayloadStore {
-    payloads: HashMap<String, StoredJsonPayload>,
+    payloads_by_session: HashMap<String, HashMap<String, StoredJsonPayload>>,
 }
 
 #[derive(Clone)]
@@ -88,11 +88,12 @@ pub(in crate::shards::mcp) fn new_store() -> McpJsonPayloadStore {
 }
 
 pub(in crate::shards::mcp) async fn clear_payloads(store: &McpJsonPayloadStore) {
-    store.lock().await.payloads.clear();
+    store.lock().await.payloads_by_session.clear();
 }
 
 pub(in crate::shards::mcp) async fn put_payload(
     store: &McpJsonPayloadStore,
+    session_id: &str,
     value: Value,
     label: Option<String>,
 ) -> Result<JsonPayloadOpenResult, String> {
@@ -116,7 +117,11 @@ pub(in crate::shards::mcp) async fn put_payload(
 
     let mut guard = store.lock().await;
     prune_expired(&mut guard);
-    guard.payloads.insert(payload_id, stored);
+    guard
+        .payloads_by_session
+        .entry(session_id.to_string())
+        .or_default()
+        .insert(payload_id, stored);
 
     Ok(JsonPayloadOpenResult {
         payload: metadata,
@@ -128,24 +133,28 @@ pub(in crate::shards::mcp) async fn put_payload(
 
 pub(in crate::shards::mcp) async fn list_payloads(
     store: &McpJsonPayloadStore,
+    session_id: &str,
 ) -> Vec<JsonPayloadMetadata> {
     let mut guard = store.lock().await;
     prune_expired(&mut guard);
     guard
-        .payloads
-        .values()
+        .payloads_by_session
+        .get(session_id)
+        .into_iter()
+        .flat_map(|payloads| payloads.values())
         .map(|payload| payload.metadata.clone())
         .collect()
 }
 
 pub(in crate::shards::mcp) async fn describe_payload(
     store: &McpJsonPayloadStore,
+    session_id: &str,
     payload_id: &str,
     max_depth: Option<u32>,
     array_sample_size: Option<u32>,
     object_key_limit: Option<u32>,
 ) -> Result<JsonPayloadDescription, String> {
-    let payload = get_payload(store, payload_id).await?;
+    let payload = get_payload(store, session_id, payload_id).await?;
     let schema_depth = bounded_option(
         max_depth.map(|value| value as usize),
         DEFAULT_SCHEMA_DEPTH,
@@ -181,11 +190,12 @@ pub(in crate::shards::mcp) async fn describe_payload(
 
 pub(in crate::shards::mcp) async fn query_pointers(
     store: &McpJsonPayloadStore,
+    session_id: &str,
     payload_id: &str,
     pointers: &[String],
     max_bytes: Option<u32>,
 ) -> Result<JsonPointerQueryResponse, String> {
-    let payload = get_payload(store, payload_id).await?;
+    let payload = get_payload(store, session_id, payload_id).await?;
     let budget_bytes = bounded_option(
         max_bytes.map(|value| value as usize),
         DEFAULT_QUERY_BUDGET_BYTES,
@@ -250,31 +260,44 @@ pub(in crate::shards::mcp) async fn query_pointers(
 
 pub(in crate::shards::mcp) async fn drop_payload(
     store: &McpJsonPayloadStore,
+    session_id: &str,
     payload_id: &str,
 ) -> bool {
     let mut guard = store.lock().await;
     prune_expired(&mut guard);
-    guard.payloads.remove(payload_id).is_some()
+    let dropped = guard
+        .payloads_by_session
+        .get_mut(session_id)
+        .is_some_and(|payloads| payloads.remove(payload_id).is_some());
+    guard
+        .payloads_by_session
+        .retain(|_, payloads| !payloads.is_empty());
+    dropped
 }
 
 async fn get_payload(
     store: &McpJsonPayloadStore,
+    session_id: &str,
     payload_id: &str,
 ) -> Result<StoredJsonPayload, String> {
     let mut guard = store.lock().await;
     prune_expired(&mut guard);
     guard
-        .payloads
-        .get(payload_id)
+        .payloads_by_session
+        .get(session_id)
+        .and_then(|payloads| payloads.get(payload_id))
         .cloned()
         .ok_or_else(|| format!("JSON payload not found or expired: {payload_id}"))
 }
 
 fn prune_expired(store: &mut JsonPayloadStore) {
     let now = Instant::now();
+    store.payloads_by_session.values_mut().for_each(|payloads| {
+        payloads.retain(|_, payload| payload.expires_at_instant > now);
+    });
     store
-        .payloads
-        .retain(|_, payload| payload.expires_at_instant > now);
+        .payloads_by_session
+        .retain(|_, payloads| !payloads.is_empty());
 }
 
 pub(in crate::shards::mcp) fn estimate_value_bytes(value: &Value) -> Result<usize, String> {
@@ -378,5 +401,48 @@ fn describe_value_shape_at(
         _ => json!({
             "type": value_type(value)
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn payloads_are_scoped_to_their_owner_session() -> Result<(), String> {
+        let store = new_store();
+        let opened = put_payload(
+            &store,
+            "session-a",
+            json!({
+                "visible": true
+            }),
+            Some("test-payload".to_string()),
+        )
+        .await?;
+        let payload_id = opened.payload.payload_id;
+
+        assert_eq!(list_payloads(&store, "session-a").await.len(), 1);
+        assert!(list_payloads(&store, "session-b").await.is_empty());
+        assert!(
+            describe_payload(&store, "session-b", &payload_id, None, None, None)
+                .await
+                .is_err()
+        );
+
+        let pointer = "/visible".to_string();
+        let response = query_pointers(&store, "session-a", &payload_id, &[pointer], None).await?;
+        let result = response
+            .results
+            .first()
+            .ok_or_else(|| "Expected one JSON pointer result".to_string())?;
+        assert_eq!(result.status, "ok");
+        assert_eq!(result.value, Some(json!(true)));
+
+        assert!(!drop_payload(&store, "session-b", &payload_id).await);
+        assert!(drop_payload(&store, "session-a", &payload_id).await);
+        assert!(list_payloads(&store, "session-a").await.is_empty());
+
+        Ok(())
     }
 }
