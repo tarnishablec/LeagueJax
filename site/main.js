@@ -5,7 +5,10 @@ const releaseSources = {
     fallback: `https://github.com/tarnishablec/LeagueJax/releases/latest/download/${defaultInstallerName}`,
   },
   gitee: {
-    fallback: `https://gitee.com/tarnishablec/league-jax-releases/releases/latest/download/${defaultInstallerName}`,
+    fallback: "https://gitee.com/tarnishablec/league-jax-releases/releases",
+    latestReleaseApi:
+      "https://gitee.com/api/v5/repos/tarnishablec/league-jax-releases/releases/latest",
+    assetName: defaultInstallerName,
   },
 };
 
@@ -13,6 +16,7 @@ const translations = {
   en: {
     navDownloads: "Downloads",
     navFeatures: "Features",
+    navAi: "AI",
     navScreenshots: "Screenshots",
     navOpenSource: "Open Source",
     heroTitle: "LeagueJax",
@@ -43,6 +47,21 @@ const translations = {
     featureReplayTitle: "Replays and tools",
     featureReplayCopy:
       "Centralize replay management and practical client-side companion actions as the project evolves.",
+    aiTitle: "AI companion layer",
+    aiCopy:
+      "LeagueJax now includes MCP support, letting compatible AI clients inspect selected local context and call approved companion tools through explicit boundaries.",
+    aiProtocolLabel: "Protocol",
+    aiProtocolCopy:
+      "Expose LeagueJax capabilities to AI clients without turning the desktop app into an uncontrolled automation layer.",
+    aiContextTitle: "Readable context",
+    aiContextCopy:
+      "Share supported game, session, and local companion state with assistants that understand the Model Context Protocol.",
+    aiToolsTitle: "Approved tools",
+    aiToolsCopy:
+      "Let AI clients call defined LeagueJax actions instead of scraping the interface or guessing hidden state.",
+    aiBoundaryTitle: "Explicit boundaries",
+    aiBoundaryCopy:
+      "Keep AI integration scoped to supported capabilities, with product rules staying inside the owning LeagueJax modules.",
     screenshotsTitle: "See the real LeagueJax interface",
     screenshotsCopy:
       "Actual desktop screens show how LeagueJax organizes live scouting, match history, replay files, and lightweight tools.",
@@ -79,6 +98,7 @@ const translations = {
   zh: {
     navDownloads: "下载",
     navFeatures: "功能",
+    navAi: "AI",
     navScreenshots: "界面",
     navOpenSource: "开源策略",
     heroTitle: "LeagueJax",
@@ -108,6 +128,21 @@ const translations = {
       "在游戏过程中保留必要信息，保持低打扰、易阅读、可快速确认。",
     featureReplayTitle: "回放与工具",
     featureReplayCopy: "逐步集中回放管理、客户端辅助操作和其他实用工具。",
+    aiTitle: "AI 伴侣能力层",
+    aiCopy:
+      "LeagueJax 现在支持 MCP 能力，兼容的 AI 客户端可以在明确边界内读取选定的本地上下文，并调用经过定义的伴侣工具。",
+    aiProtocolLabel: "协议",
+    aiProtocolCopy:
+      "把 LeagueJax 能力暴露给 AI 客户端，同时避免把桌面应用变成不受控的自动化层。",
+    aiContextTitle: "可读取上下文",
+    aiContextCopy:
+      "向理解 Model Context Protocol 的助手提供受支持的游戏、会话和本地伴侣状态。",
+    aiToolsTitle: "受控工具",
+    aiToolsCopy:
+      "让 AI 客户端调用明确定义的 LeagueJax 动作，而不是抓取界面或猜测隐藏状态。",
+    aiBoundaryTitle: "明确边界",
+    aiBoundaryCopy:
+      "AI 集成只覆盖受支持的能力，产品规则仍留在各自归属的 LeagueJax 模块内。",
     screenshotsTitle: "真实的 LeagueJax 界面",
     screenshotsCopy:
       "这些实际桌面界面展示 LeagueJax 如何整理当前对局、战绩、回放文件和轻量工具。",
@@ -144,6 +179,7 @@ const translations = {
   ja: {
     navDownloads: "ダウンロード",
     navFeatures: "機能",
+    navAi: "AI",
     navScreenshots: "画面",
     navOpenSource: "公開方針",
     heroTitle: "LeagueJax",
@@ -174,6 +210,21 @@ const translations = {
     featureReplayTitle: "リプレイとツール",
     featureReplayCopy:
       "リプレイ管理、クライアント補助操作、その他の実用ツールを段階的に集約します。",
+    aiTitle: "AI コンパニオン層",
+    aiCopy:
+      "LeagueJax は MCP に対応しました。対応する AI クライアントは、明確な境界の中で選択されたローカルコンテキストを参照し、承認されたコンパニオンツールを呼び出せます。",
+    aiProtocolLabel: "プロトコル",
+    aiProtocolCopy:
+      "LeagueJax の機能を AI クライアントに公開しつつ、デスクトップアプリを制御不能な自動化レイヤーにはしません。",
+    aiContextTitle: "読み取り可能なコンテキスト",
+    aiContextCopy:
+      "Model Context Protocol を理解するアシスタントに、対応済みのゲーム、セッション、ローカルコンパニオン状態を共有します。",
+    aiToolsTitle: "承認されたツール",
+    aiToolsCopy:
+      "AI クライアントが画面を解析したり隠れた状態を推測したりせず、定義済みの LeagueJax アクションを呼び出せます。",
+    aiBoundaryTitle: "明確な境界",
+    aiBoundaryCopy:
+      "AI 連携は対応済みの機能に限定し、製品ルールはそれぞれを所有する LeagueJax モジュール内に保ちます。",
     screenshotsTitle: "実際の LeagueJax 画面",
     screenshotsCopy:
       "実際のデスクトップ画面で、現在の試合、戦績、リプレイファイル、軽量ツールの整理方法を示します。",
@@ -214,7 +265,20 @@ const getSupportedLanguage = (language) =>
 
 let currentLanguage = "en";
 
-const hydrateDownloadLink = (key, elementId) => {
+const findReleaseAssetDownloadUrl = (release, assetName) => {
+  if (!assetName || !Array.isArray(release?.assets)) {
+    return null;
+  }
+
+  const asset = release.assets.find(
+    (item) =>
+      item?.name === assetName && typeof item.browser_download_url === "string",
+  );
+
+  return asset?.browser_download_url || null;
+};
+
+const hydrateDownloadLink = async (key, elementId) => {
   const link = document.getElementById(elementId);
   const source = releaseSources[key];
 
@@ -223,6 +287,31 @@ const hydrateDownloadLink = (key, elementId) => {
   }
 
   link.href = link.getAttribute("data-fallback-href") || source.fallback;
+
+  if (!source.latestReleaseApi) {
+    return;
+  }
+
+  try {
+    const response = await fetch(source.latestReleaseApi, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const release = await response.json();
+    const assetUrl = findReleaseAssetDownloadUrl(release, source.assetName);
+
+    if (assetUrl) {
+      link.href = assetUrl;
+    }
+  } catch {
+    link.href = source.fallback;
+  }
 };
 
 const setLanguage = (language) => {

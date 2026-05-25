@@ -301,6 +301,7 @@ button {
 }
 
 .preview-panel p,
+.ai-highlight p,
 .source-card p {
   margin: 0 0 10px;
   color: var(--cyan);
@@ -399,6 +400,74 @@ button {
 }
 
 .feature-list p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.ai-section {
+  border-top: 1px solid rgba(242, 238, 229, 0.08);
+}
+
+.ai-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.ai-highlight,
+.ai-capabilities article {
+  border-radius: 8px;
+  outline: 1px solid rgba(242, 238, 229, 0.1);
+  outline-offset: -1px;
+  background: var(--surface);
+}
+
+.ai-highlight {
+  display: grid;
+  align-content: end;
+  min-height: 292px;
+  padding: 28px;
+  background:
+    linear-gradient(145deg, rgba(128, 199, 216, 0.2), transparent 56%),
+    linear-gradient(315deg, rgba(215, 177, 94, 0.14), transparent 48%),
+    var(--surface-strong);
+}
+
+.ai-highlight strong {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--text);
+  font-size: 62px;
+  line-height: 0.9;
+}
+
+.ai-highlight span {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.ai-capabilities {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ai-capabilities article {
+  min-height: 292px;
+  padding: 24px;
+}
+
+.ai-capabilities h3 {
+  margin: 0 0 16px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.16;
+}
+
+.ai-capabilities p {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.65;
@@ -656,6 +725,7 @@ button {
   }
 
   .section-heading,
+  .ai-grid,
   .split,
   .screenshot-grid {
     grid-template-columns: 1fr;
@@ -669,6 +739,10 @@ button {
 
   .feature-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ai-capabilities {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -716,7 +790,8 @@ button {
   }
 
   .preview-grid,
-  .feature-list {
+  .feature-list,
+  .ai-capabilities {
     grid-template-columns: 1fr;
   }
 
@@ -729,7 +804,9 @@ button {
     padding: 62px 0;
   }
 
-  .feature-list article {
+  .feature-list article,
+  .ai-highlight,
+  .ai-capabilities article {
     min-height: auto;
   }
 
