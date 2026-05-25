@@ -9,6 +9,7 @@ import type {
 import {
   buildSettingsPages,
   resolveActivePage,
+  resolveSettingsTabSelection,
   resolveSettingsTransitionKey,
 } from "./SettingsHub.utils";
 import type { PageEntry } from "./settings-view-model";
@@ -32,6 +33,49 @@ describe("resolveActivePage", () => {
 
   test("returns null when the requested page id is not registered", () => {
     expect(resolveActivePage([page("system")], "missing")).toBeNull();
+  });
+});
+
+describe("resolveSettingsTabSelection", () => {
+  const utilityPageIds = ["registry", "about"];
+
+  test("selects the first primary page on the settings index route", () => {
+    expect(
+      resolveSettingsTabSelection(
+        [page("system"), page("history")],
+        undefined,
+        utilityPageIds,
+      ),
+    ).toEqual({
+      primaryPageId: "system",
+      utilityPageId: null,
+    });
+  });
+
+  test("keeps utility page selection exclusive from primary pages", () => {
+    expect(
+      resolveSettingsTabSelection(
+        [page("system"), page("history")],
+        "registry",
+        utilityPageIds,
+      ),
+    ).toEqual({
+      primaryPageId: null,
+      utilityPageId: "registry",
+    });
+  });
+
+  test("returns no selected tab for an unknown explicit page", () => {
+    expect(
+      resolveSettingsTabSelection(
+        [page("system"), page("history")],
+        "missing",
+        utilityPageIds,
+      ),
+    ).toEqual({
+      primaryPageId: null,
+      utilityPageId: null,
+    });
   });
 });
 

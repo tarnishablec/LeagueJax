@@ -7,12 +7,14 @@ import type { JSX } from "solid-js";
 import { createMemo } from "solid-js";
 import { useSolidTranslation } from "@/i18n/solid";
 import * as s from "./SettingsHub.css.ts";
-import { resolveActivePage } from "./SettingsHub.utils";
+import { resolveSettingsTabSelection } from "./SettingsHub.utils";
 import type { PageEntry } from "./settings-view-model";
 
 interface SettingsPageTabsProps {
   pages: PageEntry[];
 }
+
+const emptyTabValue = "__settings-empty-tab__";
 
 const utilityPages = [
   {
@@ -41,17 +43,20 @@ const utilityPages = [
   },
 ] as const;
 
+const utilityPageIds = utilityPages.map((page) => page.id);
+
 export function SettingsPageTabs(props: SettingsPageTabsProps): JSX.Element {
   const { t } = useSolidTranslation();
   const params = useParams();
   const pageId = () => params.pageId;
-  const activePrimaryPageId = createMemo(
-    () => resolveActivePage(props.pages, pageId())?.id ?? null,
+  const activeTabSelection = createMemo(() =>
+    resolveSettingsTabSelection(props.pages, pageId(), utilityPageIds),
   );
-  const activeUtilityPageId = createMemo(() =>
-    pageId() && utilityPages.some((page) => page.id === pageId())
-      ? pageId()
-      : null,
+  const activePrimaryPageId = createMemo(
+    () => activeTabSelection().primaryPageId ?? emptyTabValue,
+  );
+  const activeUtilityPageId = createMemo(
+    () => activeTabSelection().utilityPageId ?? emptyTabValue,
   );
   const primaryTabs = keyArray(
     () => props.pages,

@@ -176,5 +176,29 @@ export const resolveActivePage = (
   return pages.find((entry) => entry.id === pageId) ?? null;
 };
 
+export interface SettingsTabSelection {
+  primaryPageId: string | null;
+  utilityPageId: string | null;
+}
+
+// Utility pages live in a separate visual group, so selection must be exclusive.
+export const resolveSettingsTabSelection = (
+  pages: PageEntry[],
+  pageId: string | undefined,
+  utilityPageIds: readonly string[],
+): SettingsTabSelection => {
+  if (pageId && utilityPageIds.includes(pageId)) {
+    return {
+      primaryPageId: null,
+      utilityPageId: pageId,
+    };
+  }
+
+  return {
+    primaryPageId: resolveActivePage(pages, pageId)?.id ?? null,
+    utilityPageId: null,
+  };
+};
+
 export const resolveSettingsTransitionKey = (pathname: string): string =>
   pathname.replace(/\/+$/, "") || "/";
