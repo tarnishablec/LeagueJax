@@ -19,6 +19,7 @@ use tracing_subscriber::{EnvFilter, Registry};
 
 use crate::commands::auto_accept::*;
 use crate::commands::claim_tool::*;
+use crate::commands::game_reference::*;
 use crate::commands::history::*;
 use crate::commands::lcu::*;
 use crate::commands::map::*;
@@ -268,6 +269,8 @@ pub fn run() {
             get_match_summaries,
             get_match_summary,
             get_match_details,
+            list_lcu_static_json_tables,
+            get_lcu_static_json,
             replay_get_snapshot,
             replay_scan_folders,
             replay_add_folder,

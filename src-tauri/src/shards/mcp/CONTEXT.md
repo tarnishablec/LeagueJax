@@ -48,6 +48,18 @@ _Avoid_: JSONPath, search query, pagination
 An optional request to release one transient JSON payload before it expires.
 _Avoid_: delete data, destructive tool, clear history
 
+**LCU Static JSON Table**:
+A known read-only League Client static game data table that can be discovered by an MCP client before reading the table's JSON.
+_Avoid_: resolver, analysis result, item judgment
+
+**LCU Static JSON Path**:
+An explicit read-only path to one League Client static JSON asset, used only when a needed table is not in the known **LCU Static JSON Table** catalog.
+_Avoid_: arbitrary LCU endpoint, local file path, process inspection
+
+**Game Reference Data**:
+Raw static League game data exposed for agent-side interpretation.
+_Avoid_: recommendation, validation, coaching verdict
+
 ## Relationships
 
 - An **MCP Session** has exactly one **MCP Session ID** after initialization.
@@ -58,6 +70,9 @@ _Avoid_: delete data, destructive tool, clear history
 - A **Payload Owner** may own zero or more **JSON Payloads**.
 - A **JSON Pointer Query** reads values from exactly one **JSON Payload** owned by the caller's **MCP Session**.
 - A **Payload Drop** targets exactly one **Payload Handle** owned by the caller's **MCP Session**.
+- An **LCU Static JSON Table** is **Game Reference Data**.
+- An **LCU Static JSON Path** may produce one **Inline Result** or one **Payload Result**.
+- **Game Reference Data** is raw reference data and does not contain LeagueJax analysis judgments.
 
 ## Example dialogue
 
@@ -73,3 +88,5 @@ _Avoid_: delete data, destructive tool, clear history
 - "payload" was used as if it were a server-wide cache entry. Resolved: a **JSON Payload** is owned by one **MCP Session**.
 - "hint" was considered for inline-vs-payload transport. Resolved: this is a **JSON Result Envelope** contract, not a tool annotation or metadata hint.
 - "drop" may sound destructive. Resolved: **Payload Drop** only releases a transient cached **JSON Payload** and does not delete user data.
+- "static resource endpoint" was used broadly. Resolved: MCP reads **LCU Static JSON Paths**, not arbitrary LCU runtime endpoints.
+- "resolve item ids" was considered for MCP. Resolved: LeagueJax exposes **Game Reference Data** and leaves interpretation to the agent.

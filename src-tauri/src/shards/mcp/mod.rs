@@ -15,10 +15,11 @@ mod payloads;
 mod server;
 mod sessions;
 mod settings;
+mod tool_catalog;
 mod tools;
 
 pub use sessions::clients::McpServerStateDto;
-pub use tools::catalog::McpToolDto;
+pub use tool_catalog::McpToolDto;
 
 use sessions::{calls, clients};
 
@@ -109,7 +110,7 @@ impl Shard for McpShard {
         })?;
 
         let start_on_launch_value = start_on_launch_handle.get_value()?;
-        if settings::start_on_launch_from_value(&start_on_launch_value) {
+        if start_on_launch_value.as_bool().unwrap_or(false) {
             let port_value = port_handle.get_value()?;
             match settings::port_from_value(&port_value) {
                 Ok(port) => {

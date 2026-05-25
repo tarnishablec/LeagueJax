@@ -50,8 +50,7 @@ impl LeagueJaxMcpServer {
         &self,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("list_json_payloads", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         list_json_payloads_result(self.json_payloads(), &session_id).await
     }
 
@@ -69,8 +68,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<DescribeJsonPayloadParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("describe_json_payload", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         describe_json_payload_result(self.json_payloads(), &session_id, params).await
     }
 
@@ -88,8 +86,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<QueryJsonPayloadPointersParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("query_json_payload_pointers", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         query_json_payload_pointers_result(self.json_payloads(), &session_id, params).await
     }
 
@@ -107,8 +104,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<DropJsonPayloadParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("drop_json_payload", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         drop_json_payload_result(self.json_payloads(), &session_id, params).await
     }
 }

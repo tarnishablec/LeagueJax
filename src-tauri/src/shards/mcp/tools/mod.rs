@@ -10,7 +10,6 @@ use crate::error::AppError;
 use crate::shards::mcp::payloads::{store::McpJsonPayloadStore, transport};
 use crate::shards::mcp::server::LeagueJaxMcpServer;
 
-pub(in crate::shards::mcp) mod catalog;
 mod game_reference;
 mod matches;
 mod server_meta;

@@ -76,7 +76,3 @@ pub(super) fn port_from_value(value: &Value) -> Result<u16, AppError> {
     port.filter(|port| *port >= MIN_PORT)
         .ok_or_else(|| AppError::other("MCP port must be an integer between 1 and 65535"))
 }
-
-pub(super) fn start_on_launch_from_value(value: &Value) -> bool {
-    value.as_bool().unwrap_or(false)
-}

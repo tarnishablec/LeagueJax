@@ -52,8 +52,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<GetMatchSummariesParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("get_match_summaries", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         get_match_summaries_result(self.app(), self.json_payloads(), &session_id, params).await
     }
 
@@ -71,8 +70,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<GetMatchSummaryParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("get_match_summary", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         get_match_summary_result(self.app(), self.json_payloads(), &session_id, params).await
     }
 
@@ -90,8 +88,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<GetMatchDetailsParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("get_match_details", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         get_match_details_result(self.app(), self.json_payloads(), &session_id, params).await
     }
 }

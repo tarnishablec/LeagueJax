@@ -49,11 +49,12 @@ pub(in crate::shards::mcp) fn record_tool_call_from_context(
     endpoint: &str,
     clients: &McpClients,
     call_records: &McpCallRecords,
-    tool_name: &'static str,
+    tool_name: &str,
     context: &RequestContext<RoleServer>,
 ) {
     let session_id = clients::session_id_from_extensions(&context.extensions);
     let (client_name, client_version) = clients::client_identity(context.peer.peer_info());
+    let tool_name = tool_name.to_string();
     let app = app.clone();
     let endpoint = endpoint.to_string();
     let clients = clients.clone();
@@ -74,7 +75,7 @@ pub(in crate::shards::mcp) fn record_tool_call_from_context(
             &call_records,
             McpCallRecordDto {
                 id: Uuid::now_v7().to_string(),
-                tool_name: tool_name.to_string(),
+                tool_name,
                 client_name,
                 client_version,
                 session_id,

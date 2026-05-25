@@ -7,7 +7,7 @@ pub(super) use runtime::{
     clear_call_records, server_state, start_server, stop_server, McpServerRuntime,
 };
 
-use crate::shards::mcp::tools::catalog::McpToolDto;
+use crate::shards::mcp::tool_catalog::McpToolDto;
 
 pub(super) fn tool_dtos() -> Vec<McpToolDto> {
     LeagueJaxMcpServer::tool_dtos()

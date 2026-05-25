@@ -5,7 +5,8 @@ use rmcp::service::{RequestContext, RoleServer};
 use crate::shards::mcp::payloads::store::McpJsonPayloadStore;
 use crate::shards::mcp::sessions::calls::{self, McpCallRecords};
 use crate::shards::mcp::sessions::clients::{self, McpClients};
-use crate::shards::mcp::tools::{self, catalog::McpToolDto};
+use crate::shards::mcp::tool_catalog::{self, McpToolDto};
+use crate::shards::mcp::tools;
 
 #[derive(Clone)]
 pub(in crate::shards::mcp) struct LeagueJaxMcpServer {
@@ -62,7 +63,7 @@ impl LeagueJaxMcpServer {
     }
 
     pub(in crate::shards::mcp) fn tool_dtos() -> Vec<McpToolDto> {
-        tools::catalog::tools_to_dtos(Self::rmcp_tools())
+        tool_catalog::tools_to_dtos(Self::rmcp_tools())
     }
 
     pub(in crate::shards::mcp) fn require_session_id(
@@ -74,9 +75,17 @@ impl LeagueJaxMcpServer {
         })
     }
 
+    pub(in crate::shards::mcp) fn session_id_from_checked_context(
+        &self,
+        context: &RequestContext<RoleServer>,
+    ) -> Result<String, String> {
+        clients::session_id_from_extensions(&context.extensions)
+            .ok_or_else(|| "Mcp-Session-Id is missing after MCP call_tool validation".to_string())
+    }
+
     pub(in crate::shards::mcp) fn record_tool_call(
         &self,
-        tool_name: &'static str,
+        tool_name: &str,
         context: &RequestContext<RoleServer>,
     ) {
         calls::record_tool_call_from_context(

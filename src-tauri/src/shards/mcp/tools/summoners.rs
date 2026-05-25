@@ -59,8 +59,7 @@ impl LeagueJaxMcpServer {
         &self,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("get_current_summoner", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         get_current_summoner_result(self.app(), self.json_payloads(), &session_id).await
     }
 
@@ -77,8 +76,7 @@ impl LeagueJaxMcpServer {
         &self,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("get_current_sgp_server_id", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         get_current_sgp_server_id_result(self.app(), self.json_payloads(), &session_id).await
     }
 
@@ -96,8 +94,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<ResolveSgpServerIdsParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("resolve_sgp_server_ids", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         resolve_sgp_server_ids_result(self.json_payloads(), &session_id, params).await
     }
 
@@ -115,8 +112,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<SearchSummonerParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("search_summoner", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         search_summoner_result(self.app(), self.json_payloads(), &session_id, params).await
     }
 
@@ -134,8 +130,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<SearchSummonersParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("search_summoners", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         search_summoners_result(self.app(), self.json_payloads(), &session_id, params).await
     }
 
@@ -153,8 +148,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<GetSummonerByPuuidParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("get_summoner_by_puuid", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         get_summoner_by_puuid_result(self.app(), self.json_payloads(), &session_id, params).await
     }
 
@@ -172,8 +166,7 @@ impl LeagueJaxMcpServer {
         Parameters(params): Parameters<GetRankedSummaryParams>,
         context: RequestContext<RoleServer>,
     ) -> Result<rmcp::model::CallToolResult, String> {
-        let session_id = self.require_session_id(&context)?;
-        self.record_tool_call("get_ranked_summary", &context);
+        let session_id = self.session_id_from_checked_context(&context)?;
         get_ranked_summary_result(self.app(), self.json_payloads(), &session_id, params).await
     }
 }

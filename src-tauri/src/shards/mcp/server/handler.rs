@@ -1,8 +1,12 @@
 use std::future::Future;
 
-use rmcp::model::{Implementation, ProtocolVersion, ServerCapabilities, ServerInfo};
-use rmcp::service::{MaybeSendFuture, NotificationContext, RoleServer};
-use rmcp::{tool_handler, ServerHandler};
+use rmcp::handler::server::tool::ToolCallContext;
+use rmcp::model::{
+    CallToolRequestParams, CallToolResult, Implementation, ProtocolVersion, ServerCapabilities,
+    ServerInfo,
+};
+use rmcp::service::{MaybeSendFuture, NotificationContext, RequestContext, RoleServer};
+use rmcp::{tool_handler, ErrorData, ServerHandler};
 
 use crate::shards::mcp::sessions::clients;
 
@@ -10,6 +14,20 @@ use super::LeagueJaxMcpServer;
 
 #[tool_handler]
 impl ServerHandler for LeagueJaxMcpServer {
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.require_session_id(&context)
+            .map_err(|message| ErrorData::invalid_params(message, None))?;
+        let tool_name = request.name.to_string();
+        self.record_tool_call(&tool_name, &context);
+
+        let tool_call_context = ToolCallContext::new(self, request, context);
+        Self::tool_router().call(tool_call_context).await
+    }
+
     fn on_initialized(
         &self,
         context: NotificationContext<RoleServer>,
