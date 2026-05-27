@@ -134,11 +134,13 @@ export const buildSettingsPages = (
   }
 
   for (const definition of definitions) {
-    if (!definition.visible) {
+    const parsed = parseSettingId(definition.id);
+    const sectionKey = `${parsed.pageId}.${parsed.sectionId}` as SettingsSectionKey;
+    const sectionDefinition = sectionDefinitions.get(sectionKey);
+    if (!definition.visible && !sectionDefinition?.hasRenderer) {
       continue;
     }
 
-    const parsed = parseSettingId(definition.id);
     const page = getOrCreatePage(parsed.pageId, definition.declarationOrder);
     const section = getOrCreateSection(
       page,

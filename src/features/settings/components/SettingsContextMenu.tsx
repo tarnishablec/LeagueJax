@@ -87,6 +87,9 @@ export function SettingsContextMenu(
     const field = activeField();
     return field !== undefined && isResettableSetting(field);
   });
+  const shouldShowGroupReset = createMemo(
+    () => canResetGroup() && !canResetSetting(),
+  );
   const canResetSection = createMemo(() => sectionResetIds().length > 0);
   const canResetPage = createMemo(() => pageResetIds().length > 0);
 
@@ -152,7 +155,7 @@ export function SettingsContextMenu(
       <Portal>
         <Menu.Positioner class={s.positioner}>
           <Menu.Content class={s.content} aria-label="Settings context menu">
-            <Show when={canResetGroup()}>
+            <Show when={shouldShowGroupReset()}>
               <Menu.Item
                 class={s.item}
                 value="reset-group"
@@ -161,7 +164,7 @@ export function SettingsContextMenu(
                 {t("settings.contextMenu.resetSetting")}
               </Menu.Item>
             </Show>
-            <Show when={!canResetGroup() && canResetSetting()}>
+            <Show when={canResetSetting()}>
               <Menu.Item
                 class={s.item}
                 value="reset-setting"

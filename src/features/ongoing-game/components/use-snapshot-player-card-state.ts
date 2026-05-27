@@ -12,6 +12,7 @@ import type { PlayerSlot } from "../routes/ongoing-game.types.ts";
 import { useSolidOngoingGameStore } from "../store";
 import type { PlayerSquadAssignment } from "./player-card-squads.ts";
 import {
+  collectBotPlayerCardTag,
   collectMatchPlayerCardTags,
   collectSpecialPlayerCardTags,
   collectSquadPlayerCardTags,
@@ -225,6 +226,14 @@ export function useSolidSnapshotPlayerCardState(params: {
         t,
       })[0],
   );
+  const botTag = createMemo(() =>
+    collectBotPlayerCardTag({
+      colors: params.playerCardTagColors(),
+      enabledIds: params.enabledPlayerCardTagIds(),
+      isBot: isBot(),
+      t,
+    }),
+  );
   const playerTags = createMemo(() =>
     sortPlayerCardTags([
       ...collectMatchPlayerCardTags(
@@ -251,6 +260,7 @@ export function useSolidSnapshotPlayerCardState(params: {
   return {
     championId: () =>
       params.slot().championId > 0 ? params.slot().championId : null,
+    botTag,
     hasHistoryLoadFailed,
     historyLoadFailedText: () =>
       t("ongoingGame.historyLoadFailed", {

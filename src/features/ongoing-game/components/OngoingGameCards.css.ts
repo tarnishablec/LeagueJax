@@ -400,10 +400,19 @@ export const rankText = style({
 });
 
 export const botLabel = style({
-  fontSize: "0.78rem",
+  display: "inline-grid",
+  placeItems: "center",
+  justifySelf: "start",
+  minHeight: 18,
+  maxWidth: "100%",
+  padding: "0 5px",
+  borderRadius: 4,
+  border: `1px solid color-mix(in oklch, ${playerTagColorVar} 36%, ${theme.color.border})`,
+  color: `color-mix(in oklch, ${playerTagColorVar} 72%, ${theme.color.foreground})`,
+  background: `color-mix(in oklch, ${playerTagColorVar} 20%, ${theme.color.surface})`,
+  fontSize: "0.68rem",
   fontWeight: 700,
-  color: theme.color.foreground,
-  lineHeight: 1.1,
+  lineHeight: 1,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",

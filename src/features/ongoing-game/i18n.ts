@@ -58,6 +58,7 @@ export const ongoingGameI18n: LocaleResource = {
             },
           },
           items: {
+            bot: "Bot mark",
             winStreak: "Win streak",
             loseStreak: "Lose streak",
             averageSoloKills: "Average solo kills",
@@ -111,6 +112,7 @@ export const ongoingGameI18n: LocaleResource = {
       cs: "CS",
       level: "Lv",
       playerTags: {
+        bot: "BOT",
         winStreak: "{{count}} wins",
         loseStreak: "{{count}} losses",
         averageSoloKills: "{{value}} solo kills",
@@ -180,6 +182,7 @@ export const ongoingGameI18n: LocaleResource = {
             },
           },
           items: {
+            bot: "人机标记",
             winStreak: "连胜场次",
             loseStreak: "连败场次",
             averageSoloKills: "场均单杀次数",
@@ -233,6 +236,7 @@ export const ongoingGameI18n: LocaleResource = {
       cs: "补刀",
       level: "等级",
       playerTags: {
+        bot: "人机",
         winStreak: "{{count}} 连胜",
         loseStreak: "{{count}} 连败",
         averageSoloKills: "{{value}} 单杀",
@@ -302,6 +306,7 @@ export const ongoingGameI18n: LocaleResource = {
             },
           },
           items: {
+            bot: "BOTマーク",
             winStreak: "連勝数",
             loseStreak: "連敗数",
             averageSoloKills: "平均ソロキル",
@@ -356,6 +361,7 @@ export const ongoingGameI18n: LocaleResource = {
       cs: "CS",
       level: "Lv",
       playerTags: {
+        bot: "BOT",
         winStreak: "{{count}}連勝",
         loseStreak: "{{count}}連敗",
         averageSoloKills: "{{value}}ソロキル",

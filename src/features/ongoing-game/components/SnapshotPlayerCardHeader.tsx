@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
 
 import { keyArray } from "@solid-primitives/keyed";
+import { assignInlineVars } from "@vanilla-extract/dynamic";
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import type { SummonerInfo } from "@/bindings/summoner.ts";
@@ -11,6 +12,10 @@ import * as s from "./OngoingGameCards.css.ts";
 import type { PlayerCardRankDisplayItem } from "./use-snapshot-player-card-state";
 
 type SnapshotPlayerCardHeaderProps = {
+  botTag?: {
+    color: string;
+    text: string;
+  };
   championId: number | null | undefined;
   identity?: Pick<SummonerInfo, "gameName" | "tagLine">;
   isBot: boolean;
@@ -72,7 +77,18 @@ export function SnapshotPlayerCardHeader(
           fallback={
             <>
               <div class={s.playerNameRow}>
-                <span class={s.botLabel}>BOT</span>
+                <Show when={props.botTag}>
+                  {(botTag) => (
+                    <span
+                      class={s.botLabel}
+                      style={assignInlineVars({
+                        [s.playerTagColorVar]: botTag().color,
+                      })}
+                    >
+                      {botTag().text}
+                    </span>
+                  )}
+                </Show>
                 <Show when={props.squadTag}>
                   {(squadTag) => (
                     <span class={s.playerSquadBadge}>{squadTag().text}</span>

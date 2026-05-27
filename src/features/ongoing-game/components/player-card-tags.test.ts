@@ -7,8 +7,10 @@ import type { MatchPerformanceStrategy } from "@/features/history/utils/match-pe
 import type { SolidTranslate } from "@/i18n/solid";
 import type { PlayerSlot } from "../routes/ongoing-game.types";
 import {
+  collectBotPlayerCardTag,
   collectMatchPlayerCardTags,
   collectSpecialPlayerCardTags,
+  getPlayerCardTagColorSettingItems,
   getPlayerCardTagSettingItems,
   type PlayerCardMatch,
 } from "./player-card-tags";
@@ -425,6 +427,19 @@ describe("collectMatchPlayerCardTags", () => {
 });
 
 describe("getPlayerCardTagSettingItems", () => {
+  test("exposes the bot mark in player card tag settings with a color setting", () => {
+    const bot = getPlayerCardTagSettingItems(t).find(
+      (item) => item.id === "bot",
+    );
+    const botColor = getPlayerCardTagColorSettingItems().find(
+      (item) => item.tagId === "bot",
+    );
+
+    expect(bot?.enabledSettingId).toBe("ongoing.playerCardTags.bot.enabled");
+    expect(bot?.colorSettingId).toBe("ongoing.playerCardTags.bot.color");
+    expect(botColor?.id).toBe("ongoing.playerCardTags.bot.color");
+  });
+
   test("exposes an excellent mark hint key for the custom settings row", () => {
     const excellent = getPlayerCardTagSettingItems(t).find(
       (item) => item.id === "excellent",
@@ -433,5 +448,35 @@ describe("getPlayerCardTagSettingItems", () => {
     expect(excellent?.hintKey).toBe(
       "settings.ongoing.playerCardTags.items.excellent.hint",
     );
+  });
+});
+
+describe("collectBotPlayerCardTag", () => {
+  test("returns the configured bot header tag when enabled", () => {
+    const tag = collectBotPlayerCardTag({
+      colors: { bot: "#123456" },
+      enabledIds: ["bot"],
+      isBot: true,
+      t,
+    });
+
+    expect(tag).toEqual({
+      color: "#123456",
+      id: "bot",
+      order: 1,
+      text: "ongoingGame.playerTags.bot",
+      tone: "neutral",
+    });
+  });
+
+  test("does not return the bot header tag when disabled", () => {
+    expect(
+      collectBotPlayerCardTag({
+        colors: {},
+        enabledIds: [],
+        isBot: true,
+        t,
+      }),
+    ).toBeUndefined();
   });
 });

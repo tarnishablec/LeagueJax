@@ -145,7 +145,7 @@ describe("buildSettingsPages", () => {
     expect(pages[0].sections[0].fields).toHaveLength(1);
   });
 
-  test("keeps custom renderer sections even when their fields are invisible", () => {
+  test("keeps invisible fields for custom renderer sections", () => {
     const pages = buildSettingsPages(
       [setting("ongoing.playerCardTags.enabled", false)],
       [],
@@ -156,6 +156,9 @@ describe("buildSettingsPages", () => {
     expect(pages[0].id).toBe("ongoing");
     expect(pages[0].sections).toHaveLength(1);
     expect(pages[0].sections[0].id).toBe("playerCardTags");
-    expect(pages[0].sections[0].fields).toEqual([]);
+    expect(pages[0].sections[0].fields).toHaveLength(1);
+    expect(pages[0].sections[0].fields[0].id).toBe(
+      "ongoing.playerCardTags.enabled",
+    );
   });
 });

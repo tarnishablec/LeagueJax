@@ -20,6 +20,7 @@ type TranslateFn = (
 const FLASH_SPELL_ID = 4;
 const MIN_STREAK_COUNT = 3;
 const DEFAULT_TAG_COLOR = "#F58200";
+const PLAYER_CARD_BOT_TAG_ID = "bot";
 const PLAYER_CARD_SQUAD_TAG_ID = "squad";
 const EXCELLENT_KDA_THRESHOLD = 6;
 const EXCELLENT_BALANCED_MIN_GAMES = 3;
@@ -86,6 +87,8 @@ type PlayerCardSpecialTagDefinition = {
   defaultColor: string;
   tone: PlayerCardTagTone;
 };
+
+type PlayerCardHeaderTagDefinition = PlayerCardSpecialTagDefinition;
 
 export type PlayerCardTagSettingItem = {
   colorSettings: PlayerCardTagColorSettingItem[];
@@ -563,7 +566,20 @@ export const PLAYER_CARD_SPECIAL_TAGS = [
   },
 ] as const satisfies PlayerCardSpecialTagDefinition[];
 
+const PLAYER_CARD_HEADER_TAGS = [
+  {
+    id: PLAYER_CARD_BOT_TAG_ID,
+    settingLabelKey: "settings.ongoing.playerCardTags.items.bot",
+    cardLabelKey: "ongoingGame.playerTags.bot",
+    order: 1,
+    defaultEnabled: true,
+    defaultColor: "#9CA3AF",
+    tone: "neutral",
+  },
+] as const satisfies PlayerCardHeaderTagDefinition[];
+
 const SINGLE_COLOR_TAG_DEFINITIONS = [
+  ...PLAYER_CARD_HEADER_TAGS,
   ...PLAYER_CARD_MATCH_TAGS,
   ...PLAYER_CARD_SPECIAL_TAGS,
 ];
@@ -701,6 +717,29 @@ export function collectSquadPlayerCardTags(params: {
       tone: "info",
     },
   ];
+}
+
+export function collectBotPlayerCardTag(params: {
+  colors: Readonly<Record<string, string>>;
+  enabledIds: readonly string[];
+  isBot: boolean;
+  t: TranslateFn;
+}): ResolvedPlayerCardTag | undefined {
+  if (
+    !params.isBot ||
+    !params.enabledIds.includes(PLAYER_CARD_BOT_TAG_ID)
+  ) {
+    return undefined;
+  }
+
+  const tag = PLAYER_CARD_HEADER_TAGS[0];
+  return {
+    color: getPlayerCardTagColor(tag.id, params.colors),
+    id: tag.id,
+    order: tag.order,
+    text: params.t(tag.cardLabelKey),
+    tone: tag.tone,
+  };
 }
 
 export function collectSpecialPlayerCardTags(params: {

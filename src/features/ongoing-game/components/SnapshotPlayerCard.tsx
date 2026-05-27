@@ -58,6 +58,7 @@ export function SnapshotPlayerCard(props: {
   return (
     <article class={s.playerCard} style={playerCardStyle()}>
       <SnapshotPlayerCardHeader
+        botTag={cardState.botTag()}
         championId={cardState.championId()}
         identity={cardState.identity()}
         isBot={cardState.isBot()}
