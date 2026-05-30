@@ -316,17 +316,17 @@ export const playerTag = style({
 
 export const rankGrid = style({
   display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(2, 1fr)",
   alignItems: "center",
-  columnGap: 2,
+  columnGap: 6,
   minWidth: 0,
 });
 
 export const rankItem = style({
   display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr)",
+  gridTemplateColumns: "auto 1fr",
   alignItems: "center",
-  gap: 3,
+  gap: 4,
   lineHeight: 1,
   minWidth: 0,
 });
