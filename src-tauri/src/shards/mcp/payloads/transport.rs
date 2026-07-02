@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rmcp::model::{CallToolResult, Content, JsonObject};
+use rmcp::model::{CallToolResult, ContentBlock, JsonObject};
 use rmcp::schemars;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -160,7 +160,7 @@ pub(in crate::shards::mcp) async fn emit_json_result<T: Serialize>(
 }
 
 fn structured_json_result(value: serde_json::Value, summary: String) -> CallToolResult {
-    let mut result = CallToolResult::success(vec![Content::text(summary)]);
+    let mut result = CallToolResult::success(vec![ContentBlock::text(summary)]);
     result.structured_content = Some(value);
     result
 }

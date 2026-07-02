@@ -53,7 +53,8 @@ pub(in crate::shards::mcp) fn record_tool_call_from_context(
     context: &RequestContext<RoleServer>,
 ) {
     let session_id = clients::session_id_from_extensions(&context.extensions);
-    let (client_name, client_version) = clients::client_identity(context.peer.peer_info());
+    let (client_name, client_version) =
+        clients::client_identity(context.peer.peer_info().as_deref());
     let tool_name = tool_name.to_string();
     let app = app.clone();
     let endpoint = endpoint.to_string();

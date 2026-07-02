@@ -32,7 +32,7 @@ impl ServerHandler for LeagueJaxMcpServer {
         &self,
         context: NotificationContext<RoleServer>,
     ) -> impl Future<Output = ()> + MaybeSendFuture + '_ {
-        let client_info = context.peer.peer_info().cloned();
+        let client_info = context.peer.peer_info();
         async move {
             let identity = clients::register_client_connected(
                 self.app(),
@@ -40,7 +40,7 @@ impl ServerHandler for LeagueJaxMcpServer {
                 self.clients(),
                 self.call_records(),
                 &context.extensions,
-                client_info.as_ref(),
+                client_info.as_deref(),
             )
             .await;
             tracing::info!(
