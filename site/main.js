@@ -379,7 +379,9 @@ const openScreenshotPreview = (button) => {
 
   const titleKey = button.getAttribute("data-preview-title-key");
   const dictionary = translations[currentLanguage] || translations.en;
-  lightboxTitle.textContent = titleKey ? dictionary[titleKey] || "" : "";
+  lightboxTitle.textContent = titleKey
+    ? dictionary[titleKey] || "Screenshot preview"
+    : "Screenshot preview";
   lightboxImage.src = image;
   lightboxImage.alt = button.getAttribute("data-preview-alt") || "";
   screenshotLightbox.hidden = false;

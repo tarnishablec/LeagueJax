@@ -10,6 +10,7 @@ export type Division = "I" | "II" | "III" | "IV" | "NA";
 
 export type QueueType =
   | "RANKED_SOLO_5x5"
+  | "RANKED_PREMADE_5x5"
   | "RANKED_FLEX_SR"
   | "RANKED_TFT"
   | "RANKED_TFT_DOUBLE_UP"

@@ -147,7 +147,11 @@ button {
 }
 
 .language-switcher {
+  min-inline-size: 0;
+  margin: 0;
+  border: 0;
   gap: 6px;
+  padding: 0;
 }
 
 .language-switcher button {

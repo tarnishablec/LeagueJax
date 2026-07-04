@@ -40,6 +40,8 @@ pub enum Division {
 pub enum QueueType {
     #[serde(rename = "RANKED_SOLO_5x5")]
     RankedSolo5x5,
+    #[serde(rename = "RANKED_PREMADE_5x5")]
+    RankedPremade5x5,
     #[serde(rename = "RANKED_FLEX_SR")]
     RankedFlexSr,
     #[serde(rename = "RANKED_TFT")]
@@ -238,7 +240,8 @@ pub fn mmr_reference_scale() -> MmrReferenceScale {
 
 #[cfg(test)]
 mod tests {
-    use super::{mmr_reference_scale, Tier};
+    use super::{mmr_reference_scale, QueueType, Tier};
+    use std::collections::HashMap;
 
     #[test]
     fn mmr_reference_scale_keeps_rank_anchors_contiguous_until_diamond() {
@@ -273,5 +276,22 @@ mod tests {
             assert_eq!(anchor.min_mmr_inclusive, 3500);
             assert_eq!(anchor.max_mmr_inclusive, None);
         }
+    }
+
+    #[test]
+    fn queue_type_accepts_ranked_premade_5x5_map_keys() {
+        let queue_map = serde_json::json!({
+            "RANKED_PREMADE_5x5": {
+                "wins": 0
+            }
+        });
+
+        let parsed: Result<HashMap<QueueType, serde_json::Value>, _> =
+            serde_json::from_value(queue_map);
+
+        assert!(matches!(
+            parsed,
+            Ok(map) if map.contains_key(&QueueType::RankedPremade5x5)
+        ));
     }
 }

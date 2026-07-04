@@ -725,10 +725,7 @@ export function collectBotPlayerCardTag(params: {
   isBot: boolean;
   t: TranslateFn;
 }): ResolvedPlayerCardTag | undefined {
-  if (
-    !params.isBot ||
-    !params.enabledIds.includes(PLAYER_CARD_BOT_TAG_ID)
-  ) {
+  if (!params.isBot || !params.enabledIds.includes(PLAYER_CARD_BOT_TAG_ID)) {
     return undefined;
   }
 
