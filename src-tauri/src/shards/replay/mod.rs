@@ -1130,8 +1130,13 @@ fn client_family(args: &LeagueClientCmdArgs) -> ReplayClientFamily {
 
 fn client_server_id(args: &LeagueClientCmdArgs) -> Option<String> {
     match args {
-        LeagueClientCmdArgs::Tencent(args) => normalize_platform_id(&args.rso_platform_id),
-        LeagueClientCmdArgs::Riot(args) => riot_region_to_platform_id(&args.region),
+        LeagueClientCmdArgs::Tencent(args) => args
+            .rso_platform_id
+            .as_deref()
+            .and_then(normalize_platform_id),
+        LeagueClientCmdArgs::Riot(args) => {
+            args.region.as_deref().and_then(riot_region_to_platform_id)
+        }
     }
 }
 

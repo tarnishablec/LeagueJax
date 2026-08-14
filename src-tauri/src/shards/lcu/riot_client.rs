@@ -97,7 +97,7 @@ pub struct RiotClientHttpClient {
 
 impl RiotClientHttpClient {
     pub fn new(auth: &LcuAuth, network_config: Arc<NetworkConfig>) -> Result<Self, AppError> {
-        let (port, token) = riot_client_auth(auth);
+        let (port, token) = riot_client_auth(auth)?;
         let tls_config = build_local_client_tls_config(auth.pid, "riot-client");
         let req_client = Client::builder()
             .use_preconfigured_tls(tls_config)
@@ -206,17 +206,17 @@ impl RiotClientHttpClient {
     }
 }
 
-fn riot_client_auth(auth: &LcuAuth) -> (u16, &str) {
-    match &auth.cmd_args {
-        LeagueClientCmdArgs::Tencent(args) => (
-            args.riotclient_app_port,
-            args.riotclient_auth_token.as_str(),
-        ),
-        LeagueClientCmdArgs::Riot(args) => (
-            args.riotclient_app_port,
-            args.riotclient_auth_token.as_str(),
-        ),
-    }
+fn riot_client_auth(auth: &LcuAuth) -> Result<(u16, &str), AppError> {
+    let auth = match &auth.cmd_args {
+        LeagueClientCmdArgs::Tencent(args) => args
+            .riotclient_app_port
+            .zip(args.riotclient_auth_token.as_deref()),
+        LeagueClientCmdArgs::Riot(args) => args
+            .riotclient_app_port
+            .zip(args.riotclient_auth_token.as_deref()),
+    };
+
+    auth.ok_or_else(|| AppError::other("Riot Client authentication arguments are unavailable"))
 }
 
 fn parse_response_body(body_bytes: &[u8]) -> Value {
