@@ -13,7 +13,7 @@ pub struct DetectedUxClient {
     pub ux_exe_path: Option<PathBuf>,
 }
 
-pub const UX_PROCESS_NAME: &str = "LeagueClientUx.exe";
+// pub const UX_PROCESS_NAME: &str = "LeagueClientUx.exe";
 const UX_PROCESS_STEM: &str = "LeagueClientUx";
 
 #[async_trait]

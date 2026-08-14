@@ -2,7 +2,7 @@ use std::future::Future;
 
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::model::{
-    CallToolRequestParams, CallToolResult, Implementation, ProtocolVersion, ServerCapabilities,
+    CallToolRequestParams, CallToolResponse, Implementation, ProtocolVersion, ServerCapabilities,
     ServerInfo,
 };
 use rmcp::service::{MaybeSendFuture, NotificationContext, RequestContext, RoleServer};
@@ -18,7 +18,7 @@ impl ServerHandler for LeagueJaxMcpServer {
         &self,
         request: CallToolRequestParams,
         context: RequestContext<RoleServer>,
-    ) -> Result<CallToolResult, ErrorData> {
+    ) -> Result<CallToolResponse, ErrorData> {
         self.require_session_id(&context)
             .map_err(|message| ErrorData::invalid_params(message, None))?;
         let tool_name = request.name.to_string();
