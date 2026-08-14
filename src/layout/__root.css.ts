@@ -126,8 +126,18 @@ export const navItem = recipe({
         background: theme.color.blurry,
         color: theme.color.accentForeground,
         fontWeight: 500,
-        borderLeft: "2px solid",
-        borderLeftColor: theme.color.primary,
+        selectors: {
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            insetInlineStart: 2,
+            top: "50%",
+            width: 2,
+            height: 22,
+            background: theme.color.primary,
+            transform: "translateY(-50%)",
+          },
+        },
       },
     },
     {

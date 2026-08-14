@@ -31,7 +31,10 @@ const stringifyValue = (value: unknown): string => {
 const toRows = (args: LeagueClientCmdArgs): CmdArgRow[] => {
   const record = args as Record<string, unknown>;
   return Object.entries(record)
-    .filter(([key]) => key !== "family")
+    .filter(
+      ([key, value]) =>
+        key !== "family" && value !== null && value !== undefined,
+    )
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, raw]) => ({
       key,
