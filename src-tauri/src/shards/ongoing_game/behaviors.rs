@@ -207,7 +207,11 @@ fn broadcast_updated(envo: &Envo, phase: OngoingGamePhase) {
         ready_check: effective_ready_check_clone(envo),
         champ_select_session,
         team_members: ctx.team_members.iter().map(ongoing_team_member).collect(),
-        enemy_champion_picks: enemy_champion_picks(phase, ctx.champ_select_session.as_ref()),
+        enemy_champion_picks: enemy_champion_picks(
+            phase,
+            ctx.champ_select_session.as_ref(),
+            ctx.teambuilder_payload.as_ref(),
+        ),
     };
     let channels = ctx.channels.clone();
     drop(ctx);
