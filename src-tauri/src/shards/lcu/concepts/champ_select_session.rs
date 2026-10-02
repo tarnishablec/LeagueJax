@@ -1,6 +1,15 @@
 use super::{EventType, LanePosition};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
+
+// LCU uses -1 for an empty champion slot. Rejecting it drops the whole session.
+pub(crate) fn deserialize_champion_id<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = i64::deserialize(deserializer)?;
+    Ok(u64::try_from(value).unwrap_or(0))
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
@@ -65,6 +74,7 @@ pub struct Swap {
 #[ts(export, export_to = "lcu_events.ts")]
 #[serde(default, rename_all = "camelCase")]
 pub struct BenchChampion {
+    #[serde(deserialize_with = "deserialize_champion_id")]
     pub champion_id: u64,
     pub is_priority: bool,
 }
@@ -85,7 +95,9 @@ pub enum NameVisibilityType {
 pub struct TeamMember {
     pub assigned_position: LanePosition,
     pub cell_id: u64,
+    #[serde(deserialize_with = "deserialize_champion_id")]
     pub champion_id: u64,
+    #[serde(deserialize_with = "deserialize_champion_id")]
     pub champion_pick_intent: u64,
     pub game_name: String,
     pub internal_name: String,
@@ -116,6 +128,7 @@ pub struct TeamMember {
 #[serde(default, rename_all = "camelCase")]
 pub struct Action {
     pub actor_cell_id: i64,
+    #[serde(deserialize_with = "deserialize_champion_id")]
     pub champion_id: u64,
     pub completed: bool,
     pub duration: u64,

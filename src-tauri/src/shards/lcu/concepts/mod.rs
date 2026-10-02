@@ -165,6 +165,59 @@ mod tests {
     }
 
     #[test]
+    fn champ_select_session_treats_negative_champion_id_as_unset() {
+        let raw = json!({
+            "eventType": "Update",
+            "uri": "/lol-champ-select/v1/session",
+            "data": {
+                "actions": [[
+                    {
+                        "actorCellId": 4,
+                        "championId": -1,
+                        "completed": false,
+                        "id": 3,
+                        "isAllyAction": false,
+                        "type": "pick"
+                    },
+                    {
+                        "actorCellId": 5,
+                        "championId": 86,
+                        "completed": true,
+                        "id": 4,
+                        "isAllyAction": false,
+                        "type": "pick"
+                    }
+                ]],
+                "benchChampions": [{ "championId": -1 }],
+                "gameId": 1,
+                "localPlayerCellId": 0,
+                "myTeam": [{
+                    "cellId": 0,
+                    "championId": -1,
+                    "championPickIntent": -1
+                }],
+                "theirTeam": [{
+                    "cellId": 5,
+                    "championId": 86,
+                    "assignedPosition": "top"
+                }]
+            }
+        });
+
+        let Ok(session) = serde_json::from_value::<ChampSelectSession>(raw) else {
+            panic!("champ-select session should accept championId=-1");
+        };
+        let unset = &session.data.actions[0][0];
+        let locked = &session.data.actions[0][1];
+        assert_eq!(unset.champion_id, 0);
+        assert_eq!(locked.champion_id, 86);
+        assert_eq!(session.data.my_team[0].champion_id, 0);
+        assert_eq!(session.data.my_team[0].champion_pick_intent, 0);
+        assert_eq!(session.data.their_team[0].champion_id, 86);
+        assert_eq!(session.data.bench_champions[0].champion_id, 0);
+    }
+
+    #[test]
     fn team_builder_champ_select_session_ws_event_is_parsed() -> Result<(), serde_json::Error> {
         let raw = champ_select_payload("/lol-lobby-team-builder/champ-select/v1/session", 0);
         let event = LcuWsEvent::try_from(raw)?;

@@ -89,7 +89,9 @@ pub struct TeambuilderCell {
     pub is_humanoid: bool,
     pub is_autofilled: bool,
     pub summoner_id: i64,
+    #[serde(deserialize_with = "super::champ_select_session::deserialize_champion_id")]
     pub champion_pick_intent: u64,
+    #[serde(deserialize_with = "super::champ_select_session::deserialize_champion_id")]
     pub champion_id: u64,
     pub assigned_position: String,
     pub spell1_id: u64,
@@ -164,5 +166,35 @@ mod tests {
             event.data.payload.champion_select_state.cells.allied_team[1].summoner_id,
             3515302757346176
         );
+    }
+
+    #[test]
+    fn negative_enemy_champion_id_is_unset() {
+        let raw = r#"{
+            "eventType": "Update",
+            "uri": "/riot-messaging-service/v1/message/teambuilder/v1/tbdGameDtoV1",
+            "data": {
+                "ackRequired": false,
+                "id": "",
+                "payload": "{\"counter\":1,\"phaseName\":\"CHAMPION_SELECT\",\"queueId\":420,\"gameId\":1,\"contextId\":\"\",\"championSelectState\":{\"teamId\":\"1\",\"teamChatRoomId\":\"\",\"subphase\":\"BAN_PICK\",\"localPlayerCellId\":0,\"cells\":{\"alliedTeam\":[],\"enemyTeam\":[{\"cellId\":5,\"championId\":-1,\"championPickIntent\":-1},{\"cellId\":6,\"championId\":111}]}},\"requestGuid\":\"\"}",
+                "resource": "teambuilder/v1/tbdGameDtoV1",
+                "service": "teambuilder",
+                "timestamp": 1,
+                "version": "1"
+            }
+        }"#;
+
+        let Ok(event) = serde_json::from_str::<TeambuilderTbdGame>(raw) else {
+            panic!("teambuilder payload should accept championId=-1");
+        };
+        let enemy = &event
+            .data
+            .payload
+            .champion_select_state
+            .cells
+            .enemy_team;
+        assert_eq!(enemy[0].champion_id, 0);
+        assert_eq!(enemy[0].champion_pick_intent, 0);
+        assert_eq!(enemy[1].champion_id, 111);
     }
 }
