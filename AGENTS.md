@@ -59,6 +59,18 @@ This file provides guidance to Ai agents (Codex/claude code etc.) when working w
 
 ## Commands
 
+### Build Execution Policy
+
+- Agents and subagents must **not run full builds on their own initiative**. Do not choose a full build as a routine
+  validation step or add one to an implementation plan unless the user explicitly requests it.
+- Full builds include `bun run build`, `bunx tauri build`, `bun run tauri:build`, `cargo build`, and equivalent frontend,
+  Rust, or Tauri build/package commands.
+- A full build may be run only when the user explicitly asks for that build. General approval to implement or verify a
+  change does not authorize an agent-chosen full build.
+- Prefer targeted checks such as `bun run typecheck`, `bunx biome check src/`, `cargo check`, `cargo clippy`, focused
+  tests, and `bun run sync_rs_types`, subject to the existing Change Approval Workflow. Compilation performed internally
+  by these checks is permitted.
+
 ### Development
 
 ```bash
