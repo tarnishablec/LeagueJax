@@ -134,10 +134,10 @@ describe("OP.GG filter options", () => {
       ])
         expect(tiers[rank].endsWith("+")).toBe(true);
       expect(tiers.emerald_plus).toBe(
-        locale === "zh-CN" ? "翡翠+" : "エメラルド+",
+        locale === "zh-CN" ? "流光翡翠+" : "エメラルド+",
       );
       expect(tiers.master_plus).toBe(
-        locale === "zh-CN" ? "大师+" : "マスター+",
+        locale === "zh-CN" ? "超凡大师+" : "マスター+",
       );
     },
   );
