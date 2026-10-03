@@ -5,7 +5,8 @@ import { ChampionPanel } from "./ChampionPanel";
 
 export function ChampionLoadout(props: {
   flowing: boolean;
-  detail: OpggChampionDetailDto;
+  detail: OpggChampionDetailDto | undefined;
+  loading: boolean;
   itemIcon: (id: number) => string | null;
   spellIcon: (id: number) => string | null;
 }) {
@@ -16,7 +17,7 @@ export function ChampionLoadout(props: {
         flowing={props.flowing}
         scrollable
       >
-        <ChampionSkills detail={props.detail} />
+        <ChampionSkills detail={props.detail} loading={props.loading} />
       </ChampionPanel>
       <ChampionPanel
         ariaLabel="Champion builds"
@@ -25,6 +26,7 @@ export function ChampionLoadout(props: {
       >
         <ChampionBuilds
           detail={props.detail}
+          loading={props.loading}
           itemIcon={props.itemIcon}
           spellIcon={props.spellIcon}
         />

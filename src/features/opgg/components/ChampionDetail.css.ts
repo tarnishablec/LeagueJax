@@ -66,6 +66,9 @@ export const source = style({
   color: theme.color.mutedForeground,
   fontSize: "0.6875rem",
   lineHeight: 1.5,
+  selectors: {
+    '&[data-error="true"]': { color: theme.color.error },
+  },
 });
 export const stats = style({
   display: "grid",
@@ -147,15 +150,3 @@ export const body = recipe({
     },
   },
 });
-export const skeletonCard = style({
-  display: "grid",
-  gap: 16,
-  alignContent: "start",
-  minHeight: 0,
-  overflow: "hidden",
-  padding: 14,
-  borderRadius: 10,
-  background: theme.color.surface,
-});
-export const skeletonHeading = style({ width: "36%", height: 16 });
-export const skeletonLine = style({ height: 28 });

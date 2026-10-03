@@ -14,6 +14,15 @@ export const portrait = style({
   borderRadius: 4,
   background: theme.color.surface,
 });
+export const loadingRow = style({ position: "relative", height: 45 });
+export const rowSkeleton = style({
+  position: "absolute",
+  insetInline: 12,
+  top: 10,
+  height: 24,
+  borderRadius: 4,
+  background: `rgb(from ${theme.color.foreground} r g b / 1%)`,
+});
 export const name = style({
   minWidth: 0,
   overflow: "hidden",

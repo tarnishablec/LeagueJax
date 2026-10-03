@@ -1,5 +1,7 @@
-import { style } from "@vanilla-extract/css";
+import { createVar, fallbackVar, style } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css";
+
+export const pendingRowMinHeight = createVar();
 
 export const content = style({
   display: "grid",
@@ -37,6 +39,41 @@ export const skillKey = style({
   background: theme.color.accent,
   fontSize: "0.8125rem",
   fontWeight: 600,
+});
+export const prioritySkeleton = style({
+  display: "block",
+  width: 132,
+  height: 28,
+  borderRadius: 4,
+  background: `rgb(from ${theme.color.foreground} r g b / 1%)`,
+});
+// Reserve the same responsive height as 18 levels while rendering two loading lines.
+export const skillOrderFrame = style({
+  display: "grid",
+  minHeight: 159,
+  "@container": {
+    "champion-skills (min-width: 320px)": { minHeight: 104 },
+    "champion-skills (min-width: 700px)": { minHeight: 49 },
+  },
+});
+export const skillOrderSkeleton = style({
+  display: "grid",
+  gridTemplateRows: "repeat(2, minmax(0, 1fr))",
+  gap: 6,
+});
+export const skillOrderLine = style({
+  display: "block",
+  width: "100%",
+  borderRadius: 4,
+  background: `rgb(from ${theme.color.foreground} r g b / 1%)`,
+});
+export const statsSkeleton = style({
+  display: "block",
+  width: 140,
+  maxWidth: "100%",
+  height: 18,
+  borderRadius: 4,
+  background: `rgb(from ${theme.color.foreground} r g b / 1%)`,
 });
 export const skillOrder = style({
   display: "grid",
@@ -78,6 +115,7 @@ export const skillStats = style({
   flexWrap: "wrap",
   gap: 6,
   fontSize: "0.75rem",
+  minHeight: 18,
 });
 export const buildRow = style({
   display: "grid",
@@ -85,13 +123,24 @@ export const buildRow = style({
   alignItems: "center",
   gap: 8,
   minWidth: 0,
-  minHeight: 36,
+  minHeight: fallbackVar(pendingRowMinHeight, "56px"),
   fontSize: "0.75rem",
   "@container": {
     "champion-builds (min-width: 300px)": {
       gridTemplateColumns: "minmax(68px, 0.8fr) minmax(0, 1.2fr) 52px",
+      minHeight: fallbackVar(pendingRowMinHeight, "36px"),
     },
   },
+});
+export const buildRowSkeleton = style({
+  display: "block",
+  gridColumn: "1 / -1",
+  width: "100%",
+  alignSelf: "stretch",
+  minHeight: 24,
+  marginBlock: 3,
+  borderRadius: 4,
+  background: `rgb(from ${theme.color.foreground} r g b / 1%)`,
 });
 export const situationalRow = style([
   buildRow,
@@ -99,6 +148,12 @@ export const situationalRow = style([
     borderTop: `1px solid ${theme.color.border}`,
     marginTop: 6,
     paddingTop: 12,
+    minHeight: fallbackVar(pendingRowMinHeight, "69px"),
+    "@container": {
+      "champion-builds (min-width: 300px)": {
+        minHeight: fallbackVar(pendingRowMinHeight, "43px"),
+      },
+    },
   },
 ]);
 export const buildLabel = style({
@@ -114,6 +169,8 @@ export const icons = style({
   justifyContent: "start",
   gap: 6,
   minWidth: 0,
+  minHeight: 30,
+  alignItems: "center",
 });
 export const icon = style({
   width: 30,

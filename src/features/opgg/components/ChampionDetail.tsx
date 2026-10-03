@@ -1,12 +1,10 @@
 /** @jsxImportSource solid-js */
-import { SearchX, TriangleAlert } from "lucide-solid";
-import { For, type JSX, Match, Show, Switch } from "solid-js";
+import { type JSX, Show } from "solid-js";
 import type {
   OpggChampionDetailDto,
   OpggChampionSummaryDto,
   OpggFiltersDto,
 } from "@/bindings/opgg";
-import { IconTitleSubtitleState } from "@/components/IconTitleSubtitleState";
 import { LazyImage } from "@/components/LazyImage";
 import { ScrollArea } from "@/components/scroll-area";
 import { useSolidTranslation } from "@/i18n/solid";
@@ -30,28 +28,6 @@ function Stat(props: {
       <dd class={s.statValue}>
         <ChampionRate value={props.value} neutral={props.neutral} />
       </dd>
-    </div>
-  );
-}
-
-function DetailSkeleton(props: { stacked: boolean }) {
-  return (
-    <div
-      class={s.body({ stacked: props.stacked })}
-      role="status"
-      aria-label="Loading champion details"
-      aria-busy="true"
-    >
-      <For each={[0, 1, 2, 3]}>
-        {() => (
-          <div class={s.skeletonCard} aria-hidden="true">
-            <span class={`${s.skeletonHeading} ${shared.skeleton}`} />
-            <For each={[0, 1, 2]}>
-              {() => <span class={`${s.skeletonLine} ${shared.skeleton}`} />}
-            </For>
-          </div>
-        )}
-      </For>
     </div>
   );
 }
@@ -122,12 +98,16 @@ export function ChampionDetail(props: {
                 </span>
               </Show>
             </div>
-            <p class={s.source}>
-              {t("champions.source", {
-                version: props.version || "—",
-                region: t(`champions.regions.${props.filters.region}`),
-                rank: t(`champions.rankTiers.${props.filters.tier}`),
-              })}
+            <p class={s.source} data-error={props.failed} aria-live="polite">
+              {props.failed
+                ? props.failureMessage
+                : !props.loading && !props.champion
+                  ? t("champions.emptyHint")
+                  : t("champions.source", {
+                      version: props.version || "—",
+                      region: t(`champions.regions.${props.filters.region}`),
+                      rank: t(`champions.rankTiers.${props.filters.tier}`),
+                    })}
             </p>
           </div>
         </div>
@@ -165,48 +145,28 @@ export function ChampionDetail(props: {
       </Show>
       <div class={s.content}>
         <DetailViewport stacked={layout.stacked()}>
-          <Switch>
-            <Match when={props.failed}>
-              <IconTitleSubtitleState
-                icon={TriangleAlert}
-                title={props.failureMessage}
-              />
-            </Match>
-            <Match when={props.loading}>
-              <DetailSkeleton stacked={layout.stacked()} />
-            </Match>
-            <Match when={!props.champion}>
-              <IconTitleSubtitleState
-                icon={SearchX}
-                title={t("champions.empty")}
-                subtitle={t("champions.emptyHint")}
-              />
-            </Match>
-            <Match when={props.detail}>
-              {(detail) => (
-                <div class={s.body({ stacked: layout.stacked() })}>
-                  <ChampionLoadout
-                    flowing={layout.stacked()}
-                    detail={detail()}
-                    itemIcon={props.itemIcon}
-                    spellIcon={props.spellIcon}
-                  />
-                  <ChampionMatchups
-                    flowing={layout.stacked()}
-                    strong={detail().strongAgainst}
-                    weak={detail().weakAgainst}
-                    championName={props.championName}
-                  />
-                </div>
-              )}
-            </Match>
-            <Match when={props.champion}>
-              <IconTitleSubtitleState
-                icon={SearchX}
-                title={t("champions.noData")}
-              />
-            </Match>
-          </Switch>
+          <div
+            class={s.body({ stacked: layout.stacked() })}
+            aria-busy={props.loading}
+          >
+            <ChampionLoadout
+              flowing={layout.stacked()}
+              detail={props.detail}
+              loading={props.loading}
+              itemIcon={props.itemIcon}
+              spellIcon={props.spellIcon}
+            />
+            <ChampionMatchups
+              flowing={layout.stacked()}
+              strong={props.detail?.strongAgainst}
+              weak={props.detail?.weakAgainst}
+              loading={props.loading}
+              emptyText={
+                props.failed ? props.failureMessage : t("champions.noData")
+              }
+              championName={props.championName}
+            />
+          </div>
         </DetailViewport>
       </div>
     </section>
