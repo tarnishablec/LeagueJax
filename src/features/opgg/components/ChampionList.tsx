@@ -27,10 +27,12 @@ export function ChampionList(props: {
   filters: OpggFiltersDto;
   loading: boolean;
   failed: boolean;
+  refreshing: boolean;
   championName: (id: number) => string;
   onQuery: (value: string) => void;
   onLane: (value: string | null) => void;
   onFiltersChange: (filters: OpggFiltersDto) => void;
+  onRefresh: () => void;
   onSelect: (id: number) => void;
 }) {
   const { t } = useSolidTranslation();
@@ -55,6 +57,8 @@ export function ChampionList(props: {
         <ChampionFilters
           value={props.filters}
           onValueChange={props.onFiltersChange}
+          refreshing={props.refreshing}
+          onRefresh={props.onRefresh}
         />
         <ChampionPositionTabs
           positions={CHAMPION_POSITIONS}

@@ -124,6 +124,9 @@ const championsCopy = {
 } as const;
 
 const settingsCopy = {
+  filters: { en: "Filters", "zh-CN": "筛选", "ja-JP": "フィルター" },
+  rankTier: { en: "Rank", "zh-CN": "段位", "ja-JP": "ランク" },
+  region: { en: "Region", "zh-CN": "地区", "ja-JP": "地域" },
   matchups: { en: "Matchups", "zh-CN": "对位", "ja-JP": "マッチアップ" },
   counterColumnLimitLabel: {
     en: "Matchups per column",
@@ -192,29 +195,29 @@ const rankTiers = {
   },
   master_plus: {
     en: "Master+",
-    "zh-CN": "大师及以上",
-    "ja-JP": "マスター以上",
+    "zh-CN": "大师+",
+    "ja-JP": "マスター+",
   },
   master: { en: "Master", "zh-CN": "超凡大师", "ja-JP": "マスター" },
   diamond_plus: {
     en: "Diamond+",
-    "zh-CN": "钻石及以上",
-    "ja-JP": "ダイヤモンド以上",
+    "zh-CN": "钻石+",
+    "ja-JP": "ダイヤモンド+",
   },
   diamond: { en: "Diamond", "zh-CN": "璀璨钻石", "ja-JP": "ダイヤモンド" },
   emerald_plus: {
     en: "Emerald+",
-    "zh-CN": "翡翠及以上",
-    "ja-JP": "エメラルド以上",
+    "zh-CN": "翡翠+",
+    "ja-JP": "エメラルド+",
   },
   emerald: { en: "Emerald", "zh-CN": "流光翡翠", "ja-JP": "エメラルド" },
   platinum_plus: {
     en: "Platinum+",
-    "zh-CN": "铂金及以上",
-    "ja-JP": "プラチナ以上",
+    "zh-CN": "铂金+",
+    "ja-JP": "プラチナ+",
   },
   platinum: { en: "Platinum", "zh-CN": "华贵铂金", "ja-JP": "プラチナ" },
-  gold_plus: { en: "Gold+", "zh-CN": "黄金及以上", "ja-JP": "ゴールド以上" },
+  gold_plus: { en: "Gold+", "zh-CN": "黄金+", "ja-JP": "ゴールド+" },
   gold: { en: "Gold", "zh-CN": "荣耀黄金", "ja-JP": "ゴールド" },
   silver: { en: "Silver", "zh-CN": "不屈白银", "ja-JP": "シルバー" },
   bronze: { en: "Bronze", "zh-CN": "英勇黄铜", "ja-JP": "ブロンズ" },
@@ -227,9 +230,14 @@ function localeTree(locale: "en" | "zh-CN" | "ja-JP") {
     settings: {
       pages: { opgg: { title: "OP.GG" } },
       sections: {
-        opgg: { matchups: { title: settingsCopy.matchups[locale] } },
+        opgg: {
+          filters: { title: settingsCopy.filters[locale] },
+          matchups: { title: settingsCopy.matchups[locale] },
+        },
       },
       opgg: {
+        rankTier: { label: settingsCopy.rankTier[locale] },
+        region: { label: settingsCopy.region[locale] },
         counterColumnLimit: {
           label: settingsCopy.counterColumnLimitLabel[locale],
           hint: settingsCopy.counterColumnLimitHint[locale],

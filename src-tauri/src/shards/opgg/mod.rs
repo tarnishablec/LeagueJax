@@ -13,7 +13,17 @@ const OPGG_CHAMPION_API: &str = "https://lol-api-champion.op.gg";
 const COUNTER_SAMPLE_FLOOR: u32 = 80;
 
 #[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS, strum::AsRefStr,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TS,
+    strum::AsRefStr,
+    strum::EnumIter,
 )]
 #[ts(export, export_to = "opgg.ts")]
 #[serde(rename_all = "snake_case")]
@@ -39,7 +49,17 @@ pub enum OpggRegion {
 }
 
 #[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS, strum::AsRefStr,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TS,
+    strum::AsRefStr,
+    strum::EnumIter,
 )]
 #[ts(export, export_to = "opgg.ts")]
 #[serde(rename_all = "snake_case")]
@@ -162,7 +182,7 @@ struct RawMeta {
 #[derive(Debug, Deserialize)]
 struct RawSummary {
     id: u32,
-    average_stats: RawAverageStats,
+    average_stats: Option<RawAverageStats>,
     #[serde(default)]
     positions: Vec<RawPosition>,
 }
@@ -284,7 +304,7 @@ pub async fn list_champions(
         .data
         .into_iter()
         .filter(|summary| summary.id > 0)
-        .map(summary_dto)
+        .filter_map(summary_dto)
         .collect::<Vec<_>>();
     champions.sort_by(|left, right| {
         left.tier
@@ -317,22 +337,25 @@ pub async fn champion_detail(
         Some((champion_id, &position)),
     ))
     .await?;
-    Ok(detail_dto(
+    detail_dto(
         envelope.meta.version,
         position,
         envelope.data,
         filters,
         counter_column_limit,
-    ))
+    )
 }
 
-fn summary_dto(summary: RawSummary) -> OpggChampionSummaryDto {
-    OpggChampionSummaryDto {
+// Sparse rank scopes can contain champions without statistics. Omit those
+// entries instead of rejecting the whole list or inventing zero-valued rates.
+fn summary_dto(summary: RawSummary) -> Option<OpggChampionSummaryDto> {
+    let average_stats = summary.average_stats?;
+    Some(OpggChampionSummaryDto {
         id: summary.id,
-        win_rate: summary.average_stats.win_rate,
-        pick_rate: summary.average_stats.pick_rate,
-        ban_rate: summary.average_stats.ban_rate,
-        tier: summary.average_stats.tier,
+        win_rate: average_stats.win_rate,
+        pick_rate: average_stats.pick_rate,
+        ban_rate: average_stats.ban_rate,
+        tier: average_stats.tier,
         positions: summary
             .positions
             .into_iter()
@@ -346,16 +369,20 @@ fn summary_dto(summary: RawSummary) -> OpggChampionSummaryDto {
                 })
             })
             .collect(),
-    }
+    })
 }
 
+// A missing summary is absence of rank-scoped data, not a champion with zero statistics.
 fn detail_dto(
     version: String,
     position: String,
     detail: RawDetail,
     filters: OpggFiltersDto,
     counter_column_limit: usize,
-) -> OpggChampionDetailDto {
+) -> Result<OpggChampionDetailDto, AppError> {
+    let average_stats = detail.summary.average_stats.as_ref().ok_or_else(|| {
+        AppError::other("OP.GG has no statistics for this champion in the selected region and rank")
+    })?;
     let lane = detail
         .summary
         .positions
@@ -364,7 +391,7 @@ fn detail_dto(
     let (skill_priority, skill_order, skill_pick_rate, skill_win_rate) = skill_summary(&detail);
     let (strong_against, weak_against) = split_matchups(&detail.counters, counter_column_limit);
 
-    OpggChampionDetailDto {
+    Ok(OpggChampionDetailDto {
         filters,
         counter_column_limit,
         id: detail.summary.id,
@@ -372,17 +399,17 @@ fn detail_dto(
         version,
         win_rate: lane
             .map(|entry| entry.stats.win_rate)
-            .unwrap_or(detail.summary.average_stats.win_rate),
+            .unwrap_or(average_stats.win_rate),
         pick_rate: lane
             .map(|entry| entry.stats.pick_rate)
-            .unwrap_or(detail.summary.average_stats.pick_rate),
+            .unwrap_or(average_stats.pick_rate),
         ban_rate: lane
             .map(|entry| entry.stats.ban_rate)
-            .unwrap_or(detail.summary.average_stats.ban_rate),
+            .unwrap_or(average_stats.ban_rate),
         tier: lane
             .and_then(|entry| entry.stats.tier_data.as_ref().map(|tier| tier.tier))
             .filter(|tier| *tier > 0)
-            .unwrap_or(detail.summary.average_stats.tier),
+            .unwrap_or(average_stats.tier),
         summoner_spells: builds(&detail.summoner_spells, 2),
         starter_items: builds(&detail.starter_items, 1),
         boots: builds(&detail.boots, 1),
@@ -394,7 +421,7 @@ fn detail_dto(
         skill_win_rate,
         strong_against,
         weak_against,
-    }
+    })
 }
 
 fn builds(items: &[RawBuild], limit: usize) -> Vec<OpggBuildDto> {
@@ -655,7 +682,7 @@ mod tests {
     }
 
     #[test]
-    fn detail_preserves_the_requested_scope() -> Result<(), serde_json::Error> {
+    fn detail_preserves_the_requested_scope() -> Result<(), Box<dyn std::error::Error>> {
         let raw: RawDetail = serde_json::from_value(serde_json::json!({
             "summary": {"id": 222, "average_stats": {}}
         }))?;
@@ -663,11 +690,49 @@ mod tests {
             region: OpggRegion::Kr,
             tier: OpggRankTier::DiamondPlus,
         };
-        let detail = detail_dto("16.19".into(), "ADC".into(), raw, filters, 8);
+        let detail = detail_dto("16.19".into(), "ADC".into(), raw, filters, 8)?;
         assert_eq!(detail.filters, filters);
         assert_eq!(detail.counter_column_limit, 8);
         assert_eq!(detail.id, 222);
         assert_eq!(detail.position, "ADC");
+        Ok(())
+    }
+
+    #[test]
+    fn challenger_list_skips_null_statistics_without_rejecting_valid_champions(
+    ) -> Result<(), serde_json::Error> {
+        let envelope: RawEnvelope<Vec<RawSummary>> = serde_json::from_value(serde_json::json!({
+            "meta": {"version": "16.19"},
+            "data": [
+                {"id": 32, "average_stats": null, "positions": []},
+                {"id": 86, "average_stats": {"win_rate": 0.530534, "tier": 5}, "positions": []}
+            ]
+        }))?;
+        let champions = envelope
+            .data
+            .into_iter()
+            .filter_map(summary_dto)
+            .collect::<Vec<_>>();
+        assert_eq!(champions.len(), 1);
+        assert_eq!(champions[0].id, 86);
+        assert_eq!(champions[0].win_rate, 0.530534);
+        assert_eq!(champions[0].tier, 5);
+        Ok(())
+    }
+
+    #[test]
+    fn champion_details_report_unavailable_statistics() -> Result<(), serde_json::Error> {
+        let raw: RawDetail = serde_json::from_value(serde_json::json!({
+            "summary": {"id": 32, "average_stats": null, "positions": []}
+        }))?;
+        assert!(detail_dto(
+            "16.19".into(),
+            "JUNGLE".into(),
+            raw,
+            OpggFiltersDto::default(),
+            8
+        )
+        .is_err());
         Ok(())
     }
 

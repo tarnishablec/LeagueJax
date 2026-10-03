@@ -1,13 +1,13 @@
 /** @jsxImportSource solid-js */
 import { createEffect, createMemo, createSignal } from "solid-js";
-import type { OpggFiltersDto } from "@/bindings/opgg";
 import { useSolidTranslation } from "@/i18n/solid";
 import { useChampionAssets } from "../assets";
 import { ChampionDetail } from "../components/ChampionDetail";
 import { ChampionList } from "../components/ChampionList";
-import { DEFAULT_CHAMPION_FILTERS } from "../filters";
 import { filterChampions, preferredPosition } from "../model";
 import { resolveSelectedChampionId } from "../queries";
+import { refreshChampionData } from "../refresh";
+import { useChampionFilters } from "../use-champion-filters";
 import {
   useChampionDetailQuery,
   useChampionListQuery,
@@ -21,9 +21,8 @@ export default function ChampionsRoute() {
   const [laneFilter, setLaneFilter] = createSignal<string | null>(null);
   const [selectedId, setSelectedId] = createSignal<number | null>(null);
   const [position, setPosition] = createSignal<string | null>(null);
-  const [filters, setFilters] = createSignal<OpggFiltersDto>({
-    ...DEFAULT_CHAMPION_FILTERS,
-  });
+  const { filters, setFilters } = useChampionFilters();
+  const [refreshing, setRefreshing] = createSignal(false);
   const listQuery = useChampionListQuery(filters);
   const listData = listQuery.data;
   const champions = createMemo(() => listData()?.champions ?? []);
@@ -68,6 +67,16 @@ export default function ChampionsRoute() {
   const detail = detailQuery.data;
   const listLoading = listQuery.isLoading;
 
+  const refresh = async () => {
+    if (refreshing()) return;
+    setRefreshing(true);
+    try {
+      await refreshChampionData(listQuery.refetch, detailQuery.refetch);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div class={s.page}>
       <ChampionList
@@ -82,6 +91,10 @@ export default function ChampionsRoute() {
         onQuery={setQuery}
         onLane={setLaneFilter}
         onFiltersChange={setFilters}
+        refreshing={
+          refreshing() || listQuery.isValidating() || detailQuery.isValidating()
+        }
+        onRefresh={() => void refresh()}
         onSelect={setSelectedId}
       />
       <ChampionDetail

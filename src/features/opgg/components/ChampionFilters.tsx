@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
 import { createMemo } from "solid-js";
 import type { OpggFiltersDto } from "@/bindings/opgg";
+import { RefreshButton } from "@/components/RefreshButton";
 import { createListCollection, SettingsSelect } from "@/components/settings-ui";
 import { useSolidTranslation } from "@/i18n/solid";
 import {
@@ -14,6 +15,8 @@ import * as s from "./ChampionFilters.css";
 export function ChampionFilters(props: {
   value: OpggFiltersDto;
   onValueChange: (value: OpggFiltersDto) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
 }) {
   const { t } = useSolidTranslation();
   const tiers = createMemo(() =>
@@ -64,6 +67,12 @@ export function ChampionFilters(props: {
           if (isOpggRegion(region))
             props.onValueChange({ ...props.value, region });
         }}
+      />
+      <RefreshButton
+        ariaLabel="Refresh OP.GG champion data"
+        loading={props.refreshing}
+        minLoadingMs={350}
+        onClick={props.onRefresh}
       />
     </div>
   );

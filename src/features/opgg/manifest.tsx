@@ -68,6 +68,7 @@ export class SolidChampionsShard implements SolidWebShard {
   public setup(jax: Jax): void {
     const settings = jax.getShard(SolidSettingsShard);
     settings.registerPage({ id: "opgg", order: 25 });
+    settings.registerSection({ key: "opgg.filters", order: 5 });
     settings.registerSection({
       key: "opgg.matchups",
       order: 10,

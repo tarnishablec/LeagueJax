@@ -116,6 +116,31 @@ describe("OP.GG filter options", () => {
       expect(settings.opgg.counterColumnLimit.hint).toBeTruthy();
     },
   );
+
+  test.each(["zh-CN", "ja-JP"] as const)(
+    "uses compact plus labels consistently in %s",
+    (locale) => {
+      const dictionary = championsI18n[locale]?.champions as Record<
+        string,
+        unknown
+      >;
+      const tiers = dictionary.rankTiers as Record<string, string>;
+      for (const rank of [
+        "master_plus",
+        "diamond_plus",
+        "emerald_plus",
+        "platinum_plus",
+        "gold_plus",
+      ])
+        expect(tiers[rank].endsWith("+")).toBe(true);
+      expect(tiers.emerald_plus).toBe(
+        locale === "zh-CN" ? "翡翠+" : "エメラルド+",
+      );
+      expect(tiers.master_plus).toBe(
+        locale === "zh-CN" ? "大师+" : "マスター+",
+      );
+    },
+  );
 });
 
 describe("champion request scopes", () => {

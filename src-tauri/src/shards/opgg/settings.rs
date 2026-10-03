@@ -4,11 +4,18 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use jax::{depends, shard_id, Jax, Shard};
 use serde_json::Value;
+use strum::IntoEnumIterator;
 
 use crate::error::AppError;
-use crate::shards::settings::types::{SettingControlDto, SettingDefinitionDto, SettingScopeDto};
+use crate::shards::settings::types::{
+    SettingControlDto, SettingDefinitionDto, SettingOptionDto, SettingScopeDto,
+};
 use crate::shards::settings::{SettingHandle, SettingsShard};
 
+use super::{OpggRankTier, OpggRegion};
+
+const RANK_TIER_SETTING_ID: &str = "opgg.filters.rankTier";
+const REGION_SETTING_ID: &str = "opgg.filters.region";
 const COUNTER_COLUMN_LIMIT_SETTING_ID: &str = "opgg.matchups.counterColumnLimit";
 pub(super) const DEFAULT_COUNTER_COLUMN_LIMIT: usize = 8;
 const MIN_COUNTER_COLUMN_LIMIT: usize = 1;
@@ -47,11 +54,59 @@ impl Shard for OpggShard {
 
     async fn setup(&self, jax: Arc<Jax>) -> Result<(), Box<dyn Error + Send + Sync>> {
         let settings = jax.get_shard::<SettingsShard>();
+        settings.register_definition(rank_tier_definition())?;
+        settings.register_definition(region_definition())?;
         let handle = settings.register_definition(counter_column_limit_definition())?;
         if self.counter_column_limit.set(handle).is_err() {
             return Err(AppError::other("OP.GG settings are already initialized").into());
         }
         Ok(())
+    }
+}
+
+// Build the setting options from the API enum so unsupported ranks cannot be saved.
+fn rank_tier_definition() -> SettingDefinitionDto {
+    SettingDefinitionDto {
+        id: RANK_TIER_SETTING_ID.to_string(),
+        label_key: "settings.opgg.rankTier.label".to_string(),
+        scope: SettingScopeDto::Shared,
+        control: Some(SettingControlDto::Select),
+        default_value: Value::String(OpggRankTier::default().as_ref().to_string()),
+        order: Some(10),
+        visible: Some(true),
+        options: Some(
+            OpggRankTier::iter()
+                .map(|tier| SettingOptionDto {
+                    value: tier.as_ref().to_string(),
+                    label_key: format!("champions.rankTiers.{}", tier.as_ref()),
+                    display_label: None,
+                })
+                .collect(),
+        ),
+        ..SettingDefinitionDto::default()
+    }
+}
+
+// Regions share the same catalog as API requests instead of a second settings-only list.
+fn region_definition() -> SettingDefinitionDto {
+    SettingDefinitionDto {
+        id: REGION_SETTING_ID.to_string(),
+        label_key: "settings.opgg.region.label".to_string(),
+        scope: SettingScopeDto::Shared,
+        control: Some(SettingControlDto::Select),
+        default_value: Value::String(OpggRegion::default().as_ref().to_string()),
+        order: Some(20),
+        visible: Some(true),
+        options: Some(
+            OpggRegion::iter()
+                .map(|region| SettingOptionDto {
+                    value: region.as_ref().to_string(),
+                    label_key: format!("champions.regions.{}", region.as_ref()),
+                    display_label: None,
+                })
+                .collect(),
+        ),
+        ..SettingDefinitionDto::default()
     }
 }
 
@@ -101,6 +156,32 @@ fn counter_column_limit_from_value(value: &Value) -> Result<usize, AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn filter_setting_options_match_the_api_enums() -> Result<(), serde_json::Error> {
+        for definition in [rank_tier_definition(), region_definition()] {
+            assert!(matches!(
+                definition.control,
+                Some(SettingControlDto::Select)
+            ));
+            let options = definition.options.unwrap_or_default();
+            assert_eq!(options.len(), 16);
+            assert!(options
+                .iter()
+                .any(|option| Value::String(option.value.clone()) == definition.default_value));
+            for option in options {
+                let value = Value::String(option.value);
+                if definition.id == RANK_TIER_SETTING_ID {
+                    let tier: OpggRankTier = serde_json::from_value(value.clone())?;
+                    assert_eq!(serde_json::to_value(tier)?, value);
+                } else {
+                    let region: OpggRegion = serde_json::from_value(value.clone())?;
+                    assert_eq!(serde_json::to_value(region)?, value);
+                }
+            }
+        }
+        Ok(())
+    }
 
     #[test]
     fn counter_limit_accepts_integer_json_representations_and_bounds() -> Result<(), AppError> {
