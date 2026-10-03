@@ -361,6 +361,7 @@ pub fn run() {
                 .register(Arc::new(shards::mini_window::MiniWindowShard::new()))
                 .register(Arc::new(shards::log::LogShard::new()))
                 .register(Arc::new(shards::network::NetworkShard::new()))
+                .register(Arc::new(shards::opgg::OpggShard::new()))
                 .register(Arc::new(shards::lcu::LcuShard::new()))
                 .register(Arc::new(shards::league_bridge::LeagueBridgeShard::new()))
                 .register(Arc::new(shards::static_cache::StaticCacheShard::new()))

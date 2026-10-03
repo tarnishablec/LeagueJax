@@ -16,6 +16,7 @@ export function championDetailKey(
   filters: OpggFiltersDto,
   championId: number | null,
   position: string | null,
+  counterColumnLimit: number,
 ) {
   return championId === null || !position
     ? null
@@ -25,6 +26,7 @@ export function championDetailKey(
         filters.tier,
         championId,
         position,
+        counterColumnLimit,
       ] as const);
 }
 
@@ -36,8 +38,13 @@ export function championListArgs(key: ReturnType<typeof championListKey>) {
 export function championDetailArgs(
   key: NonNullable<ReturnType<typeof championDetailKey>>,
 ) {
-  const [, region, tier, championId, position] = key;
-  return { championId, position, filters: { region, tier } };
+  const [, region, tier, championId, position, counterColumnLimit] = key;
+  return {
+    championId,
+    position,
+    filters: { region, tier },
+    counterColumnLimit,
+  };
 }
 
 // Solid resources can retain previous data while loading another key. Check
@@ -54,10 +61,12 @@ export function currentChampionDetail(
   filters: OpggFiltersDto,
   championId: number | null,
   position: string | null,
+  counterColumnLimit: number,
 ) {
   return matchesChampionFilters(data?.filters, filters) &&
     data?.id === championId &&
-    data.position === position
+    data.position === position &&
+    data.counterColumnLimit === counterColumnLimit
     ? data
     : undefined;
 }

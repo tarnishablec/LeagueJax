@@ -123,6 +123,22 @@ const championsCopy = {
   },
 } as const;
 
+const settingsCopy = {
+  matchups: { en: "Matchups", "zh-CN": "对位", "ja-JP": "マッチアップ" },
+  counterColumnLimitLabel: {
+    en: "Matchups per column",
+    "zh-CN": "每列对位条目数",
+    "ja-JP": "各列のマッチアップ表示数",
+  },
+  counterColumnLimitHint: {
+    en: "Show up to this many strong and weak matchups per column (1–50). Fewer appear when data is limited. Also applies to the mini window.",
+    "zh-CN":
+      "克制与被克制两列各显示最多此数量的条目（1–50）。数据不足时显示实际可用条目；小窗也会使用此设置。",
+    "ja-JP":
+      "有利・不利の各列に表示する最大件数です（1〜50）。データが少ない場合は表示数も少なくなります。ミニウィンドウにも適用されます。",
+  },
+} as const;
+
 const positions = {
   TOP: { en: "Top", "zh-CN": "上单", "ja-JP": "トップ" },
   JUNGLE: { en: "Jungle", "zh-CN": "打野", "ja-JP": "ジャングル" },
@@ -208,6 +224,18 @@ const rankTiers = {
 function localeTree(locale: "en" | "zh-CN" | "ja-JP") {
   return {
     nav: { champions: "OP.GG" },
+    settings: {
+      pages: { opgg: { title: "OP.GG" } },
+      sections: {
+        opgg: { matchups: { title: settingsCopy.matchups[locale] } },
+      },
+      opgg: {
+        counterColumnLimit: {
+          label: settingsCopy.counterColumnLimitLabel[locale],
+          hint: settingsCopy.counterColumnLimitHint[locale],
+        },
+      },
+    },
     champions: {
       title: championsCopy.title[locale],
       source: championsCopy.source[locale],

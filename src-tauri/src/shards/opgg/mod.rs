@@ -5,9 +5,12 @@ use ts_rs::TS;
 
 use crate::error::AppError;
 
+mod settings;
+
+pub use settings::OpggShard;
+
 const OPGG_CHAMPION_API: &str = "https://lol-api-champion.op.gg";
 const COUNTER_SAMPLE_FLOOR: u32 = 80;
-const COUNTER_COLUMN_LIMIT: usize = 8;
 
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS, strum::AsRefStr,
@@ -105,6 +108,7 @@ pub struct OpggPositionSummaryDto {
 #[serde(rename_all = "camelCase")]
 pub struct OpggChampionDetailDto {
     pub filters: OpggFiltersDto,
+    pub counter_column_limit: usize,
     pub id: u32,
     pub position: String,
     pub version: String,
@@ -302,7 +306,9 @@ pub async fn champion_detail(
     champion_id: u32,
     position: &str,
     filters: OpggFiltersDto,
+    counter_column_limit: usize,
 ) -> Result<OpggChampionDetailDto, AppError> {
+    let counter_column_limit = settings::validate_counter_column_limit(counter_column_limit)?;
     let position = normalize_position(position)?;
     let envelope: RawEnvelope<RawDetail> = get_json(champion_request(
         client,
@@ -316,6 +322,7 @@ pub async fn champion_detail(
         position,
         envelope.data,
         filters,
+        counter_column_limit,
     ))
 }
 
@@ -347,6 +354,7 @@ fn detail_dto(
     position: String,
     detail: RawDetail,
     filters: OpggFiltersDto,
+    counter_column_limit: usize,
 ) -> OpggChampionDetailDto {
     let lane = detail
         .summary
@@ -354,10 +362,11 @@ fn detail_dto(
         .iter()
         .find(|entry| entry.name.eq_ignore_ascii_case(&position));
     let (skill_priority, skill_order, skill_pick_rate, skill_win_rate) = skill_summary(&detail);
-    let (strong_against, weak_against) = split_matchups(&detail.counters);
+    let (strong_against, weak_against) = split_matchups(&detail.counters, counter_column_limit);
 
     OpggChampionDetailDto {
         filters,
+        counter_column_limit,
         id: detail.summary.id,
         position,
         version,
@@ -438,7 +447,10 @@ fn skill_summary(detail: &RawDetail) -> (Vec<String>, Vec<String>, f64, f64) {
 // OP.GG reports one win rate per opponent, from this champion's point of view.
 // The high end is who they beat; the low end is who beats them. Taking both
 // ends of one sorted list keeps a matchup from appearing on both sides.
-fn split_matchups(counters: &[RawCounter]) -> (Vec<OpggCounterDto>, Vec<OpggCounterDto>) {
+fn split_matchups(
+    counters: &[RawCounter],
+    counter_column_limit: usize,
+) -> (Vec<OpggCounterDto>, Vec<OpggCounterDto>) {
     let mut ranked = counters
         .iter()
         .filter(|counter| counter.champion_id > 0 && counter.play > 0)
@@ -453,12 +465,12 @@ fn split_matchups(counters: &[RawCounter]) -> (Vec<OpggCounterDto>, Vec<OpggCoun
         .filter(|counter| counter.play >= COUNTER_SAMPLE_FLOOR)
         .cloned()
         .collect::<Vec<_>>();
-    if substantial.len() >= COUNTER_COLUMN_LIMIT {
+    if substantial.len() >= counter_column_limit {
         ranked = substantial;
     }
     ranked.sort_by(|left, right| right.win_rate.total_cmp(&left.win_rate));
 
-    let take = COUNTER_COLUMN_LIMIT.min(ranked.len() / 2);
+    let take = counter_column_limit.min(ranked.len() / 2);
     if take == 0 {
         return (Vec::new(), Vec::new());
     }
@@ -651,8 +663,9 @@ mod tests {
             region: OpggRegion::Kr,
             tier: OpggRankTier::DiamondPlus,
         };
-        let detail = detail_dto("16.19".into(), "ADC".into(), raw, filters);
+        let detail = detail_dto("16.19".into(), "ADC".into(), raw, filters, 8);
         assert_eq!(detail.filters, filters);
+        assert_eq!(detail.counter_column_limit, 8);
         assert_eq!(detail.id, 222);
         assert_eq!(detail.position, "ADC");
         Ok(())
@@ -680,7 +693,7 @@ mod tests {
             counter(9, 1, 10),
         ];
 
-        let (strong, weak) = split_matchups(&counters);
+        let (strong, weak) = split_matchups(&counters, settings::DEFAULT_COUNTER_COLUMN_LIMIT);
         assert_eq!(
             strong
                 .iter()
@@ -694,6 +707,58 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![8, 7, 6, 5]
         );
+    }
+
+    #[test]
+    fn split_matchups_applies_configured_limit_without_overlap() {
+        let counters = (1..=120)
+            .map(|id| counter(id, 121 - id, 120))
+            .collect::<Vec<_>>();
+        for limit in [1, 3, 8, 50] {
+            let (strong, weak) = split_matchups(&counters, limit);
+            assert_eq!(strong.len(), limit);
+            assert_eq!(weak.len(), limit);
+            assert_eq!(strong[0].champion_id, 1);
+            assert_eq!(weak[0].champion_id, 120);
+            assert!(strong.iter().all(|entry| weak
+                .iter()
+                .all(|opponent| opponent.champion_id != entry.champion_id)));
+        }
+    }
+
+    #[test]
+    fn split_matchups_keeps_columns_disjoint_when_data_is_insufficient() {
+        for total in [0, 1, 3, 7] {
+            let counters = (1..=total)
+                .map(|id| counter(id, 10 - id, 100))
+                .collect::<Vec<_>>();
+            let (strong, weak) = split_matchups(&counters, 50);
+            assert_eq!(strong.len(), total as usize / 2);
+            assert_eq!(weak.len(), total as usize / 2);
+            assert!(strong.iter().all(|entry| weak
+                .iter()
+                .all(|opponent| opponent.champion_id != entry.champion_id)));
+        }
+    }
+
+    #[test]
+    fn split_matchups_uses_configured_limit_for_sample_fallback() {
+        let counters = vec![
+            counter(1, 60, 100),
+            counter(2, 55, 100),
+            counter(3, 45, 100),
+            counter(4, 40, 100),
+            counter(5, 9, 10),
+            counter(6, 1, 10),
+        ];
+        let (strong, weak) = split_matchups(&counters, 2);
+        assert_eq!(strong[0].champion_id, 1);
+        assert_eq!(weak[0].champion_id, 4);
+        let (strong, weak) = split_matchups(&counters, 8);
+        assert_eq!(strong.len(), 3);
+        assert_eq!(weak.len(), 3);
+        assert_eq!(strong[0].champion_id, 5);
+        assert_eq!(weak[0].champion_id, 6);
     }
 
     #[test]

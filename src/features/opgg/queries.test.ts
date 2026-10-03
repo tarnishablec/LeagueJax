@@ -53,6 +53,7 @@ function list(filters: OpggFiltersDto): OpggChampionListDto {
 function detail(filters: OpggFiltersDto): OpggChampionDetailDto {
   return {
     filters,
+    counterColumnLimit: 8,
     version: "16.19",
     id: 222,
     position: "ADC",
@@ -104,6 +105,15 @@ describe("OP.GG filter options", () => {
       for (const tier of OPGG_RANK_TIERS) expect(tiers[tier]).toBeTruthy();
       expect(dictionary.source).toContain("{{region}}");
       expect(dictionary.source).toContain("{{rank}}");
+      const settings = championsI18n[locale]?.settings as {
+        pages: { opgg: { title: string } };
+        sections: { opgg: { matchups: { title: string } } };
+        opgg: { counterColumnLimit: { label: string; hint: string } };
+      };
+      expect(settings.pages.opgg.title).toBe("OP.GG");
+      expect(settings.sections.opgg.matchups.title).toBeTruthy();
+      expect(settings.opgg.counterColumnLimit.label).toBeTruthy();
+      expect(settings.opgg.counterColumnLimit.hint).toBeTruthy();
     },
   );
 });
@@ -116,7 +126,9 @@ describe("champion request scopes", () => {
       for (const tier of OPGG_RANK_TIERS) {
         const filters = { region, tier };
         listKeys.add(JSON.stringify(championListKey(filters)));
-        detailKeys.add(JSON.stringify(championDetailKey(filters, 222, "ADC")));
+        detailKeys.add(
+          JSON.stringify(championDetailKey(filters, 222, "ADC", 8)),
+        );
       }
     }
     expect(listKeys.size).toBe(OPGG_REGIONS.length * OPGG_RANK_TIERS.length);
@@ -126,23 +138,23 @@ describe("champion request scopes", () => {
 
   test("includes champion and position in the detail cache identity", () => {
     const keys = [
-      championDetailKey(globalEmerald, 222, "ADC"),
-      championDetailKey(globalEmerald, 222, "MID"),
-      championDetailKey(globalEmerald, 103, "MID"),
+      championDetailKey(globalEmerald, 222, "ADC", 8),
+      championDetailKey(globalEmerald, 222, "MID", 8),
+      championDetailKey(globalEmerald, 103, "MID", 8),
     ];
     expect(new Set(keys.map((key) => JSON.stringify(key))).size).toBe(3);
   });
 
   test("disables details until both a champion and position are available", () => {
-    expect(championDetailKey(globalEmerald, null, "ADC")).toBeNull();
-    expect(championDetailKey(globalEmerald, 222, null)).toBeNull();
-    expect(championDetailKey(globalEmerald, 222, "")).toBeNull();
+    expect(championDetailKey(globalEmerald, null, "ADC", 8)).toBeNull();
+    expect(championDetailKey(globalEmerald, 222, null, 8)).toBeNull();
+    expect(championDetailKey(globalEmerald, 222, "", 8)).toBeNull();
   });
 
   test("snapshots request arguments so a later filter change cannot alter an in-flight request", () => {
     const filters = { ...koreaEmerald };
     const listKey = championListKey(filters);
-    const detailKey = championDetailKey(filters, 222, "ADC");
+    const detailKey = championDetailKey(filters, 222, "ADC", 8);
     if (!detailKey) throw new Error("Expected an active champion detail key");
     filters.region = "na";
     filters.tier = "all";
@@ -151,6 +163,7 @@ describe("champion request scopes", () => {
       championId: 222,
       position: "ADC",
       filters: koreaEmerald,
+      counterColumnLimit: 8,
     });
   });
 
@@ -164,23 +177,23 @@ describe("champion request scopes", () => {
 
   test("rejects stale details even when champion and position did not change", () => {
     const previous = detail(globalEmerald);
-    expect(currentChampionDetail(previous, globalEmerald, 222, "ADC")).toBe(
+    expect(currentChampionDetail(previous, globalEmerald, 222, "ADC", 8)).toBe(
       previous,
     );
     expect(
-      currentChampionDetail(previous, koreaEmerald, 222, "ADC"),
+      currentChampionDetail(previous, koreaEmerald, 222, "ADC", 8),
     ).toBeUndefined();
     expect(
-      currentChampionDetail(previous, globalDiamond, 222, "ADC"),
+      currentChampionDetail(previous, globalDiamond, 222, "ADC", 8),
     ).toBeUndefined();
     expect(
-      currentChampionDetail(previous, globalEmerald, 222, "MID"),
+      currentChampionDetail(previous, globalEmerald, 222, "MID", 8),
     ).toBeUndefined();
     expect(
-      currentChampionDetail(previous, globalEmerald, 103, "ADC"),
+      currentChampionDetail(previous, globalEmerald, 103, "ADC", 8),
     ).toBeUndefined();
     expect(
-      currentChampionDetail(previous, globalEmerald, null, null),
+      currentChampionDetail(previous, globalEmerald, null, null, 8),
     ).toBeUndefined();
   });
 
@@ -199,8 +212,8 @@ describe("champion request scopes", () => {
   });
 
   test("rapid lane changes retain distinct request arguments and reject a late lane response", async () => {
-    const firstKey = championDetailKey(globalEmerald, 222, "JUNGLE");
-    const nextKey = championDetailKey(globalEmerald, 222, "MID");
+    const firstKey = championDetailKey(globalEmerald, 222, "JUNGLE", 8);
+    const nextKey = championDetailKey(globalEmerald, 222, "MID", 8);
     if (!firstKey || !nextKey)
       throw new Error("Expected two active lane requests");
     let finishFirst: (value: OpggChampionDetailDto) => void = () => {};
@@ -210,11 +223,54 @@ describe("champion request scopes", () => {
     const next = { ...detail(globalEmerald), position: "MID" };
     expect(championDetailArgs(firstKey).position).toBe("JUNGLE");
     expect(championDetailArgs(nextKey).position).toBe("MID");
-    expect(currentChampionDetail(next, globalEmerald, 222, "MID")).toBe(next);
+    expect(currentChampionDetail(next, globalEmerald, 222, "MID", 8)).toBe(
+      next,
+    );
     finishFirst({ ...detail(globalEmerald), position: "JUNGLE" });
     expect(
-      currentChampionDetail(await firstRequest, globalEmerald, 222, "MID"),
+      currentChampionDetail(await firstRequest, globalEmerald, 222, "MID", 8),
     ).toBeUndefined();
+  });
+
+  test("isolates matchup limits in cache keys and immutable request arguments", () => {
+    const keys = [1, 8, 50].map((limit) =>
+      championDetailKey(globalEmerald, 222, "ADC", limit),
+    );
+    expect(new Set(keys.map((key) => JSON.stringify(key))).size).toBe(3);
+    for (const [index, key] of keys.entries()) {
+      if (!key) throw new Error("Expected an active matchup request");
+      expect(championDetailArgs(key).counterColumnLimit).toBe(
+        [1, 8, 50][index],
+      );
+    }
+  });
+
+  test("rejects late or cached details after the configured limit changes", async () => {
+    let finishPrevious: (value: OpggChampionDetailDto) => void = () => {};
+    const previousRequest = new Promise<OpggChampionDetailDto>((resolve) => {
+      finishPrevious = resolve;
+    });
+    const previous = detail(globalEmerald);
+    const active = { ...previous, counterColumnLimit: 3 };
+    expect(currentChampionDetail(active, globalEmerald, 222, "ADC", 3)).toBe(
+      active,
+    );
+    expect(
+      currentChampionDetail(previous, globalEmerald, 222, "ADC", 3),
+    ).toBeUndefined();
+    finishPrevious(previous);
+    expect(
+      currentChampionDetail(
+        await previousRequest,
+        globalEmerald,
+        222,
+        "ADC",
+        3,
+      ),
+    ).toBeUndefined();
+    expect(currentChampionDetail(previous, globalEmerald, 222, "ADC", 8)).toBe(
+      previous,
+    );
   });
 });
 

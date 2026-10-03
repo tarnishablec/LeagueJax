@@ -9,6 +9,7 @@ export type OpggBuildDto = {
 
 export type OpggChampionDetailDto = {
   filters: OpggFiltersDto;
+  counterColumnLimit: number;
   id: number;
   position: string;
   version: string;

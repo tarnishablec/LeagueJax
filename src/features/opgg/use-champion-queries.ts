@@ -5,6 +5,7 @@ import type {
   OpggChampionListDto,
   OpggFiltersDto,
 } from "@/bindings/opgg";
+import { useSolidSettingValue } from "@/features/settings/use-setting-value";
 import { createSolidQuery } from "@/infra/solid-query";
 import {
   championDetailArgs,
@@ -14,6 +15,11 @@ import {
   currentChampionDetail,
   currentChampionList,
 } from "./queries";
+import {
+  DEFAULT_COUNTER_COLUMN_LIMIT,
+  OPGG_COUNTER_COLUMN_LIMIT_SETTING,
+  parseCounterColumnLimit,
+} from "./settings";
 
 // Scope validation belongs to this feature; the generic query runtime only
 // handles keys and resources. Guard failed resource reads before inspecting data.
@@ -41,15 +47,31 @@ export function useChampionListQuery(
 }
 
 // Fetch from the immutable request key and reject retained results for another
-// champion, position, region, or tier before they reach presentation components.
+// champion, position, region, tier, or matchup limit before presentation.
 export function useChampionDetailQuery(
   filters: Accessor<OpggFiltersDto>,
   championId: Accessor<number | null>,
   position: Accessor<string | null>,
   enabled: Accessor<boolean> = () => true,
 ) {
+  const counterLimitSetting = useSolidSettingValue<number>(
+    OPGG_COUNTER_COLUMN_LIMIT_SETTING,
+    DEFAULT_COUNTER_COLUMN_LIMIT,
+  );
+  const counterColumnLimit = createMemo(
+    () =>
+      parseCounterColumnLimit(counterLimitSetting()) ??
+      DEFAULT_COUNTER_COLUMN_LIMIT,
+  );
   const key = createMemo(() =>
-    enabled() ? championDetailKey(filters(), championId(), position()) : null,
+    enabled()
+      ? championDetailKey(
+          filters(),
+          championId(),
+          position(),
+          counterColumnLimit(),
+        )
+      : null,
   );
   const query = createSolidQuery<OpggChampionDetailDto>(key, (requestKey) =>
     invoke(
@@ -67,6 +89,7 @@ export function useChampionDetailQuery(
           filters(),
           championId(),
           position(),
+          counterColumnLimit(),
         ),
   );
 
