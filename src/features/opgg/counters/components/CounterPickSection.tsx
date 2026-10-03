@@ -2,7 +2,7 @@
 
 import { Collapsible } from "@ark-ui/solid/collapsible";
 import { Key } from "@solid-primitives/keyed";
-import { ChevronDown, ChevronRight } from "lucide-solid";
+import { Info } from "lucide-solid";
 import { createMemo, Match, Show, Switch } from "solid-js";
 import type { EnemyChampionPick } from "@/bindings/ongoing_game";
 import type { OpggChampionListDto } from "@/bindings/opgg";
@@ -22,6 +22,8 @@ import {
 import * as s from "./CounterPickSection.css.ts";
 import { CounterPositionSelect } from "./CounterPositionSelect";
 
+// A full-card disclosure button is a sibling of the content, not its ancestor.
+// The lane picker and retry control sit above it and keep independent actions.
 export function CounterPickSection(props: {
   pick: EnemyChampionPick;
   nameOf: (championId: number) => string;
@@ -76,6 +78,11 @@ export function CounterPickSection(props: {
       open={props.expanded}
       onOpenChange={({ open }) => props.onExpandedChange(open)}
     >
+      <Collapsible.Trigger
+        type="button"
+        class={s.toggle}
+        aria-label={`${props.expanded ? "Collapse" : "Expand"} counters for enemy slot ${props.pick.cellId}`}
+      />
       <div class={s.enemy}>
         <LazyImage
           src={championIconUrl(props.pick.championId)}
@@ -85,12 +92,6 @@ export function CounterPickSection(props: {
         <div class={s.enemyInfo}>
           <h2 class={s.enemyName}>{props.nameOf(props.pick.championId)}</h2>
           <div class={s.metadata}>
-            <CounterPositionSelect
-              cellId={props.pick.cellId}
-              value={props.positionChoice}
-              resolvedPosition={position()}
-              onValueChange={props.onPositionChange}
-            />
             <Show when={positionSource()}>
               {(source) => <span class={s.muted}>{source()}</span>}
             </Show>
@@ -105,22 +106,14 @@ export function CounterPickSection(props: {
             </Show>
           </div>
         </div>
-        <Collapsible.Trigger
-          type="button"
-          class={s.toggle}
-          aria-label={
-            props.expanded
-              ? "Collapse champion counters"
-              : "Expand champion counters"
-          }
-        >
-          <Show
-            when={props.expanded}
-            fallback={<ChevronRight size={14} aria-hidden="true" />}
-          >
-            <ChevronDown size={14} aria-hidden="true" />
-          </Show>
-        </Collapsible.Trigger>
+        <div class={s.positionControl}>
+          <CounterPositionSelect
+            cellId={props.pick.cellId}
+            value={props.positionChoice}
+            resolvedPosition={position()}
+            onValueChange={props.onPositionChange}
+          />
+        </div>
       </div>
       <Collapsible.Content class={s.body}>
         <Switch>
@@ -144,7 +137,10 @@ export function CounterPickSection(props: {
             </div>
           </Match>
           <Match when={state() === "empty"}>
-            <p class={s.status}>{t("counters.insufficient")}</p>
+            <p class={s.emptyStatus} role="status">
+              <Info size={14} aria-hidden="true" />
+              <span>{t("counters.insufficient")}</span>
+            </p>
           </Match>
           <Match when={state() === "ready"}>
             <Key each={counters()} by={(row) => row.championId}>
@@ -158,16 +154,13 @@ export function CounterPickSection(props: {
                       className={s.smallPortrait}
                     />
                     <span class={s.name}>{props.nameOf(row().championId)}</span>
-                    <span>
-                      <span
-                        class={`${s.rate} ${rate() >= 0.5 ? s.rateTone.win : s.rateTone.loss}`}
-                      >
-                        {formatRate(rate())}
-                      </span>
-                      <span class={s.muted}>
-                        {" "}
-                        {t("counters.games", { count: String(row().play) })}
-                      </span>
+                    <span
+                      class={`${s.rate} ${rate() >= 0.5 ? s.rateTone.win : s.rateTone.loss}`}
+                    >
+                      {formatRate(rate())}
+                    </span>
+                    <span class={s.games}>
+                      {t("counters.games", { count: String(row().play) })}
                     </span>
                   </div>
                 );

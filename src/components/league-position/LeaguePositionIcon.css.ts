@@ -4,6 +4,16 @@ import { recipe } from "@vanilla-extract/recipes";
 export const iconWidthVar = createVar();
 export const iconHeightVar = createVar();
 export const pairMinHeightVar = createVar();
+export const iconMaskVar = createVar();
+export const iconColorVar = createVar();
+
+export const tinted = style({
+  background: iconColorVar,
+  maskImage: iconMaskVar,
+  maskSize: "contain",
+  maskPosition: "center",
+  maskRepeat: "no-repeat",
+});
 
 export const icon = recipe({
   base: {

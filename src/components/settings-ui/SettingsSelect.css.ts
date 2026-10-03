@@ -1,4 +1,5 @@
 import { style } from "@vanilla-extract/css";
+import { recipe } from "@vanilla-extract/recipes";
 import { layers } from "@/styles/layers.css";
 import { theme } from "@/styles/theme.css";
 
@@ -12,7 +13,7 @@ export const control = style({
   height: "100%",
 });
 
-export const trigger = style({
+const triggerBase = style({
   width: "100%",
   height: "100%",
   borderRadius: 8,
@@ -32,7 +33,7 @@ export const trigger = style({
     },
     "&:focus-visible": {
       outline: `2px solid ${theme.color.primary}`,
-      outlineOffset: -1,
+      outlineOffset: -2,
     },
     "&[data-state='open']": {
       borderColor: theme.color.primary,
@@ -42,6 +43,38 @@ export const trigger = style({
       cursor: "not-allowed",
     },
   },
+});
+
+export const trigger = recipe({
+  base: triggerBase,
+  variants: {
+    iconOnly: {
+      false: {},
+      true: {
+        gridTemplateColumns: "minmax(0, 1fr)",
+        placeItems: "center",
+        gap: 0,
+        padding: 0,
+        border: "none",
+        borderRadius: 999,
+        background: "transparent",
+        outline: `1px solid ${theme.color.border}`,
+        outlineOffset: -1,
+        selectors: {
+          "&:hover": {
+            background: theme.color.surface,
+            outlineColor: theme.color.primary,
+          },
+          "&[data-state='open']": { outlineColor: theme.color.primary },
+          "&:focus-visible": {
+            outline: `2px solid ${theme.color.primary}`,
+            outlineOffset: -2,
+          },
+        },
+      },
+    },
+  },
+  defaultVariants: { iconOnly: false },
 });
 
 export const valueText = style({

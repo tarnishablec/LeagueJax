@@ -2,6 +2,8 @@ import { style, styleVariants } from "@vanilla-extract/css";
 import { theme } from "@/styles/theme.css";
 
 export const section = style({
+  position: "relative",
+  isolation: "isolate",
   display: "grid",
   gap: 8,
   padding: 8,
@@ -49,23 +51,32 @@ export const muted = style({
 });
 
 export const toggle = style({
-  display: "grid",
-  placeItems: "center",
-  width: 26,
-  height: 26,
+  position: "absolute",
+  inset: 0,
+  zIndex: 1,
   border: "none",
-  borderRadius: 999,
+  borderRadius: "inherit",
   padding: 0,
-  background: theme.color.popupBackground,
-  color: theme.color.foreground,
+  background: "transparent",
   cursor: "pointer",
-  outline: `1px solid ${theme.color.border}`,
-  outlineOffset: -1,
+  selectors: {
+    "&:hover": {
+      background: `color-mix(in srgb, ${theme.color.foreground} 2%, transparent)`,
+    },
+    "&:focus-visible": {
+      outline: `2px solid ${theme.color.primary}`,
+      outlineOffset: -2,
+    },
+  },
 });
 
+export const positionControl = style({ position: "relative", zIndex: 2 });
+
+// Share all four tracks with the list so numeric widths align across rows.
 export const row = style({
   display: "grid",
-  gridTemplateColumns: "32px minmax(0, 1fr) max-content",
+  gridColumn: "1 / -1",
+  gridTemplateColumns: "subgrid",
   gap: 8,
   alignItems: "center",
 });
@@ -81,13 +92,25 @@ export const name = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  fontWeight: 600,
+  fontWeight: 300,
+  fontSize: "0.85rem",
 });
 
 export const rate = style({
   fontVariantNumeric: "tabular-nums",
   fontWeight: 650,
+  justifySelf: "end",
+  whiteSpace: "nowrap",
 });
+
+export const games = style([
+  muted,
+  {
+    fontVariantNumeric: "tabular-nums",
+    justifySelf: "end",
+    whiteSpace: "nowrap",
+  },
+]);
 
 export const rateTone = styleVariants({
   win: { color: theme.color.success },
@@ -95,6 +118,7 @@ export const rateTone = styleVariants({
 });
 
 export const status = style({
+  gridColumn: "1 / -1",
   margin: 0,
   minHeight: 112,
   display: "grid",
@@ -105,13 +129,28 @@ export const status = style({
   color: theme.color.mutedForeground,
 });
 
+export const emptyStatus = style([
+  status,
+  {
+    minHeight: 0,
+    gridTemplateColumns: "14px minmax(0, 1fr)",
+    alignItems: "center",
+    gap: 6,
+    paddingBlock: "2px 4px",
+    paddingInlineStart: 44,
+  },
+]);
+
 export const body = style({
   display: "grid",
+  gridTemplateColumns: "32px minmax(0, 1fr) max-content max-content",
   gap: 8,
   selectors: { "&[hidden]": { display: "none" } },
 });
 
 export const retry = style({
+  position: "relative",
+  zIndex: 2,
   padding: "4px 8px",
   borderRadius: 4,
   background: theme.color.surface,

@@ -57,26 +57,48 @@ export function normalizeLeaguePosition(
   return null;
 }
 
+// Tint the existing asset's alpha mask so callers can change its color without
+// duplicating the position artwork or relying on source-color-dependent filters.
 export function LeaguePositionIcon(props: {
   position: string | null | undefined;
   width?: number;
   height?: number;
   emphasis?: "strong" | "subtle";
+  color?: string;
 }): JSX.Element {
   const normalized = () => normalizeLeaguePosition(props.position);
 
   return (
     <Show when={normalized()}>
       {(position) => (
-        <img
-          class={s.icon({ emphasis: props.emphasis ?? "strong" })}
-          style={assignInlineVars({
-            [s.iconWidthVar]: `${props.width ?? 16}px`,
-            [s.iconHeightVar]: `${props.height ?? 16}px`,
-          })}
-          src={iconUrl(position())}
-          alt={`position-${position()}`}
-        />
+        <Show
+          when={props.color}
+          fallback={
+            <img
+              class={s.icon({ emphasis: props.emphasis ?? "strong" })}
+              style={assignInlineVars({
+                [s.iconWidthVar]: `${props.width ?? 16}px`,
+                [s.iconHeightVar]: `${props.height ?? 16}px`,
+              })}
+              src={iconUrl(position())}
+              alt={`position-${position()}`}
+            />
+          }
+        >
+          {(color) => (
+            <span
+              role="img"
+              aria-label={`position-${position()}`}
+              class={`${s.icon({ emphasis: props.emphasis ?? "strong" })} ${s.tinted}`}
+              style={assignInlineVars({
+                [s.iconWidthVar]: `${props.width ?? 16}px`,
+                [s.iconHeightVar]: `${props.height ?? 16}px`,
+                [s.iconMaskVar]: `url("${iconUrl(position())}")`,
+                [s.iconColorVar]: color(),
+              })}
+            />
+          )}
+        </Show>
       )}
     </Show>
   );

@@ -3,7 +3,7 @@ import { createListCollection, Select } from "@ark-ui/solid/select";
 import { keyArray } from "@solid-primitives/keyed";
 import { Check, ChevronsUpDown } from "lucide-solid";
 import type { JSX } from "solid-js";
-import { Show, splitProps } from "solid-js";
+import { children, Show, splitProps } from "solid-js";
 import { Portal } from "solid-js/web";
 import { visuallyHidden } from "@/styles/accessibility.css";
 import {
@@ -34,6 +34,7 @@ interface SettingsSelectOwnProps {
   onValueChange: NonNullable<Select.RootProps<SelectItem>["onValueChange"]>;
   placeholder?: string;
   formatValue?: (label: string) => string;
+  triggerIcon?: JSX.Element;
   groups?: SelectGroup[];
   disablePortal?: boolean;
   triggerProps?: SettingsControlSlotProps<Select.TriggerProps>;
@@ -166,12 +167,16 @@ export function SettingsSelect(props: SettingsSelectProps): JSX.Element {
       "ariaLabel",
       "placeholder",
       "formatValue",
+      "triggerIcon",
       "groups",
       "disablePortal",
       "triggerProps",
       "hiddenSelectProps",
     ],
   );
+  // Resolve the slot once; checking it for layout must not mount extra tooltip
+  // or icon component trees before the same content is inserted in the trigger.
+  const triggerIcon = children(() => local.triggerIcon);
   const listContent = () => (
     <Select.Positioner class={s.positioner}>
       <Select.Content class={s.content}>
@@ -207,26 +212,38 @@ export function SettingsSelect(props: SettingsSelectProps): JSX.Element {
       <Select.Label class={visuallyHidden}>{local.ariaLabel}</Select.Label>
       <Select.HiddenSelect {...local.hiddenSelectProps} />
       <Select.Control class={s.control}>
-        <Select.Trigger {...local.triggerProps} class={s.trigger}>
+        <Select.Trigger
+          {...local.triggerProps}
+          class={s.trigger({ iconOnly: Boolean(triggerIcon()) })}
+        >
           <Show
-            when={local.formatValue}
+            when={triggerIcon()}
             fallback={
-              <Select.ValueText
-                class={s.valueText}
-                placeholder={local.placeholder}
-              />
+              <>
+                <Show
+                  when={local.formatValue}
+                  fallback={
+                    <Select.ValueText
+                      class={s.valueText}
+                      placeholder={local.placeholder}
+                    />
+                  }
+                >
+                  {(formatValue) => (
+                    <FormattedValueText
+                      formatValue={formatValue()}
+                      placeholder={local.placeholder}
+                    />
+                  )}
+                </Show>
+                <Select.Indicator class={s.indicator}>
+                  <ChevronsUpDown size={14} />
+                </Select.Indicator>
+              </>
             }
           >
-            {(formatValue) => (
-              <FormattedValueText
-                formatValue={formatValue()}
-                placeholder={local.placeholder}
-              />
-            )}
+            {triggerIcon()}
           </Show>
-          <Select.Indicator class={s.indicator}>
-            <ChevronsUpDown size={14} />
-          </Select.Indicator>
         </Select.Trigger>
       </Select.Control>
       {local.disablePortal ? listContent() : <Portal>{listContent()}</Portal>}
