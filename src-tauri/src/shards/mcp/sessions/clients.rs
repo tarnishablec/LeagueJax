@@ -136,7 +136,7 @@ pub(in crate::shards::mcp) async fn register_client_connected(
     clients: &McpClients,
     call_records: &McpCallRecords,
     extensions: &Extensions,
-    client_info: Option<&rmcp::model::ClientInfo>,
+    client_info: Option<&rmcp::model::InitializeRequestParams>,
 ) -> McpClientIdentity {
     let session_id = session_id_from_extensions(extensions)
         .unwrap_or_else(|| format!("pending-{}", Uuid::now_v7()));
@@ -220,7 +220,7 @@ async fn prune_stale_clients(clients: &McpClients) -> bool {
 }
 
 pub(in crate::shards::mcp) fn client_identity(
-    client_info: Option<&rmcp::model::ClientInfo>,
+    client_info: Option<&rmcp::model::InitializeRequestParams>,
 ) -> (String, String) {
     let client = client_info.map(|info| &info.client_info);
     let client_name = non_empty_client_field(client.map(|client| &client.name))

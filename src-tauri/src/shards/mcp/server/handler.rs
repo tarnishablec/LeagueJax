@@ -3,7 +3,7 @@ use std::future::Future;
 use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, Implementation, ProtocolVersion, ServerCapabilities,
-    ServerInfo,
+    ServerConfig,
 };
 use rmcp::service::{MaybeSendFuture, NotificationContext, RequestContext, RoleServer};
 use rmcp::{tool_handler, ErrorData, ServerHandler};
@@ -53,8 +53,8 @@ impl ServerHandler for LeagueJaxMcpServer {
         }
     }
 
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::from_build_env())
             .with_protocol_version(ProtocolVersion::V_2025_11_25)
             .with_instructions(
